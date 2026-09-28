@@ -21,12 +21,14 @@ fi
 mkdir -p "$DEST"
 rsync -a --delete --no-owner --no-group --exclude='.git' "$SRC/" "$DEST/"
 
-# Commit only if something actually changed.
+# Always commit — an empty commit is a heartbeat proving the script ran
+# and the copy is fresh. Empty commits store no new objects.
+TS="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 git -C "$REPO" add -A
 if git -C "$REPO" diff --cached --quiet; then
-  echo "no changes since last snapshot"
+  git -C "$REPO" commit -q --allow-empty -m "skills snapshot $TS (no changes)"
+  echo "heartbeat $(git -C "$REPO" rev-parse --short HEAD) at $TS (no changes)"
 else
-  TS="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   git -C "$REPO" commit -q -m "skills snapshot $TS"
   echo "committed $(git -C "$REPO" rev-parse --short HEAD) at $TS"
 fi
