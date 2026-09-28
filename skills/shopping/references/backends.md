@@ -38,7 +38,7 @@ Base search flow:
 ```sh
 MARKETPLACE_RESULTS_JSON=$(mktemp "${TMPDIR:-/tmp}/facebook-marketplace-search.XXXXXX")
 
-facebook-cli marketplace search --query "<item>" --limit <N> > "$MARKETPLACE_RESULTS_JSON"
+facebook-cli marketplace search --query "<item>" --limit <N> --out "$MARKETPLACE_RESULTS_JSON"
 ```
 
 Useful flags:
@@ -51,17 +51,6 @@ Useful flags:
 - `--max-listing-age-in-days` for recency
 - `--limit <N>` for page size (default and max 20; higher values are capped)
 - `--after <cursor>` to continue a search — pass the `paging.cursors.after` value from the previous response (absent `paging` means no more results)
-
-Inspect search results and present selected `listing_id` values:
-
-```sh
-jq '
-  [
-    .data[]
-    | select((.listing_id // "") != "" and (.title // "") != "" and (.product_url // "") != "" and (.image_url // "") != "")
-    | {listing_id, title, description, price, condition, location, distance, product_url, image_url}
-  ][0:50]
-' "$MARKETPLACE_RESULTS_JSON"
 
 Call `shopping.resolve_results`:
 

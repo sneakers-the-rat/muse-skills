@@ -42,7 +42,7 @@ facebook-cli
 │   └── seller-info --listing-id <id>          # Seller ratings/info
 ├── groups
 │   ├── details --group-id <id-or-vanity> # Fetch name, About, visibility, history, tags, ordered rules, and member count
-│   ├── search [--keywords "..."]         # Search/list your groups; --role any = all public groups
+│   ├── search [--keywords "..."] [--role connected|admin|admod|any] [--after <cursor>]  # Paginated membership listing; keyword + any searches connected/private and public groups
 │   └── posts --group-id <id>             # Browse posts in a group; --query filters by text
 ├── events
 │   ├── search [--scope connected|discover] [--keywords "..."] [--location "..."] [--latitude N --longitude=-N] [--radius-in-miles N] [--category ...] [--start-date ...] [--end-date ...] [--limit N] [--after <cursor>]  # Paginated: data[] + paging.cursors.after; coordinates beat --location, which is only city-accurate

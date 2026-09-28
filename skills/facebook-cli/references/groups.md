@@ -41,7 +41,7 @@ return the same not-found error.
 ### Search Groups
 
 ```bash
-facebook-cli groups search [--keywords <text>] [--role <role>] [--sort-by <sort>] [--status <status>] [--limit <n>]
+facebook-cli groups search [--keywords <text>] [--role <role>] [--sort-by <sort>] [--status <status>] [--limit <n>] [--after <cursor>]
 ```
 
 **Options:**
@@ -50,10 +50,14 @@ facebook-cli groups search [--keywords <text>] [--role <role>] [--sort-by <sort>
   - `connected` (default) — only groups you're a member of
   - `admin` — groups where you're an admin
   - `admod` — groups where you're admin or moderator
-  - `any` — search **all public groups** (requires `--keywords`; uses GUSS public group search)
+  - `any` — search connected groups (including private groups) first, then
+    public discovery results (requires `--keywords`)
 - `--sort-by` (optional): `MOST_RELEVANT`, `LARGEST`, `LAST_VISITED`, `RECENT_ACTIVITY`, `ALPHABETICAL`
 - `--status` (optional): `any`, `weekly_active`, `non_archived` (default), `archived`
-- `--limit` (optional): Maximum number of results (default 10, max 25)
+- `--limit` (optional): Maximum number of results per page (default 25 with
+  `--keywords`, 10 otherwise; max 25)
+- `--after` (optional): Cursor from `paging.cursors.after` in the previous
+  response. Supported only when `--keywords` is omitted
 
 **Examples:**
 ```bash
@@ -69,11 +73,17 @@ facebook-cli groups search --sort-by LARGEST --limit 5
 # Groups I admin
 facebook-cli groups search --role admin
 
-# Search ALL public groups (not just joined)
+# Search connected and public groups
 facebook-cli groups search --keywords "hiking" --role any
+
+# Next page while listing memberships
+facebook-cli groups search --role connected --after "<cursor_from_previous_response>"
 ```
 
-**Response fields:**
+**Response:** Each page keeps results in `groups`; `paging.cursors.after` is
+present when another page is available.
+
+**Group fields:**
 - `group_id`: Numeric group ID
 - `name`: Group name
 - `member_count`: Number of members

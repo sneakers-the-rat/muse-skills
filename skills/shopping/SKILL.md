@@ -327,7 +327,7 @@ otherwise be unnecessary overhead.
 
 ## Marketplace Search
 
-### Product shape
+### Printed listing shape
 
 ```json
 {
@@ -338,7 +338,7 @@ otherwise be unnecessary overhead.
   "condition": "condition of the item, e.g., Used (good)",
   "description": "listing description",
   "product_url": "listing URL",
-  "image_url": "direct image URL"
+  "image_url": {"withheld": "signed URL; ..."}
 }
 ```
 
@@ -350,7 +350,7 @@ MARKETPLACE_RESULTS_JSON=$(mktemp "${TMPDIR:-/tmp}/facebook-marketplace-search.X
 facebook-cli marketplace search \
   --query "<natural language item query>" \
   --limit <N> \
-  > "$MARKETPLACE_RESULTS_JSON"
+  --out "$MARKETPLACE_RESULTS_JSON"
 ```
 
 With location or local pickup filters:
@@ -364,8 +364,10 @@ facebook-cli marketplace search \
   --radius-in-miles <miles> \
   --delivery-method local_pickup_only \
   --limit <N> \
-  > "$MARKETPLACE_RESULTS_JSON"
+  --out "$MARKETPLACE_RESULTS_JSON"
 ```
+
+The command prints each listing with `image_url` replaced by a `withheld` object. The full payload, including signed photo URLs, goes only to the `--out` file. Pick listings and their `listing_id` values from the printed output. Do not read, print, or `jq` the `--out` file; pass its path unchanged in `result_paths`. To show a listing's photo, select it in `shopping.resolve_results`: its card carries the photo. Select only listings whose printed output has an `image_url`: `shopping.resolve_results` fails the whole call when a selected listing has no photo.
 
 ### Listing details
 
