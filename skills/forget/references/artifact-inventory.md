@@ -28,8 +28,8 @@ and future producers from restating the subject.
 
 Inspect precise matches and semantic restatements in:
 
-- `~/MEMORY.md` and the dated source logs under `~/memory/`;
-- `~/USER.md` and `~/memory/personalization.md`;
+- `~/MEMORY.md` and relevant files under `~/memory/`, including dated source logs;
+- `~/USER.md`;
 - `~/SOUL.md`, `~/IDENTITY.md`, and legacy `~/GOALS.md` when the information
   became persona, identity, or carried goal context;
 - `~/FEEDBACK.md`, the durable preference input to conversational follow-ups,

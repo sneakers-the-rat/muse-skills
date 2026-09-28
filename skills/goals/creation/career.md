@@ -40,7 +40,7 @@ give two or three real connector options plus a final "Not now", for at most
 four options.
 
 **Intake.** Before you ask anything, use what your context already contains
-without opening anything: `~/MEMORY.md`, `~/memory/personalization.md`, the
+without opening anything: `~/USER.md`, `~/MEMORY.md`, the
 user's existing goals, and connected data. Do not re-ask a constraint the user
 already gave. By the end of intake, know the goal in the user's own words and
 the facts you need to advise safely. Ask why it matters or what they tried before

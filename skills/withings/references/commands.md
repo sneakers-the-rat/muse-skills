@@ -43,7 +43,11 @@ Flags:
 | `--interval` | no | `hourly`, `daily`, `weekly` — daily-metrics only |
 | `--fields` | no | Comma-separated subset of fields |
 
-`query` returns a JSON **array** of records (not wrapped in `{ok, status, body}`).
+`query` returns a JSON **array** of records (not wrapped in `{ok, status, body}`),
+with one exception: while the user's "Read measurements and heart data"
+permission is deny or ask, `query --category daily-metrics` returns
+`{"withheld": {...}, "records": [...]}` (rows without body metrics). Sleep and
+workout always return the plain array.
 
 ### Output contract (new surface)
 

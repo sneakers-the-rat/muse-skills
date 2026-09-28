@@ -83,3 +83,17 @@ Quick reference for the other passthroughs:
 - `withings devices` — list paired Withings devices.
 
 Full command matrix, meas-type IDs, and Withings → Muse field mapping: [references/commands.md](references/commands.md).
+- Permission-withheld data: while the user's "Read measurements and heart
+  data" permission is deny or ask, `query --category daily-metrics` wraps its
+  rows in `{"withheld": {...}, "records": [...]}` with body metrics (weight,
+  blood pressure, SpO2, heart measurements) removed, and a request for only
+  those fields fails with `data_class_excluded`. Key off the `withheld`
+  marker: when present, the permission is restricting those fields — say so
+  instead of "no readings". When the user actually needs a withheld metric
+  and the permission requires approval (`withheld.reason` is
+  `requires_approval`, or a body-metrics-only query failed with
+  `data_class_excluded` saying it requires approval), run
+  `withings measures --category 1 --start-date <d> --end-date <d>`, which is
+  governed by that permission and shows the user the approval prompt. Sleep
+  and workout results are never wrapped; a response without the marker is an
+  ordinary result.
