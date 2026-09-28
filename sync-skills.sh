@@ -32,3 +32,10 @@ else
   git -C "$REPO" commit -q -m "skills snapshot $TS"
   echo "committed $(git -C "$REPO" rev-parse --short HEAD) at $TS"
 fi
+
+# Push to GitHub. Auth is a write-scoped deploy key for this repo only
+# (see core.sshCommand in the repo config). A failed push fails the
+# script so the scheduled run reports it; the local commit is kept and
+# the next run retries.
+git -C "$REPO" push -q origin main
+echo "pushed to origin/main"
