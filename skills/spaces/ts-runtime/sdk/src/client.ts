@@ -42,21 +42,16 @@ export class SpaceActionError extends Error {
     message: string,
     readonly status: number,
     readonly retryAfterMs?: number,
+    readonly retrySafe = false,
   ) {
     super(message);
     this.name = "SpaceActionError";
   }
 }
 
-// 4xx client errors an identical retry cannot fix: malformed request (400),
-// unprocessable/validation (422), missing action (404), and auth/authz
-// (401/403 — the SDK already does an internal refresh+retry for *refreshable*
-// 401s before throwing, so a 401 reaching here is non-refreshable). Everything
-// else — backpressure (429/503), transient server/gateway errors (500/502/504),
-// and network failures — IS retried, but with exponential backoff + jitter (see
-// `actionRetryDelay`). Retrying *without* backoff is what turns an overload into
-// a self-sustaining storm; the cure is jittered backoff, not giving up.
-export const PERMANENT_ACTION_STATUSES = new Set([400, 401, 403, 404, 422]);
+// Actions can write even when invoked by useQuery. A failed connection or
+// gateway response cannot prove that the handler did not commit a write.
+export const PERMANENT_ACTION_STATUSES = new Set([400, 401, 403, 404, 409, 413, 415, 422]);
 
 /** Retries after the first failure for a retryable action error. */
 export const MAX_ACTION_RETRIES = 3;
@@ -65,11 +60,8 @@ const RETRY_CAP_MS = 30_000;
 
 /**
  * Default retry predicate for Space action queries, used by
- * {@link spaceQueryClient}. Retries backpressure (429/503), transient
- * server/gateway errors, and network failures up to {@link MAX_ACTION_RETRIES}
- * times; never retries a permanent 4xx. A per-`useQuery` `retry` override MUST
- * funnel its action-error case through this (or replicate the permanent-status
- * check) — otherwise it diverges from the backoff policy the singleton governs.
+ * {@link spaceQueryClient}. Retry only explicit pre-invocation failures, with
+ * bounded backoff. Per-query overrides must preserve this outcome boundary.
  */
 export function shouldRetryAction(
   failureCount: number,
@@ -81,7 +73,7 @@ export function shouldRetryAction(
   ) {
     return false;
   }
-  return failureCount < MAX_ACTION_RETRIES;
+  return error instanceof SpaceActionError && error.retrySafe && failureCount < MAX_ACTION_RETRIES;
 }
 
 /**
@@ -799,6 +791,15 @@ export function createActionClient<A extends Record<string, ClientActionShape>>(
             const refreshResult = await waitForSpaceActionAuthRefresh(
               body.error.code,
             );
+            // The handler may have committed a write before needing a VM
+            // credential. Refresh authentication, but replay only when the
+            // server explicitly guarantees the handler never started.
+            if (!("retrySafe" in body) || body.retrySafe !== true) {
+              throw new SpaceActionError(
+                "Your session has been refreshed. Reload the app to check whether your changes were saved before trying again.",
+                409,
+              );
+            }
             const retryEndpoint = endpointWithViewerAssertion(
               endpoint,
               refreshResult.iframeSrc,
@@ -832,6 +833,7 @@ export function createActionClient<A extends Record<string, ClientActionShape>>(
                 `action ${name} failed after auth refresh: ${retryResponse.status} ${retryText}`,
                 retryResponse.status,
                 parseRetryAfterMs(retryResponse),
+                isActionRetrySafe(retryBody),
               );
             }
             return readActionData(retryResponse, name);
@@ -842,12 +844,17 @@ export function createActionClient<A extends Record<string, ClientActionShape>>(
             `action ${name} failed: ${response.status} ${text}`,
             response.status,
             parseRetryAfterMs(response),
+            isActionRetrySafe(body),
           );
         }
         return readActionData(response, name);
       };
     },
   });
+}
+
+function isActionRetrySafe(body: unknown): boolean {
+  return body !== null && typeof body === "object" && "retrySafe" in body && body.retrySafe === true;
 }
 
 // Parse a `Retry-After` response header (RFC 7231 delta-seconds or HTTP-date)

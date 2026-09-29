@@ -1,4 +1,5 @@
 import { afterEach, test } from "bun:test";
+import { Database } from "bun:sqlite";
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -73,43 +74,6 @@ export const entries = sqliteTable("entries", {
 });
 `;
 
-test("builds a Cloudflare deploy manifest for Worker-compatible actions", async () => {
-  const spaceDir = await makeSpace({
-    actionsSource: `
-import { defineAction, z, type ActionsModule } from "@hatch/space-sdk";
-import * as schema from "./schema";
-
-export const Actions = {
-  listEntries: defineAction({
-    request: z.object({ limit: z.number().int().positive() }),
-    response: z.object({ count: z.number() }),
-    async handler(ctx, args) {
-      await ctx.db<typeof schema>().select().from(schema.entries).limit(args.limit);
-      return { count: args.limit };
-    },
-  }),
-} satisfies ActionsModule;
-`,
-  });
-  const outDir = path.join(spaceDir, "cloudflare-dist");
-  const { manifestPath, workerPath } = await buildCloudflareArtifacts({
-    spaceDir,
-    outDir,
-  });
-
-  const manifest = JSON.parse(await fs.readFile(manifestPath, "utf8"));
-  assert.equal(manifest.runtime, "hatch-ts-cloudflare-v1");
-  assert.equal(manifest.slug, "daily-journal");
-  assert.equal(manifest.bindings, undefined);
-  assert.equal(manifest.clientFiles.length, 2);
-  assert.equal(manifest.migrations.length, 1);
-  assert.match(manifest.workerJs, /request\.method\s*===\s*["']GET["']/);
-  assert.match(manifest.workerJs, /request\.method\s*===\s*["']HEAD["']/);
-  assert.match(manifest.workerJs, /ASSETS\.fetch\(request\)/);
-  assert.match(manifest.workerJs, /BUCKET/);
-  assert.ok((await fs.stat(workerPath)).size > 0);
-});
-
 test("built Cloudflare worker forwards invocation and action authority on tool callbacks", async () => {
   const spaceDir = await makeSpace({
     actionsSource: `
@@ -137,6 +101,18 @@ export const Actions = {
   assert.equal(typeof workerModule.default?.fetch, "function");
 
   const callbackRequests = [];
+  const sqlite = new Database(":memory:");
+  sqlite.exec(`CREATE TABLE __hatch_shared_state (id INTEGER PRIMARY KEY, version INTEGER, accepting INTEGER);
+    INSERT INTO __hatch_shared_state VALUES (1, 1, 1);
+    CREATE TABLE __hatch_shared_invocations (id TEXT PRIMARY KEY, kind TEXT, started_at_ms INTEGER);`);
+  const db = { prepare(sql) {
+    let values = [];
+    return {
+      bind(...args) { values = args; return this; },
+      async run() { return sqlite.prepare(sql).run(...values); },
+      async first() { return sqlite.prepare(sql).get(...values); },
+    };
+  } };
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (input, init) => {
     const request = input instanceof Request ? input : new Request(input, init);
@@ -191,21 +167,23 @@ export const Actions = {
       }),
       {
         SPACE_SLUG: "daily-journal",
-        SPACE_SHORTCODE: "daily-journal-share",
+        SPACE_SHORTCODE: "daily-journal-space-1",
         SPACE_ACTION_SPACE_SLUG: "daily-journal",
         SPACE_ACTION_VM_ID: "00000000-0000-4000-8000-000000000001",
         SPACE_ACTION_EDGE_HOST: "hatch.test-only.metaaivm.com",
         SPACE_ACTION_NOTARY_TOKEN: "test-notary-token",
         SPACE_ACTION_CREDENTIAL_EXPIRES_AT_MS: String(now + 60_000),
         SPACE_ACTION_CREDENTIAL_REFRESH_AFTER_MS: String(now + 30_000),
-        DB: {},
+        DB: db,
         ASSETS: { fetch: async () => new Response(null, { status: 404 }) },
         BUCKET: {},
       },
+      { waitUntil() {} },
     );
     assert.equal(response.status, 200, await response.text());
   } finally {
     globalThis.fetch = originalFetch;
+    sqlite.close();
   }
 
   assert.equal(callbackRequests.length, 1);

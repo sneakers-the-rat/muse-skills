@@ -82,30 +82,14 @@ local VM web artifact is shared to Cloudflare for the first time:
 }
 ```
 
-`initialDbSnapshot` is a one-way local SQLite seed for Cloudflare D1. Jarvis
-clones the local `app.db`, exports the clone as SQL, and includes that SQL in
-the deploy manifest. The seed rides on the existing
-`POST /space-deploy/spaces/{shortcode}/deploy` control-plane route, so no
-additional Stefi proxy route is required for the initial local-to-Cloudflare
-copy.
-The runtime string is the
-`CLOUDFLARE_INITIAL_DB_SNAPSHOT_RUNTIME` wire contract.
-
-Control-plane contract:
-
-- Missing `initialDbSnapshot` preserves the current deploy behavior: create or
-  update the Worker, publish client files, and apply SQL migrations.
-- When present, `runtime` must match
-  `CLOUDFLARE_INITIAL_DB_SNAPSHOT_RUNTIME`, and the snapshot `shortcode` and
-  `slug` must match the deployment being handled.
-- The control plane treats the snapshot as the full initial D1 state. It
-  restores the snapshot before worker deployment and does not replay manifest
-  migrations on top of it.
-- If Cloudflare reports that the target D1 database is already initialized, the
-  control plane treats the seed as already applied and continues with worker
-  deployment. A future replace/reset flow must be explicit.
-- Blob objects are not included. Existing local `ctx.blobs` data remains local
-  until a separate blob migration or remote-blob review path is implemented.
+`initialDbSnapshot` seeds D1 from a fenced local SQLite snapshot on first
+publication. `initialBlobSnapshot` transfers the corresponding objects to R2.
+The control plane validates their runtime, shortcode, and slug before upload;
+it never overwrites an active database or bucket with a later local seed.
+While shared, edits read remote snapshots and deploys apply migrations to D1.
+Unshare drains writers and restores both D1 and R2 locally before enabling
+local actions. See the [shared-state contract](../../../../docs/spaces-shared-state.md)
+for admission, failure, and recovery semantics.
 
 The build generates a Worker tsconfig and typechecks the space's
 `server/src/actions.ts` against a Cloudflare-only `@hatch/space-sdk` shim. That
@@ -157,10 +141,13 @@ base whether that sits at the origin root (prod) or behind a `/backend/<sid>/`
 reverse-proxy prefix (annotation rig). Cloudflare web artifacts return a Worker-relative
 `./blobs/public/<key>` or `./blobs/private/<key>?token=...` URL backed by the
 per-web-artifact R2 bucket bound as `BUCKET`, with HMAC-signed tokens for private
-blobs.
+blobs. Stateful downloads require a verified viewer and use `Cache-Control:
+no-store`, including blobs marked public within the app. Both Cloudflare and VM
+blob responses carry CSP `sandbox` and `nosniff`; attachments can display passive
+content but cannot execute scripts with the app's origin or permissions.
 
 Run the local Cloudflare exporter tests with:
 
 ```bash
-bun test cloudflare/build-cloudflare.test.mjs
+bun test --timeout 30000 cloudflare/build-cloudflare.test.mjs cloudflare/shared-state.test.ts
 ```

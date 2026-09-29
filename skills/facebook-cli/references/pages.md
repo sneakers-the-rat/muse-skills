@@ -48,9 +48,9 @@ facebook-cli pages posts cancel-schedule --page-id <page-id> --post-id <post-id>
 - `account-insights` includes Page identity; `posts list` includes post metadata,
   metrics and activity. Reuse these results rather than fetching every item
   again. Use `posts get` for specific posts; `access` is an optional diagnostic,
-  not a consent preflight or authorization grant. Reads retain connector
-  authorization and verification-code output guarding; never bypass a withheld
-  or failed read with another tool.
+  not a consent preflight or authorization grant. All Page discovery, content,
+  and analytics reads share one read permission and retain verification-code
+  output guarding; never bypass a withheld or failed read with another tool.
 - Command defaults return only a subset of metrics. When the user asks for
   every/all/complete account or post metric, or asks to identify anything
   unavailable or unreadable, run the exact command's `--help` and explicitly pass

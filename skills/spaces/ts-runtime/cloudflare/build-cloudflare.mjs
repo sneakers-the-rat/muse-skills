@@ -265,6 +265,8 @@ async function collectMigrations(spaceDir) {
 async function writeEntrypoint(entryDir, spaceDir) {
   await fs.mkdir(entryDir, { recursive: true });
   const entryPath = path.join(entryDir, "entry.ts");
+  const packageJson = await readJsonIfExists(path.join(spaceDir, "package.json"));
+  const slug = packageJson.hatch?.slug ?? path.basename(spaceDir);
   const runtimeImport = toImportSpecifier(entryDir, workerRuntimePath);
   const actionsPath = path.join(spaceDir, "server", "src", "actions.ts");
   const actionsImport = toImportSpecifier(entryDir, actionsPath);
@@ -274,7 +276,7 @@ async function writeEntrypoint(entryDir, spaceDir) {
       `import { createWorker } from "${runtimeImport}";`,
       `import { Actions } from "${actionsImport}";`,
       "",
-      "export default createWorker(Actions);",
+      `export default createWorker(Actions, ${JSON.stringify(slug)});`,
       "",
     ].join("\n"),
   );
@@ -387,12 +389,15 @@ async function readServerActionsShape(spaceDir) {
 async function writeDeployManifest({ spaceDir, outDir, workerPath }) {
   const packageJson = await readJsonIfExists(path.join(spaceDir, "package.json"));
   const workerJs = await fs.readFile(workerPath, "utf8");
+  const serverActions = await readServerActionsShape(spaceDir);
   const manifest = {
     runtime: "hatch-ts-cloudflare-v1",
+    sharedStateVersion: 1,
+    runWorkerFirst: serverActions.hasServerActions,
     slug: packageJson.hatch?.slug ?? path.basename(spaceDir),
     name: packageJson.hatch?.name ?? packageJson.name ?? path.basename(spaceDir),
     workerJs,
-    serverActions: await readServerActionsShape(spaceDir),
+    serverActions,
     migrations: await collectMigrations(spaceDir),
     clientFiles: await collectClientFiles(spaceDir),
   };

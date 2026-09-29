@@ -1,4 +1,6 @@
 import { drizzle } from "drizzle-orm/d1";
+import { ActionRequestError, readActionRequest } from "./action-request";
+import { admitSharedAction, sharedStateAvailable, SharedStateUnavailable, type SharedDatabase } from "./shared-state";
 import {
   createPrivilegedExecutor,
   inferenceOptionsToPayload,
@@ -12,7 +14,6 @@ import {
   type AgentSendResult,
   type AgentStatusResult,
   type ActionDefinition,
-  type ActionRpcRequest,
   type BlobClient,
   type BlobMetadata,
   type BlobPutData,
@@ -64,6 +65,7 @@ type R2ObjectBody = R2Object & {
 };
 
 type R2Bucket = {
+  put(key: string, value: BlobPutData, options: R2PutOptions & { onlyIf: { etagDoesNotMatch: string } }): Promise<R2Object | null>;
   put(key: string, value: BlobPutData, options?: R2PutOptions): Promise<R2Object>;
   get(key: string): Promise<R2ObjectBody | null>;
   head(key: string): Promise<R2Object | null>;
@@ -80,8 +82,7 @@ type CloudflareEnv = {
     fetch(request: Request): Promise<Response>;
   };
   BUCKET: R2Bucket;
-  DB: unknown;
-  SPACE_SLUG?: string;
+  DB: SharedDatabase;
   SPACE_SHORTCODE?: string;
   SPACE_ACTION_CREDENTIAL_EXPIRES_AT_MS?: string;
   SPACE_ACTION_CREDENTIAL_REFRESH_AFTER_MS?: string;
@@ -92,14 +93,18 @@ type CloudflareEnv = {
   SPACE_VERSION?: string;
 };
 
+type WorkerExecutionContext = { waitUntil(promise: Promise<unknown>): void };
+
 type WorkerModule = {
-  fetch(request: Request, env: CloudflareEnv): Promise<Response>;
+  fetch(request: Request, env: CloudflareEnv, execution: WorkerExecutionContext): Promise<Response>;
 };
 
 type ActionsExport = Record<string, unknown>;
 
 const jsonHeaders = {
   "content-type": "application/json; charset=utf-8",
+  "cache-control": "no-store",
+  "x-content-type-options": "nosniff",
 };
 
 const viewerHeaders = {
@@ -138,25 +143,26 @@ function isSpaceActionForbiddenError(error: unknown): error is SpaceActionForbid
 const BLOB_SIGNING_KEY_R2_PATH = "_internal/blob-signing-key.json";
 
 async function loadOrCreateBlobSigningKey(bucket: R2Bucket): Promise<CryptoKey> {
-  const existing = await bucket.get(BLOB_SIGNING_KEY_R2_PATH);
-  if (existing) {
-    const persisted = (await new Response(existing.body).json()) as { key_b64?: string };
-    if (typeof persisted.key_b64 === "string") {
-      const raw = Uint8Array.from(atob(persisted.key_b64), (c) => c.charCodeAt(0));
-      if (raw.length === 32) {
-        return crypto.subtle.importKey("raw", raw, { name: "HMAC", hash: "SHA-256" }, false, [
-          "sign",
-          "verify",
-        ]);
-      }
+  let existing = await bucket.get(BLOB_SIGNING_KEY_R2_PATH);
+  if (!existing) {
+    const raw = crypto.getRandomValues(new Uint8Array(32));
+    const key_b64 = btoa(String.fromCharCode(...raw));
+    const created = await bucket.put(BLOB_SIGNING_KEY_R2_PATH, JSON.stringify({ key_b64 }), {
+      httpMetadata: { contentType: "application/json" },
+      onlyIf: { etagDoesNotMatch: "*" },
+    });
+    if (created) {
+      return crypto.subtle.importKey("raw", raw, { name: "HMAC", hash: "SHA-256" }, false, ["sign", "verify"]);
     }
+    // Concurrent initialization has one winner. Every invocation uses that
+    // persisted key; existing links must never be invalidated by a losing put.
+    existing = await bucket.get(BLOB_SIGNING_KEY_R2_PATH);
   }
-  const raw = new Uint8Array(32);
-  crypto.getRandomValues(raw);
-  const key_b64 = btoa(String.fromCharCode(...raw));
-  await bucket.put(BLOB_SIGNING_KEY_R2_PATH, JSON.stringify({ key_b64 }), {
-    httpMetadata: { contentType: "application/json" },
-  });
+  if (!existing) throw new Error("Blob signing key is unavailable");
+  const persisted = await new Response(existing.body).json() as { key_b64?: unknown };
+  if (typeof persisted.key_b64 !== "string") throw new Error("Invalid blob signing key");
+  const raw = Uint8Array.from(atob(persisted.key_b64), c => c.charCodeAt(0));
+  if (raw.length !== 32) throw new Error("Invalid blob signing key");
   return crypto.subtle.importKey("raw", raw, { name: "HMAC", hash: "SHA-256" }, false, [
     "sign",
     "verify",
@@ -268,6 +274,8 @@ export function viewerFromHeaders(headers: Headers): Viewer | undefined {
   }
   const spaceId = optionalHeader(headers, viewerHeaders.spaceId);
   const displayName = decodeOptionalHeader(headers, viewerHeaders.displayName);
+  const isOwner = requireHeader(headers, viewerHeaders.isOwner);
+  if (isOwner !== "true" && isOwner !== "false") throw new Error("Invalid viewer owner flag");
 
   return {
     source: "cloudflare",
@@ -277,7 +285,7 @@ export function viewerFromHeaders(headers: Headers): Viewer | undefined {
     ...(spaceId !== undefined ? { spaceId } : {}),
     viewerFbid: requireHeader(headers, viewerHeaders.viewerFbid),
     ownerFbid: requireHeader(headers, viewerHeaders.ownerFbid),
-    isOwner: requireHeader(headers, viewerHeaders.isOwner) === "true",
+    isOwner: isOwner === "true",
     tokenExpiresAt,
     tokenId: requireHeader(headers, viewerHeaders.tokenId),
     ...(displayName !== undefined ? { displayName } : {}),
@@ -307,6 +315,7 @@ function buildActionMap(actionsExport: unknown): Map<string, CloudflareActionDef
 }
 
 function createCtx(
+  slug: string,
   env: CloudflareEnv,
   request: Request,
   action: CloudflareActionDefinition,
@@ -321,7 +330,7 @@ function createCtx(
     createPrivilegedTransport(env, viewer, invocationId, actionName),
   );
   return {
-    slug: env.SPACE_SLUG ?? "",
+    slug,
     invocationId,
     spaceDir: "",
     viewer,
@@ -1225,6 +1234,9 @@ async function handleBlobDownload(request: Request, env: CloudflareEnv): Promise
   const headers = new Headers();
   object.writeHttpMetadata(headers);
   headers.set("content-type", metadata.contentType);
+  // Uploaded documents must not execute with a viewer's app authority.
+  headers.set("content-security-policy", "sandbox");
+  headers.set("x-content-type-options", "nosniff");
   headers.set("etag", metadata.etag);
   headers.set("content-length", String(metadata.sizeBytes));
   let cacheControl: string;
@@ -1244,27 +1256,58 @@ async function handleBlobDownload(request: Request, env: CloudflareEnv): Promise
 
 // --- Worker entrypoint ---
 
-export function createWorker(actionsExport: unknown): WorkerModule {
+export function createWorker(actionsExport: unknown, slug: string): WorkerModule {
   const actions = buildActionMap(actionsExport);
 
-  return {
-    async fetch(request, env) {
-      const url = new URL(request.url);
+  async function handleRequest(request: Request, env: CloudflareEnv): Promise<Response> {
+    const url = new URL(request.url);
+    let finish: (() => Promise<void>) | undefined;
+    let viewer: Viewer | undefined;
+    try {
+      if (actions.size > 0) {
+        try { viewer = viewerFromHeaders(request.headers); } catch { /* Invalid trusted context is denied. */ }
+        if (!viewer || !viewer.spaceId ||
+            `${viewer.spaceSlug}-${viewer.spaceId}` !== env.SPACE_SHORTCODE ||
+            (viewer.isOwner && viewer.viewerFbid !== viewer.ownerFbid)) {
+          return jsonResponse({ error: "Sign in to open this shared app", code: "viewer_required" }, 401);
+        }
+        if (request.method === "GET" || request.method === "HEAD") {
+          if (!await sharedStateAvailable(env.DB)) throw new SharedStateUnavailable();
+        }
+      }
       if (
         (request.method === "GET" || request.method === "HEAD") &&
         /^\/blobs\/(?:public|private)\//.test(url.pathname)
       ) {
-        return handleBlobDownload(request, env);
+        const response = await handleBlobDownload(request, env);
+        if (actions.size > 0) response.headers.set("cache-control", "no-store");
+        return response;
       }
       if (request.method === "GET" || request.method === "HEAD") {
         const assetResponse = await env.ASSETS.fetch(request);
         if (assetResponse.status !== 404) {
-          return assetResponse;
+          if (actions.size === 0) return assetResponse;
+          const response = new Response(assetResponse.body, assetResponse);
+          response.headers.set("cache-control", "no-store");
+          return response;
         }
       }
 
+      if (url.pathname !== "/actions") return jsonResponse({ error: "Not found" }, 404);
       if (request.method !== "POST") {
         return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+
+      const body = await readActionRequest(request);
+      if ("kind" in body) {
+        if (actions.size > 0 && !await sharedStateAvailable(env.DB)) throw new SharedStateUnavailable();
+        const names = [...new Set([...actions.keys()].map(normalizeActionName))].sort();
+        const data = names.map(action => ({
+          slug,
+          action,
+          request_schema: z.toJSONSchema(actions.get(action)!.request, { io: "input", unrepresentable: "any" }),
+        }));
+        return jsonResponse({ data, version: 1 });
       }
 
       // Client-only web artifacts ship an empty action map: they are static
@@ -1275,17 +1318,6 @@ export function createWorker(actionsExport: unknown): WorkerModule {
           { error: "This web artifact has no server actions" },
           404,
         );
-      }
-
-      let body: ActionRpcRequest;
-      try {
-        body = (await request.json()) as ActionRpcRequest;
-      } catch {
-        return jsonResponse({ error: "Request body must be JSON" }, 400);
-      }
-
-      if (typeof body.action !== "string") {
-        return jsonResponse({ error: "Missing action" }, 400);
       }
 
       const action =
@@ -1305,42 +1337,63 @@ export function createWorker(actionsExport: unknown): WorkerModule {
         );
       }
 
-      try {
-        const data = await action.handler(
-          createCtx(
-            env,
-            request,
-            action,
-            body.action,
-            normalizeActionCallId(body.actionCallId),
-          ),
-          parsedArgs.data,
+      finish = await admitSharedAction(env.DB);
+      const data = await action.handler(
+        createCtx(
+          slug,
+          env,
+          request,
+          action,
+          body.action,
+          normalizeActionCallId(body.actionCallId),
+        ),
+        parsedArgs.data,
+      );
+      const parsedResponse = action.response.safeParse(data);
+      if (!parsedResponse.success) {
+        return jsonResponse(
+          {
+            error: "The app could not confirm the result. Reload to check your changes before trying again.",
+            code: "action_outcome_unknown",
+          },
+          409,
         );
-        const parsedResponse = action.response.safeParse(data);
-        if (!parsedResponse.success) {
-          return jsonResponse(
-            {
-              error: "Invalid action response",
-              issues: parsedResponse.error.issues,
-            },
-            500,
-          );
-        }
-        return jsonResponse({ data: parsedResponse.data, version: 1 });
-      } catch (error) {
-        if (isSpaceActionAuthRefreshRequiredError(error)) {
-          return jsonResponse(
-            { error: { code: error.code, refreshable: true }, authRefreshRequired: true },
-            401,
-          );
-        }
-        if (isSpaceActionForbiddenError(error)) {
-          return jsonResponse({ error: error.message }, 403);
-        }
-        const message =
-          error instanceof Error ? error.message : "Action execution failed";
-        return jsonResponse({ error: message }, 500);
       }
+      return jsonResponse({ data: parsedResponse.data, version: 1 });
+    } catch (error) {
+      if (error instanceof ActionRequestError) {
+        return jsonResponse({ error: error.message }, error.status);
+      }
+      if (error instanceof SharedStateUnavailable) {
+        const response = jsonResponse({ error: error.message, code: "shared_state_busy", retrySafe: true }, 503);
+        response.headers.set("retry-after", "3");
+        return response;
+      }
+      if (isSpaceActionAuthRefreshRequiredError(error)) {
+        return jsonResponse(
+          { error: { code: error.code, refreshable: true }, authRefreshRequired: true, retrySafe: false },
+          401,
+        );
+      }
+      if (isSpaceActionForbiddenError(error)) {
+        return jsonResponse({ error: error.message }, 403);
+      }
+      return finish
+        ? jsonResponse({ error: "The app could not confirm the result. Reload to check your changes before trying again.", code: "action_outcome_unknown" }, 409)
+        : jsonResponse({ error: "The app is temporarily unavailable. Please try again shortly.", code: "shared_state_unavailable", retrySafe: true }, 503);
+    } finally {
+      if (finish) await finish();
+    }
+  }
+
+  return {
+    fetch(request, env, execution) {
+      const response = handleRequest(request, env);
+      // Retain admission, effects, and cleanup through client disconnects.
+      // Cloudflare limits this grace period to 30 seconds; work terminated
+      // before cleanup remains recorded and must never be expired by guess.
+      execution.waitUntil(response);
+      return response;
     },
   };
 }
