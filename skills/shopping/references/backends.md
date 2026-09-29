@@ -2,33 +2,6 @@
 
 Load this file only when you need backend-specific filters.
 
-## Meta Catalog Search
-
-Base command:
-
-```sh
-CATALOG_RESULTS_JSON=$(mktemp "${TMPDIR:-/tmp}/meta-catalog-search.XXXXXX")
-meta-catalog-search --query "<q1>" --query "<q2>" -n <N> --out "$CATALOG_RESULTS_JSON"
-```
-
-Useful flags:
-- `--category`, `--gender` for hard constraints
-- `--brand` for brand or retailer/domain matching; verify results because backend matching is boosted, not guaranteed
-- `--currency` with `--min-price` / `--max-price` (values are cents)
-- `--color`, `--material`, `--style`, `--prefer-brand` for soft preferences
-The tool prints metadata-only summary output; product details live in the JSON file written with `--out`. Use `jq` to scan and filter the JSON file instead of reading the full file at once:
-
-```sh
-# Count products without reading every product
-jq '.count' "$CATALOG_RESULTS_JSON"
-
-# Preview the first five products with display fields only
-jq '.products[0:5] | map({rank, name, brand, price, sale_price, url, image_url})' "$CATALOG_RESULTS_JSON"
-
-# Stream matching-brand products with display fields only
-jq '.products[] | select((.brand // "") == "<brand>") | {rank, name, price, url, image_url}' "$CATALOG_RESULTS_JSON"
-```
-
 ## Facebook Marketplace
 
 Use for local, secondhand, pickup, strict-budget, and deal-hunting requests.
