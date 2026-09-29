@@ -31,6 +31,7 @@ import {
   type ActionDefinition,
   type Ctx,
   type JsonValue,
+  type LocalViewer,
   type PrivilegedContract,
   type SpaceQueryInvalidationInput,
   type SpaceToolClient,
@@ -281,6 +282,7 @@ function buildCtx(args: {
   blobDir?: string;
   spaceDb: SpaceDb;
   invocationId: string;
+  viewer?: LocalViewer;
   requestId: string;
   rootRequestId?: string;
   action: string;
@@ -334,6 +336,7 @@ function buildCtx(args: {
     invocationId: args.invocationId,
     spaceDir: args.spaceDir,
     db: args.spaceDb.accessor,
+    ...(args.viewer !== undefined ? { viewer: args.viewer } : {}),
     agent,
     inference,
     tool,
@@ -400,6 +403,7 @@ async function runInvocation(args: {
     blobDir,
     spaceDb,
     invocationId: command.invocation_id,
+    viewer: command.viewer,
     requestId: command.request_id,
     rootRequestId: command.root_request_id,
     action: command.action,

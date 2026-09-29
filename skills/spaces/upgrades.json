@@ -1,5 +1,5 @@
 {
-  "currentVersion": 22,
+  "currentVersion": 23,
   "versionField": "platformVersion",
   "upgrades": [
     {
@@ -424,6 +424,25 @@
         "Reloading the published artifact shows the same PERSISTED data. Transient view state such as the selected tab or filter may reset to its default; that is the intended outcome of holding it in component state.",
         "If the artifact keeps a single record, opening the published artifact in a second browser session shows that record without a token in the address. If it keeps several, every record that existed before the upgrade is still reachable from the UI.",
         "The TypeScript web artifact build/typecheck succeeds."
+      ]
+    },
+    {
+      "version": 23,
+      "id": "2026-09-25-local-action-viewer",
+      "title": "Authenticated local action viewers",
+      "runtime": "typescript",
+      "summary": "Authenticated local HTTP actions now receive ctx.viewer with source local, userId, ownerUserId, and isOwner. Cloudflare viewers carry source cloudflare and retain their share and token fields.",
+      "applicability": "TypeScript artifacts that read ctx.viewer or use the Viewer type. Existing checks that only read isOwner need no source change.",
+      "instructions": [
+        "Limit this upgrade to adapting identity-field reads to the Viewer union. Preserve existing action authorization guards and which callers they admit or reject; do not add, tighten, or loosen guards as part of this upgrade.",
+        "When ctx.viewer is present, narrow on ctx.viewer.source before reading identity fields: local uses userId and ownerUserId; cloudflare uses viewerFbid, ownerFbid, shareId, and token metadata. Never manufacture share or token values for local calls.",
+        "artifact.invoke_action, post_submit_action, managed crons with execution.kind=space_action, and web_artifacts.audit run without ctx.viewer, as do peer and notary-only callers. Missing viewer is not proof of ownership. Never fabricate a viewer, add an owner fallback, or create an unguarded write action to make these calls pass. If adapting identity fields exposes a conflict between required callers and owner-only access, report that authorization conflict in verification_notes rather than changing permissions."
+      ],
+      "verification": [
+        "Source review confirms that authorization guards are unchanged and source-specific identity fields are read only after narrowing ctx.viewer.source.",
+        "The artifact builds and typechecks with the updated viewer union.",
+        "Use available sandbox checks for changed identity-field handling. artifact.invoke_action and web_artifacts.audit have no viewer, so rejection by an existing strict owner-only guard is expected; do not change the guard to pass verification.",
+        "The edit builder cannot perform authenticated owner or nonowner browser checks. Record those paths as unverified in verification_notes. This capability limit alone does not block completing v23 after source review, build/typecheck, and the available sandbox checks; do not claim an owner save or reopen was verified."
       ]
     }
   ]

@@ -27,7 +27,7 @@ import {
   type ToolFinanceOptions,
   type ToolSearchResponse,
   type ToolWeatherOptions,
-  type Viewer,
+  type CloudflareViewer as Viewer,
 } from "./sdk";
 import {
   buildToolContent,
@@ -270,6 +270,7 @@ export function viewerFromHeaders(headers: Headers): Viewer | undefined {
   const displayName = decodeOptionalHeader(headers, viewerHeaders.displayName);
 
   return {
+    source: "cloudflare",
     authenticated: true,
     shareId: requireHeader(headers, viewerHeaders.shareId),
     spaceSlug: requireHeader(headers, viewerHeaders.spaceSlug),

@@ -36,7 +36,18 @@ export type SpaceDbAccessor = <
   TSchema extends Record<string, unknown> = Record<string, never>,
 >() => SpaceDb<TSchema>;
 
-export type Viewer = {
+/** User identity verified by the local daemon, without a share token. */
+export type LocalViewer = {
+  source: "local";
+  authenticated: true;
+  spaceSlug: string;
+  userId: string;
+  ownerUserId: string;
+  isOwner: boolean;
+};
+
+export type CloudflareViewer = {
+  source: "cloudflare";
   authenticated: true;
   shareId: string;
   spaceSlug: string;
@@ -48,6 +59,8 @@ export type Viewer = {
   tokenId: string;
   displayName?: string;
 };
+
+export type Viewer = LocalViewer | CloudflareViewer;
 
 export type BlobPutData = string | ArrayBuffer | ArrayBufferView | Blob;
 

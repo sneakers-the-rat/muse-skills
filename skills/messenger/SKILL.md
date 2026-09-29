@@ -273,14 +273,16 @@ For every send, Marketplace initiation, or edit, pass the body through
 `--text-stdin` as the final option and a single-quoted heredoc:
 
 ```sh
---text-stdin << 'HATCH_MSG'
+--text-stdin << 'MESSENGER_INPUT'
 exact message text
-HATCH_MSG
+MESSENGER_INPUT
 ```
 
 There is no `--text` flag. The quoted delimiter prevents shell expansion and
 preserves `$`, quotes, and newlines. Choose a delimiter absent from the body;
-never use an unquoted heredoc.
+never use an unquoted heredoc. Feed the heredoc directly to the CLI, without
+replacing it with an `echo`/`printf` pipeline or command substitution.
+`--text-stdin` cannot undo shell expansion that changed the body beforehand.
 
 ## Send a Message
 
@@ -317,15 +319,15 @@ Use names rather than IDs. Wait for explicit confirmation; if the user changes
 anything, show the revised preview and wait again. Then call exactly one form:
 
 ```sh
-hatch_messenger_cli send --cid '<CONVERSATION_ID>' [--attach <FILE>] --text-stdin << 'HATCH_MSG'
+hatch_messenger_cli send --cid '<CONVERSATION_ID>' [--attach <FILE>] --text-stdin << 'MESSENGER_INPUT'
 message text
-HATCH_MSG
+MESSENGER_INPUT
 ```
 
 ```sh
-hatch_messenger_cli send --to '<FACEBOOK_USER_ID>' [--attach <FILE>] --text-stdin << 'HATCH_MSG'
+hatch_messenger_cli send --to '<FACEBOOK_USER_ID>' [--attach <FILE>] --text-stdin << 'MESSENGER_INPUT'
 message text
-HATCH_MSG
+MESSENGER_INPUT
 ```
 
 For attachments, use a readable local path. If the source is outside the
@@ -368,9 +370,9 @@ rule:
 ```sh
 hatch_messenger_cli marketplace initiate \
   --listing-id <LISTING_ID> \
-  --text-stdin << 'HATCH_MSG'
+  --text-stdin << 'MESSENGER_INPUT'
 message text
-HATCH_MSG
+MESSENGER_INPUT
 ```
 
 `created: true` means a new thread was created and the message was sent.
@@ -473,9 +475,9 @@ and **After:** with the exact replacement, each as a Markdown blockquote. If
 the requested replacement changes, preview again.
 
 ```sh
-hatch_messenger_cli edit [--cid '<CONVERSATION_ID>'] --mid '<MESSAGE_ID>' --text-stdin << 'HATCH_MSG'
+hatch_messenger_cli edit [--cid '<CONVERSATION_ID>'] --mid '<MESSAGE_ID>' --text-stdin << 'MESSENGER_INPUT'
 replacement text
-HATCH_MSG
+MESSENGER_INPUT
 ```
 
 The replacement must exactly match the confirmed Message Text Input body.

@@ -2,7 +2,7 @@
 name: "facebook_cli"
 icon: "facebook"
 title: "Facebook"
-description: "Use when the user provides a Facebook URL or asks to read personal posts, comments, reactions, friends, timelines, profiles, stories, feeds, groups, events, or saved items, or to discover public events happening near a place, nearby, or in a local area on a date, or to create, edit, publish, or delete their own Marketplace listings. To find, browse, or buy Marketplace listings, use shopping instead."
+description: "Use when the user provides a Facebook URL or asks to read personal posts, comments, reactions, friends, timelines, profiles, stories, feeds, groups, events, or saved items, or to discover public events happening near a place, nearby, or in a local area on a date, or to create, edit, publish, or delete their own Marketplace listings. To find, browse, or buy Marketplace listings, use shopping instead. Use pages commands for managed Facebook Page discovery, insights, native draft editing/deletion, same-draft publication, approved posts and native scheduling."
 metadata: { "includeInPrompt": true }
 ---
 
@@ -19,8 +19,28 @@ link-sharing decode-url --url '<pasted link>'`, then follow
 
 ## Quick Reference
 
+The read-only post and Marketplace-only write restrictions below apply to
+personal-profile activity. Managed Pages separately support draft, post and
+scheduling writes gated by consent, Page access and operation approval.
+
 ```
 facebook-cli
+├── pages                                      # Read references/pages.md first
+│   ├── list [--limit N] [--after <cursor>]      # Managed Pages
+│   ├── access --page-id <id>                   # Page access diagnostic
+│   ├── account-insights --page-id <id>         # Page metrics
+│   ├── drafts
+│   │   ├── create --page-id <id> ...           # WRITE — prompts for approval
+│   │   ├── show --page-id <id> --draft-id <id> # Read a native draft
+│   │   ├── publish --page-id <id> ...          # WRITE — same draft; prompts for approval
+│   │   ├── edit --page-id <id> ...             # WRITE — prompts for approval
+│   │   └── delete --page-id <id> ...           # WRITE — prompts for approval
+│   └── posts
+│       ├── list --page-id <id>                 # Recent posts with metrics
+│       ├── get --page-id <id> --post-ids <ids>  # Selected post metrics
+│       ├── create --page-id <id> ...           # WRITE — publish or schedule; prompts for approval
+│       ├── reschedule --page-id <id> ...       # WRITE — prompts for approval
+│       └── cancel-schedule --page-id <id> ...  # WRITE — prompts for approval
 ├── post
 │   ├── read (--post-id <id> | --url <url>) # Read by numeric ID/PFBID or canonical post/photo/video URL
 │   ├── comments
@@ -129,7 +149,7 @@ The chains that are not mechanical:
    - **Profile-aware**: If the user's profile mentions hobbies or interests, suggest related workflows (e.g., cyclist -> "Catch up on what your cycling friends have posted").
    - **Time-aware**: Near holidays or weekends, suggest checking timeline for what friends are up to, or tidying up your own Marketplace drafts.
    - **Session-aware**: After publishing a listing -> "Check whether it went live or stayed a draft"; after viewing a post -> "See the reaction counts and what people are saying in the comments".
-4. **Only suggest what's real** — every suggestion must be achievable using the commands documented here. Most tools are **read-only** — do not suggest creating posts, adding reactions, or writing comments. The only write actions available are creating, editing, deleting, and publishing Marketplace listings.
+4. **Only suggest what's real** — every suggestion must be achievable using the commands documented here. Most personal-profile tools are **read-only** — do not suggest unsupported posts, reactions, or comments. Managed Pages support only the documented draft, post, and scheduling writes. Marketplace writes support only creating, editing, deleting, and publishing the user's own listings.
 5. **Keep it conversational** — short bulleted list with one-line descriptions. Offer to walk through any of them.
 
 ## References
@@ -137,6 +157,7 @@ The chains that are not mechanical:
 One file per feature area, each named for the area it covers:
 [references/friends.md](references/friends.md),
 [references/posts.md](references/posts.md),
+[references/pages.md](references/pages.md),
 [references/comments.md](references/comments.md),
 [references/reactions.md](references/reactions.md),
 [references/marketplace.md](references/marketplace.md),
@@ -160,7 +181,7 @@ One file per feature area, each named for the area it covers:
 3. **Refuse requests that could harm, profile, or surveil individuals.** Do not infer personal attributes (ethnicity, sexuality, political views, financial status, mental health, relationship fidelity) from social media activity. Do not characterize, label, or rank people based on their engagement patterns. Do not facilitate tracking of minors' online activity. Do not enable social comparison rooted in conflict (e.g., "who's taking sides"). When refusing, explain why the request is harmful. Do not offer partial compliance as a workaround — do not offer to "just show the data" so the user can make the judgment themselves, and do not suggest the user could accomplish the request through other means outside of Muse.
 4. If a command fails, report the error to the user.
 5. Do not bulk-scrape or enumerate profiles/posts.
-6. Marketplace listing create, edit, delete, and publish require approval because they change public-facing content. Saved-item add/remove and saved-collection creation may proceed from a clear request without an additional confirmation. Posts, comments, reactions, timeline, profile, marketplace browsing (including `marketplace my-listings`), groups browsing, events browsing, and feed are read-only — never suggest writes for those.
+6. Managed Page draft, post, and scheduling writes and Marketplace listing create, edit, delete, and publish prompt for approval because they change connector state; publication can change public-facing content. Saved-item add/remove and saved-collection creation may proceed from a clear request without an additional confirmation. Personal posts, comments, reactions, timeline, profile, marketplace browsing (including `marketplace my-listings`), groups browsing, events browsing, and feed are read-only — never suggest writes for those.
 7. All commands output JSON by default — do not pass `--format json` (the flag does not exist).
 8. For interest-based friend search, use `--json-query` with a FindPeople template. Get the user's FB ID from `facebook-cli me` first. Map user intent to the correct filter key: interests/hobbies → `topic`, sports → `sports`, employer → `company`, city → `location`, school → `college`, entertainment → `movies`/`music`/`tv_shows`/etc. **Use `topic` for general interests (NOT `interests`).** Example: `--json-query '{"intent":"FindPeople","target":"users","filters":{"friend_by":["FB_ID"],"topic":["hiking"]}}'`. Results include `match_context` with groups/pages/profile_details — parse XML tags from context strings for display. See [friends.md](references/friends.md) for full filter table and response format.
 9. **Always use facebook-cli for structured lookups — never social.search.** For any request involving friends, profiles, timelines, posts, comments, or reactions, always use `facebook-cli` commands. Marketplace is split: your own listings are facebook-cli's, and finding or browsing listings to buy is the `shopping` skill's. Do not use social.search or other tools as substitutes for operations that facebook-cli supports. Those tools lack access to the same structured data. The only exception is free-text semantic search across the user's Facebook graph (use social.search for that). When cross-referencing (e.g., which friends posted in a group), use `facebook-cli me friends` to get the friend list and cross-reference against post authors.

@@ -46,6 +46,8 @@ export {
   type SpaceDb,
   type SpaceDbAccessor,
   type Viewer,
+  type LocalViewer,
+  type CloudflareViewer,
 } from "../../sdk/src/server-contract";
 
 export {

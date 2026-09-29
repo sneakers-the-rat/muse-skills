@@ -57,6 +57,8 @@ export {
   type SpaceDb,
   type SpaceDbAccessor,
   type Viewer,
+  type LocalViewer,
+  type CloudflareViewer,
 } from "./server-contract";
 
 // Local handle for the `Ctx` interface below; the full set of these symbols

@@ -4,10 +4,13 @@
 // The daemon-side dispatcher (Rust) is the canonical schema authority — these
 // types must stay byte-compatible with what the daemon produces and consumes.
 
+import type { LocalViewer } from "@hatch/space-sdk";
+
 export interface InvokeCommand {
   kind: "invoke";
   action: string;
   args: Record<string, unknown>;
+  viewer?: LocalViewer;
   invocation_id: string;
   request_id: string;
   slug: string;
