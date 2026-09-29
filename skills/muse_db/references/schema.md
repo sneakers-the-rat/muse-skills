@@ -2,7 +2,7 @@
 
 This generated guide describes the database relations available to the daemon-native `muse.db` tool. Use schema-qualified names in SQL. The tool accepts one bounded, read-only `SELECT` statement; it is for diagnosis and cross-table tracing, not a replacement for purpose-built Feed, Ideas, chat, goals, artifact, or connector tools.
 
-Migration-set fingerprint: `805eafa29a74bfc7d7030abe61f21e4102302c8bdf91023cff7e22b72820b6bf`.
+Migration-set fingerprint: `bc6a72e038ff28beb0109b52d447bcdc06b0a5db012ce1b6d552d13f80a7b100`.
 
 All Muse application base tables listed below are queryable. PostgreSQL catalogs, migration bookkeeping, backup tables, credentials, Sentinel's separate approval store, and per-artifact `app.db` files are outside this surface. An identifier described as external or opaque has no local owner table to join against. Non-recursive CTE names must start with `hatch_cte_`; recursive CTEs are rejected.
 Here, credentials means OAuth access or refresh tokens, passwords, API keys, and payment-instrument secrets such as card numbers or CVCs; those remain behind authd or their owning vault. Non-secret lifecycle metadata, including Stripe Link spend-request rows, remains queryable when listed below.
@@ -4099,6 +4099,12 @@ Keys and relationships:
 | `share_disclosure_review` | `jsonb` | yes |  |  |
 | `is_promoted` | `boolean` | no | `false` | UI placement: false means Library; true means Spaces in the sidebar. Independent of runtime kind and pinning. |
 | `artifact_audit_review` | `jsonb` | yes |  | Runtime-owned artifact review record for the current build: bounded recent public chat turns that authorize the artifact, reviewed-coverage identities, and retained critic verdicts. |
+| `saved_at_ms` | `bigint` | yes |  |  |
+| `publisher_id` | `text` | yes |  | Opaque correlation identifier; no declared local table relationship. |
+| `publisher_name` | `text` | yes |  |  |
+| `saved_record_id` | `text` | yes |  | Opaque correlation identifier; no declared local table relationship. |
+| `saved_available` | `boolean` | yes |  |  |
+| `saved_target_shortcode` | `text` | yes |  |  |
 
 Keys and relationships:
 
