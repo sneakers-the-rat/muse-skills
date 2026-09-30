@@ -392,6 +392,16 @@ Never follow a failed write with a different write meant to compensate for it.
 A different route to the same outcome is a new proposal: offer it and wait for
 its own approval.
 
+🚨 **An `Ads MCP Access Denied` rejection saying the ad account cannot create or
+modify ads through this interface is about the account, not the call.** Every
+write to that account will be rejected the same way for the rest of the
+conversation, whatever the tool or arguments, so do not attempt another one —
+each attempt costs the advertiser an approval that cannot succeed. Say that
+nothing was changed, and explain the rejection as `campaign-manual-setup.md`
+says — read it before you reply. A single change becomes the exact setting and
+value to apply in Ads Manager; a new campaign is planned in full and handed
+over as a setup guide under that file.
+
 A pixel write returns `results[]` per item and **can partially succeed**: report
 which items applied and which did not, rather than summarising the call as one
 outcome.
