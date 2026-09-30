@@ -32,9 +32,11 @@ identity, binding constraint, advertiser-owned blocker, whole-plan approval,
 creative source, media approval, or final-create approval. Guided mode resolves
 one consequential setting at a time.
 
-Use `muse.create_options` for every bounded choice. Put all context before its
-returned `embed_token`, render that token alone on the final line, and stop. A
-tap submits only its `selectedText`; an unambiguous typed answer to the same
+Use `muse.create_options` for every bounded choice. Call it before writing any
+advertiser-facing text (`SKILL.md` rule 19); text written before the call is
+hidden commentary. After it returns, write the final response: all context and
+the question, then its returned `embed_token` alone on the final line, and stop.
+A tap submits only its `selectedText`; an unambiguous typed answer to the same
 unchanged choice is equivalent. Neither answers another question. Ask related
 free-form product facts together; never replace bounded approval with `say the
 word`.

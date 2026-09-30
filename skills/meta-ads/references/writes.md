@@ -11,7 +11,7 @@ reaches for most:
 - `references/response-style.md` — a confirmation sentence is prose. An
   objective is `Sales`, never `OUTCOME_SALES`; a bid strategy is
   `Highest volume`, never `LOWEST_COST_WITHOUT_CAP`; a status is `Paused`. One
-  currency notation, figures copied exactly, thousands grouped. The write path
+  currency notation, thousands grouped. The write path
   echoes more coded values back than any read does, because it restates what it
   is about to set.
 - `references/account-scope.md` — resolving the wrong account is worse here than
@@ -492,8 +492,13 @@ that fails:
   `optimization_goal` and `targeting` are all required, so "make me an ad set for
   £40 a day" cannot be satisfied from the request alone. The three do not all get
   the same treatment. `billing_event` and `optimization_goal` follow from the
-  campaign's objective, so read them off the parent or off a comparable existing
-  ad set and say that is what you did. **`targeting` is an audience, and copying
+  campaign's objective: take the goal from the `valid_optimization_goals` the
+  campaign returned, or off a comparable existing ad set and say that is what
+  you did. Send `billing_event: IMPRESSIONS`; the schema lists other values, but
+  they pair with only a few goals and are rejected otherwise. Some goals also
+  need a `destination_type`: `POST_ENGAGEMENT` takes `ON_POST` and `PAGE_LIKES`
+  takes `ON_PAGE`. For video, optimise for `THRUPLAY`, not `VIDEO_VIEWS`.
+  **`targeting` is an audience, and copying
   one off a neighbouring ad set is inventing it** — the advertiser never named
   that audience, and safety rule 1 does not stop applying because the value came
   from somewhere in their account. Send the broad Advantage+ Audience default
@@ -543,6 +548,7 @@ writing at all, which costs the advertiser far more than the change was worth.
 | Intent | Tool |
 |---|---|
 | rename, re-budget, reschedule, pause an existing object | `ads_update_entity` |
+| change an existing ad's image, video, text, link or call to action | a new creative with `ads_create_creative`, then a new ad with `ads_create_ad`; creatives cannot be edited in place. The original ad keeps its status, and keeps delivering if it is live: say so, and offer to pause it (or, in a paused hierarchy, archive it) as its own approved step before any publish |
 | publish drafts or activate/resume an object | `ads_activate_entity` |
 | create a campaign / ad set / ad / creative | `ads_create_campaign`, `ads_create_ad_set`, `ads_create_ad`, `ads_create_creative` |
 
@@ -577,6 +583,12 @@ that those come from retrieved policy text, never from memory. The declaration
 applies them; your job is to make it, say you made it, and let the retrieved
 policy say what it changes.
 
+For housing, employment, or financial products and services, the declaration
+also has to reach every ad set: send `targeting_as_signal: 0` on each
+`ads_create_ad_set` in that campaign. Left unset, the tool switches Advantage
+detailed targeting on by default, which these categories do not allow, and the
+create is rejected.
+
 Where no category applies, leave the argument alone. An unwarranted declaration
 is not the safe default — it forces real targeting restrictions onto a
 legitimate advertiser, which rule 9 treats as a failure of the same severity as
@@ -600,9 +612,16 @@ to duplicate what you cannot read turns a working capability into a false
 carry a budget at all depends on the parent, and only the campaign can tell you.
 A campaign holding `campaign_daily_budget` or `campaign_lifetime_budget` runs
 campaign budget optimisation, and an ad set under it is rejected for carrying
-its own budget or its own bid strategy. Nothing in the ad-set arguments says so,
+its own budget or its own bid strategy, or for an `optimization_goal` that
+differs from its siblings'. Nothing in the ad-set arguments says so,
 so an unchecked guess here is the single most common way a creation chain
 collapses into a loop of rejected attempts.
+
+The same read settles the rest of the ad set. Apply
+`references/campaign-delivery-compatibility.md` to the new ad set against the
+parent's objective, budget owner and bid strategy, and against the goal its
+existing ad sets use, before composing the create. An ad set added to an
+existing campaign gets the same compatibility check as one in a new campaign.
 
 When the parent runs campaign budget optimisation and the advertiser asks for an
 ad-set budget, say the budget lives on the campaign and stop there.
