@@ -88,6 +88,22 @@ Existing Ads references need no upload. A buildable source is:
 - catalog carousel: a resolved healthy product set; or
 - boosted/partnership format: the exact supported post and identity.
 
+**A message ad has no web destination, so never ask the advertiser for one.**
+This turns on the ad set's `destination_type` alone, whatever the objective:
+`MESSENGER`, `WHATSAPP`, or `INSTAGRAM_DIRECT` makes it a message ad. Use the
+matching button and set `link_url` to the channel's standard value, never an
+advertiser answer:
+
+| Channel | Button | `link_url` | Needs |
+|---|---|---|---|
+| Messenger | `MESSAGE_PAGE` | `https://m.me/<page_id>` | the returned Page ID |
+| WhatsApp | `WHATSAPP_MESSAGE` | `https://api.whatsapp.com/send` | a WhatsApp number connected to the Page |
+| Instagram Direct | `INSTAGRAM_MESSAGE` | `https://www.instagram.com/` | the Page's connected Instagram account as `instagram_user_id` |
+
+Never guess a Page or Instagram ID. When a channel's prerequisite is missing,
+say what the advertiser must connect instead of building the ad. Describe the
+button as opening a chat and keep links out of advertiser-facing text.
+
 **Generating the ad's content is not available for every advertiser.** Making a
 new image, and writing the ad's words, are both switched off for ads in these
 categories: social issues, elections or politics; housing, employment, or

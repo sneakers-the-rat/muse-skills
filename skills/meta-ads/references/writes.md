@@ -580,7 +580,8 @@ claiming that a pause or other change has taken effect.
 and a node is ready only when everything it depends on exists and is in hand.**
 A creative needs the media reference its upload returned (`image_hash` or
 `video_id`, plus a thumbnail for video) and, for image and carousel ads, the
-destination `link_url`; an existing post (`object_story_id`) replaces the media
+destination `link_url` (for a message ad, the standard link in
+`campaign-creative.md`); an existing post (`object_story_id`) replaces the media
 and is never combined with it. An ad needs `creative` naming exactly one source.
 A creative's format must also be one the parent campaign's objective accepts —
 when an ad is rejected as incompatible with its objective, that is a planning

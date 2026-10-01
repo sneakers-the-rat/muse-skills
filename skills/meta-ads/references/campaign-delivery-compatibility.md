@@ -35,7 +35,7 @@ values; use advertiser-facing names in responses.
 | Website purchases or conversion value | `OUTCOME_SALES` with `OFFSITE_CONVERSIONS` or `VALUE`, a website destination, and a returned eligible conversion source plus a supported event |
 | Website lead conversions | `OUTCOME_LEADS` with `OFFSITE_CONVERSIONS`, a website destination, and a returned eligible conversion source plus the selected lead event |
 | Instant-form leads | `OUTCOME_LEADS` with `LEAD_GENERATION` or `QUALITY_LEAD`, an on-ad destination, and the returned Page and form |
-| Messaging conversations | An objective matching the stated outcome with `CONVERSATIONS`, a matching Messenger, WhatsApp, or Instagram Direct destination, and its returned identity |
+| Messaging conversations | An objective matching the stated outcome with `CONVERSATIONS`, a matching Messenger, WhatsApp, or Instagram Direct destination, and its returned identity; the creative uses the channel's message button and standard link per `campaign-creative.md`, never an advertiser-supplied URL |
 | Page Likes | `OUTCOME_ENGAGEMENT` with `PAGE_LIKES`, the Page destination and returned Page; use a live-supported billing event, normally impressions |
 | Post engagement | `OUTCOME_ENGAGEMENT` with `POST_ENGAGEMENT`, an on-post destination, and the returned Page/post or supported new-ad shape |
 | Profile visits | `OUTCOME_TRAFFIC` with `VISIT_INSTAGRAM_PROFILE` or `PROFILE_VISIT` and the matching returned profile destination |

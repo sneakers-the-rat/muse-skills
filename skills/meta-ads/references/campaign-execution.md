@@ -35,7 +35,8 @@ read, return to the earliest open decision before requesting final approval.
 Copy field names and enum values exactly from the live schema; never translate a
 human label into a guessed provider value. An identifier is not a URL. Do not
 construct a URL pattern from an ID unless the live schema explicitly defines
-that transformation.
+that transformation, or the ad set's `destination_type` is `MESSENGER`,
+`WHATSAPP`, or `INSTAGRAM_DIRECT`, where `campaign-creative.md` gives the link.
 
 Only when that tool's schema exposes `advertiser_request`, use the advertiser's
 complete current multi-turn wording required by `SKILL.md`; never add an
