@@ -402,6 +402,14 @@ says — read it before you reply. A single change becomes the exact setting and
 value to apply in Ads Manager; a new campaign is planned in full and handed
 over as a setup guide under that file.
 
+**Some rejections name something only the advertiser can change** — the Page
+has not accepted the Lead Ads terms, there is no payment method, the Instagram
+account is restricted, two-factor authentication or a security checkpoint is
+required, or the post being boosted no longer exists. No retry and no other
+write that depends on the same thing can succeed. Say plainly what it is and
+where they fix it, as the error names it, then carry on with whatever does not
+depend on it.
+
 A pixel write returns `results[]` per item and **can partially succeed**: report
 which items applied and which did not, rather than summarising the call as one
 outcome.
@@ -568,12 +576,21 @@ only `status` in `fields`.
 In draft mode, updates are staged until publication. Check the result before
 claiming that a pause or other change has taken effect.
 
-**Creation is a dependency graph: campaign → ad sets, creatives → ads.** For a
-complete campaign, follow `references/campaign-execution.md`: inspect the live
-input schemas, obtain final approval for the exact paused hierarchy, then call
-the individual create tools in dependency order. Use only returned parent and
-media references. Stop after a deterministic rejection; reconcile an ambiguous
-result before deciding whether any dependent write is safe.
+**Creation is a dependency graph: campaign → ad sets, media → creatives → ads,
+and a node is ready only when everything it depends on exists and is in hand.**
+A creative needs the media reference its upload returned (`image_hash` or
+`video_id`, plus a thumbnail for video) and, for image and carousel ads, the
+destination `link_url`; an existing post (`object_story_id`) replaces the media
+and is never combined with it. An ad needs `creative` naming exactly one source.
+A creative's format must also be one the parent campaign's objective accepts —
+when an ad is rejected as incompatible with its objective, that is a planning
+decision to reopen with the advertiser, not an argument to adjust. For a
+complete campaign, follow
+`references/campaign-execution.md`: inspect the live input schemas, obtain final
+approval for the exact paused hierarchy, then call the individual create tools
+in dependency order. Use only returned parent and media references. Stop after a
+deterministic rejection; reconcile an ambiguous result before deciding whether
+any dependent write is safe.
 
 **A Special Ad Category has to be DECLARED on the write, not just discussed.**
 `special_ad_categories` is optional in the schema and **defaults to `[]`**, so a

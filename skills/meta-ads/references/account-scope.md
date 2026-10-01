@@ -40,7 +40,9 @@ account after an access failure.
 Two fields on each `ads_get_ad_accounts` entry gate what you may do next:
 
 - `is_ads_mcp_enabled` — when false, do not use that `ad_account_id` or any ad
-  object under it in a later call.
+  object under it in a later call. Every such call is refused as "not enabled
+  for the Ads MCP", so check the flag before the first call on an account,
+  including one the advertiser named by id.
 - `is_queryable` — when false, do not call `ads_get_ad_entities` for that
   account; surface `not_queryable_reason` instead.
 
