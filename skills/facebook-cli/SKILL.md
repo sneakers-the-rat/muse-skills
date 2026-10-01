@@ -88,9 +88,11 @@ facebook-cli
 
 ## Account Linking
 
-Before running any facebook-cli command, verify the user's Facebook account is connected by running `facebook-cli me`, except for `facebook-cli marketplace search`, `facebook-cli marketplace listing details`, and `facebook-cli marketplace seller-info`. If the command returns account info (name and profile ID), the account is connected — proceed normally. Cache this result for the rest of the conversation; do not re-run the check before every command. If any subsequent command fails with an auth or account error, re-run `facebook-cli me` to recheck account linking status.
+Use `facebook-cli me` to get the user's account identity when the task needs it. Reuse a successful result already in context. Do not run it just to check connection status before another command.
 
-If the command fails or returns an error indicating no account is linked, the account is not connected. Get the connect URL by running `facebook-cli connect-url` (it outputs JSON with a `connect_url` field), then tell the user, substituting that URL:
+For a user-requested task, recheck after an account change or authentication error. A timeout or rate limit does not establish an account change or disconnection.
+
+Only a successful empty result or an explicit not-linked response establishes that no account is connected. If linking is needed, run `facebook-cli connect-url` and use its `connect_url`:
 
 > Your Facebook account is not connected. To connect it, visit [Meta Accounts Center](`connect_url`) and link your Facebook account.
 
