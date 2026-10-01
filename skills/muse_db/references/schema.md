@@ -2,7 +2,7 @@
 
 This generated guide describes the database relations available to the daemon-native `muse.db` tool. Use schema-qualified names in SQL. The tool accepts one bounded, read-only `SELECT` statement; it is for diagnosis and cross-table tracing, not a replacement for purpose-built Feed, Ideas, chat, goals, artifact, or connector tools.
 
-Migration-set fingerprint: `c4ab68a6aae061f91818c725712461accb73a8affd54e7e632ae5dc2f34bc7fd`.
+Migration-set fingerprint: `9b8575628206745e9350b3b7df759d9bcfbe1ebb0cdc33596255d6edcd65980c`.
 
 All Muse application base tables listed below are queryable. PostgreSQL catalogs, migration bookkeeping, backup tables, credentials, Sentinel's separate approval store, and per-artifact `app.db` files are outside this surface. An identifier described as external or opaque has no local owner table to join against. Non-recursive CTE names must start with `hatch_cte_`; recursive CTEs are rejected.
 Here, credentials means OAuth access or refresh tokens, passwords, API keys, and payment-instrument secrets such as card numbers or CVCs; those remain behind authd or their owning vault. Non-secret lifecycle metadata, including Stripe Link spend-request rows, remains queryable when listed below.
@@ -2655,6 +2655,7 @@ Keys and relationships:
 | `finalization_id` | `text` | yes |  | Opaque correlation identifier; no declared local table relationship. |
 | `avatar_milestones_json` | `text` | no | `'{}'::text` |  |
 | `legacy_folded_at_ms` | `bigint` | yes |  |  |
+| `advanced_avatar_variants_json` | `text` | no | `'{}'::text` |  |
 
 Keys and relationships:
 
