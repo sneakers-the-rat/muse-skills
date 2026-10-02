@@ -65,10 +65,11 @@ unsupported. Do not invent a schema or bypass the CLI with a direct API call.
   `update_flow` changes the flow status AND all its actions. Read `get_flow`,
   `get_flow_action`, and `get_flow_message` before and after changes. Making a
   flow or action live can start delivering messages.
-- Audiences: list membership does not grant or revoke marketing consent; use
-  subscription tools for consent changes. Adding list members, subscribing
-  profiles, or creating events can trigger flows. Check the relevant flows
-  before those changes.
+- Audiences: use `get_profiles_for_list` to enumerate a list's members. List
+  membership does not grant or revoke marketing consent; use subscription
+  tools for consent changes. Adding list members, subscribing profiles, or
+  creating events can trigger flows. Check the relevant flows before those
+  changes.
 - Bulk changes, merges, and deletions: confirm the target set and consequences.
   Profile deletion is permanent. Preserve returned job IDs and use the matching
   job-status read before claiming completion. After any uncertain write or
