@@ -1,7 +1,6 @@
 ---
 name: "messenger_read"
 title: "Messenger"
-icon: "messenger"
 description: "Work with the user's Messenger account: read call history; read and search contacts; read, search, and summarize conversations; send, react to, unsend, or edit messages; and message Marketplace listing threads."
 category: "communication"
 metadata: { "includeInPrompt": true }

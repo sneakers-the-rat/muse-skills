@@ -1,7 +1,6 @@
 ---
 name: "threads"
 description: "Read and manage the user's Threads account: profile, posts, feed, saved posts, activity, insights, social graph, search, trends, and a specific post by URL or ID. Can tune feed ranking and publish posts on request."
-icon: "threads"
 metadata: { "includeInPrompt": true }
 ---
 

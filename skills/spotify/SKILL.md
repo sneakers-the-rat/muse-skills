@@ -1,7 +1,6 @@
 ---
 name: "spotify"
 description: "Discover, search, and manage Spotify music, podcasts, and playlists, including deleting shows or episodes you created with Save to Spotify."
-icon: "spotify"
 metadata: { "includeInPrompt": true }
 ---
 

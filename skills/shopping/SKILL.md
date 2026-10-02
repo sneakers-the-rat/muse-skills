@@ -1,6 +1,6 @@
 ---
 name: "shopping"
-description: "Use for any product or shopping question: find, reverse image search, shopping Instagram/Marketplace links, buy, compare, or evaluate real products with prices, images, and product page URLs, including buying or browsing Facebook Marketplace listings. Use when presenting shopping search results from any source. For shopping intent, load this skill first before any other skills."
+description: "Use for any product or shopping question: find, reverse image search, shopping Instagram/Facebook/Marketplace links, buy, compare, or evaluate real products with prices, images, and product page URLs, including buying or browsing Facebook Marketplace listings. Use when presenting shopping search results from any source. For shopping intent, load this skill first before any other skills."
 metadata:
   includeInPrompt: true
 ---
@@ -124,6 +124,13 @@ pay. Remembering products yourself gets you none of that.
 3. If the shopping context contains product IDs, use `shopping product-details --product-id <product id>` to fetch the corresponding product details. Write a temporary `{"products": [...]}` JSON file whose entries copy `product.id`, `product.name`, `product.price`, `product.url`, and `product.images[0].url` verbatim from the product-details response into `product_id`, `price`, `name`, `url`, and `image_url`. Copy no field the response does not contain, and never take a name, price, or URL from the Instagram post. Pass that file and the copied product IDs to `shopping.resolve_results`. Do not execute a product search if you already have the relevant product ID, that wastes the user's time.
 4. If the shopping context contains no product IDs, execute the product discovery workflow using the data provided in the shopping context.
 5. Surface the found products in the shopping results widget and mention them via product markers in the text response.
+
+### Shopping Facebook reel links
+
+1. Use `facebook-cli post read --url '<link>'` to fetch the shopping context for the provided `facebook.com/reel/` link. Do not open the link in the browser. Its `shoppable_products` are the products Facebook identified in the reel.
+2. If the user named a product, shop for that product. Otherwise, shop for the products in `shoppable_products`. If there are none, ask the user which product they want.
+3. Execute the product discovery workflow for those products using the data provided in the shopping context, such as `brand_name`, `color`, and `product_name`, together with any constraints the user gave, but skip browser product search and search with `meta-catalog-search` only.
+4. Surface the found products in the shopping results widget and mention them via product markers in the text response.
 
 ## Meta Catalog Search
 
