@@ -5,7 +5,6 @@ description: >-
   flows, subscriber lists, and audience segments. Use to compare campaign
   performance and revenue, find recent customers, plan audience targeting, and
   manage marketing content and subscriptions through Klaviyo's official MCP server.
-icon: "klaviyo"
 metadata: { "includeInPrompt": false }
 ---
 

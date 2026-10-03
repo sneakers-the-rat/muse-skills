@@ -6,7 +6,6 @@ description: >-
   and slide decks, campaign artwork, flyers and banners, applying saved brand kits
   and templates, and resizing designs for social posts and stories through Canva's
   official MCP server.
-icon: "canva"
 metadata: { "includeInPrompt": false }
 ---
 
@@ -84,8 +83,8 @@ older token.
 Treat an explicit creation count as a hard mutation limit. After a
 `create-design` job succeeds, do not create, copy, or resize another design to
 correct its wording, layout, or quality unless the user explicitly authorizes
-another design. Report the mismatch and, when possible, offer to correct the
-completed design directly in Canva.
+another design. Report the mismatch and provide the Canva link so the user can
+correct the completed design in the Canva editor.
 
 ## Upload and transform images
 
@@ -127,10 +126,12 @@ Before `autofill-design`, inspect `get-design-dataset` or
 `get-brand-template-dataset` and match its field names/types. Set
 `update_in_place` only when the user requested overwriting that design.
 
-For brand-template updates, do not begin the workflow unless the current live
-catalogue provides every required step. Use `publish-brand-template` only when
-the user requested organization-wide publication. Publishing affects a reusable
-shared template.
+Updating a brand template requires creating its draft, editing and saving that
+draft, then publishing it. The current launch catalogue cannot edit or save the
+draft, so provide the Canva link and ask the user to complete those steps in the
+Canva editor. Use `publish-brand-template` only after the user confirms the
+edited draft is ready and requests organization-wide publication. Publishing
+affects a reusable shared template.
 
 Resolve Canva shortlinks before using designs. Confirm `get-export-formats`
 before `export-design`. Use `help` for current Canva product support questions,
