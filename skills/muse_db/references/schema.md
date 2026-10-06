@@ -2,7 +2,7 @@
 
 This generated guide describes the database relations available to the daemon-native `muse.db` tool. Use schema-qualified names in SQL. The tool accepts one bounded, read-only `SELECT` statement; it is for diagnosis and cross-table tracing, not a replacement for purpose-built Feed, Ideas, chat, goals, artifact, or connector tools.
 
-Migration-set fingerprint: `cabd4754511acb0af1726323b528b007236d7cb0907ba4c13f4ea0298c83208e`.
+Migration-set fingerprint: `4938415adac5bb1f16b1b5c9c02ee5c8b325d4ea063053e3fae9521d6b2ce9e4`.
 
 All Muse application base tables listed below are queryable. PostgreSQL catalogs, migration bookkeeping, backup tables, credentials, Sentinel's separate approval store, and per-artifact `app.db` files are outside this surface. An identifier described as external or opaque has no local owner table to join against. Non-recursive CTE names must start with `hatch_cte_`; recursive CTEs are rejected.
 Here, credentials means OAuth access or refresh tokens, passwords, API keys, and payment-instrument secrets such as card numbers or CVCs; those remain behind authd or their owning vault. Non-secret lifecycle metadata, including Stripe Link spend-request rows, remains queryable when listed below.
@@ -2722,6 +2722,8 @@ Keys and relationships:
 | `run_location_context_json` | `text` | yes |  |  |
 | `owner_kind` | `text` | yes |  | Creation origin: user, main_agent, or cron; null when unknown. Immutable across takeover and continuation. User leases have a null owner_agent_id and reserve root_message_id, stream_owner_message_id and tool_call_id with task_id and have no executing agent, chat card or terminal chat delivery. Rust owns the vocabulary and lifecycle. |
 | `broker_instance` | `text` | no | `'user'::text` | Immutable physical browser owner selected by trusted admission: user or cron. Independent of logical owner_kind and retained across continuation. |
+| `wallet_selection_provider` | `text` | yes |  | Validated wallet provider selected for the current browser task |
+| `wallet_selection_payment_method_id` | `text` | yes |  | Opaque correlation identifier; no declared local table relationship. Opaque validated wallet payment-method id selected for the current browser task |
 
 Keys and relationships:
 
