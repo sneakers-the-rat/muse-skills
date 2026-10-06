@@ -2,12 +2,12 @@
 
 This generated guide describes the database relations available to the daemon-native `muse.db` tool. Use schema-qualified names in SQL. The tool accepts one bounded, read-only `SELECT` statement; it is for diagnosis and cross-table tracing, not a replacement for purpose-built Feed, Ideas, chat, goals, artifact, or connector tools.
 
-Migration-set fingerprint: `caca6b1333d5019b1b448e984dffd7537cf87740ed1f9547c4386f0ef5e7ef7a`.
+Migration-set fingerprint: `cabd4754511acb0af1726323b528b007236d7cb0907ba4c13f4ea0298c83208e`.
 
 All Muse application base tables listed below are queryable. PostgreSQL catalogs, migration bookkeeping, backup tables, credentials, Sentinel's separate approval store, and per-artifact `app.db` files are outside this surface. An identifier described as external or opaque has no local owner table to join against. Non-recursive CTE names must start with `hatch_cte_`; recursive CTEs are rejected.
 Here, credentials means OAuth access or refresh tokens, passwords, API keys, and payment-instrument secrets such as card numbers or CVCs; those remain behind authd or their owning vault. Non-secret lifecycle metadata, including Stripe Link spend-request rows, remains queryable when listed below.
 
-The model's private reasoning is never readable here. Thinking items and provider-encrypted redacted-thinking items are stored beside ordinary transcript records, so each table that carries them is served through a redacted security-barrier view. Each affected table's note below says whether it filters out reasoning rows, withholds columns that embed reasoning, or both. A withheld column is not part of the table for this tool, so a query naming it fails as an unknown column; a filtered row is absent without error. Check the table's note before reading an absence or an unknown-column error as a gap in the records: where the note names no row filter, a missing row is a genuine gap, and where it names no withheld column, an unknown column is a mistake in the query. The tool also authenticates as a least-privilege database role holding SELECT on exactly the relations listed here, so nothing outside this guide is reachable.
+The model's private reasoning is never readable here. Thinking items and provider-encrypted redacted-thinking items are stored beside ordinary transcript records, so each table that carries them is served through a redacted security-barrier view. Saved per-turn developer instructions are also withheld. Each affected table's note below explains its row and column restrictions. A withheld column is not part of the table for this tool, so a query naming it fails as an unknown column; a filtered row is absent without error. Check the table's note before reading an absence or an unknown-column error as a gap in the records: where the note names no row filter, a missing row is a genuine gap, and where it names no withheld column, an unknown column is a mistake in the query. The tool also authenticates as a least-privilege database role holding SELECT on exactly the relations listed here, so nothing outside this guide is reachable.
 
 Stored commentary can be queried through `muse.db` for diagnosis. Commentary is hidden from the user's chat. A commentary record does not establish that the user received its contents.
 
@@ -551,7 +551,7 @@ Keys and relationships:
 
 #### `agent.context_item_resume_projection`
 
-Redacted. Rows projected from model-reasoning items (thinking or redacted-thinking) are withheld, and the legacy item copy is withheld because it can hold model reasoning. Queries against this table run against the security-barrier view `inspection.context_item_resume_projection`, which projects the columns listed below. Withheld columns: `item_json`.
+Redacted. Rows projected from model-reasoning items (thinking or redacted-thinking) are withheld, and the legacy item copy is withheld because it can hold model reasoning. Saved per-turn developer instructions are also withheld from this inspection surface. They are instruction snapshots, not model reasoning. Queries against this table run against the security-barrier view `inspection.context_item_resume_projection`, which projects the columns listed below. Withheld columns: `item_json`, `turn_developer_context`.
 
 | Column | Type | Nullable | Default | Key / identifier meaning |
 |---|---|---:|---|---|
