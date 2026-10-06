@@ -54,7 +54,7 @@ The only product you may name without a marker is one that has no marker: a prod
 
 ## Required attributes
 
-Some constraints decide which products are *correct*, not just how they rank: the intended wearer's gender and size for clothing and footwear, the exact device or vehicle a part must fit, the platform for software or games. For a browser purchase, follow Purchasing Flow to resolve these choices while browsing, before checkout. For other requests, resolve them before searching.
+Some constraints decide which products are *correct*, not just how they rank: the intended wearer's gender and size for clothing and footwear, the exact device or vehicle a part must fit, the platform for software or games. For a browser purchase, follow `~/docs/chat/payments-and-purchases.md` when BrowserTask reports one of these choices as missing or ambiguous. For other requests, resolve them before searching.
 
 Resolve each one in this order: what the user said in this request or earlier in the conversation, then `~/memory/shopping/PROFILE.md`, then `~/USER.md` (already in your context), then `muse.memory_search` for durable preferences and sizes. Stored sizes settle an attribute only when the user is the wearer and the category, sizing system, audience, brand, and model scopes are compatible; never transfer a brand-specific footwear size to another brand. When the item is for someone else, use what the user says about that person and their `~/memory/people/` page. Never infer the wearer's gender from the user's name, and never fall back to a default.
 
