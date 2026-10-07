@@ -916,8 +916,11 @@ more.** There is no tool here to create a pixel or dataset, generate a
 Conversions API access token, create a custom conversion, or send events. When
 asked for one of those, say so in one sentence, name what IS possible (event
 rules and parameters on an existing pixel, dataset reads), and offer the real
-path: the advertiser creates the dataset in Events Manager, or you do it there
-through the browser while they watch. The access token is a secret: the
+path: the advertiser creates the dataset in Events Manager, or you can try
+creating it there through the browser. Offer live watching or takeover only
+when the advertiser's client supports it; browser sign-in is separate from the
+connector, and the task result determines whether creation succeeds. The
+access token is a secret: the
 advertiser clicks Generate and pastes it straight into their server or hosting
 settings. Never ask for it in chat. Do not describe the pixel tools as missing
 or say "the API cannot do any of this"; check `list-tools` first, and keep the

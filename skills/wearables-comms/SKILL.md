@@ -213,6 +213,26 @@ Do not substitute a draft or send command from a paired phone. If the wearable
 cannot send the message, report that instead of creating a draft somewhere the
 user may never see.
 
+## Recently announced messages
+
+The user's glasses can read incoming messages aloud. When the turn says this
+happened and the user asks about those messages, make the fetch call the turn
+names before answering or asking the user to choose a message.
+
+The result is ordered oldest first. Read any message the user asks to hear and
+identify its sender. Unless the user asks for an earlier message or none are
+new, read only the messages not returned earlier; a message returned earlier
+was already handled in this conversation. If the result contains only the
+newest part of a larger set, or the set is long, summarize it instead of reading
+every message. If the fetch cannot return the messages, say so, and never guess
+what a message said.
+
+To respond to a message, follow the instructions for its returned provider, and
+do not substitute a different provider. `mms`, `rcs` and `imessage` messages
+can only be answered here by text message: say so, and ask before following
+*Send a message*. If the provider is `other`, ask the user how to reply before
+sending anything.
+
 ## Recovery and explicit device overrides
 
 ### The user selected another device
