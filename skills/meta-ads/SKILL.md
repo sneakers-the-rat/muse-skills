@@ -109,7 +109,7 @@ task touches **before** answering, not after drafting.
 | `references/campaign-execution.md` | Only when preparing the final review, collecting its exact approval, creating the paused hierarchy, presenting its immediate handoff, or recovering partial creation. |
 | `references/campaign-handoff.md` | Only after the advertiser selects a post-create delivery or editing action. |
 | `references/campaign-manual-setup.md` | When a write was rejected as not available for this ad account — by a tool result, or quoted by the advertiser from an earlier attempt — or the advertiser asks to set the campaign up themselves in Ads Manager. Read it before explaining that rejection. |
-| `references/writes.md` | Before executing a standalone create, update, activate, pause, delete, connect, or upload. Complete campaigns load it only when their staged references direct. |
+| `references/writes.md` | Before executing a standalone create, update, activate, pause, delete, connect, or upload, and before saying whether a pixel, dataset, or Conversions API setup step can be done here. Complete campaigns load it only when their staged references direct. |
 
 ## Tooling
 Use `exec` to run the installed binary directly:

@@ -122,20 +122,9 @@ pay. Remembering products yourself gets you none of that.
 2. Keep the `cart_id` for the rest of the conversation. It is internal state. Do not show it to the user.
 3. Follow the Purchase workflow once the user is ready to check out their cart.
 
-### Shopping Instagram links
+### Shopping Instagram and Facebook links
 
-1. Use `instagram-cli post` and `instagram-cli media-understanding` to fetch the shopping context for the provided Instagram link.
-2. If the shopping context contains multiple products, ask the user which product they want to focus on.
-3. If the shopping context contains product IDs, use `shopping product-details --product-id <product id>` to fetch the corresponding product details. Write a temporary `{"products": [...]}` JSON file whose entries copy `product.id`, `product.name`, `product.price`, `product.url`, and `product.images[0].url` verbatim from the product-details response into `product_id`, `price`, `name`, `url`, and `image_url`. Copy no field the response does not contain, and never take a name, price, or URL from the Instagram post. Pass that file and the copied product IDs to `shopping.resolve_results`. Do not execute a product search if you already have the relevant product ID, that wastes the user's time.
-4. If the shopping context contains no product IDs, execute the product discovery workflow using the data provided in the shopping context.
-5. Surface the found products in the shopping results widget and mention them via product markers in the text response.
-
-### Shopping Facebook reel links
-
-1. Use `facebook-cli post read --url '<link>'` to fetch the shopping context for the provided `facebook.com/reel/` link. Do not open the link in the browser. Its `shoppable_products` are the products Facebook identified in the reel.
-2. If the user named a product, shop for that product. Otherwise, shop for the products in `shoppable_products`. If there are none, ask the user which product they want.
-3. Execute the product discovery workflow for those products using the data provided in the shopping context, such as `brand_name`, `color`, and `product_name`, together with any constraints the user gave, but skip browser product search and search with<!-- catalog-search-v1-only:start --> `meta-catalog-search`<!-- catalog-search-v1-only:end --><!-- catalog-search-v2-only:start --> `shopping catalog-search`<!-- catalog-search-v2-only:end --> only.
-4. Surface the found products in the shopping results widget and mention them via product markers in the text response.
+For shopping an Instagram or Facebook link, load `/opt/hatch/skills/shopping/references/social-shopping-links.md` and follow the matching workflow.
 
 ## Meta Catalog Search
 
