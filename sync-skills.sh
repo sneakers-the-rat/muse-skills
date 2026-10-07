@@ -34,8 +34,22 @@ else
 fi
 
 # Push to GitHub. Auth is a write-scoped deploy key for this repo only
-# (see core.sshCommand in the repo config). A failed push fails the
-# script so the scheduled run reports it; the local commit is kept and
-# the next run retries.
-git -C "$REPO" push -q origin main
-echo "pushed to origin/main"
+# (see core.sshCommand in the repo config). First try: the configured
+# sshCommand (Sentinel egress proxy). If that fails, retry once through
+# the Oracle relay SOCKS forward (127.0.0.1:1080, relay-egress-socks.service)
+# per the user's 2026-10-06 standing rule: when egress is wedged, route
+# around the proxy through fedi-relay (159.54.176.80). Only if both fail
+# does the script fail; the local commit is kept and the next run retries.
+if git -C "$REPO" push -q origin main; then
+  echo "pushed to origin/main"
+else
+  echo "primary push failed; retrying through Oracle relay SOCKS (127.0.0.1:1080)" >&2
+  SSH_CMD="$(git -C "$REPO" config core.sshCommand)"
+  RELAY_SSH_CMD="${SSH_CMD//nc -X connect -x 198.19.0.1:3128/nc -X 5 -x 127.0.0.1:1080}"
+  if [ "$RELAY_SSH_CMD" = "$SSH_CMD" ]; then
+    echo "could not derive relay sshCommand from core.sshCommand; giving up" >&2
+    exit 1
+  fi
+  git -C "$REPO" -c core.sshCommand="$RELAY_SSH_CMD" push -q origin main
+  echo "pushed to origin/main via Oracle relay"
+fi
