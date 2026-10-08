@@ -174,8 +174,10 @@ truncate the search response, and do not replace it with a hand-built summary.
 Redirect every search directly into a distinct temporary JSON file on its first
 attempt, verify its exit status and response, and keep the saved JSON unchanged
 until widget creation succeeds. If an earlier search was piped, truncated, or
-reduced by a custom parser, do not repeat it in the same turn; ask the user to
-continue in a new turn so the complete response can be retained.
+reduced by a custom parser, or overwritten, recover it with a fresh search
+directly into a new temporary JSON file under the provider's retry guidance.
+Verify the complete response before creating the list; no additional user
+message is needed to recover search output.
 
 For native-provider JSON, create one row per selected complete offer with
 `type: "flight"` and point directly into the unchanged search file:
