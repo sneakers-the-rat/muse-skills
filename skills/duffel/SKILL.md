@@ -3,7 +3,7 @@ name: "duffel"
 description: "Use Duffel to search, book, pay for, or manage flights. Use Duffel to monitor an already booked flight's fare when the user directly asks for ongoing price monitoring."
 allowed-tools:
   - "exec"
-  - "widget.create"
+  - "widget.create_list_widget"
   - "read"
   - "write"
   - "edit"
@@ -192,8 +192,7 @@ alternatives such as cheapest, fastest, nonstop, and explicitly refundable,
 and identify all legs and total party price. Treat native-provider inventory as
 one live source, not exhaustive coverage across every airline channel.
 
-Present the shortlist with native flight rows through `widget.create`, using
-`kind: "list"`. Read the Flights section in
+Present the shortlist with native flight rows through `widget.create_list_widget`. Read the Flights section in
 `/opt/hatch/skills/booking/references/flights.md` for
 complete-trip rows and presentation.
 For list creation, redirect each search to a distinct temporary JSON file.
@@ -216,7 +215,7 @@ its `data` to the file path and that offer's JSON pointer, for example:
 ```
 
 Use the original offer's zero-based index in `/offers/<index>`. Keep the file
-until `widget.create` succeeds. Do not copy the offer JSON into the tool call,
+until `widget.create_list_widget` succeeds. Do not copy the offer JSON into the tool call,
 rewrite timestamps, remove fields, or generate a separate widget payload file.
 The runtime reads the selected object, maps timestamps, and
 stores the complete flight data. It does not retain the path or pointer.

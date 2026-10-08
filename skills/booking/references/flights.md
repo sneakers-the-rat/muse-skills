@@ -150,19 +150,18 @@ seat.
 
 ## Flight comparison response
 
-Every user-visible comparison of live flight options must use `widget.create`
-with `kind: "list"` and flight rows whenever `widget.create` is present in the
-current tool set. Tool availability is the capability signal: do not choose a
+For every user-visible comparison of live flight options, load the `widget`
+namespace and use `widget.create_list_widget` with flight rows whenever available. Tool availability is the capability signal: do not choose a
 Markdown table because client support is uncertain, the schema is lengthy, the
 provider output is large, or Markdown is easier. Attempt the structured list
 before writing the response. Use the Markdown fallback only when
-`widget.create` is absent or one valid `widget.create` call returns an explicit
+`widget.create_list_widget` is absent or one valid `widget.create_list_widget` call returns an explicit
 unsupported or rendering error.
 
 Do not delegate a native-provider flight comparison to a generic research or
 browser worker. Keep its search and widget creation in the user-facing agent.
 If a worker already searched, require its unchanged response path and candidate
-pointers; never relay its table. Confirm a successful `widget.create` before
+pointers; never relay its table. Confirm a successful `widget.create_list_widget` before
 responding. Invalid arguments require a corrected retry, not Markdown.
 
 Do not use a shopping widget or a duplicate option picker. Search the complete
@@ -232,7 +231,7 @@ multi-city trip. Do not split or duplicate a round trip into outbound and return
 rows, pair legs from different offers, or invent per-leg prices. Keep separately
 ticketed one-way offers separate and explicit.
 
-If `widget.create` is absent, or its valid invocation explicitly fails because
+If `widget.create_list_widget` is absent, or its valid invocation explicitly fails because
 the client cannot render the native flight list, follow
 `/opt/hatch/skills/booking/references/presentation.md` and use its compact
 flight Markdown table. Do not infer lack of support without attempting the tool
