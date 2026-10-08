@@ -235,6 +235,20 @@ required attributes in every query. If there are relevant brands for the user's
 request that you know they personally prefer based on their shopping profile or
 other sources, include semantic queries which specify them.
 
+When the current user message attaches an image and asks to shop a clear target,
+start with a direct reverse-image search using the uploaded image path from the
+prompt context:
+
+```sh
+CATALOG_RESULTS_JSON=$(mktemp "${TMPDIR:-/tmp}/shopping-catalog-search.XXXXXX")
+shopping catalog-search --image-path <uploaded_file_path> --retries 2 \
+  --out "$CATALOG_RESULTS_JSON"
+```
+
+Use `--query` alongside `--image-path` only when text is needed to clarify the
+product target or required attributes. Do not replace an available uploaded
+image path with a text description of the image.
+
 ```sh
 CATALOG_RESULTS_JSON=$(mktemp "${TMPDIR:-/tmp}/shopping-catalog-search.XXXXXX")
 shopping catalog-search \

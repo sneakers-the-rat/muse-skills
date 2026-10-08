@@ -48,7 +48,7 @@ facebook-cli
 │   ├── audiences                             # Current posting audience and available choices
 │   ├── crossposting [--privacy <choice>]     # Current sharing destinations
 │   ├── create --message "..." [--privacy <choice>] [--share-to-story on|off] [--share-to-instagram on|off] [--share-to-threads on|off]
-│   ├── read (--post-id <id> | --url <url>) # Read by numeric ID/PFBID or canonical post/photo/video URL
+│   ├── read (--post-id <id> | --url <url>) [--out <file>] # Read by ID/URL; --out also fetches system-ranked similar products for shopping
 │   ├── comments
 │   │   ├── add --post-id <id> --text "..." [--parent-comment-id <id>]  # Approved comment or reply
 │   │   └── read --post-id <id> [--limit N] [--after <cursor>]  # Read comments (paginated: data[] + paging.cursors.after; post link at summary.post_url)
