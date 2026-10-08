@@ -250,10 +250,12 @@ jq -r '.products[] | [.product_id, .brand, .name, .price, .size] | @tsv' "$CATAL
 Constraint flags for the `shopping catalog-search` CLI:
 - `--category` for a hard category constraint.
 - `--gender` for a hard gender/audience constraint resolved under Required attributes. Use exactly `male`, `female`, or `unisex`, preserve it on refinements, and do not infer it from product type or styling.
-- `--brand` for a hard brand constraint. Always specify `--brand` when the user requests results exclusively from a specific brand. If the user names several acceptable brands, make one CLI call per brand.
-- `--prefer-brand` for returning more results from a brand that the user personally prefers, but didn't specify in their request. One preferred brand: pass `--prefer-brand` (and a brand-specific query). Multiple preferred brands: use one brand-specific query each and omit `--prefer-brand`.
+- `--brand` for hard brand constraints. Always specify `--brand` when the user requests results exclusively from one or more brands; repeat the flag for multiple acceptable brands.
+- `--prefer-brand` for returning more results from brands that the user personally prefers, but didn't specify in their request. Repeat the flag for multiple preferred brands and include one brand-specific query for each.
 - `--domain` ensures available products from the specified seller domain are returned. Always specify `--domain` when the user requests results from a specific seller; pass its canonical hostname without a scheme or path.
 - `--currency` for specifying the currency (which indirectly specifies a market), defaults to the currency of the user's home location.
+- `--min-price` and `--max-price` for inclusive budget bounds in hundredths of `--currency` (for example, `2500` means 25.00).
+- `--seller-type direct|secondhand` for a seller-type ranking preference. Use `secondhand` for used, pre-owned, thrifted, vintage, or refurbished inventory.
 
 ```sh
 CATALOG_RESULTS_JSON=$(mktemp "${TMPDIR:-/tmp}/shopping-catalog-search.XXXXXX")
