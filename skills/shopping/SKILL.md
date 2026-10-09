@@ -32,6 +32,11 @@ After selecting products, call `shopping.resolve_results` with the product-searc
 
 The tool resolves and normalizes those selections, returns a `path` for optional widget presentation, and returns `product_citations` markers for the response. This is the single product-resolution and citation path. It does not create or present UI; call `shopping.create_shopping_results_widget` separately with the returned path when a shopping widget is appropriate.
 
+A subagent should not call `shopping.resolve_results` directly, instead it should take the JSON payload it would have passed to `shopping.resolve_results` and pass it to the main agent instead (which will be responsible for calling `shopping.resolve_results`) in the following format:
+```
+product_search_handoff: <JSON payload>
+```
+
 ### Markers belong to the product, not to the widget
 
 A marker is how you write a product's name anywhere, in every message, for the whole conversation. It is not part of the shopping-results presentation and it is not discharged by having presented one.
