@@ -235,7 +235,7 @@ be parsed, use the other search results rather than issuing diagnostic catalog
 calls or silently dropping constraints.
 <!-- catalog-search-v1-only:end -->
 <!-- catalog-search-v2-only:start -->
-`shopping catalog-search` accepts up to four semantic `--query` values. Put all
+`shopping catalog-search` accepts up to eight semantic `--query` values. Put all
 required attributes in every query. If there are relevant brands for the user's
 request that you know they personally prefer based on their shopping profile or
 other sources, include semantic queries which specify them.
@@ -262,11 +262,12 @@ shopping catalog-search \
   --query "<specific product query including every constraint from preferred brand B>" \
   --retries 2 --out "$CATALOG_RESULTS_JSON"
 
-# Inspect the returned products while retaining their ids
-jq -r '.products[] | [.product_id, .brand, .name, .price, .size] | @tsv' "$CATALOG_RESULTS_JSON"
+# Preview the first 20 products while retaining their ids
+jq -r '.products[0:20][] | [.product_id, .brand, .name, .price, .size] | @tsv' "$CATALOG_RESULTS_JSON"
 ```
 
 Constraint flags for the `shopping catalog-search` CLI:
+- `--num-results` (`-n`) for the number of products requested per semantic query; defaults to `20`.
 - `--category` for a hard category constraint.
 - `--gender` for a hard gender/audience constraint resolved under Required attributes. Use exactly `male`, `female`, or `unisex`, preserve it on refinements, and do not infer it from product type or styling.
 - `--brand` for hard brand constraints. Always specify `--brand` when the user requests results exclusively from one or more brands; repeat the flag for multiple acceptable brands.
@@ -284,8 +285,8 @@ shopping catalog-search \
   --domain "nordstrom.com" \
   --retries 2 --out "$CATALOG_RESULTS_JSON"
 
-# Inspect the returned products while retaining their ids
-jq -r '.products[] | [.product_id, .brand, .name, .price, .size] | @tsv' "$CATALOG_RESULTS_JSON"
+# Preview the first 20 products while retaining their ids
+jq -r '.products[0:20][] | [.product_id, .brand, .name, .price, .size] | @tsv' "$CATALOG_RESULTS_JSON"
 ```
 
 Filter returned products against every hard requirement before selecting them.
@@ -453,7 +454,7 @@ The command prints each listing with `image_url` replaced by a `withheld` object
 
 ### Listing details
 
-Fetch full details and seller trust signals with `facebook-cli marketplace listing details --listing-id <listing_id>` and `facebook-cli marketplace seller-info --listing-id <listing_id>`. Search results carry only `seller_id` (no seller name), so `seller-info` is how you surface the seller's name, rating, and review count. See `references/backends.md` for the full flag set and pagination.
+Fetch full details and seller trust signals with `facebook-cli marketplace listing details --listing-id <listing_id>` and `facebook-cli marketplace seller-info --listing-id <listing_id>`. Search results carry only `seller_id` (no seller name), so `seller-info` is how you surface the seller's name, rating, and review count. See `references/backends.md` for the full flag set, including vehicle year, mileage and transmission filters, and pagination.
 
 ### Pasted listing links
 
