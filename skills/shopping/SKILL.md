@@ -263,7 +263,7 @@ shopping catalog-search \
   --retries 2 --out "$CATALOG_RESULTS_JSON"
 
 # Preview the first 20 products while retaining their ids
-jq -r '.products[0:20][] | [.product_id, .brand, .name, .price, .size] | @tsv' "$CATALOG_RESULTS_JSON"
+jq -r '.products[0:20][] | [.product_id, .brand, .name, (.sale_price // .price), .size] | @tsv' "$CATALOG_RESULTS_JSON"
 ```
 
 Constraint flags for the `shopping catalog-search` CLI:
@@ -286,7 +286,7 @@ shopping catalog-search \
   --retries 2 --out "$CATALOG_RESULTS_JSON"
 
 # Preview the first 20 products while retaining their ids
-jq -r '.products[0:20][] | [.product_id, .brand, .name, .price, .size] | @tsv' "$CATALOG_RESULTS_JSON"
+jq -r '.products[0:20][] | [.product_id, .brand, .name, (.sale_price // .price), .size] | @tsv' "$CATALOG_RESULTS_JSON"
 ```
 
 Filter returned products against every hard requirement before selecting them.
