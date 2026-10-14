@@ -20,13 +20,13 @@ Leave out words such as "album", "playlist", "podcast", "episode", or "audiobook
 
 If the request names nothing to play, such as "play music" or "play Spotify", run `spotify-api wearable-play --content-type saved_music` instead of asking what to play. If the caller asks for their liked songs, run `spotify-api wearable-play --content-type liked_songs`.
 
-If the caller named no device, or named these glasses, and the result's `status` is `wearable_play_resolved`, call `device.invoke` on the device carrying the call with:
+If the caller named no device, or clearly referred to the device carrying the call, such as "here", "on this device", or "these glasses", and the result's `status` is `wearable_play_resolved`, call `device.invoke` on the device carrying the call with:
 - `command` set to the result's `node_command`, unchanged
 - `params_json` set to the result's `node_params`, unchanged
 
-Call `device.invoke` exactly one time. If it fails or times out, report that. Do not retry, do not invoke another device, and do not switch to `spotify-api play`: playback may already have started on the glasses.
+Call `device.invoke` exactly one time. If it fails or times out, report that. Do not retry, do not invoke another device, and do not switch to `spotify-api play`: playback may already have started on the device carrying the call.
 
-If the caller names another playback device, such as a speaker, TV, computer, phone, car, or console, even without a brand or name, or says "there" for one mentioned earlier, run `spotify-api devices`, then:
+If the caller names a playback device other than the one carrying the call, such as a speaker, TV, computer, phone, car, or console, even without a brand or name, or says "there" for one mentioned earlier, run `spotify-api devices`, then:
 
 ```
 spotify-api play --context-uri <partner_uri> --target-device-id <id>
