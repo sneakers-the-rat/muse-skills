@@ -1,150 +1,152 @@
 # Changelog
 
-Daily summaries of the skills archive, newest first. Maintained by the
-nightly check-in; entries through 2026-10-15 were backfilled at the
-2026-10-15 restructure. Times are America/Los_Angeles.
+Daily summaries of the skills archive, newest first. Each entry links to
+its commit and summarizes what the changed skill text actually says or
+does differently; line counts are trailing metadata only. Maintained by
+the nightly check-in; entries through 2026-10-15 backfilled 2026-10-15.
+Times are America/Los_Angeles.
 
 ## 2026-10-15
-- `fcce708` 12:57 — First hook-driven snapshot (the hourly backup moved from a cron task to a hook). Plot-only commit; no skill files changed.
-- `afb01e5` 12:54 — Deletion-recording fix takes effect: 56 stale link entries for connectors not shipped in this image (aftership, arlo, beehiiv-mcp, bfl-mcp, …) removed from `skills/` (−56 lines); sync-script fixes.
-- `ecb5cd9` 12:51 — The backup restructure: symlinks resolved to real file content (+24,804/−99 across 468 files in the trees; muse_db, documents, facebook and goals largest), the `workflow-skills/` tree added, README.md and plot.svg added, and the pre-restructure safety copies (612 files) moved back out of the repo.
-- `5a6ab99` 12:43 — The old hourly script swept a safety-copy folder into the repo (612 non-skill files, no skill files changed); undone in the 12:51 restructure.
+- [`fcce708`](https://github.com/sneakers-the-rat/muse-skills/commit/fcce708c1fbb7b80c5594ca2c43086ea7c4e30dd) 12:57 — First snapshot run by the new skills-snapshot hook (the hourly backup moved from a cron task to a hook). No skill files changed.
+- [`afb01e5`](https://github.com/sneakers-the-rat/muse-skills/commit/afb01e5fde8c7ee3dc765f8c3cac311ba5c4f003) 12:54 — The stored symlink entries for 56 connectors this image doesn't ship (aftership, arlo, beehiiv-mcp, …) were deleted from `skills/` once deletion recording was fixed — with symlink resolution on, those one-line placeholders were dead weight and the trees now hold only real content. (+0/−56, 56 files)
+- [`ecb5cd9`](https://github.com/sneakers-the-rat/muse-skills/commit/ecb5cd9d76d992dd56168eda8e9f9172993f5f9b) 12:51 — The backup restructure: every symlink in the archive was replaced by the real content it named, so the connector docs (CONNECTOR.md / connector.yaml for 60+ connectors) and the workflow-skills playbooks appear in the archive as readable files for the first time; README.md and the plot were added, and the safety copies accidentally swept in at 12:43 were moved back out. (+24,804/−99 in the trees, 468 files)
+- [`5a6ab99`](https://github.com/sneakers-the-rat/muse-skills/commit/5a6ab99b9e2bbfdb1fd036a9a770801e66da8544) 12:43 — The old hourly script swept a safety-copy folder (612 non-skill files) into the repo; no skill files changed. Undone at 12:51.
 - 12 further snapshots this day recorded no skill changes.
 
 ## 2026-10-14
-- `4c922d1` 22:43 — artifacts: one file, +1/−1.
-- `2b14911` 20:44 — 155 files added across artifacts, booking and the connector namespace (+155 lines — one line per file: link entries appearing).
-- `a5c7238` 14:43 — Major contraction of the archived tree: +743/−40,692 across 319 files (artifacts 30, meta-ads 22, facebook-cli 16, goals 15, booking 9, and many more) — an image roll replaced much of the tree.
-- `9309914` 07:43 — spotify connector doc, +3/−3.
-- `b48eb83` 02:43 — muse_db skill, +3/−1.
-- `fe8274f` 01:43 — duffel connector doc, +3.
+- [`4c922d1`](https://github.com/sneakers-the-rat/muse-skills/commit/4c922d163052c4d314da322e109621256e714689) 22:43 — A single-line reference edit in the artifacts tree; no instruction text changed. (+1/−1, 1 file)
+- [`2b14911`](https://github.com/sneakers-the-rat/muse-skills/commit/2b149119dcca0ed770d7f4c134a8bcba278d314e) 20:44 — Link repair after the contraction: files that had collapsed to one-line link entries were re-pointed — artifacts testing now links to `../references/verification.md`, and booking's hotels, restaurants and tickets references point at their `/opt/muse/skills/` counterparts. (+155/−0, 155 files)
+- [`a5c7238`](https://github.com/sneakers-the-rat/muse-skills/commit/a5c7238ce306b61ed9ec1f2ffb114522ad089048) 14:43 — The contraction: across 319 files, archived content was replaced by single-line symlink entries as the source tree switched to the namespace layout. The skill content upstream didn't change; the archive's representation of it did. (+743/−40,692, 319 files)
+- [`9309914`](https://github.com/sneakers-the-rat/muse-skills/commit/9309914e52d898368a1609aa406bc1a498979b6f) 07:43 — Spotify wearable playback clarified: "here", "on this device" or "these glasses" counts as naming the device carrying the call; a named *other* device goes through `spotify-api devices`; `device.invoke` is called exactly once — never retried and never replaced with `spotify-api play`, since playback may already have started. (+3/−3, 1 file)
+- [`b48eb83`](https://github.com/sneakers-the-rat/muse-skills/commit/b48eb83c500a98f492a35d250ab198f2f889f677) 02:43 — muse_db schema reference regenerated for a new migration set; new handoff columns (`handoff_context_high_water_seq`, `handoff_state_json`). (+3/−1, 1 file)
+- [`fe8274f`](https://github.com/sneakers-the-rat/muse-skills/commit/fe8274f28e8f69f6cc8b9c00403cb4c44f843dd9) 01:43 — Duffel gains three failure modes: `checkout_receipt_unverified` (the attempt closed but the receipt doesn't establish whether a booking or payment happened — report both as unknown and stop), `checkout_preparation_rejected` (a traveler-profile requirement blocked 3DS preparation; nothing was submitted), and `held_payment_failed` (report the failed payment attempt on an existing order; don't infer the order's status). (+3/−0, 1 file)
 - 18 further snapshots this day recorded no skill changes.
 
 ## 2026-10-13
-- `1f77ff8` 22:43 — +70/−19 across 9 files (messenger 2, asana, canva, duffel, facebook-cli, and others).
-- `795aa96` 16:43 — meta-ads and shopping, +38/−2.
-- `fd11cab` 14:43 — facebook-cli (2 files) and evernote, +34/−14.
-- `354169d` 13:43 — +26/−5 across duffel, instagram-messages, messenger, opentable and plaid.
-- `4eb982d` 00:43 — messenger, +1.
+- [`1f77ff8`](https://github.com/sneakers-the-rat/muse-skills/commit/1f77ff865adc25f75e1517ccef1287d896dc42e3) 22:43 — Asana: one workspace per grant — run `asana accounts` before touching workspace data, treat its IDs as opaque, and disambiguate by `display_name`. Canva: use `list-tools --names-only` plus `describe-tool` instead of pulling the whole catalogue. Duffel: the validation/expired-offer correction rule is now scoped to before any approval or submission. (+70/−19, 9 files)
+- [`795aa96`](https://github.com/sneakers-the-rat/muse-skills/commit/795aa968c80f7e90024fc9f828e5a6798f427806) 16:43 — Meta Ads' manifest description changed from managing accounts to "Analyze your business performance and get tailored guidance on what to improve." Shopify UCP: buyer-detail changes on an existing checkout go through `checkout update` with the *complete* desired `buyer` object — updates replace buyer state, so never send only the newly learned fields, and never invent a top-level fulfillment field. (+38/−2, 2 files)
+- [`fd11cab`](https://github.com/sneakers-the-rat/muse-skills/commit/fd11cab2aa38e3b31d0e06a544b803c86c489010) 14:43 — Evernote's description broadens to "Search and manage notes, notebooks, Spaces, tags, tasks and attachments," and its tool-discovery wording replaces the OAuth/DCR paragraph. Facebook Pages: `pages list` and `posts list` limits are documented as capped (20 and 10; larger values are capped server-side). (+34/−14, 3 files)
+- [`354169d`](https://github.com/sneakers-the-rat/muse-skills/commit/354169d1d82669f858af069693ee6bcef8f78537) 13:43 — Duffel gains `approved_credential_unresolved`: payment credentials unavailable, the attempt stopped before submitting a booking, and any card authorization or hold is unknown — do not retry. Instagram Messages' and Messenger's privacy disclosures were restructured, adding a `confidential_vm` variant ("Instagram is a Meta app, which means the info exchanged is visible to Meta") shown as a callout. (+26/−5, 6 files)
+- [`4eb982d`](https://github.com/sneakers-the-rat/muse-skills/commit/4eb982d7c2eaa68cb8b731d54694a84b2aaf1c5d) 00:43 — Messenger's manifest adds the `thread-create` verb. (+1/−0, 1 file)
 - 18 further snapshots this day recorded no skill changes.
 
 ## 2026-10-12
-- `31a22ca` 21:43 — +266/−84 across 13 files (apple-healthkit, facebook-cli, google-calendar, google-contacts, google-docs, and others).
-- `adbe61c` 16:43 — facebook-cli, gmail, plaid and voice-selector, +148/−22.
-- `636fab9` 05:43 — travel-planning, +1/−1.
-- `d2b5155` 01:43 — spaces, +2/−2.
+- [`31a22ca`](https://github.com/sneakers-the-rat/muse-skills/commit/31a22ca5d0a88ae54b88c4c3b4b6e1221613b44e) 21:43 — The Google Workspace manifests gain per-action approval button labels (Create / "Don't create", Edit, Delete / "Always allow deleting contacts", …) across Calendar, Contacts, Docs, Drive, Forms, Sheets, Slides and Tasks. Apple Health: the backfill command is renamed to `health.backfill` and the `health-cli status` documentation is dropped. Facebook posts: show the confirmed `post_url` as a clickable link by default. (+266/−84, 13 files)
+- [`adbe61c`](https://github.com/sneakers-the-rat/muse-skills/commit/adbe61c4cb9f74a6a48a3c4f5a0d4f813cd7d28d) 16:43 — Plaid's manifest gains country gating (`allowed_countries: [US]`). Gmail `+read` output is reordered: sender, recipients, subject and date first, then the attachment inventory, body last. Facebook Marketplace's reference drops the map-widget paragraph. (+148/−22, 4 files)
+- [`636fab9`](https://github.com/sneakers-the-rat/muse-skills/commit/636fab993d36c49f196c81833739a65b20e24abc) 05:43 — Travel planning: CAPTCHA is removed from the flight-discovery failure list (a bot wall the browser could not get past stays). (+1/−1, 1 file)
+- [`d2b5155`](https://github.com/sneakers-the-rat/muse-skills/commit/d2b515524bb0a81e500825832e2ebe27ee5ebfea) 01:43 — One spaces file changed; no prose. (+2/−2, 1 file)
 - 20 further snapshots this day recorded no skill changes.
 
 ## 2026-10-11
 - 24 snapshots ran; no skill files changed.
 
 ## 2026-10-10
-- `d8d5344` 15:43 — duffel, +18/−4.
-- `ec4f8d4` 13:43 — gmail, +36/−1.
-- `835085b` 07:43 — muse_db, +5/−1.
+- [`d8d5344`](https://github.com/sneakers-the-rat/muse-skills/commit/d8d534463ee07b655a876676fd0d43504d92390d) 15:43 — Duffel: disclose incomplete search coverage (`search_coverage.complete: false`); `offers_total` counts matches in scanned pages with airline/price filters applied locally. On failure, present useful `partial_results` with the caveat before searching again, and let a later fuller comparison explicitly supersede the partial one. (+18/−4, 1 file)
+- [`ec4f8d4`](https://github.com/sneakers-the-rat/muse-skills/commit/ec4f8d43a98acf5d1e6190c9b4d2f39b06baeeb6) 13:43 — Gmail's manifest gains per-action approval button labels: Send / "Don't send", Reply / "Don't reply", with reply-all variants. (+36/−1, 1 file)
+- [`835085b`](https://github.com/sneakers-the-rat/muse-skills/commit/835085bcae027c1ef640bde10ebedbd2d5b8b11b) 07:43 — muse_db schema reference regenerated; new device-node columns (`node_id`, `node_name`) and browser-harness fields with defaults. (+5/−1, 1 file)
 - 21 further snapshots this day recorded no skill changes.
 
 ## 2026-10-09
-- `8cc08db` 21:43 — facebook-cli (2 files), meta-ads (2) and generate_podcast, +13/−15.
-- `0f94b6d` 19:43 — shopping, +13/−3.
-- `8235f86` 16:43 — spotify (2 files) and shopping, +62/−46.
-- `a32719e` 13:44 — +60/−12 across duffel, facebook-cli, gmail, meta-ads and shopping.
-- `7694d81` 04:43 — gmail and outlook-mail, +3/−1.
+- [`8cc08db`](https://github.com/sneakers-the-rat/muse-skills/commit/8cc08db959461fe01b0cd9e3ce6b6c5e4068e671) 21:43 — Facebook saved items: `--type` now accepts any `type` value `saved list` returns (e.g. `post_with_photo`) and should be passed unchanged, instead of a fixed category list. The save-to-spotify vendor README updates its repo paths (hatch-extensions → Jarvis, skills/crates → hatch-skills/crates). (+13/−15, 5 files)
+- [`0f94b6d`](https://github.com/sneakers-the-rat/muse-skills/commit/0f94b6de6deb1899cff4ecfb8f4b2b1695ce7a20) 19:43 — Shopping: the preference-resolution order drops its `muse.memory_search` step, and product previews gain `seller_type` and `seller_quality` columns. (+13/−3, 1 file)
+- [`8235f86`](https://github.com/sneakers-the-rat/muse-skills/commit/8235f867aee4d720976a8fc11bced0c628892b87) 16:43 — Spotify's voice-playback guidance is split into its own reference (`references/wearable-playback.md`): spoken requests on a call, when the call device's catalog lists `music_fulfillment`. Shopping previews now prefer `sale_price` over list price. (+62/−46, 3 files)
+- [`a32719e`](https://github.com/sneakers-the-rat/muse-skills/commit/a32719e46a57a6626f5427b87d90985495ebbdf1) 13:44 — Duffel: on domestic routes a premium cabin may be sold as First — if a domestic business search has no useful match, run one `--cabin first` search before giving up on premium inventory; present the actual cabin and fare brand, and don't broaden to economy without the user's agreement. The Shop Similar guidance added to Facebook posts yesterday was removed again. (+60/−12, 7 files)
+- [`7694d81`](https://github.com/sneakers-the-rat/muse-skills/commit/7694d817545167128ece2c643486ec27a36cf25d) 04:43 — Gmail: don't attach a video's generated thumbnail unless it was explicitly requested as its own attachment; if a `+send` fails after approval, report it and wait — the user may have edited the message on the approval card, so never auto-resend. Outlook Mail: `send` output can carry `user_edited: true` and a "Final sent message" that supersedes the original draft. (+3/−1, 2 files)
 - 19 further snapshots this day recorded no skill changes.
 
 ## 2026-10-08
-- `0d0514b` 23:43 — shopping (2 files) and facebook-cli, +13/−6.
-- `16fa99d` 21:43 — spaces (8 files), plaid and shopping, +511/−27.
-- `48cc9f6` 19:43 — shopping reworked, +74/−66 in one file.
-- `8372247` 15:43 — facebook-cli (2 files), generate_podcast and shopping, +43/−2.
-- `50edfdd` 12:43 — facebook-cli, +93/−6 across 4 files.
-- `5e889c1` 10:44 — shopping, +4/−2.
-- `6b82efc` 06:43 — spotify, +14/−13.
+- [`0d0514b`](https://github.com/sneakers-the-rat/muse-skills/commit/0d0514bfe5943b57ce12345d83bc443b42b6e8e0) 23:43 — Shopping: `catalog-search` now accepts up to eight semantic queries (was four), gains a `--num-results` flag, and previews are capped at the first 20 products. Marketplace vehicle search gains year, mileage and transmission filters that restrict results to vehicles. (+15/−5, 3 files)
+- [`16fa99d`](https://github.com/sneakers-the-rat/muse-skills/commit/16fa99d8b3b9fde2457d3137b11c7984c309eeb8) 21:43 — Shopping: a subagent must not call `shopping.resolve_results` itself — it hands the payload to the main agent, which owns resolution. (+527/−2 in the trees, 8 files; the bulk is the spaces TS-runtime README, an asset file)
+- [`48cc9f6`](https://github.com/sneakers-the-rat/muse-skills/commit/48cc9f658be774e58340503a44d958a13d62579c) 19:43 — Shopify UCP: a payment route must be explicitly selected before checkout creation — offer the Wallet routes with `muse.create_options`; "Use another method" means browser takeover from the catalog product URLs, and no UCP checkout is created first. (+74/−66, 1 file)
+- [`8372247`](https://github.com/sneakers-the-rat/muse-skills/commit/837224783a0df143d7226ce9529cc4318f502f81) 15:43 — Facebook `post read --out` gains Shop Similar for shopping requests: the file also carries the system-ranked `featured_products` slate in catalog format. Shopping gains a reverse-image entry point: when the user attaches an image and asks to shop it, start with `catalog-search --image-path`. (+28/−1, 3 files)
+- [`50edfdd`](https://github.com/sneakers-the-rat/muse-skills/commit/50edfddbeba0b9db5a569227956c4b229aff620d) 12:43 — Facebook gains personal-profile writes: publishing personal text posts, comments and replies, each behind native approval (previously read-only outside Marketplace and Pages), plus an `audiences` command showing the current posting audience. (+82/−1, 3 files)
+- [`5e889c1`](https://github.com/sneakers-the-rat/muse-skills/commit/5e889c10fcf6570463be95136214c6738e28f9f2) 10:44 — Shopping: `--brand` is repeatable for several acceptable brands; new `--min-price`/`--max-price` bounds (in hundredths of the currency) and a `--seller-type direct|secondhand` ranking preference. (+3/−2, 1 file)
+- [`6b82efc`](https://github.com/sneakers-the-rat/muse-skills/commit/6b82efcea90b197b2729b79c7e51d2805da6ff7e) 06:43 — Spotify's description adds audiobooks, and voice playback now calls `voice.play_music` directly instead of routing through `ui.set`. (+9/−7, 1 file)
 - 17 further snapshots this day recorded no skill changes.
 
 ## 2026-10-07
-- `5e270f6` 23:43 — booking and duffel, +33/−27.
-- `8d029ca` 21:43 — meta-ads (13 files) and wearables-comms, +355/−60.
-- `2508c9f` 18:43 — +393/−70 across 71 files (booking, dropbox, duffel, facebook-cli, github, and many more).
-- `f087df1` 15:43 — spaces (3 files), meta-ads (2), zoom (2), plaid and wearables-comms, +117/−25.
-- `6d48505` 05:43 — shopping, +32/−11.
-- `a520d1c` 03:43 — gmail, +1/−1.
-- `92640aa` 00:43 — meta-ads (5 files), shopping (2) and muse_db, +56/−20.
+- [`5e270f6`](https://github.com/sneakers-the-rat/muse-skills/commit/5e270f6a82d41b07e2150bf693c63435596c0ec3) 23:43 — Duffel and booking flights: the recovery rule for truncated or overwritten search output is inverted — no longer "ask the user to continue in a new turn"; rerun the search into a fresh temporary JSON file and verify the complete response yourself. Duffel searches now always carry `--cabin` (economy by default). (+22/−8, 2 files)
+- [`8d029ca`](https://github.com/sneakers-the-rat/muse-skills/commit/8d029ca09571e758e70959fcf5fabb16afcb95c9) 21:43 — Meta Ads: policy answers — after the one catalogue-title retry, a still-`N/A` result means the policy "could not be confirmed," never answered from another source; accounts flagged `is_ads_mcp_write_disabled` route to the manual-setup reference; and never announce a write as happening ("uploading it now"). (+34/−31, 13 files)
+- [`2508c9f`](https://github.com/sneakers-the-rat/muse-skills/commit/2508c9fe3e4d30e651017b7ca0c03e5791320583) 18:43 — A manifest format migration across ~40 connectors: manifests gain structured `metadata` / `auth` / `cli` blocks (settings visibility, auth provider, CLI binary and skill name) in place of loose top-level keys. A schema restyle — no instruction text changes — with small touch-ups in the Dropbox, Duffel, GitHub, Peloton, Share Ideas and Ticketmaster skills. (+393/−70, 71 files)
+- [`f087df1`](https://github.com/sneakers-the-rat/muse-skills/commit/f087df1164414331329c7151b916a47315d8237a) 15:43 — Meta Ads: dataset creation softens — the advertiser creates it in Events Manager "or you can try creating it there through the browser," offering live watching or takeover only when the advertiser's client supports it. Plaid: one Link session may add several institutions ("Add financial accounts"). (+22/−8, 5 files)
+- [`6d48505`](https://github.com/sneakers-the-rat/muse-skills/commit/6d48505539e6751844c3e87f0fc15eef31c71223) 05:43 — Shopping: result-review wording tightened (open all non-Marketplace product pages; every required attribute goes into every catalog query). (+5/−5, 1 file)
+- [`a520d1c`](https://github.com/sneakers-the-rat/muse-skills/commit/a520d1cb4b72f56503c067e58e4649523d694c79) 03:43 — Gmail: before proposing or drafting a reply or follow-up, read the full thread — extending the earlier rule about checking before declaring something missing. (+1/−1, 1 file)
+- [`92640aa`](https://github.com/sneakers-the-rat/muse-skills/commit/92640aaab1513a939a4fcaa82576e837cfb21142) 00:43 — Meta Ads permissions are relabeled to match reality: "Create new pixel events" becomes "Add event rules and parameters to existing pixels" — creating a dataset or a Conversions API token has no tool, must be said plainly, and happens in Events Manager. `writes.md` is now also routed for pixel/dataset questions, with new eval scenarios for both cases. (+53/−7, 6 files)
 - 17 further snapshots this day recorded no skill changes.
 
 ## 2026-10-06
-- `535516d` 20:43 — One non-skill file changed; no skill files changed.
-- `4b4912a` 19:43 — meta-ads, +34/−7.
-- `b630247` 16:43 — The magic-moment bundle was removed: +41/−8,528 across 62 files (magic-moment alone accounted for 50 files).
-- `f05b116` 11:43 — Outlook suite (calendar, contacts, mail — 2 files each), generate_podcast and gmail, +252/−13 across 14 files.
-- 9 further snapshots this day recorded no skill changes; the day's first snapshot ran at 11:43.
+- [`535516d`](https://github.com/sneakers-the-rat/muse-skills/commit/535516dbe530d5cd2b4c9cab85e24f45caf3cde1) 20:43 — One non-skill file changed; no skill text.
+- [`4b4912a`](https://github.com/sneakers-the-rat/muse-skills/commit/4b4912ac535c3b6d78fc009e90ff805f115ead3a) 19:43 — Meta Ads billing blindness: `amount_spent` is delivery spend for the level and window queried — name both whenever quoting it, and call `maximum` "all time", never "since your last bill." No Ads tool returns the balance owed, prepaid funds, the spending limit, payments, invoices or ad credits, and none may be derived from spend or budgets. Two eval scenarios added (spend-scope-stated, billing-credit-not-inferred). (+31/−0, 2 files)
+- [`b630247`](https://github.com/sneakers-the-rat/muse-skills/commit/b6302472c91d4213d4822d7328b56f22c98acc47) 16:43 — The magic-moment skill was removed from the image (the whole bundle: SKILL.md, story/screenplay/timeline guides, card and overlay specs, INSTALL.md). Calendly's auth mode changed from `account_center` to `direct_oauth`, and several connector auth configs were refreshed alongside. (+12/−8,528, 50 files)
+- [`f05b116`](https://github.com/sneakers-the-rat/muse-skills/commit/f05b1166f32cc600c461bea4d75f6fc4c152f348) 11:43 — Gmail and Google Calendar manifests gain `multi_account` blocks: a shared `google_oauth_accounts` credential namespace spanning the Gmail, Calendar, Drive and People APIs. Generate Podcast's description narrows — voice messages and verbatim reading route to `tts`; the podcast skill is for composed audio. Instagram: organizing saved posts into collections means the most specific matching collection, or a new one. (+252/−13, 14 files)
+- 9 further snapshots this day recorded no skill changes. The day's snapshots begin at 11:43.
 
 ## 2026-10-05
-- `7340605` 18:43 — +114/−42 across 11 files (gmail 2, muse_db 2, todoist 2, facebook-cli, spaces, and others).
-- `ef341dd` 12:43 — muse_db, +7/−3.
-- `605f8f1` 08:43 — gmail, +8.
-- `ec40b96` 02:43 — opentable, +2/−2.
+- [`7340605`](https://github.com/sneakers-the-rat/muse-skills/commit/7340605f323bbee578a86d3c7ed3917c9fec0fd2) 18:43 — Facebook Pages: `--request-id` is dropped from all drafts and posts commands (create, publish, edit, delete, reschedule, cancel-schedule) — callers no longer supply their own idempotency key. Smaller edits ride along in Gmail, muse_db, Todoist and wearables-comms. (+114/−42, 11 files)
+- [`ef341dd`](https://github.com/sneakers-the-rat/muse-skills/commit/ef341dd09e65076799b90967ba2ef0ffaf9da5a5) 12:43 — muse_db clarification: stored commentary *is* queryable for diagnosis, but it is hidden from the user's chat and a commentary record does not establish the user received it; private reasoning stays unreadable. (+7/−3, 2 files)
+- [`605f8f1`](https://github.com/sneakers-the-rat/muse-skills/commit/605f8f1066675420bd843410013721efd803a932) 08:43 — Gmail `+read` is upgraded: the attachment inventory comes first (filenames, types, sizes, MIME part IDs), every read saves a Markdown copy under `~/workspace/email/gmail/` and returns its path, and HTML bodies render as Markdown by default. Plus the rule: inspect existing messages and attachments before saying a response or document is missing. (+8/−0, 1 file)
+- [`ec40b96`](https://github.com/sneakers-the-rat/muse-skills/commit/ec40b96f4e9fb07df076c910ca78a2405bca1058) 02:43 — OpenTable's manifest description becomes "Find and book restaurants with OpenTable," and its consent text now reads "By connecting, you agree to OpenTable's Terms of Use and Privacy Policy." (+2/−2, 1 file)
 - 20 further snapshots this day recorded no skill changes.
 
 ## 2026-10-04
-- `347c7dd` 19:43 — voice-selector and voice-design, +1/−106 (the voice-design content was removed).
-- `4d41625` 07:43 — device-data, muse_db and spaces, +11/−3.
+- [`347c7dd`](https://github.com/sneakers-the-rat/muse-skills/commit/347c7dd893d1d802c57cd0832f7a1cfabb09ea83) 19:43 — The standalone voice-design skill was removed from the image; voice selection lives in voice-selector alone, whose tool reference updates from `muse.voice_options` to `voice.options`. (+1/−106, 2 files)
+- [`4d41625`](https://github.com/sneakers-the-rat/muse-skills/commit/4d416250e7245d5d0b71cc071e2aff02eee3b8da) 07:43 — Device Data: calendar results paginate with `--limit`/`--cursor` (pass `next_cursor` unchanged; an absent cursor ends pagination; check `cache.coverage` separately for completeness). The muse_db schema reference gains continuation columns (`continuation_key`, `continuation_generation`, `continuation_reminders`). (+9/−2, 2 files)
 - 21 further snapshots this day recorded no skill changes.
 
 ## 2026-10-03
 - 24 snapshots ran; no skill files changed.
 
 ## 2026-10-02
-- `59ddc90` 23:43 — forget skill, +17.
-- `78ba221` 20:43 — +116/−78 across 24 files (box, quickbooks and shopify 2 files each, asana, booking, and others).
-- `a6e411a` 14:43 — google-calendar, +1/−1.
-- `9681f12` 12:43 — klaviyo and voice-selector rewritten wholesale, +1,050/−1,058 in 2 files.
-- `5ee4f6c` 09:43 — shopping, +9/−84.
-- `cc811cb` 07:43 — duffel, +7/−2.
-- `ce3b6e9` 05:43 — muse_db, +3/−1.
-- `b264336` 03:43 — spaces (3 files), canva (2) and wearables-comms, +311/−75.
-- `2eb70b5` 01:43 — muse_db, +2/−1.
+- [`59ddc90`](https://github.com/sneakers-the-rat/muse-skills/commit/59ddc9071362785da1ac945eab7624618473716f) 23:43 — The forget inventory documents a blind spot: the Feed's own derived claims about the reader, its per-run signal snapshots and citations, and its label cache live outside `memory.claims` and the supersession cascade, so claim retraction doesn't reach them — the runtime forget fence clears *all* of them (no targeted delete exists), and they can only return from new connector evidence after repeated sightings. (+17/−0, 1 file)
+- [`78ba221`](https://github.com/sneakers-the-rat/muse-skills/commit/78ba221d45dda611751c457d6aed9fa97b258997) 20:43 — Box retry semantics split: read-only hosted MCP requests refresh and retry once on HTTP 401, but a hosted MCP *write* is never automatically replayed after sending — check whether it applied, refresh, and retry manually only if needed. Booking hotels now finds lodging providers via `skill_search`. Canva: report a design mismatch and hand over the Canva link instead of offering to correct it in place. The icon-unquoting sweep continued across the MCP connector set. (+11/−14, 24 files)
+- [`a6e411a`](https://github.com/sneakers-the-rat/muse-skills/commit/a6e411a9dd89bbf19a9a80e203eeb65a4e5c3b25) 14:43 — A Google Calendar eval scenario's grading note is rewritten: the wrapper's status path only reports connected/not_connected and never emits `unavailable` — treat it as a code-backed gap. (+1/−1, 1 file)
+- [`9681f12`](https://github.com/sneakers-the-rat/muse-skills/commit/9681f127a47b1baa1ff6878ff5d3e736de14e736) 12:43 — Klaviyo: enumerate a list's members with `get_profiles_for_list` (membership tools are not consent tools — restated). Voice-selector's voice catalog data was regenerated in the same snapshot. (+1,050/−1,058, 2 files)
+- [`5ee4f6c`](https://github.com/sneakers-the-rat/muse-skills/commit/5ee4f6cc1b4a752edfa727f5310bd6fdc8a632f5) 09:43 — Shopping: the `hatch_telemetry_context` plumbing was removed from checkout entirely — browser checkout no longer receives per-product telemetry contexts, and the `HATCH_SHOPPING_PRODUCT_CONTEXTS` environment variable disappears from the Shopify UCP commands. (+9/−84, 3 files)
+- [`cc811cb`](https://github.com/sneakers-the-rat/muse-skills/commit/cc811cbe1b023b215727664da6cbcd5411b3c96f) 07:43 — Duffel: the Stripe Link failure table is rewritten around `requires_action` / `resolution` — use only `user_action.url` (never an `action_url` buried in `provider_response`); `auto_resume` reruns the identical `book` after the user connects, `replacement_required` stops without another spend. (+19/−10, 1 file)
+- [`ce3b6e9`](https://github.com/sneakers-the-rat/muse-skills/commit/ce3b6e92ebff28250c9c71cbabee8d11206a5952) 05:43 — muse_db schema reference regenerated; new `sharing_summary` and `recipient_profiles` columns. (+3/−1, 1 file)
+- [`b264336`](https://github.com/sneakers-the-rat/muse-skills/commit/b264336f9235ce894734a60f80b05720b9a4459c) 03:43 — Canva: a `list-tools` omission is authoritative for the current task — never infer tool availability from the skill text, a prior turn, or a cached schema. Wearables-comms gains a "contacts haven't synced" procedure: `contacts_never_synced` does not mean the user skipped setup, and the skill gives the Meta AI app settings path to check. (+23/−3, 2 files)
+- [`2eb70b5`](https://github.com/sneakers-the-rat/muse-skills/commit/2eb70b52d26c54d0099498dfd4c711374b5a4ebf) 01:43 — muse_db schema reference regenerated; new `avatar_visual_metadata_json` column. (+2/−1, 1 file)
 - 15 further snapshots this day recorded no skill changes.
 
 ## 2026-10-01
-- `28b53d1` 23:43 — meta-ads (6 files), ghl, github and shopping, +188/−86.
-- `1454f00` 20:43 — +25/−10 across 15 files (facebook-cli 3, apple-healthkit, gmail, google-calendar, google-drive, and others).
-- `f1d221b` 18:43 — +40/−32 across 64 files (calendly, facebook-cli, function-health, gmail and google-calendar 2 files each, and many more).
-- `b63e6c3` 15:43 — wearables-comms, +31/−2.
-- `34802f2` 13:43 — Six connector docs gained lines (+11 total): ghl, github, meta-ads, philips-hue, printify, and one more.
-- `9a1ef36` 05:43 — facebook-cli, instagram, messenger, muse_db and threads, +92/−59.
-- `d5996e5` 03:43 — +76/−8 across 28 files, one file each in many connectors (apple-healthkit, asana, box, canva, dropbox, …).
-- `57da82a` 00:43 — meta-ads (5 files) and threads-messages, +126/−12.
+- [`28b53d1`](https://github.com/sneakers-the-rat/muse-skills/commit/28b53d1c4e6a18eb109476136f8a77c645b5d0b7) 23:43 — Meta Ads: placement-specific media generation arrives — campaign video comes from `media.generate_video`, and a generated video's thumbnail is never shown as the creative; a new eval scenario records the live finding where the agent wrongly claimed it could not generate video. The `approval_policy` migration continues (GHL, GitHub, Meta Ads). (+57/−10, 5 files)
+- [`1454f00`](https://github.com/sneakers-the-rat/muse-skills/commit/1454f0071c0e956b5062a35ac06ee404a892197d) 20:43 — The approval model migrates: `require_fresh_approval: true` is replaced by `approval_policy: fresh_consent_only` (Apple Health, Facebook, Health Connect, Messenger) and `approval_policy: fresh_consent_or_task_allow` (Gmail, Calendar, Drive, Instagram, …). Facebook Pages gains rule 22: managed Pages are not followed Pages — `pages list` must never serve a followed-Pages request. (+90/−76, 22 files)
+- [`f1d221b`](https://github.com/sneakers-the-rat/muse-skills/commit/f1d221b333d16f1fe6b99fdcfd5c25a4821d31b0) 18:43 — A format normalization sweep: `icon: "name"` values are unquoted in SKILL.md frontmatter and manifest.yaml across ~30 connectors. Shopping's description widens to cover Instagram, Facebook and Marketplace links. (+33/−33, 63 files)
+- [`b63e6c3`](https://github.com/sneakers-the-rat/muse-skills/commit/b63e6c3269650448b54f373fbd0dc9491a48d349) 15:43 — Wearables-comms: calling is native only — app-based call requests (WhatsApp, Messenger, Instagram) are unsupported, so don't invoke a call command for them and don't substitute a cellular call; a "Supported routes" section spells out what does work. (+24/−5, 1 file)
+- [`34802f2`](https://github.com/sneakers-the-rat/muse-skills/commit/34802f206b81fc7d7b7a96cae314a9654fe87238) 13:43 — `require_fresh_approval: true` added to sensitive operations in GHL, GitHub and Meta Ads; Philips Hue and Tessie get `category: productivity`, Printify `category: business`. (+10/−3, 5 files)
+- [`9a1ef36`](https://github.com/sneakers-the-rat/muse-skills/commit/9a1ef368e7edf5a4c0e262493ec3fb57d29bafc3) 05:43 — Facebook connection discipline rewritten: don't run `me` as a pre-flight check before commands — only a successful empty result or an explicit not-linked response establishes disconnection; timeouts and rate limits prove nothing. (+12/−29, 2 files)
+- [`d5996e5`](https://github.com/sneakers-the-rat/muse-skills/commit/d5996e59c1a985dd1b650445c903e7eace1fa838) 03:43 — `category: business` is assigned across ~17 connector manifests, and `require_fresh_approval: true` lands on sensitive operations in Apple Health, Facebook, Health Connect, Messenger and Threads. Spotify gains a Voice Playback section: starting music during a voice conversation goes through that flow, everything else stays on the `spotify-api` commands. (+92/−46, 27 files)
+- [`57da82a`](https://github.com/sneakers-the-rat/muse-skills/commit/57da82a4b59792c81e5d96c710b913933d039921) 00:43 — Meta Ads message ads: never ask the advertiser for a destination URL — `destination_type` MESSENGER / WHATSAPP / INSTAGRAM_DIRECT makes it a message ad, with the channel's standard `link_url` (`https://m.me/<page_id>`, `https://api.whatsapp.com/send`). A new eval scenario records the live finding. (+30/−5, 2 files)
 - 16 further snapshots this day recorded no skill changes.
 
 ## 2026-09-30
-- `43f1d18` 22:43 — meta-ads, +31/−7.
-- `7dd56dd` 19:43 — muse_db and voice-selector, +728/−2.
-- `a038126` 16:43 — dropbox (3 files), gmail (2), muse_db (2), plaid and voice-selector, +43/−29.
-- `4d84ba6` 12:43 — meta-ads (5 files) and quickbooks (2), +106/−15.
-- `5e14a9d` 02:43 — meta-ads (17 files), shopping (3), messenger (2), stripe (2) and muse_db, +649/−380 across 27 files.
+- [`43f1d18`](https://github.com/sneakers-the-rat/muse-skills/commit/43f1d18d39e4aa535325c2653ba690c974ce3cc3) 22:43 — Meta Ads: check an account's Ads-MCP-enabled flag before the first call on it. Restricted-topic targeting: a rejection means that audience can't be targeted at all — no synonym or narrower-term re-searches for the same people; keep the audience broad and say it's unavailable. Rejections only the advertiser can fix (Lead Ads terms unaccepted, no payment method, restricted Instagram account, 2FA/checkpoint) get the fix named, with no retries. (+53/−3, 3 files)
+- [`7dd56dd`](https://github.com/sneakers-the-rat/muse-skills/commit/7dd56dda8578ef9769fca4c5cae9204276f5a05e) 19:43 — muse_db schema reference regenerated; new `advanced_avatar_variants_json` column. (+2/−1, 1 file)
+- [`a038126`](https://github.com/sneakers-the-rat/muse-skills/commit/a038126b74eb6925bde4b53fe14c91db068bbeea) 16:43 — Dropbox gains uploads: a new `create-file` command (local file to Dropbox, text and binary, up to 150 MiB), the `content.dropboxapi.com` host, and a description that now reads "Search, read, upload, organize, and share." Gmail drops "filters" from its raw-API settings list. (+33/−4, 2 files)
+- [`4d84ba6`](https://github.com/sneakers-the-rat/muse-skills/commit/4d84ba6c3e5c5f3463c9eb9c65d2793c17397d64) 12:43 — Meta Ads gains `references/campaign-manual-setup.md`: when an account rejects writes as unavailable ("Ads MCP Access Denied"), that's about the account — every write will fail the same way for the rest of the conversation, so stop attempting writes (each costs an unusable approval) and hand the accepted plan to the advertiser to build in Ads Manager. (+27/−1, 2 files)
+- [`5e14a9d`](https://github.com/sneakers-the-rat/muse-skills/commit/5e14a9d59c9e8171b0bdafa3684d450536e55888) 02:43 — Messenger approval semantics clarified: with approvals on, a reply sends without a separate approval only for conversations the user previously allowed from this account, revocable under Settings > Connectors > Messenger > Manage recipient permissions; the manifest's quota mode becomes `enforce`. Meta Ads: shell wrappers and pipes around its CLI are banned (`| head`, `| python3` — oversized results already return as files), `--chart-json` keys are pinned exactly, and a campaign-delivery-compatibility reference is added. (+36/−7, 6 files)
 - 19 further snapshots this day recorded no skill changes.
 
 ## 2026-09-29
-- `0a2d306` 17:43 — facebook-cli (2 files) and places-search, +22/−9.
-- `3c85b84` 13:43 — The artifacts tree updated, +1,672/−289 across 19 files.
-- `065d968` 09:43 — meta-ads (9 files), vercel (2), figma, linear and quickbooks, +913/−286.
-- `97483a1` 04:43 — muse_db, +7/−1.
-- `0d8e195` 02:43 — shopping (2 files) and subscription-status, +40/−40.
-- `8f8bccc` 00:43 — Large update: +10,637/−208 across 100 files (meta-ads 20, spaces 12, figma 7, asana 3, box 3, and many more).
+- [`0a2d306`](https://github.com/sneakers-the-rat/muse-skills/commit/0a2d3061a191d5e61819490b1b321236b7b52118) 17:43 — Facebook Pages rule 21: Page commands take only the `page_id` from `pages list` — never a `profile_id` or a post's `owner_id` — and `pages list` is paginated with cursors until the Page is found. Places Search's "near me" wording is narrowed to the device-location case. (+32/−23, 3 files)
+- [`3c85b84`](https://github.com/sneakers-the-rat/muse-skills/commit/3c85b842ec419a05165209b7b78729cf914e6ee0) 13:43 — Artifacts route all map content through the shared `references/maps.md`: the document, PDF and presentation skills gain the map row, a `maps-recipes.md` helper lands, and a vendored map-runtime (the `@meta/maps` runtime, bundled because artifacts have no bundler or React) appears; `media.generate_image` is now only for decorative or fictional maps. (+96/−9, 9 files)
+- [`065d968`](https://github.com/sneakers-the-rat/muse-skills/commit/065d968616ef0e0d4777ab4670355b13eeb52602) 09:43 — Figma: provider skills must be fetched via `get_figma_skill` (`skill://` URIs) before tools that require them. Linear: under a read-only OAuth grant the write tools are hidden from the live catalogue — documented `additional_access` entries plus a `scope_add_url` consent flow; an all-read tools list must not be described as lack of write support. (+34/−27, 10 files)
+- [`97483a1`](https://github.com/sneakers-the-rat/muse-skills/commit/97483a1ee192e253fc7fc20d5e2c587c979e2b1d) 04:43 — muse_db schema reference regenerated; new saved-content columns (`saved_at_ms`, `publisher_id`, `publisher_name`, `saved_record_id`, `saved_available`, `saved_target_shortcode`). (+7/−1, 1 file)
+- [`0d8e195`](https://github.com/sneakers-the-rat/muse-skills/commit/0d8e19540cbbef71428df79f1d63e72fee77236e) 02:43 — Shopping trims its backend descriptions (dropping the coverage-quality claims for catalog vs browser search) and narrows the "only for products from Facebook Marketplace" condition. (+2/−6, 2 files)
+- [`8f8bccc`](https://github.com/sneakers-the-rat/muse-skills/commit/8f8bccc3afc3e8974e7a6048940bdf4a16052690) 00:43 — A wave of ~25 connector packages lands in the archive at once — Asana, Box, Canva, Dropbox, Evernote, Figma, GHL, GitHub, Klaviyo, Linear, Lovable, the full Meta Ads suite with its 17 reference files, QuickBooks, Replit, Shopify, Slack, Stripe, Todoist, Vercel, Zapier, Zoom and more — each with SKILL.md, auth config and manifest. An archive coverage expansion: the playbooks existed upstream but hadn't been captured as files here. (+10,637/−208, 100 files)
 - 18 further snapshots this day recorded no skill changes.
 
 ## 2026-09-28
-- `4c73296` 22:43 — +390/−67 across 45 files (spaces 7, facebook-cli 4, gmail 2, instagram 2, messenger 2, and others).
-- `2476277` 18:43 — wearables-comms, +5/−4.
-- `ca6f708` 16:43 — facebook-cli (2 files), shopping (2) and voice-design, +52/−31.
-- `48856cf` 13:43 — spaces (3 files) and plaid (2), +620/−237.
-- `c4c9e92` 11:43 — goals (7 files), withings (3), outlook-calendar (2), outlook-mail (2), forget and others, +145/−10 across 21 files.
-- `9fbaed2` 05:43 — messenger and muse_db, +79/−96.
+- [`4c73296`](https://github.com/sneakers-the-rat/muse-skills/commit/4c73296ef27585798468f9420854404718b32b71) 22:43 — Facebook gains managed-Pages support: `pages list` / access / account-insights, drafts create/show/publish/edit/delete, and posts create/reschedule/cancel-schedule — all writes approval-gated, with a new `references/pages.md`. The read-only restriction is rescoped to personal-profile activity, with Pages writes the documented exception. Manifests across the set gain `category:` fields. (+1,100/−72, 34 files)
+- [`2476277`](https://github.com/sneakers-the-rat/muse-skills/commit/2476277b3676dda37eb1527052c4738d8b496334) 18:43 — Wearables-comms: `params_json.contact_name` must now always be set — the resolved contact name, or the supplied number when no contact resolves. (+2/−2, 1 file)
+- [`ca6f708`](https://github.com/sneakers-the-rat/muse-skills/commit/ca6f708bbf2f885579a4a24f11076f260371ea09) 16:43 — Facebook groups search gains `--after` cursor pagination, and `--role any` is redefined: connected groups (including private) first, then public discovery; `--limit` defaults to 25 with keywords. Shopping: Marketplace results now print `image_url` as a `{"withheld": …}` object — the full payload goes only to the new `--out` file, which the agent must not read. Voice-design gains a restore-previous-voice flow and saved-voice disambiguation rules. (+120/−58, 6 files)
+- [`48856cf`](https://github.com/sneakers-the-rat/muse-skills/commit/48856cfd38dbae6607c3db3925eda8250175ffc8) 13:43 — Plaid: `transactions-get` with explicit dates becomes the default history read; `transactions-sync` is demoted to persistent-store and cursor workflows only. The skill warns that `--days-requested` does not filter, explains partial results via `body.institutions`, and pins the sign convention (positive = outflow). (+27/−12, 1 file)
+- [`c4c9e92`](https://github.com/sneakers-the-rat/muse-skills/commit/c4c9e924baabce061a100eb52cbe89ac29fffee3) 11:43 — Permission data classes land in connector manifests: Gmail declares drafts a data class governed by `users.drafts.list` (Sentinel attaches exclusion constraints to allowed message reads; the trusted worker enforces them and fails closed), Calendar's `free_busy.query` is declared an event-schedule emitter, Instagram's `interactions.read` an account-insights emitter, Notion's `search.read` a page-content emitter. Outlook Calendar and Mail gain "Permission-withheld fields" guidance — a withheld field is not an empty one; use `get` with approval only for one specific event or message. The goals creation guides and the forget inventory switch their no-open source list from `~/memory/personalization.md` to `~/USER.md` + `~/MEMORY.md`. (+430/−143, 25 files)
+- [`9fbaed2`](https://github.com/sneakers-the-rat/muse-skills/commit/9fbaed2e970944ffa8b124d8cbcb89e02c42426c) 05:43 — "Messenger Channel" is renamed "Messenger side chat" throughout the Messenger skill: the flow now runs through `chat.connection_status` and `~/docs/chat-connections/messenger.md`, and replies are delivered by the runtime through the originating chat. The muse_db schema reference is regenerated for the same rename (`runtime.channel_*` becomes `chat.chats` / `chat.event_transports` / `chat.message_bindings`). (+42/−48, 3 files)
 - 18 further snapshots this day recorded no skill changes.
 
 ## 2026-09-27
-- `5138f2a` 21:50 — Backup script adjustment (one non-skill file; no skill files changed).
-- `dd433bc` 21:45 — Backup script adjustment (one non-skill file; no skill files changed).
-- `4b035f6` 21:42 — Initial archive commit: the full mirror of `/opt/hatch/skills`, +76,643 lines across 2,032 files (booking 1,643 files, spaces 107, magic-moment 50, artifacts 41, facebook-cli 15, and the rest of the namespace).
-- 3 further snapshots this evening recorded no skill changes.
+- [`5138f2a`](https://github.com/sneakers-the-rat/muse-skills/commit/5138f2afe19b193e1d62df1623c46b0058244a30) 23:57 — Backup-script setup edits; no skill files changed.
+- [`dd433bc`](https://github.com/sneakers-the-rat/muse-skills/commit/dd433bc947eb32d883651a617d081de8aef5a7a7) 23:46 — Backup-script setup edits; no skill files changed.
+- [`4b035f6`](https://github.com/sneakers-the-rat/muse-skills/commit/4b035f68e7124dbf5b85559f8e30c1940ac1e848) 21:42 — The initial archive import: the full skill set as first captured — the artifacts library, the booking skill with its references and eval scenarios (1,643 of the files), the connector playbooks then present (Gmail, the Google suite, Facebook, Instagram, Spotify, Plaid, Duffel, FlightAware, …), the goals creation guides, the spaces templates and TS runtime, magic-moment, and voice-design. (+76,643 lines, 2,032 files)
+- 3 further snapshots this day recorded no skill changes.
