@@ -8,10 +8,15 @@ real skill file content, browsable in place:
   namespace, with each link replaced by the content it names)
 - `workflow-skills/` — mirror of `/opt/hatch/workflow-skills` (the
   agent-facing skill playbooks and their registry metadata)
+- `connectors/` — mirror of the `/opt/hatch/connectors` directories that
+  no symlink in `/opt/hatch/skills` resolves into: the connectors with no
+  skill surface (currently `meta_catalog_search` and `stripe-link`). The
+  set is recomputed every run — a connector that gains a skill symlink
+  leaves this tree and is archived through `skills/` instead.
 
 ## Change volume
 
-Lines added and removed per commit across the archived trees:
+Lines added and removed per commit across the skill trees:
 
 ![Skill history plot](plot.svg)
 
