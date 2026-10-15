@@ -1,0 +1,187 @@
+#!/usr/bin/env python3
+"""Scaffold operating documentation for an already-connected custom API.
+
+Authd supplies the registered hosts and credential scheme. The doc and its
+descriptor are copies of templates/connector/CONNECTOR.md and connector.yaml
+with those values filled in, so the templates stay the one source of their
+shape. This also creates the helper directory.
+"""
+
+import argparse
+import fcntl
+import json
+import os
+import re
+import stat
+import sys
+from pathlib import Path
+
+AUTHD_SOCKET = os.environ.get("JARVIS_AUTHD_SOCK", "/run/hatch/auth/authd.sock")
+LIST_PATH = "/v1/custom-connectors/list"
+HELPER_PATH = str(Path(__file__).with_name("dynamic_credentials.py"))
+TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates" / "connector"
+
+from dynamic_credentials import DynamicCredentialError, _post_json_unix
+
+
+def fail(message: str) -> None:
+    print(f"error: {message}", file=sys.stderr)
+    raise SystemExit(1)
+
+
+def title_case_provider(provider: str) -> str:
+    cleaned = provider.replace("_", " ").replace("-", " ").replace(".", " ")
+    return " ".join(word.capitalize() for word in cleaned.split())
+
+
+def registered_connector(provider: str) -> dict:
+    """The connector authd currently holds for `custom.<provider>`."""
+    name = f"custom.{provider}"
+    try:
+        payload = _post_json_unix(AUTHD_SOCKET, LIST_PATH, {}, 5.0)
+    except (OSError, DynamicCredentialError) as err:
+        fail(f"could not list registered connectors: {err}")
+    try:
+        # This route wraps in `{"ok", "result"}`; /v1/credentials/surrogate does not.
+        connectors = json.loads(payload).get("result", {}).get("connectors", [])
+    except (json.JSONDecodeError, AttributeError) as err:
+        fail(f"could not parse the authd connector list: {err}")
+    for entry in connectors:
+        if str(entry.get("name", "")).lower() != name:
+            continue
+        # An OAuth row is listed from register time and only flips to connected
+        # at the authorize callback, so registered does not mean usable.
+        if entry.get("disabled"):
+            fail(f"{name} is disabled; ask the user to re-enable it before scaffolding")
+        if not entry.get("connected"):
+            fail(
+                f"{name} is registered but holds no credential yet, so the user "
+                "has not finished the setup link. Wait for the connected "
+                "notification instead of documenting an interface that cannot "
+                "authenticate"
+            )
+        return entry
+    fail(
+        f"no connector named {name} is registered; "
+        "set it up with credentials.request_api_access first"
+    )
+
+
+def render_connector_doc(
+    *, provider: str, display_name: str, scheme: str, hosts: list[str]
+) -> dict[str, str]:
+    """Fill the shared connector templates. The writer completes the rest."""
+    templates = {}
+    for name in ("connector.yaml", "CONNECTOR.md"):
+        try:
+            templates[name] = (TEMPLATE_DIR / name).read_text(encoding="utf-8")
+        except OSError as err:
+            fail(f"could not read the connector template {TEMPLATE_DIR / name}: {err}")
+    values = {
+        "<provider>": provider,
+        "<Provider Name>": display_name,
+        "<auth-scheme>": scheme,
+        "<api-hosts-json>": json.dumps(hosts),
+        "<api-hosts>": ", ".join(f"`{host}`" for host in hosts),
+    }
+    for token, value in values.items():
+        # Descriptor values sit inside double-quoted YAML strings.
+        templates["connector.yaml"] = templates["connector.yaml"].replace(
+            token, json.dumps(value, ensure_ascii=False)[1:-1]
+        )
+        templates["CONNECTOR.md"] = templates["CONNECTOR.md"].replace(token, value)
+    return templates
+
+
+def ensure_directory(parent_fd: int, name: str) -> int:
+    try:
+        os.mkdir(name, mode=0o755, dir_fd=parent_fd)
+        os.fsync(parent_fd)
+    except FileExistsError:
+        pass
+    return os.open(name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent_fd)
+
+
+def create_layout(home: Path, provider: str, files: dict[str, str]) -> tuple[Path, Path]:
+    """Create through directory descriptors without replacing existing docs or links."""
+    handles = [os.open(home, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)]
+    try:
+        for part in ["workspace", "custom-connectors", f"custom.{provider}"]:
+            handles.append(ensure_directory(handles[-1], part))
+        document_fd = handles[-1]
+        # Serialize publication and reclaim only this writer's interrupted stage.
+        lock_fd = os.open(".write-lock", os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW | os.O_NONBLOCK,
+                          0o600, dir_fd=document_fd)
+        handles.append(lock_fd)
+        if not stat.S_ISREG(os.fstat(lock_fd).st_mode):
+            fail("invalid connector publication lock")
+        fcntl.flock(lock_fd, fcntl.LOCK_EX)
+        current = ensure_directory(document_fd, "bin")
+        handles.append(current)
+        for directory_fd in handles[:-1]:
+            if directory_fd != lock_fd:
+                os.fsync(directory_fd)
+        os.fsync(current)
+        for name in files:
+            try:
+                os.stat(name, dir_fd=document_fd, follow_symlinks=False)
+            except FileNotFoundError:
+                continue
+            fail("custom connector docs already exist; read them before making changes")
+        # The descriptor lands first, so a doc never appears without one.
+        for name, text in files.items():
+            temporary = f".{name}.pending"
+            try:
+                os.unlink(temporary, dir_fd=document_fd)
+            except FileNotFoundError:
+                pass
+            fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+                         0o644, dir_fd=document_fd)
+            try:
+                with os.fdopen(fd, "w", encoding="utf-8") as stream:
+                    stream.write(text)
+                    stream.flush()
+                    os.fsync(stream.fileno())
+                try:
+                    os.link(temporary, name, src_dir_fd=document_fd,
+                            dst_dir_fd=document_fd, follow_symlinks=False)
+                except FileExistsError:
+                    fail("custom connector docs already exist; read them before making changes")
+                os.fsync(document_fd)
+            finally:
+                os.unlink(temporary, dir_fd=document_fd)
+                os.fsync(document_fd)
+    finally:
+        for fd in reversed(handles):
+            os.close(fd)
+    return (home / "workspace" / "custom-connectors" / f"custom.{provider}" / "CONNECTOR.md",
+            home / "workspace" / "custom-connectors" / f"custom.{provider}" / "bin")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Document an already-connected custom connector.")
+    parser.add_argument("--provider", required=True)
+    parser.add_argument("--display-name")
+    args = parser.parse_args()
+    provider = args.provider.strip().lower().removeprefix("custom.")
+    if not re.fullmatch(r"[a-z0-9][a-z0-9_-]*", provider):
+        fail("provider must be a registered lowercase slug")
+    connector = registered_connector(provider)
+    hosts = [str(host) for host in connector.get("hosts", []) if str(host).strip()]
+    if not hosts:
+        fail("registered connector has no allowed hosts")
+    # The scheme uses credentials.request_api_access's names so a reconnect can reuse it.
+    scheme = "oauth2_code" if str(connector.get("schema", "")).lower() == "oauth" else "api_key"
+    if not Path(HELPER_PATH).is_file():
+        fail(f"missing bundled credential helper: {HELPER_PATH}")
+    display_name = " ".join((args.display_name or title_case_provider(provider)).split())
+    document, helpers = create_layout(Path.home(), provider, render_connector_doc(
+        provider=provider, display_name=display_name, scheme=scheme, hosts=hosts))
+    print(f"created: {document}")
+    print(f"helpers: {helpers}")
+    print("next: fill in the remaining placeholders, document verified operations "
+          "and delete the template comments")
+
+
+if __name__ == "__main__":
+    main()

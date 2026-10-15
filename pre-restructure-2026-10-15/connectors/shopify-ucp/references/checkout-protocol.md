@@ -1,0 +1,229 @@
+# Shopify UCP checkout protocol
+
+- Use this protocol after the user selects eligible catalog products from one Shopify merchant. Every command runs as `/opt/hatch/bin/shopify-ucp-cli`, and every command except `order get` takes a JSON input file.
+
+## Check eligibility
+
+- Every selected product needs `is_agentic_checkout_creation_enabled` exactly `true` in its catalog result, and missing or null counts as false. Keep each product's exact `product_id`, capability flags and storefront `url`.
+
+- Put products in one checkout only when their URLs clearly identify the same storefront. Matching brand names are not enough, and a checkout never mixes merchants.
+
+- The checkout endpoint makes the final eligibility decision.
+
+## Keep an optional cart
+
+- Use a cart only when the basket must outlast the turn, because the user is still adding or removing items or wants to return later. `checkout create` takes items directly. Keep the opaque cart ID, which `cart create` returns as `result.id` and later cart commands echo as `agent_state.cart_id`.
+
+```json
+{"items": [{"item_id": "<catalog product_id>", "quantity": 1}]}
+```
+
+- `cart get` and `cart cancel` take `{"cart_id": "<cart_id>"}`, and `cart update` takes the `cart_id` with the complete `items` list. An update replaces the whole basket, which is how an item is removed, so read `cart get` first when unsure and rebuild from `result.line_items`, using each line's `item.id` and `quantity`.
+
+- A cart holds one merchant. A cart spanning two is refused with an error naming both merchants, so start a separate cart instead of retrying.
+
+- Cart commands and `checkout create` accept catalog product IDs or the variant GIDs a cart returns. Search again for a resumed cart's products when you no longer have their catalog eligibility flags.
+
+- A cart is not linked to its checkout. Cancel it once `checkout complete` returns `ok: true` or the browser confirms the order, because nothing else closes it and there is no way to list forgotten carts.
+
+- A `warning` or `info` message, such as `quantity_adjusted`, does not fail a cart call. Report it when it changes what the user is buying.
+
+## Choose the payment route
+
+- Keep a payment route explicitly selected for this purchase. Otherwise ask with `muse.create_options` and wait, offering Shop Pay, Link and Use another method. A saved default or an existing connection does not select a route.
+
+- For Use another method, follow `/opt/muse/skills/shopping/references/browser-checkout.md` from the selected product URLs, explain that the user will enter payment during browser takeover and do not create a UCP checkout.
+
+- For a wallet route, call `wallet.list_payment_methods` for its provider and resolve one exact saved card as that wallet's connector docs describe. If the user declines setup or no usable card results, return to the route choice.
+
+## Prepare buyer details
+
+- Start from details already known in the conversation and `~/USER.md`. Before asking for a missing name, email address or phone number, call `wallet.get_user_info`, and for a missing recipient name or shipping address call `wallet.list_shipping_addresses`. Use wallet values only for matching missing fields.
+
+- After applying known, sole or default values, ask one grouped question for every required detail still missing or ambiguous. Do not tell the user details are needed before these lookups finish.
+
+- Direct completion needs the buyer email, the recipient's first and last name and a complete shipping address with street, city, state or region, postal code and two-letter country code. Direct checkout ships only to the United States and Canada, so use the browser route for another destination. Include a phone number when known, and ask for one only when the user or merchant requires it.
+
+- Wait for those details before creating the checkout. If the user does not want to give them, use the browser route with the selected wallet from the original product URLs.
+
+## Create the checkout
+
+- Confirm every product, exact variant and quantity, and put the complete item set into this first call, because `checkout update` cannot add or remove products.
+
+- Use each catalog `product_id` as an `items[].item_id`, with one entry per distinct variant and repeats folded into its `quantity`, which must be at least 1. Do not add a merchant field, because the endpoint resolves the merchant from the IDs.
+
+- Set `currency` from the products' latest catalog details, such as `CAD` for a product priced in Canadian dollars, and use `USD` only when the currency is absent. Never infer it from the shipping country. If the products' currencies differ, offer browser checkout for all of them instead.
+
+- Leave the wallet provider and payment-method ID out of this request.
+
+```json
+{
+  "buyer": {
+    "email": "<buyer email>",
+    "phone_number": "<phone, when known>",
+    "country_code": "<two-letter country code, when known>",
+    "address": {
+      "first_name": "<recipient first name>",
+      "last_name": "<recipient last name>",
+      "street1": "<street address>",
+      "street2": "<apartment or unit, when known>",
+      "city": "<city>",
+      "state": "<state or region>",
+      "postal_code": "<postal code>",
+      "country": "<two-letter country code>"
+    }
+  },
+  "items": [
+    {"item_id": "<catalog product_id>", "quantity": 1}
+  ],
+  "currency": "<catalog currency, or USD>"
+}
+```
+
+```text
+/opt/hatch/bin/shopify-ucp-cli checkout create --input-file '<checkout.json>'
+```
+
+## Read the creation result
+
+- Continue only with a usable `agent_state.checkout_id`, and save it. Read the quote from the output's `checkout` view, which the CLI validated, and treat `result` as the merchant's raw body.
+
+- A checkout ID with `requires_escalation` or a buyer-detail message is still a created checkout. Keep the selected route and follow the completion branches below without asking the route question again.
+
+- A merchant `error` message sets `ok` to false and adds an `error` summary, but keeps the checkout. Its `severity` decides the next step:
+
+  - `recoverable` can be fixed with `checkout update`.
+
+  - `requires_buyer_input` and `requires_buyer_review` continue in the browser from the checkout URL.
+
+  - `unrecoverable` ends direct checkout, so explain it and offer browser checkout from the product URL.
+
+- Read `requested_currency`, `checkout_currency` and `currency_changed`. Shopify may choose a supported currency for the shipping destination, which is not an error and needs no browser fallback.
+
+- When the currency changed, use only the checkout currency and amounts from then on. Tell the user both currencies, explain that Shopify chose the market from the shipping address, and show the new item price and total.
+
+- After creation the checkout currency is fixed, and `checkout get` or `checkout update` fails if the merchant answers in another currency. Explain the failure and offer browser checkout from the checkout URL instead of retrying.
+
+- Recheck any budget against the checkout amounts. If the budget is in another currency and no user-approved equivalent exists, ask for a limit in the checkout currency, and never compare currencies as raw numbers or invent an exchange rate. The user approves the final quote in its own currency, and a decision about the catalog price does not cover it.
+
+- Take the checkout URL from `result.continue_url` or `result.checkout.continue_url`, or else use a selected product's original storefront URL. Never construct one. A continuation URL alone does not require browser completion.
+
+- If creation fails or rejects an item, explain the result and offer browser checkout from the original product URL without retrying. If the user accepts, follow `/opt/muse/skills/shopping/references/browser-checkout.md`.
+
+## Choose direct or browser completion
+
+- Keep the selected wallet and card. Ask again only when the user asks to switch or the card is no longer listed, and never substitute another card.
+
+- For a switch to another wallet, resolve its exact card with `wallet.list_payment_methods` and keep the existing checkout. For Use another method, continue the existing checkout in the browser from its URL and explain that the user will enter payment during takeover.
+
+- Take the first branch that matches the selected wallet:
+
+  - Shop Pay completes directly only when every product's `is_agentic_checkout_completion_enabled` is exactly `true`, creation did not report `requires_escalation` and the checkout has the recipient's name and address. Otherwise continue in the browser with Shop Pay.
+
+  - Link continues in the browser when creation reported `requires_escalation` or a message requiring buyer input or review, whatever the completion flags say.
+
+  - Link continues in the browser when any product's completion flag is not exactly `true`, or when the checkout lacks the recipient's name and address.
+
+  - Otherwise Link completes directly.
+
+- On a browser branch, finish any wallet connection or card setup in the parent first, briefly acknowledge the handoff and end the reply. Do not poll the browser task, and never call `checkout complete` for that checkout.
+
+### Continue in the browser
+
+- Name the wallet by provider ID and the card by its masked label in the brief, never the opaque payment-method ID. The browser task does not call wallet tools or discuss other payment routes. After the user accepts its final review, send the provider and exact payment-method ID only in the `wallet_payment` field of `browser.steer_task`.
+
+```json
+{
+  "task": "<request in the user's words>. Open <exact Shopify checkout URL> for <selected products>. Use provider <shop-pay or stripe-link> with saved card <masked label>. Use these choices for every item: <variants and quantities>. Ask only for missing required purchase choices. Continue through checkout and hand off the exact final terms before submission. Shipping preference: <deadline, budget or speed, or none>."
+}
+```
+
+- Continue the purchase as `/opt/muse/skills/shopping/references/browser-checkout.md` describes.
+
+## Refresh buyer details, delivery, discounts and totals
+
+- Read the offered delivery options, with their `id`, `title`, `description` and `totals`, from `result.checkout.fulfillment.methods[].groups[].options[]`, because the `checkout` view shows only the selected one.
+
+- When the checkout offers one delivery option, select it. With several, pick the best fit when the user stated a deadline, budget or speed or the options are nearly identical, and say which you chose. Otherwise show each option's price and estimate and let the user choose.
+
+- If different item groups need separate delivery choices, do not complete directly, and continue in the browser from the checkout URL.
+
+```json
+{"checkout_id": "<checkout_id>", "selected_delivery_option_id": "<delivery option id>"}
+```
+
+```text
+/opt/hatch/bin/shopify-ucp-cli checkout update --input-file '<update.json>'
+```
+
+- When the user asks to add or change buyer contact or shipping details on an existing checkout, run `checkout update` with its saved `checkout_id` and the complete desired `buyer` object. Use known buyer details and ask together for any missing or ambiguous fields.
+
+- Keep the shipping address nested under `buyer`, because the CLI maps it to the checkout's fulfillment destination and buyer context. Never invent a top-level fulfillment field.
+
+- Send the whole buyer, not only newly learned fields, because a buyer update replaces the checkout's buyer state.
+
+- Send buyer changes alone or with delivery and discount changes. The checkout stays the same, and a buyer update needs no payment method or wallet connection.
+
+```json
+{
+  "checkout_id": "<checkout_id>",
+  "buyer": {
+    "email": "<email>",
+    "phone_number": "<phone>",
+    "country_code": "<country code>",
+    "address": {
+      "first_name": "<first name>",
+      "last_name": "<last name>",
+      "street1": "<street1>",
+      "street2": "<street2>",
+      "city": "<city>",
+      "state": "<state>",
+      "postal_code": "<postal code>",
+      "country": "<two-letter country>"
+    }
+  }
+}
+```
+
+- Refresh the same checkout with `checkout get` to verify the buyer update and read its delivery options. A buyer update request does not authorize completing or charging the checkout.
+
+- Apply promo codes by passing the complete desired set in `discount_codes`, in the same call as a delivery choice or on its own with the `checkout_id`. Use codes the user supplied or found in a deal search they asked for, never invent codes and do not interrupt every checkout to ask for one.
+
+- Omit `discount_codes` to keep the existing codes, and pass an empty list to clear them. Report the applied discounts, any `result.checkout.rejected_discount_codes` and the refreshed total, because rejected codes can appear even when `ok` is true.
+
+## Review and complete
+
+- Show the completed quote with the masked card, items, final total and delivery choice, as the checkout review in `~/docs/chat/payments-and-purchases.md` describes. A wallet connection or an earlier request to buy does not approve this quote.
+
+- For Link, ask for the user's explicit approval and wait. For Shop Pay, do not ask in chat, because `checkout complete` requests the wallet approval that serves as final confirmation.
+
+- Write the completion input with only the checkout ID, the wallet provider, the exact payment-method ID from `wallet.list_payment_methods` and the selected delivery option when there is one. `wallet_provider` is `stripe_link` or `shop_pay`, spelled with an underscore here.
+
+```json
+{
+  "checkout_id": "<checkout_id>",
+  "wallet_provider": "<stripe_link or shop_pay>",
+  "payment_method_id": "<exact payment-method id>",
+  "selected_delivery_option_id": "<delivery option id, when one exists>"
+}
+```
+
+```text
+/opt/hatch/bin/shopify-ucp-cli checkout complete --input-file '<complete.json>'
+```
+
+- Direct Shop Pay completion pays with a one-time Shop Pay token and never exposes card details. When direct Shop Pay completion is unavailable, use the browser route rather than producing card details.
+
+## After completion
+
+- `ok: true` from `checkout complete` confirms the order. A failure after the wallet approval, or an unknown outcome, does not prove that no order was placed, so check `order get` before saying so, and never retry or switch to the browser automatically.
+
+```text
+/opt/hatch/bin/shopify-ucp-cli order get --checkout-id '<checkout_id>'
+```
+
+- Summarize the order status, products, merchant, final amount, delivery estimate and the returned confirmation link, without raw JSON, internal IDs, buyer contact details or the shipping address.
+
+- For a later status question, use `order get --checkout-id`, or `checkout get` with an input file holding `{"checkout_id": "<checkout_id>"}`. Reads add UTC and user-local forms of provider times, such as `checkout_expires_at`, `order_placed_at` and `order_event_occurred_at`. An order-status message time is not a delivery time.
+
+- Cancel a placed order with `checkout cancel` and `{"checkout_id": "<checkout_id>"}` only when the user explicitly asks, then confirm the new state with `order get`.

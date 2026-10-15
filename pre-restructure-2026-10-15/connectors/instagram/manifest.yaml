@@ -1,0 +1,117 @@
+version: 1
+metadata:
+  visible_in_settings: true
+auth:
+  provider: instagram
+  required: true
+cli:
+  binary: instagram-cli
+  skill: instagram
+connector: instagram
+category: social
+display_name: Instagram
+description: Catch up on friends and the creators you love
+icon: instagram
+request_quota:
+  mode: shadow
+  workers:
+    - instagram-cli
+    - instagram-messages-cli
+  queries_per_minute: 600
+  burst: 100
+# The `account-insights` command is keyed to interactions.read but returns the
+# account-level insight metrics "Access analytics" (analytics.read) governs, so
+# interactions.read is an account-insights DATA CLASS emitter. While analytics
+# is deny/ask, Sentinel attaches an exclusion constraint and the trusted worker
+# refuses the account-insights command; other interaction reads (followers,
+# comments, likes) carry no insight metrics and proceed.
+data_classes:
+  account_insights:
+    governed_by: analytics.read
+    emitted_by:
+      - interactions.read
+actions:
+  read:
+    default: allow
+    label: Read permissions
+    methods:
+      content.read:
+        label: Access content
+        approval_phrase: access content on Instagram
+      interactions.read:
+        label: Access followers, comments, likes, and insights
+        approval_phrase: access your followers, comments, likes, and insights on Instagram
+      analytics.read:
+        label: Access analytics
+        approval_phrase: access Instagram analytics
+      algorithm.read:
+        label: Access your algorithm
+        approval_phrase: access your Instagram algorithm
+  write:
+    default: ask
+    label: Write and delete permissions
+    methods:
+      profile.edit:
+        approval_policy: fresh_consent_or_task_allow
+        label: Edit your profile
+        approval_phrase: edit your Instagram profile
+      algorithm.update:
+        default: allow
+        label: Edit your algorithm
+        approval_phrase: update your Instagram algorithm
+      content.post:
+        approval_policy: fresh_consent_or_task_allow
+        label: Post content
+        approval_phrase: post this content to Instagram
+      saved.write:
+        default: allow
+        label: Manage saved posts
+        approval_phrase: manage your saved posts on Instagram
+commands:
+  # Credential-free URL helpers handled by the binary before the tool pipeline.
+  connect-url: null
+  disconnect-url: null
+  # Account discovery; not policy-gated.
+  accounts: null
+  profile: content.read
+  posts: content.read
+  feed: content.read
+  user-profile: content.read
+  tagged-posts: content.read
+  post: content.read
+  saved-posts: content.read
+  own-stories: content.read
+  own-stories-archive: content.read
+  stories-tray: content.read
+  story-media: content.read
+  location-search: content.read
+  media-understanding: content.read
+  followers: interactions.read
+  following: interactions.read
+  close-friends: interactions.read
+  activity-notifications: interactions.read
+  fetch-post-comments: interactions.read
+  fetch-post-likers: interactions.read
+  recently-liked-posts: interactions.read
+  recently-commented-posts: interactions.read
+  account-insights: interactions.read
+  saved-collections: interactions.read
+  analytics-metric-metadata: analytics.read
+  analytics-account-insights: analytics.read
+  analytics-top-post: analytics.read
+  analytics-follower-count-delta: analytics.read
+  analytics-metric-cards: analytics.read
+  current-interests: algorithm.read
+  create-interest: algorithm.update
+  update-interest: algorithm.update
+  delete-interest: algorithm.update
+  update-interests: algorithm.update
+  post-feed: content.post
+  post-story: content.post
+  create-saved-collection: saved.write
+  rename-saved-collection: saved.write
+  save-post: saved.write
+  unsave-post: saved.write
+  set-profile-picture: profile.edit
+  update-bio: profile.edit
+  profile-banner: profile.edit

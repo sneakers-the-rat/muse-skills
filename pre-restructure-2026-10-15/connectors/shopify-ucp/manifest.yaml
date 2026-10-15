@@ -1,0 +1,95 @@
+version: 1
+metadata:
+  visible_in_settings: false
+auth: none
+connector: shopify-ucp
+display_name: Shopify UCP
+icon: shopify
+description: Assemble a cart, prepare payment, view checkout, complete checkout, and cancel Shopify UCP orders for in-chat purchases.
+cli:
+  binary: shopify-ucp-cli
+  skill: shopify_ucp
+cli_subcommands:
+  - checkout get
+  - checkout create
+  - checkout update
+  - checkout complete
+  - checkout cancel
+  - order get
+  - cart create
+  - cart get
+  - cart update
+  - cart cancel
+actions:
+  read:
+    default: allow
+    label: Order permissions
+    methods:
+      checkout.get:
+        label: View checkout
+      order.details:
+        label: View order
+      cart.get:
+        label: View cart
+  write:
+    default: ask
+    label: Purchase permissions
+    methods:
+      checkout.create:
+        # Agent-internal: minting a session has no user-visible side effect
+        # (no money moves, no inventory hold) and the user has nothing to
+        # decide yet.
+        default: allow
+        label: Create checkout
+      checkout.update:
+        # Delivery selection only. Buyer data and discount-code replacement
+        # have their own methods below, each checked independently.
+        default: allow
+        label: Update checkout delivery
+      checkout.buyer.update:
+        # Buyer details can be filled after checkout creation without adding a
+        # second approval to the active checkout flow.
+        default: allow
+        label: Update checkout buyer information
+      checkout.discounts.update:
+        # Applying codes the user asked for should not add another approval to
+        # the active checkout flow; it is still checked independently.
+        default: allow
+        label: Update checkout discounts
+        approval_phrase: update discount codes on a Shopify checkout
+      checkout.complete:
+        # The final checkout call consumes the payment credential prepared
+        # after the selected wallet's explicit payment-method approval. The
+        # wallet owns the user HITL, so Shopify completion must not prompt again.
+        default: allow
+        label: Place order
+      checkout.cancel:
+        # Cancellation reverses or stops a checkout/order and does not create a
+        # new spend. Treat it like quote updates: no extra HITL prompt.
+        default: allow
+        label: Cancel order
+      cart.create:
+        # A cart moves no money and holds no inventory; the purchase HITL is
+        # downstream at `checkout complete`. Nothing for the user to decide yet.
+        default: allow
+        label: Create cart
+      cart.update:
+        # Full-replacement cart edit. Same rationale as create: pre-purchase,
+        # no spend, no inventory hold.
+        default: allow
+        label: Update cart
+      cart.cancel:
+        # Cancelling a cart stops a pre-purchase draft and creates no spend.
+        default: allow
+        label: Cancel cart
+commands:
+  "checkout get": checkout.get
+  "checkout create": checkout.create
+  "checkout update": checkout.update
+  "checkout complete": checkout.complete
+  "checkout cancel": checkout.cancel
+  "order get": order.details
+  "cart create": cart.create
+  "cart get": cart.get
+  "cart update": cart.update
+  "cart cancel": cart.cancel
