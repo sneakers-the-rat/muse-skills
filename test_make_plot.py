@@ -1,6 +1,6 @@
 import unittest
 
-from make_plot import parse_log, render_svg
+from make_plot import _top_exponent, parse_log, render_svg
 
 LOG = """commit\tabc123\t2026-09-27T21:42:59-07:00
 
@@ -69,6 +69,29 @@ class TestRender(unittest.TestCase):
         svg = render_svg([])
         self.assertIn("<svg", svg)
         self.assertEqual(svg.count("<polyline"), 2)
+
+    def test_top_exponent_comes_from_data(self):
+        self.assertEqual(_top_exponent(0), 1)
+        self.assertEqual(_top_exponent(10), 1)
+        self.assertEqual(_top_exponent(11), 2)
+        self.assertEqual(_top_exponent(100), 2)
+        self.assertEqual(_top_exponent(10637), 5)
+        self.assertEqual(_top_exponent(100000), 5)
+
+    def test_log_scale_labels_are_powers_of_ten(self):
+        s = [
+            {"hash": "a", "date": "2026-09-27T21:42:59-07:00",
+             "added": 10637, "removed": 3},
+            {"hash": "b", "date": "2026-10-05T10:00:00-07:00",
+             "added": 0, "removed": 8528},
+        ]
+        svg = render_svg(s)
+        # Top label is the first power covering the data max (10637).
+        for label in ("10e0", "10e1", "10e2", "10e3", "10e4", "10e5"):
+            self.assertIn(label, svg)
+        self.assertNotIn("10e6", svg)
+        # No linear-scale labels.
+        self.assertNotIn("20000", svg)
 
 
 if __name__ == "__main__":

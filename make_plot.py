@@ -4,9 +4,12 @@
 One point per commit on each of two lines: lines added and lines removed
 in the tracked skill trees (skills/, workflow-skills/), measured with
 `git log --numstat`. The x axis is commit time with tick marks every
-week. The point for the run currently in progress is passed on the
-command line and appended, so the plot committed in a snapshot already
-includes that snapshot's own point.
+week. The y axis is log-scaled: gridlines and labels sit at powers of ten
+(10e0, 10e1, ...) and the top power is the smallest one covering the
+largest value in the data — nothing about the scale is fixed. Values of
+0 sit on the 10e0 floor. The point for the run currently in progress is
+passed on the command line and appended, so the plot committed in a
+snapshot already includes that snapshot's own point.
 
 Pure stdlib. Usage:
   make_plot.py --repo PATH --out PATH \
@@ -65,15 +68,13 @@ def load_series(repo):
     return parse_log(out)
 
 
-def _nice_max(v):
-    if v <= 10:
-        return 10
+def _top_exponent(v):
+    """Smallest exponent e >= 1 with 10**e >= v: the plot's top gridline
+    is the first power of ten that covers the largest value in the data."""
     import math
-    exp = math.floor(math.log10(v))
-    for m in (1, 2, 2.5, 5, 10):
-        if m * 10 ** exp >= v:
-            return int(m * 10 ** exp)
-    return 10 ** (exp + 1)
+    if v <= 10:
+        return 1
+    return max(1, math.ceil(math.log10(v)))
 
 
 def render_svg(series, width=960, height=360):
@@ -86,7 +87,7 @@ def render_svg(series, width=960, height=360):
     t1 = max(p[0] for p in pts)
     if t1 <= t0:
         t1 = t0 + timedelta(days=1)
-    ymax = _nice_max(max(max(p[1], p[2]) for p in pts))
+    top_exp = _top_exponent(max(max(p[1], p[2]) for p in pts))
 
     ml, mr, mt, mb = 58, 14, 30, 42
     iw, ih = width - ml - mr, height - mt - mb
@@ -96,7 +97,11 @@ def render_svg(series, width=960, height=360):
         return ml + (dt - t0).total_seconds() / span * iw
 
     def y(v):
-        return mt + ih - v / ymax * ih
+        import math
+        # Log scale: value v sits log10(v) of top_exp decades above the
+        # floor; values <= 1 (including 0) sit on the 10e0 floor line.
+        decades = math.log10(v) if v > 1 else 0.0
+        return mt + ih - decades / top_exp * ih
 
     def polyline(idx):
         return " ".join(f"{x(p[0]):.1f},{y(p[idx]):.1f}" for p in pts)
@@ -115,14 +120,13 @@ def render_svg(series, width=960, height=360):
         ticks = [t0]
 
     grid = []
-    for i in range(6):
-        v = ymax * i / 5
-        yy = y(v)
+    for e in range(top_exp + 1):
+        yy = y(10 ** e)
         grid.append(
             f'<line x1="{ml}" y1="{yy:.1f}" x2="{ml + iw}" y2="{yy:.1f}" '
             f'stroke="#e3e3e3" stroke-width="1"/>'
             f'<text x="{ml - 6}" y="{yy + 3:.1f}" font-size="9" '
-            f'text-anchor="end" fill="#555">{v:g}</text>')
+            f'text-anchor="end" fill="#555">10e{e}</text>')
     tick_svg = []
     for tk in ticks:
         xx = x(tk)
