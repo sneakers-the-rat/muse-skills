@@ -20,8 +20,10 @@ TREES = ("skills", "workflow-skills")
 
 
 def parse_log(text):
-    """Parse `git log --format=commit%x09%H%x09%cI --numstat` output
-    into a list of {hash, date, added, removed} dicts, in log order."""
+    """Parse full `git log --format=commit%x09%H%x09%cI --numstat` output
+    into one {hash, date, added, removed} dict PER COMMIT, in log order.
+    Only numstat lines under the tracked skill trees are summed; a commit
+    that touched nothing in the trees still gets its (0, 0) point."""
     series = []
     cur = None
     for line in text.splitlines():
@@ -31,7 +33,8 @@ def parse_log(text):
             series.append(cur)
         elif cur is not None and "\t" in line:
             f = line.split("\t")
-            if len(f) >= 3 and f[0].isdigit() and f[1].isdigit():
+            if (len(f) >= 3 and f[0].isdigit() and f[1].isdigit()
+                    and f[2].startswith(tuple(t + "/" for t in TREES))):
                 cur["added"] += int(f[0])
                 cur["removed"] += int(f[1])
     return series
@@ -40,7 +43,7 @@ def parse_log(text):
 def load_series(repo):
     out = subprocess.run(
         ["git", "-C", repo, "log", "--reverse",
-         "--format=commit%x09%H%x09%cI", "--numstat", "--", *TREES],
+         "--format=commit%x09%H%x09%cI", "--numstat"],
         capture_output=True, text=True, check=True).stdout
     return parse_log(out)
 

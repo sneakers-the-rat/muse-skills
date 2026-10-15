@@ -7,19 +7,29 @@ LOG = """commit\tabc123\t2026-09-27T21:42:59-07:00
 10\t2\tskills/a/SKILL.md
 -\t-\tskills/bin.dat
 3\t0\tskills/b.md
+7\t7\tREADME.md
 commit\tdef456\t2026-10-05T10:00:00-07:00
 
 0\t5\tskills/a/SKILL.md
+commit\tghi789\t2026-10-06T10:00:00-07:00
+
+4\t4\tCHANGELOG.md
 """
 
 
 class TestParseLog(unittest.TestCase):
     def test_sums_and_skips_binary(self):
         s = parse_log(LOG)
-        self.assertEqual(len(s), 2)
+        self.assertEqual(len(s), 3)
+        # README.md numstat is outside the trees and must not be summed.
         self.assertEqual((s[0]["added"], s[0]["removed"]), (13, 2))
         self.assertEqual((s[1]["added"], s[1]["removed"]), (0, 5))
         self.assertEqual(s[0]["hash"], "abc123")
+
+    def test_commit_outside_trees_gets_zero_point(self):
+        s = parse_log(LOG)
+        self.assertEqual((s[2]["added"], s[2]["removed"]), (0, 0))
+        self.assertEqual(s[2]["hash"], "ghi789")
 
     def test_empty(self):
         self.assertEqual(parse_log(""), [])

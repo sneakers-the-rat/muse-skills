@@ -27,16 +27,23 @@ fi
 # browsable and content-complete. Links whose targets are not shipped in
 # this image dangle; rsync skips just those (exit 23/24) and the mirror
 # otherwise succeeds — those two codes are tolerated, anything else fails.
+# --ignore-errors: without it, rsync skips the whole deletion phase when
+# any file errors — and the permanently dangling links error every run,
+# which would silently stop upstream deletions from ever being recorded.
+# Final sweep: the archive's invariant is zero symlinks in the trees, so
+# any link entry rsync left behind (e.g. a stale entry for a dangling
+# source link) is removed; the next run re-copies anything real.
 # --no-owner/--no-group: source files are owned by nobody; we track
 # content, not ownership. Deletions upstream are recorded as deletions.
 mirror() {
   local src="$1" dest="$2" rc=0
   mkdir -p "$dest"
-  rsync -aL --delete --no-owner --no-group --exclude='.git' "$src/" "$dest/" || rc=$?
+  rsync -aL --delete --ignore-errors --no-owner --no-group --exclude='.git' "$src/" "$dest/" || rc=$?
   if [ "$rc" -ne 0 ] && [ "$rc" -ne 23 ] && [ "$rc" -ne 24 ]; then
     echo "rsync $src -> $dest failed with exit $rc" >&2
     exit "$rc"
   fi
+  find "$dest" -type l -delete
 }
 mirror /opt/hatch/skills "$REPO/skills"
 mirror /opt/hatch/workflow-skills "$REPO/workflow-skills"
