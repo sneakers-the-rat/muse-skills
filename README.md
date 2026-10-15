@@ -9,9 +9,6 @@ real skill file content, browsable in place:
 - `workflow-skills/` — mirror of `/opt/hatch/workflow-skills` (the
   agent-facing skill playbooks and their registry metadata)
 
-Custom skills from a single instance's workspace are deliberately not
-archived here — this repo tracks Muse's skills over time.
-
 ## Change volume
 
 Lines added and removed per commit across the archived trees:

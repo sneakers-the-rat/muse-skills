@@ -18,6 +18,20 @@ from datetime import datetime, timedelta
 
 TREES = ("skills", "workflow-skills")
 
+# Commits excluded from the plot entirely (no point on either line):
+# repo-restructuring events whose line counts are artifacts of the
+# archive's own mechanics, not skill changes — they skew the y-axis.
+#   4b035f6  the initial archive commit (full tree import)
+#   a5c7238  the 2026-10-14 contraction (tree became symlink entries)
+#   5a6ab99  safety copies swept into the repo by the old script
+#   ecb5cd9  the 2026-10-15 restructure (symlinks resolved back to files)
+EXCLUDED_COMMITS = {
+    "4b035f68e7124dbf5b85559f8e30c1940ac1e848",
+    "a5c7238ce306b61ed9ec1f2ffb114522ad089048",
+    "5a6ab99b9e2bbfdb1fd036a9a770801e66da8544",
+    "ecb5cd9d76d992dd56168eda8e9f9172993f5f9b",
+}
+
 
 def parse_log(text):
     """Parse full `git log --format=commit%x09%H%x09%cI --numstat` output
@@ -29,6 +43,9 @@ def parse_log(text):
     for line in text.splitlines():
         if line.startswith("commit\t"):
             parts = line.split("\t")
+            if parts[1] in EXCLUDED_COMMITS:
+                cur = None
+                continue
             cur = {"hash": parts[1], "date": parts[2], "added": 0, "removed": 0}
             series.append(cur)
         elif cur is not None and "\t" in line:

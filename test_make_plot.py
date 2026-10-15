@@ -34,6 +34,15 @@ class TestParseLog(unittest.TestCase):
     def test_empty(self):
         self.assertEqual(parse_log(""), [])
 
+    def test_excluded_commit_dropped(self):
+        log = ("commit\t4b035f68e7124dbf5b85559f8e30c1940ac1e848"
+               "\t2026-09-27T21:42:59-07:00\n\n"
+               "100\t0\tskills/a.md\n"
+               "commit\tabc123\t2026-09-28T10:00:00-07:00\n\n"
+               "1\t1\tskills/a.md\n")
+        s = parse_log(log)
+        self.assertEqual([p["hash"] for p in s], ["abc123"])
+
 
 class TestRender(unittest.TestCase):
     def test_two_lines_weekly_ticks(self):
