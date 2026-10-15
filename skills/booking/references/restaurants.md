@@ -1,0 +1,1 @@
+/opt/muse/skills/restaurant-reservations/references/restaurants.md
