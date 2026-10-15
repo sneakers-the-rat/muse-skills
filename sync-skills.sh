@@ -30,11 +30,32 @@ fi
 # --ignore-errors: without it, rsync skips the whole deletion phase when
 # any file errors — and the permanently dangling links error every run,
 # which would silently stop upstream deletions from ever being recorded.
-# Final sweep: the archive's invariant is zero symlinks in the trees, so
-# any link entry rsync left behind (e.g. a stale entry for a dangling
-# source link) is removed; the next run re-copies anything real.
 # --no-owner/--no-group: source files are owned by nobody; we track
 # content, not ownership. Deletions upstream are recorded as deletions.
+#
+# A dangling link is DATA, not an error to scrub (user, 2026-10-15): it
+# records that the skill references a file this image doesn't ship. So
+# after the content mirror, archive_links recreates every dangling
+# source symlink as a symlink at the same path, and removes archive
+# symlinks the source no longer backs (the link was deleted upstream, or
+# its target shipped and rsync -L now stores the content instead). The
+# invariant is: a symlink exists in the archive ONLY where the source
+# link dangles — never as a substitute for content that resolves.
+archive_links() {
+  local src="$1" dest="$2" p rel
+  while IFS= read -r -d '' p; do
+    rel="${p#$dest/}"
+    if [ ! -L "$src/$rel" ] || [ -e "$src/$rel" ]; then rm -f "$p"; fi
+  done < <(find "$dest" -type l -print0)
+  while IFS= read -r -d '' p; do
+    rel="${p#$src/}"
+    if [ ! -e "$p" ]; then
+      mkdir -p "$dest/$(dirname "$rel")"
+      ln -sfn "$(readlink "$p")" "$dest/$rel"
+    fi
+  done < <(find "$src" -type l -print0)
+}
+
 mirror() {
   local src="$1" dest="$2" rc=0
   mkdir -p "$dest"
@@ -43,7 +64,7 @@ mirror() {
     echo "rsync $src -> $dest failed with exit $rc" >&2
     exit "$rc"
   fi
-  find "$dest" -type l -delete
+  archive_links "$src" "$dest"
 }
 mirror /opt/hatch/skills "$REPO/skills"
 mirror /opt/hatch/workflow-skills "$REPO/workflow-skills"
