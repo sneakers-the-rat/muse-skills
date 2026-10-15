@@ -2,9 +2,15 @@
 # Hourly snapshot of Muse's skill trees into this git repo:
 #   skills/          <- /opt/hatch/skills          (symlinks resolved)
 #   workflow-skills/ <- /opt/hatch/workflow-skills (symlinks resolved)
+#   connectors/      <- the /opt/hatch/connectors directories that NO
+#                       symlink in /opt/hatch/skills resolves into — the
+#                       connectors with no skill surface. Computed fresh
+#                       every run, never a hard-coded list: the moment a
+#                       connector gains a skill symlink it is archived
+#                       through skills/ instead and drops out of here.
 # This repo is an archive of Muse's own skills over time; workspace-local
 # custom skills are instance-specific and deliberately not archived here.
-# Only the two trees are mirrored; other repo files (README.md,
+# Only these trees are mirrored; other repo files (README.md,
 # CHANGELOG.md, plot.svg, these scripts) are maintained alongside and
 # committed by the same `git add -A` sweep.
 # Every run makes a real commit: plot.svg always gains the current run's
@@ -69,10 +75,49 @@ mirror() {
 mirror /opt/hatch/skills "$REPO/skills"
 mirror /opt/hatch/workflow-skills "$REPO/workflow-skills"
 
-# Measure this run's skill-file diff (the two trees only): the counts are
-# the plot's current point and decide the (no changes) message.
+# Connectors with no skill surface. A connector directory is covered when
+# at least one symlink in /opt/hatch/skills resolves to the directory
+# itself or to a path inside it; every other connector is mirrored into
+# connectors/<name>/ under the same rules as the skill trees. Archive
+# directories whose connector has since gained a skill symlink (or has
+# vanished upstream) are pruned, so connectors/ always holds exactly the
+# currently-unlinked set — computed here, never listed by hand.
+SKILL_TARGETS=()
+while IFS= read -r l; do
+  t="$(readlink -f "$l" 2>/dev/null)" && [ -n "$t" ] && SKILL_TARGETS+=("$t")
+done < <(find /opt/hatch/skills -type l -print)
+mkdir -p "$REPO/connectors"
+UNLINKED=()
+for c in /opt/hatch/connectors/*/; do
+  name="$(basename "$c")"
+  covered=0
+  for t in ${SKILL_TARGETS[@]+"${SKILL_TARGETS[@]}"}; do
+    case "$t" in
+      "${c%/}"|"${c%/}/"*) covered=1; break ;;
+    esac
+  done
+  if [ "$covered" -eq 0 ]; then
+    UNLINKED+=("$name")
+    mirror "${c%/}" "$REPO/connectors/$name"
+  fi
+done
+for d in "$REPO/connectors"/*/; do
+  [ -d "$d" ] || continue
+  name="$(basename "$d")"
+  keep=0
+  for u in ${UNLINKED[@]+"${UNLINKED[@]}"}; do
+    if [ "$u" = "$name" ]; then keep=1; break; fi
+  done
+  if [ "$keep" -eq 0 ]; then rm -rf "$d"; fi
+done
+
+# Measure this run's skill-file diff (the two skill trees only): the
+# counts are the plot's current point. A separate connectors count keeps
+# a connectors-only change from being labelled (no changes).
 git -C "$REPO" add -A
 read -r ADDED REMOVED <<< "$(git -C "$REPO" diff --cached --numstat -- skills workflow-skills \
+  | awk '{ if ($1 ~ /^[0-9]+$/) a += $1; if ($2 ~ /^[0-9]+$/) r += $2 } END { print a + 0, r + 0 }')"
+read -r CONN_ADDED CONN_REMOVED <<< "$(git -C "$REPO" diff --cached --numstat -- connectors \
   | awk '{ if ($1 ~ /^[0-9]+$/) a += $1; if ($2 ~ /^[0-9]+$/) r += $2 } END { print a + 0, r + 0 }')"
 
 # Regenerate the plot with this run's point appended, then stage it too.
@@ -86,12 +131,12 @@ git -C "$REPO" add -A
 if git -C "$REPO" diff --cached --quiet; then
   echo "nothing to commit at $TS (plot unchanged); skipping commit"
 else
-  if [ "$ADDED" -eq 0 ] && [ "$REMOVED" -eq 0 ]; then
+  if [ "$ADDED" -eq 0 ] && [ "$REMOVED" -eq 0 ] && [ "$CONN_ADDED" -eq 0 ] && [ "$CONN_REMOVED" -eq 0 ]; then
     git -C "$REPO" commit -q -m "skills snapshot $TS (no changes)"
   else
     git -C "$REPO" commit -q -m "skills snapshot $TS"
   fi
-  echo "committed $(git -C "$REPO" rev-parse --short HEAD) at $TS (+$ADDED/-$REMOVED skill lines)"
+  echo "committed $(git -C "$REPO" rev-parse --short HEAD) at $TS (+$ADDED/-$REMOVED skill lines, +$CONN_ADDED/-$CONN_REMOVED connector lines)"
 fi
 
 # Push to GitHub. Auth is a write-scoped deploy key for this repo only
