@@ -19,6 +19,8 @@
 
 - The helper synthesizes the script, writes `~/workspace/podcasts/<slug>/<slug>.mp3` and records the episode in the catalog. It prints JSON with `slug`, `path`, `duration_secs` and `cover`. When it also published, the JSON adds `feed_url`, `episode_url` and `subscription_links`.
 
+- For a freshly rendered episode, inspect `speakers` for the effective voice IDs and `tts_diagnostics` for substitutions or validation warnings. These TTS fields may be absent when reusing an older episode. If a requested voice became a default, tell the user which voice was used; do not claim the requested voice was honored or change saved preferences.
+
 - Add `--publish` and `--feed-title` only when publishing is authorized, as [publishing and delivery](publishing.md) explains.
 
 - Synthesis follows the conversation's language by default. Pass `--language`, such as `es` or `pt_BR`, only to honor an explicit request, and write the script in that language.
