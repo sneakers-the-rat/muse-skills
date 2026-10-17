@@ -51,7 +51,7 @@
 
 - Require the exact text or post, the exact destination and any reply target before sending. Never invent a recipient, thread, content or reply target.
 
-- Send to one existing `--thread-fbid`, or to 1 to 11 unique `--recipient-user-fbids`. IDs are positive decimal strings without a sign, leading zero or surrounding spaces. Include `--text`, `--media-fbid` or both.
+- Send to one existing `--thread-fbid`, or to 1 to 11 unique `--recipient-user-fbids` in one comma-separated list, such as `USER_ID,USER_ID`. IDs are positive decimal strings without a sign, leading zero or surrounding spaces. Include `--text`, `--media-fbid` or both.
 
 ```sh
 /opt/hatch/bin/threads-messages-cli send --account-id ACCOUNT_ID --thread-fbid THREAD_ID --text "Hello"
@@ -64,13 +64,13 @@
 
 - With both text and media, the service sends the post share first and the text second. The output describes the trailing text, or the share for a media-only send, and contains only the opaque `message_id` and numeric `timestamp_ms`.
 
-- Every send needs the user to approve its confirmation card. Tell them which @username the card's recipient should show. If it shows someone else or an `Unverified Threads` account or conversation, they should decline, and a decline or dismissal ends the action. A send whose full preview cannot fit is rejected.
+- Every send needs the user to approve its confirmation card. Tell them which @username the card's recipient should show and, for a reply, which message it answers, since the card shows only `Reply: Existing message`. If it shows someone else or an `Unverified Threads` account or conversation, they should decline, and a decline or dismissal ends the action. A send whose full preview cannot fit is rejected.
 
 - Treat consent, account, recipient-type, group-eligibility and quota rejections as final, and never reroute the send.
 
 - Run one send at a time and wait for its result, because parallel sends can let every confirmation expire with nothing sent. A returned `message_id` means the message was delivered, so report it as sent.
 
-- After an interruption, cancellation, timeout, HTTP 500 or unclear result, read the thread before reporting anything, and never resend automatically. If the message is missing, say it may not have been delivered and send again only after the user asks for and approves a new send. A rate limit or any other failure ends the attempt.
+- After an interruption, cancellation, timeout, HTTP 500 or unclear result, read the thread before reporting anything, and never resend automatically. A read can show the text normalized, so match the message by content and time rather than exact bytes. If the message is missing, say it may not have been delivered and send again only after the user asks for and approves a new send. A rate limit or any other failure ends the attempt.
 
 ## No unattended sends
 

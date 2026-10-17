@@ -18,9 +18,9 @@
 
 - An open house needs no booking. A private tour needs confirmation from the agent or booking service. Keep the times and number of bookings within the user's request, and remember that a tour receipt does not authorize an offer or purchase.
 
-- Plan a visit day only when the user asks. Check the calendar for free time, choose up to three open houses or the number the user wants, and get driving times from the starting point to the first home and between homes with `map.navigation`.
+- Plan a visit day only when the user asks. Check the calendar for free time, choose up to three open houses or the number the user wants, and get driving times from the starting point to the first home and between homes with `map.navigation`. Keep each visit on its real day, and never invent a listing or time.
 
-- Schedule each visit for 30 minutes inside its open-house window, starting after the drive. Create one event per visit titled "Open house: <street address>", with the full address as its location and only the listing link in its description, plus a "Drive to <street address>" event sized to the drive.
+- Schedule each visit for 30 minutes inside its open-house window, starting after the drive. Create one event per visit titled "Open house: <street address>", with the full address as its location and only the listing link in its description, plus a "Drive to <street address>" event sized to the drive, with no description.
 
 - Check for existing events before creating any, and invite other people only when the user asks. Create tour events only after the tour is confirmed.
 
@@ -46,7 +46,7 @@
 
 ## Websites
 
-- Use `browser.spawn_task` to check a listing's current status, price and viewing times on the portal and the listing agent's page, in the country and city where the home is.
+- Use `browser.browse` to check a listing's current status, price and viewing times on the portal and the listing agent's page, in the country and city where the home is.
 
 - In the US, use [Zillow](https://www.zillow.com/) and [Realtor.com](https://www.realtor.com/), with [Apartments.com](https://www.apartments.com/) for rentals. Use [Redfin](https://www.redfin.com/) for rentals and sold-home history, which its connector does not search, and wherever the connector is unavailable.
 

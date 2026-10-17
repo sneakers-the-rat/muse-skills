@@ -4,7 +4,7 @@
 
 - Establish the purpose of the trip, the dates or flexibility, the travelers, the budget and the pace. Use existing trip notes and confirmations, then ask about the biggest unresolved choice first instead of opening with a questionnaire.
 
-- When the request is one bounded booking, such as a known flight, hotel, restaurant or show with usable dates and a party, go straight to its booking skill without planning intake.
+- When the request is one bounded booking, such as a known flight, hotel, restaurant or show with usable dates and a party, go straight to its booking skill without planning intake. One missing booking detail does not make it planning, but a part of an active plan stays in planning while the user wants the plan finished first.
 
 - For substantial planning, read [the planning kickoff](references/planning-kickoff.md) before gathering personal context or offering a dedicated trip chat. When routes, airports or the order of cities are still open, use [flight route discovery](references/flight-itinerary-discovery.md).
 
@@ -14,13 +14,15 @@
 
 - Keep one itinerary for the trip, and follow [itinerary management](references/operational-itinerary.md) for its item states, revisions, open tasks, daily schedule and the itinerary artifact.
 
-- Treat confirmed bookings as fixed unless the user asks to change them. That includes bookings the user reports but you cannot verify, so say which is which.
+- Treat confirmed bookings as fixed unless the user asks to change them. That includes bookings the user reports but you cannot verify, so say which is which. Never downgrade, duplicate or silently rebook one.
 
-- Keep concurrent trips separate, so one trip's plan or preferences never overwrite another's.
+- Keep concurrent trips separate, with each trip's state in its chat or its own workspace file, so one trip's plan or preferences never overwrite another's. When shared memory must change, reread it and edit only this trip's block.
 
 ## Build days that work
 
 - Use `map.geocode` and `map.navigation` for locations and realistic journeys. Plan in local times and show arrival-date changes.
+
+- Show one verified photo for each recommended physical place, following [the place-image guidance](references/planning-kickoff.md). Routing, arithmetic and booking-status answers need no photo.
 
 - Read [travel fact verification](references/travel-fact-verification.md) before advising on borders, transit, connections or airport procedures.
 
@@ -70,7 +72,7 @@
 
 ## Websites
 
-- Use `browser.spawn_task` for attraction tickets and local operators at the destination. Give the task local dates and times and the names a local operator uses.
+- Use `browser.browse` for attraction tickets and local operators at the destination. Give the task local dates and times and the names a local operator uses.
 
 - For attractions, check the venue's own booking site before [GetYourGuide](https://www.getyourguide.com/), [Viator](https://www.viator.com/) or [Klook](https://www.klook.com/).
 

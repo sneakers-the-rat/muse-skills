@@ -42,7 +42,7 @@
 - Fill it from the built file. Drive converts the upload into the Google Slides deck in place:
 
 ```text
-/opt/hatch/bin/hatch_gws_cli drive files update --params '{"fileId":"<presentation_id>"}' --upload "$HOME/workspace/your_files/<artifact-slug>/<name>.pptx"
+/opt/hatch/bin/hatch_gws_cli drive files update --params '{"fileId":"<presentation_id>"}' --upload "$JARVIS_HOME/workspace/your_files/<artifact-slug>/<name>.pptx"
 ```
 
 - The upload path must be absolute and inside the home directory. Relative and `/tmp` paths fail.

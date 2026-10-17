@@ -36,7 +36,7 @@
 
 ## Websites
 
-- Use `browser.spawn_task` for seat selection and checkout with the official seller, found through the venue, team, artist or promoter page. Carry the event, date, quantity and seat requirements, and ask for the exact seats and delivered total.
+- Use `browser.browse` for seat selection and checkout with the official seller, found through the venue, team, artist or promoter page. Carry the event, date, quantity and seat requirements, and ask for the exact seats and delivered total.
 
 - Use the Ticketmaster site or app for transferring or reselling tickets in the user's account, which the connector cannot do.
 

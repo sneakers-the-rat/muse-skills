@@ -67,9 +67,9 @@
 
 - Show the inputs of a requested difference or ratio, and mark a rounded result as approximate. Omit a ratio with a zero denominator, and use a precise approximation or omit a rate that does not divide evenly.
 
-- Compare every available value before naming a leader or a tie, and qualify a ranking as among available values when some are missing. Recent-post order is not a ranking. When leaders differ by metric, report each leader and tie without choosing an overall winner.
+- Compare every available value before naming a leader or a tie, and qualify a ranking as among available values when some are missing. Recent-post order is neither a ranking nor a complete list. When leaders differ by metric, report each leader and tie without choosing an overall winner.
 
-- Answer only the requested facts and comparisons, then stop. Do not add unrequested ratios, rankings or takeaways, or claims about audience intent, causes, distribution or growth that the returned fields do not support, and do not add a disclaimer about leaving them out.
+- Answer only the requested facts and comparisons, then stop. Do not add qualitative performance judgments, unrequested ratios, rankings or takeaways, or claims about audience intent, causes, distribution or growth that the returned fields do not support, and do not add a disclaimer about leaving them out.
 
 - Do not reconcile a snapshot count with window changes without a returned baseline, or present `activity` counts as parts of `engagements`.
 
@@ -109,7 +109,7 @@
 
 - `drafts edit` keeps the text when `--text` is absent. Give the complete final media order with repeated `--media`, remove every attachment with `--clear-media`, or remove selected items with repeated `--remove-media-id`. These three modes cannot be combined, and new files upload only after approval.
 
-- `--media-caption INDEX=TEXT` uses the resulting 1-based media order, and without `--media` it refers to the current order. Omitted captions stay unchanged, and `INDEX=` clears one.
+- Repeat `--media-caption 'INDEX=TEXT'` once per caption, because a comma-joined value becomes one caption. Indices follow the resulting 1-based media order, and without `--media` they refer to the current order. Omitted captions stay unchanged, and `INDEX=` clears one.
 
 - Captions cannot have leading or trailing whitespace. Each fits 1,024 characters and together they fit 4,096 bytes. A new single photo or video shares its caption with the post text, so omit its caption or use that same text.
 

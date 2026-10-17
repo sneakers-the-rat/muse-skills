@@ -130,7 +130,7 @@
 
 - The `ads_catalog_list_*` readers take `entity_id` plus `limit` and `cursor`, never `catalog_id`, `product_set_id`, `after_cursor` or `cursor_after`. Pass back the exact returned cursor as `cursor`, because a hand-built or renamed one is rejected.
 
-- `ads_catalog_get_diagnostics`, `ads_catalog_get_data_sources` and `ads_catalog_get_dynamic_ads_health` take `catalog_id` and no cursor argument. `ads_catalog_get_product_feed_upload_sessions` takes `product_feed_id`, never `catalog_id`.
+- `ads_catalog_get_diagnostics`, `ads_catalog_get_data_sources` and `ads_catalog_get_dynamic_ads_health` take `catalog_id`, never `after_cursor` or `cursor_after`, and page only with a `cursor` their schema declares. `ads_catalog_get_product_feed_upload_sessions` takes `product_feed_id`, never `catalog_id`.
 
 - `ads_catalog_get_feed_rules` takes `product_feed_id`, never `feed_id` or `catalog_id`. `ads_catalog_event_source_get` and `ads_catalog_event_source_get_health` take `catalog_id`, and `ads_catalog_event_source_get_catalogs` takes `event_source_id`.
 

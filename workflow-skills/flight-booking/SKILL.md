@@ -46,7 +46,7 @@
 
 ## Websites
 
-- Check these sites with `browser.spawn_task`, using the brief in [flight comparison](references/flights.md) so each task returns complete itineraries with the payable total.
+- Check these sites with `browser.browse`, using the brief in [flight comparison](references/flights.md) so each task returns complete itineraries with the payable total.
 
 - [Google Flights](https://www.google.com/travel/flights), [Kayak](https://www.kayak.com/flights) and [Skyscanner](https://www.skyscanner.com/) compare carriers and sellers on most routes and link out to the seller, which holds the bookable fare.
 

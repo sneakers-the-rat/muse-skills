@@ -21,16 +21,16 @@
 
 ```text
 /opt/hatch/bin/withings list-fields --category daily-metrics
-/opt/hatch/bin/withings query --category daily-metrics --start-date 2026-09-01 --end-date 2026-09-07 --fields body_mass_kg
+/opt/hatch/bin/withings query --category daily-metrics --start-date 2026-09-01 --end-date 2026-09-07 --fields body_mass_kg,body_fat_percentage
 /opt/hatch/bin/withings query --category daily-metrics --start-date 2026-08-01 --interval weekly --fields step_count
 /opt/hatch/bin/withings query --category sleep --start-date 2026-09-06
 ```
 
-- Categories are `daily-metrics`, `sleep` and `workout`. `--start-date` is required and `--end-date` defaults to today.
+- Categories are `daily-metrics`, `sleep` and `workout`. `--start-date` is required and `--end-date` defaults to today. Both dates are inclusive. When the user asks about recent trends without dates, query the last seven days.
 
-- Field names are snake_case with units, such as `body_mass_kg`, `step_count`, `hr_average_bpm` and `sleep_total_duration_sec`. Withings names such as `weight` or `hr_average` are not valid. Run `list-fields` before filtering when unsure, because an empty filtered result usually means a wrong field name, not missing data.
+- Field names are snake_case with units, such as `body_mass_kg`, `step_count`, `hr_average_bpm` and `sleep_total_duration_sec`. Withings names such as `weight` or `hr_average` are not valid. `--fields` takes a comma-separated list. Run `list-fields` before filtering when unsure, because an empty filtered result usually means a wrong field name, not missing data.
 
-- `--interval hourly|daily|weekly` applies to daily metrics only and already aggregates, so never sum or average the buckets again:
+- `--interval hourly|daily|weekly` applies to daily metrics only, defaults to `daily` and already aggregates, so never sum or average the buckets again:
   - Counters such as steps, calories, distance, elevation and activity durations are summed.
   - `hr_average_bpm` is averaged and `hr_max_bpm` takes the maximum.
   - Body measurements, blood pressure, oxygen saturation and temperatures keep the last reading in each bucket, so a daily weight is that day's last weigh-in.

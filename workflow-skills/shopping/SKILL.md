@@ -6,17 +6,17 @@
 
 - Establish whether the user wants a specific product or a recommendation, who it is for and whether used or refurbished is acceptable. Apply this conversation first, then relevant preferences in `~/memory/shopping/PROFILE.md` and `~/USER.md`, or the person's `~/memory/people/` page when buying for someone else.
 
-- Resolve the attributes that decide whether a product is correct before searching, such as the wearer's gender and size, the device a part must fit or the software platform. Use a stored size only when its category, sizing system, brand and wearer match. Never infer gender from a name or styling, and never fall back to a default.
+- Resolve the attributes that decide whether a product is correct before searching, such as the wearer's gender and size, the device a part must fit or the software platform. Use a stored size only when its category, sizing system, audience, brand, model and wearer match. Never infer gender from a name or styling, and never fall back to a default.
 
 - Ask for one missing attribute per message before searching, starting with the one that most changes the results, such as the wearer's gender before their size. Wait for the answer before asking the next one.
 
-- Use `muse.create_options` for a bounded choice and plain text for an open question. Never put two questions or two option widgets in one message, because a second widget appears as a stray list beside the one the user is answering.
+- Use `muse.create_options` for a bounded choice and plain text for an open question. Never put two option widgets in one message, because a second widget appears as a stray list beside the one the user is answering.
 
 - Resolve required attributes before the first search rather than narrowing the results afterwards, because an unresolved attribute returns wrong products.
 
-- During a browser checkout, ask for every missing choice together, as `~/docs/chat/payments-and-purchases.md` describes.
+- During a browser checkout, ask for every missing choice together in one message, in plain text when several need answers, as `~/docs/chat/payments-and-purchases.md` describes.
 
-- If the user cannot say or declines, search each plausible value separately and label the results by value, rather than guessing or using the user's own value.
+- If the user cannot say or declines, search each plausible value separately, such as one catalog search with `--gender male` and one with `--gender female`, and label the results by value, rather than guessing or using the user's own value.
 
 - Apply every resolved attribute to every search for the request, refinements included.
 
@@ -38,8 +38,8 @@
     /opt/hatch/bin/shopping catalog-search --query "<product with every requirement>" --retries 2 --out "$catalog_results"
     ```
 <!-- catalog-search-v2-only:end -->
-  - A browser product search with `browser.spawn_task`, briefed as below. Always run it, especially for home goods, unless the user asked only for Facebook Marketplace.
-  - Facebook Marketplace with `/opt/hatch/bin/facebook-cli marketplace search` for used, local, pickup or tight-budget requests, following the Facebook connector's [Marketplace guide](/opt/hatch/connectors/facebook_cli/references/marketplace.md).
+  - A browser product search with `browser.browse` and `task_id: "new"`, briefed as below. Always run it, especially for home goods, unless the user asked only for Facebook Marketplace.
+  - Facebook Marketplace with `/opt/hatch/bin/facebook-cli marketplace search` for used, local, pickup, tight-budget or deal-hunting requests, following the Facebook connector's [Marketplace guide](/opt/hatch/connectors/facebook_cli/references/marketplace.md).
 
 - Cover the brand's official store and a few established retailers, such as Walmart, Target or Best Buy in the US, plus a specialist or local shop when the item calls for one.
 
@@ -57,11 +57,14 @@
 
 ```json
 {
-  "task": "<what the user asked to find, in their words>. Find real purchasable products online for: <user request>. Preserve these requirements: <constraints>. Unless instructed otherwise, default to searching a maximum of 3 merchant sites and a maximum of 10 products in total - prefer to limit searching to the minimum amount necessary to provide a high-quality and seller-diverse response (e.g. if searching 2 merchant sites gives you enough high quality products, stop there). Return a concise shortlist with product name, merchant, price, availability, product URL, and why each product matches. Also populate browser_hand_off.product_results with every shortlisted product. Ensure that each URL is a dedicated product page, not a search page. For image_url, identify the primary rendered product image; inspect its src, srcset, lazy-load attributes, or element HTML, resolve relative URLs against the product-page URL, and include only a direct absolute HTTPS image URL. Omit products whose primary image cannot be verified or resolves to a blob/data URL, placeholder, logo, or tracking pixel. Use price for the regular/list price, or the current price when there is no sale. Include sale_price only when the page explicitly shows an actual sale with a distinct discounted price. Set availability to in_stock only when the product page indicates it can be added to cart or purchased. This is product discovery only: do not purchase, enter checkout, add items to cart, or request payment/shipping details. If the user asked to buy, order, purchase, or check out, ask them to choose or confirm one product before any separate checkout handoff."
+  "task_id": "new",
+  "task": "<what the user asked to find, in their words>. Find real purchasable products online for: <user request>. Preserve these requirements: <constraints>. Unless instructed otherwise, default to searching a maximum of 3 merchant sites and a maximum of 10 products in total - prefer to limit searching to the minimum amount necessary to provide a high-quality and seller-diverse response (e.g. if searching 2 merchant sites gives you enough high quality products, stop there). Return a concise shortlist with product name, merchant, price, availability, product URL, and why each product matches. Report every shortlisted product through browser.report.products. Ensure that each URL is a dedicated product page, not a search page. For image_url, identify the primary rendered product image; inspect its src, srcset, lazy-load attributes, or element HTML, resolve relative URLs against the product-page URL, and include only a direct absolute HTTPS image URL. Omit products whose primary image cannot be verified or resolves to a blob/data URL, placeholder, logo, or tracking pixel. Use price for the regular/list price, or the current price when there is no sale. Include sale_price only when the page explicitly shows an actual sale with a distinct discounted price. Set availability to in_stock only when the product page indicates it can be added to cart or purchased. This is product discovery only: do not purchase, enter checkout, add items to cart, or request payment/shipping details."
 }
 ```
 
-- Run parallel browser tasks only for distinct discovery angles, such as different retailers or product types. Refine an angle inside the task already pursuing it, and let one task cover several retailers when separate tasks would add nothing.
+- Run parallel browser tasks only for distinct discovery angles, such as different retailers or product types. Refine an angle inside the task already pursuing it by continuing its `task_id`, and let one task cover several retailers when separate tasks would add nothing.
+
+- For a purchase request, follow the purchase workflow and let the checkout flow present the cart. Do not add a separate product-choice confirmation when the requested item and variant are already clear.
 
 - When a task completes, write its `completion_result.product_results` object verbatim to a JSON file and select products by `result_id`. Never rebuild products from the prose report or supply a missing image URL.
 
@@ -92,7 +95,7 @@
 
 - Filter out results that miss a constraint, look low quality or sit outside the normal price range for the product.
 
-- Open every non-Marketplace product URL with `browser.open` and drop any that is not a dedicated product page showing in-stock availability. `browser.open` cannot fetch Meta-owned hosts such as instagram.com, facebook.com and threads.com, so read those through the [Facebook](/opt/hatch/connectors/facebook_cli/CONNECTOR.md) or [Instagram](/opt/hatch/connectors/instagram/CONNECTOR.md) connector.
+- Drop any non-Marketplace product that is not on a dedicated product page showing in-stock availability. A browser product search already verified its pages, so it needs no second fetch; open the other sources' product URLs with `browser.open`. `browser.open` cannot fetch Meta-owned hosts such as instagram.com, facebook.com and threads.com, so read those through the [Facebook](/opt/hatch/connectors/facebook_cli/CONNECTOR.md) or [Instagram](/opt/hatch/connectors/instagram/CONNECTOR.md) connector.
 
 - Never show a price, availability or product URL from `browser.search` results, because they are unreliable. Get product details from a browser product search instead.
 
@@ -171,13 +174,13 @@
 
 - Keep the original request's constraints in follow-up turns. Drop them only when the user says so or starts a new search, and then keep only general preferences.
 
-- On a new search, close the old request's browser tasks with `browser.close_task`, finding them with `browser.list_tasks`, and ignore their late results.
+- For a related search, send a revised brief to the existing `browser.browse` task. On a new search, tell the old request's browser tasks to stop and report, using `browser.windows` with `action: "list"` when a window ID is not in context, ignore their late results, and use `task_id: "new"` for the new search.
 
 ## Find a deal
 
 - Establish the product's usual price, then research where deals for it or its category appear, such as Newegg for electronics.
 
-- Search thoroughly with `browser.spawn_task` for listings below the usual price, and separately for current sales and coupon or promo codes at the sellers themselves.
+- Search thoroughly with `browser.browse` for listings below the usual price, and separately for current sales and coupon or promo codes at the sellers themselves.
 
 - Test a code in the basket when the user allows it.
 
@@ -207,9 +210,9 @@
 
 ## Complete the purchase
 
-- Run the purchase yourself in the main conversation. A subagent has neither wallet nor browser access, so it cannot complete one.
+- Route the purchase from the main conversation, through direct checkout or `browser.browse`. The browser owns its focused login and payment workers. Do not delegate live shopping to a subagent.
 
-- Before checkout, close product-search browser tasks that no longer matter with `browser.close_task`, finding them with `browser.list_tasks`, and ignore their late results.
+- Continue the browser task that found the selected product, using `browser.windows` with `action: "list"` if its window ID is not in context. Tell product-search tasks that no longer matter to stop and report, and ignore their late results.
 
 - Choosing items or building a cart moves no money. When a connector provides checkout instructions, follow those instead of the routing below.
 
@@ -219,9 +222,9 @@
 
 - Otherwise follow [browser checkout](references/browser-checkout.md) in one browser task through confirmation.
 
-- Only products eligible for direct checkout have a merchant cart, unless a connector supports one. The store holds, prices and discounts that basket, so never keep a list of your own as a cart, and say so when the route has none.
+- Products eligible for direct checkout keep their merchant cart as the Shopify UCP connector docs describe, and a connector with its own cart support keeps it there. Otherwise, ask `browser.browse` to build the merchant cart with the specified variants and quantities and prepare it for confirmation, without purchasing, and continue the same task when the user changes the cart. The store holds, prices and discounts that basket, so never keep a list of your own as a cart. Follow the connector's instructions for cart reads, changes and widgets.
 
-- Keep the `cart_id` as internal state for the rest of the conversation, never show it to the user, and follow the connector's instructions for cart reads, changes and widgets.
+- Keep the catalog `cart_id` or browser `task_id` in context, and never show internal IDs to the user. Cart confirmations return through the browser task to this conversation, each with its own `confirmation_id`, and payment authorization uses the payment approval interface. Do not ask for either decision twice.
 
 - Once the user chooses, carry the exact variant, merchant, quoted total and its source, and the delivery estimate into checkout.
 

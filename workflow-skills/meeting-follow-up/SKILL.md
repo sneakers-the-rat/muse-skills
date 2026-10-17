@@ -68,7 +68,7 @@
 
 - Notetakers that have no connector, such as [Fireflies](https://fireflies.ai/).
 
-- Open these through `browser.spawn_task` in the user's account, naming the meeting's title, date and attendees, and have it return the transcript or recap text it found.
+- Open these through `browser.browse` in the user's account, naming the meeting's title, date and attendees, and have it return the transcript or recap text it found.
 
 ## Alternatives for better results
 

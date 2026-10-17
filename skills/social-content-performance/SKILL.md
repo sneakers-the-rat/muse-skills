@@ -60,7 +60,7 @@
 
 ## Websites
 
-- Open a network's own analytics with `browser.spawn_task` when no connector covers that network, measure or period. Give the task the exact account, period and timezone, and have it return each figure with its metric name and any export it produced.
+- Open a network's own analytics with `browser.browse` when no connector covers that network, measure or period. Give the task the exact account, period and timezone, and have it return each figure with its metric name and any export it produced.
 
 - [YouTube Studio](https://studio.youtube.com/) for YouTube channel and video analytics.
 

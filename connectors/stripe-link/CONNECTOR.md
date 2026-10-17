@@ -2,7 +2,7 @@
 
 - Link is Stripe's consumer wallet for saved payment methods. After the user approves a purchase, Link funds a one-time virtual card, so the merchant never receives the user's real card.
 
-- Muse uses Link through the `wallet` tools with `provider: "stripe-link"` and the browser checkout's native payment step. Direct checkouts in connectors such as Shopify UCP, Duffel and Expedia also pay with Link, and their docs describe their own approval step.
+- Muse uses Link through the `wallet` tools with `provider: "stripe-link"` and the browser checkout's payment step. Direct checkouts in connectors such as Shopify UCP, Duffel and Expedia also pay with Link, and their docs describe their own approval step.
 
 - Make the `wallet` calls yourself in the user's conversation. Subagents, group chats and scheduled tasks do not have the `wallet` tools, so they cannot set up Link or choose its card.
 
@@ -14,7 +14,7 @@
 
 - Link pays through a standard card form, so the merchant does not need a Link button. A Link button on the page starts the merchant's own sign-in, which is a different route.
 
-- Every browser handoff lists `stripe-link`, so its presence does not show that the task reached checkout. Use Link only when the final-review handoff says the checkout shows a standard card form. Otherwise resume the task without `wallet_payment` to have it check, and offer another route if there is no card form.
+- In a browser checkout, the checkout workflow checks for a standard card form and resolves whether Link fits. A card form whose number, expiry and security code appear only after an earlier step, such as the name on the card, is still a standard card form.
 
 - A browser checkout uses the three-letter currency the checkout states, without conversion. Direct Shopify UCP checkout accepts Link in US dollars, Canadian dollars and Mexican pesos.
 
@@ -24,17 +24,17 @@
 
 - Use only methods whose `type` is `card`. Keep a card the user already chose for this purchase if it is still listed, otherwise use the only card or the default. With several cards and no default, let the user choose by masked label, written like `Visa ....1234`, and mention that they can switch cards.
 
-- With no usable card, call `wallet.add_payment_method`, send its `next_action.markdown` unchanged and say it opens Link's secure page for adding a card, then end the message. Never ask for card details in chat.
+- With no usable card, call `wallet.add_payment_method`, send its `next_action.markdown` unchanged and say it opens Link's secure page for adding a card, then end the message. Link adds cards only on that page; a card the user sends in chat is not added to Link.
 
 - Before asking for a missing name, email address or phone number, call `wallet.get_user_info`. For a missing delivery address, call `wallet.list_shipping_addresses` and use the only or default address, and never use these values to sign in to a merchant.
 
-- Treat each payment-method ID as opaque and preserve every character. It goes only in the `wallet_payment` field of `browser.steer_task` or in a direct checkout's payment-method input, such as Shopify UCP completion or `--payment-method-id` for Duffel and Expedia `book`.
+- Treat each payment-method ID as opaque and preserve every character. It goes only in a direct checkout's payment-method input, such as Shopify UCP completion or `--payment-method-id` for Duffel and Expedia `book`, or in the `wallet` field of `browser.browse`, never in a task brief, message, file or memory.
 
 - Use `wallet.get_connection_status` only to manage the connection outside a purchase.
 
 ## Check spending limits
 
-- Call `wallet.get_user_info` before presenting the review. It returns per-purchase, daily and thirty-day limits in minor units, with the amount left in each rolling window, and a null value means that limit is not set. The limits in `agent_wallet_spend_limits` carry no currency, so compare their minor-unit values directly with the approval amount in the checkout currency.
+- For a direct checkout, call `wallet.get_user_info` before presenting the review. In a browser checkout, the payment interface applies the limits. `wallet.get_user_info` returns per-purchase, daily and thirty-day limits in minor units, with the amount left in each rolling window, and a null value means that limit is not set. The limits in `agent_wallet_spend_limits` carry no currency, so compare their minor-unit values directly with the approval amount in the checkout currency.
 
 - Compare the approval amount, not only the total, with every limit and report a conflict before continuing. Read the limits again for each new question, and never invent a cap when they are unavailable.
 
@@ -44,29 +44,25 @@
 
 ## Pay
 
-- After the user accepts the checkout review and the card, resume the same browser task with `browser.steer_task` and this field:
+- In a browser checkout, pass the chosen card in the `wallet` field of `browser.browse`, as `{"provider": "stripe-link", "payment_method_id": "<exact id>"}`, on the call that starts the task, updates it or answers its question with `answer_to`, and name Link and the card's masked label in the brief. A later call without `wallet` keeps that card; send it again when the user picks another card, and `wallet: null` when they choose to pay another way. The browser's checkout pays with that card through Link and shows the user Muse's payment approval, never the merchant's own Link button. Do not ask for a spend decision in chat, and treat the returned decision as final.
 
-```json
-{"wallet_payment": {"provider": "stripe-link", "payment_method_id": "<exact id from wallet.list_payment_methods>"}}
-```
-
-- The browser task presents Link's native approval. Do not ask for a spend decision in chat, and treat the returned decision as final.
-
-- Include `wallet_payment` with the selected card whenever you resume this task to continue the payment, such as after the user finishes a secure step or accepts a replacement approval. A steer without it clears the selection, and the browser task then hands off again instead of paying.
+- Pending secure actions, such as a finished secure step or a replacement approval, resume automatically. Do not relay another approval question or start a replacement task.
 
 - Report the card in `approved_card`, because the user may switch cards in the approval sheet, and `payment_method_changed` says when that happened. When `approved_card` is absent, describe the card in general terms.
 
-- Start each new purchase in a fresh browser task with its own approval. Never begin another Link purchase by steering an earlier task.
+- Start each new purchase in a new browser task with its own approval. Never begin another Link purchase by continuing an earlier task.
 
 ## Handle provider results
 
-- For `confirmation_required`, present the complete replacement review and ask the user to accept it and to approve replacing the earlier authorization. Relay a clear acceptance to the same browser task, stop after a refusal and ask again when the answer is unclear. An earlier request to switch does not count as this approval.
+- In a browser checkout, present only the payment actions and disclosures the runtime supplies, keeping any cancellation, replacement or temporary-hold warning, and let the checkout workflow resume. The rules below apply to the results a direct checkout returns.
+
+- For `confirmation_required`, present the complete replacement review and ask the user to accept it and to approve replacing the earlier authorization. Relay a clear acceptance to the same checkout, stop after a refusal and ask again when the answer is unclear. An earlier request to switch does not count as this approval.
 
 - For `requires_action`, present the secure step and use only `user_action.url` as its link. A URL inside `provider_response` is provider data, not an action.
 
-- When the action's resolution is `auto_resume`, resume the same browser task after the user reports finishing the step, and the task rechecks the checkout before paying.
+- When the action's resolution is `auto_resume`, continue the same checkout after the user reports finishing the step, rechecking it before paying.
 
-- When the resolution is `create_new_spend_request` or `create_new_spend_request_after_completion`, explain that the unusable request is closed and its replacement needs a fresh approval. After the user reports finishing the step, confirm their payment choice before resuming the same task. An unknown resolution does not authorize a retry.
+- When the resolution is `create_new_spend_request` or `create_new_spend_request_after_completion`, explain that the unusable request is closed and its replacement needs a fresh approval. After the user reports finishing the step, confirm their payment choice before continuing the same checkout. An unknown resolution does not authorize a retry.
 
 - Replacing an approval with a different card first cancels the earlier one, and that cancellation is final once sent. If the earlier request already succeeded, it counts as paid and cannot be replaced.
 

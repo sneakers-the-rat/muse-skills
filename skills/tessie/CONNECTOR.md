@@ -25,7 +25,7 @@
 /opt/hatch/bin/tessie-api state --vin VIN
 ```
 
-- `vehicles` lists the accessible vehicles. Pick the VIN the user means, and ask when several fit and the request gives no way to choose.
+- `vehicles` lists the accessible vehicles. Use the VIN of the vehicle the user identifies, and when several exist and they have not said which, ask which one.
 
 - Read `status` or `state` before a command whenever the vehicle's current condition decides whether the action makes sense.
 
@@ -38,9 +38,9 @@
 
 - Use only command names from [Tessie's API documentation](https://developer.tessie.com/). `--wait-for-completion` waits for the vehicle to finish, and repeated `--extra-query key=value` passes a command's parameters.
 
-- Do not invent a wake-up sequence, and never turn a request for information into a physical action.
+- Do not invent a wake-up sequence. Never infer a physical action the user did not request, and never turn a request for information into one.
 
-- Honking, flashing the lights, Boombox, scheduling or cancelling a software update and fleet telemetry changes run without asking by default. Other commands and raw writes ask for approval through the connector, so run the resolved command directly and do not add a second confirmation in chat.
+- `honk`, `flash`, `remote_boombox`, `schedule_software_update`, `cancel_software_update` and raw writes to the `fleet_telemetry_config` path run without asking by default, so run each only on a clear request for that exact action. Other commands and raw writes ask for approval through the connector, so run the resolved command directly and do not add a second confirmation in chat.
 
 ## Make a raw request
 

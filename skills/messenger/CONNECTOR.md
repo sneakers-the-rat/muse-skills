@@ -10,7 +10,7 @@
 
 - Never target that side chat through this connector, by `--cid`, `--to` or an automatic reply rule, and leave it out when resolving recipients.
 
-- This connector never delivers Muse's own reminders, monitoring or scheduled results, or status updates. Background workers return those with `muse.notify_main_agent`, and the runtime delivers them through the originating chat.
+- This connector never delivers Muse's own reminders, monitoring or scheduled results, or status updates. Background workers return those with `muse.notify_main_agent`, and the runtime delivers them through the originating chat. An automatic reply rule is the only send that may run unattended.
 
 - When the user asks to connect or disconnect "Messenger" without saying which feature, explain both briefly and ask.
 
@@ -90,7 +90,7 @@
 
 ## Resolve the recipient
 
-- `sync contacts` refreshes up to 100 contacts by default and merges them into the retained snapshot. For more, rerun with a larger `--limit`, up to 10,000. `contacts` reads the whole snapshot, and `--search` matches names regardless of case.
+- `sync contacts` refreshes up to 100 contacts by default and merges them into the retained snapshot. For more, rerun with a larger `--limit`, up to 10,000. `contacts` reads the whole snapshot, and `--search` matches any part of a name regardless of case.
 
 - If a contact search finds no one, run `sync contacts --search "NAME"` once, then search again. Use the same targeted refresh when matches are ambiguous or incomplete, when the user asks to look beyond known contacts, or when current results matter.
 
@@ -184,7 +184,7 @@
 
 - These markers describe single rows, not the thread or encrypted chat support, so never say encrypted conversations are inaccessible. If it matters, say only that those messages could not be read.
 
-- Do not use repair for freshness, missing history, gaps or send failures, and never loop on a failed repair. If it reports unavailable key refresh or stale device state, ask the user to disconnect and reconnect Messenger.
+- Do not use repair for freshness, missing history, gaps, send failures or write-registration cleanup, and never loop on a failed repair. If it reports unavailable key refresh or stale device state, ask the user to disconnect and reconnect Messenger.
 
 ## Keep history private
 

@@ -58,7 +58,7 @@
 
 ## Websites
 
-- Use the store's own admin site with `browser.spawn_task` for an operation its connector lacks, such as a bulk import, keeping the same store and product IDs. Have the task report exactly what changed.
+- Use the store's own admin site with `browser.browse` for an operation its connector lacks, such as a bulk import, keeping the same store and product IDs. Have the task report exactly what changed.
 
 - [Shopify Admin](https://admin.shopify.com/) for themes, checkout, payments and domains, which the Shopify connector cannot change.
 

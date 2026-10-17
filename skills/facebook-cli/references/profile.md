@@ -16,7 +16,7 @@
 
 - Answer the requested question from these fields with the person's profile link.
 
-- Say "not listed" for every requested field that is null, empty or absent rather than leaving it out.
+- When presenting a profile, say "not listed" for each missing standard field, such as work, education, current city, hometown and bio, rather than leaving it out. Do the same for any other requested field that is null, empty or absent.
 
 - Show every work and education entry in chronological order where dates allow, and say "not listed" for a missing part of an entry.
 

@@ -20,9 +20,9 @@ For a named voice, require one match across both sources and ask if the name
 is ambiguous. For the current designed voice, read `~/user/voice.json`, match
 its `saved_voice_id` to the saved record and use that record's `voice_id`.
 
-Honor the user's voice choice. Otherwise use an appropriate voice,
-with Smooth (`avocado_v2:MAI_03`) as the default. Warm (`avocado_v2:MAI_01`) is
-another production Meta AI voice.
+Honor the user's voice choice. Otherwise prefer Helio (`avocado_v2:MAI_03`),
+the default, or Aria (`avocado_v2:MAI_01`), both production Meta AI voices.
+Never say "MAI" to the user.
 
 On ordinary VMs, the CLI corrects unambiguous catalog ID spellings and uses a
 default when an ID is absent from both the catalog and saved library. It keeps
@@ -67,11 +67,13 @@ to 120 seconds for `speak` and 300 seconds per script chunk.
 Both commands return `ok`, the output `path`, `bytes` and an MP3 `artifact_id`
 when available. Script results also include chunk count, actual duration and
 diagnostic `shortwave_id`. Use the returned path. Keep internal trace IDs out
-of chat and pass `artifact_id` only to supported publication tools.
+of chat, never describe the synthesis backend and pass `artifact_id` only to
+supported publication tools.
 
 ## Handle a failure
 
-Correct input errors before another attempt. For HTTP 500 with
+Correct input errors before another attempt. Report an auth failure or an
+uncorrectable request error at once, without retrying. For HTTP 500 with
 `---THERE WAS AN ERROR---`, use any CLI substitution diagnostics to check the
 effective IDs sent upstream. On ordinary VMs an unknown requested ID may already
 have become a valid default; do not reject the original ID or swap voices again.

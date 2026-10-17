@@ -74,6 +74,12 @@ Non-secret Stripe Link spend-request state and approved totals.
 
   Wallet provider owning this direct BrowserTask lifecycle. The table name is retained only for rolling compatibility.
 
+- `replacement_approval_id` uses `text` and is nullable.
+
+  Opaque correlation identifier; no declared local table relationship.
+
+- `replacement_task_state_revision` uses `bigint` and is nullable.
+
 ## Keys and relationships
 
 - PRIMARY KEY `stripe_link_spend_requests_pkey` covers `approval_id`.

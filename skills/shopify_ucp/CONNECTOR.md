@@ -20,7 +20,7 @@
 
 ## Safety rules
 
-- Creating a checkout moves no money. `checkout complete` requests the wallet approval and places the order, so run it in the foreground at most once per checkout, and never poll or retry it automatically.
+- Creating a checkout moves no money. `checkout complete` requests the wallet approval and places the order, so run it in the foreground at most once per checkout, and never poll or retry it automatically. Never create a Link spend request yourself, because `checkout complete` creates the only one.
 
 - A denied approval is the user's decision. Stop without placing the order, and wait for a new explicit request before trying again.
 

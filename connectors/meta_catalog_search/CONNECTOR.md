@@ -22,7 +22,7 @@ catalog_results=$(mktemp "${TMPDIR:-/tmp}/meta-catalog-search.XXXXXX")
 
 - Set price limits with `--currency` and `--min-price` or `--max-price` in cents.
 
-- `--brand` ranks the requested brand first and `--domain` the requested seller, given as a canonical hostname without a scheme or path. Both can backfill with others, so check each result, and use both flags when the user names a brand and a seller.
+- Always pass `--brand` when the user requests a specific brand and `--domain` when they name a seller, with the seller's canonical hostname without a scheme or path. Both rank their match first but can backfill with others, so check each result, and use both flags when the user names a brand and a seller.
 
 - For used, vintage, refurbished or resale items, pass `--seller-type secondhand` and `--boost-brand-seller-website false`. Otherwise the defaults favor direct sellers and the brand's own website. `--color`, `--material`, `--style` and `--prefer-brand` only rank.
 
@@ -44,11 +44,11 @@ catalog_results=$(mktemp "${TMPDIR:-/tmp}/shopping-catalog-search.XXXXXX")
 
 - `--category` requires a category, and `--gender male|female|unisex` requires the wearer category the user gave. Keep it on refinements and never infer it from styling.
 
-- `--brand` takes one brand the user limits acceptable results to. Repeat it for multiple brands.
+- Always pass `--brand` when the user limits acceptable results to certain brands, repeating it once per brand.
 
 - `--prefer-brand` takes one brand the user favors but does not require, whether from the current request or their shopping profile. Profile preferences use `--prefer-brand`, never `--brand`. Repeat it for multiple brands. Also include each preferred brand in a `--query` with the product requirements.
 
-- `--domain` specifies a requested retailer by hostname, without a scheme, path or port. Repeat it for multiple retailers.
+- Always pass `--domain` when the user names a retailer, giving its hostname without a scheme, path or port. Repeat it for multiple retailers.
 
 - `--currency` takes a three-letter code, which also selects the market, and defaults to the shopper's currency. `--min-price` and `--max-price` are inclusive bounds in hundredths of that currency, so `2500` means 25.00.
 
@@ -94,7 +94,7 @@ jq -r '
 
 - For a requested size, find it in the size variant group and fetch its candidate `product_ids` while holding color and the other chosen attributes constant. Choose only a response whose `product.selected_variant_info` confirms the whole combination and whose availability allows purchase, and treat `is_available: false` as unavailable.
 
-- Use the confirmed response's `product.id` for checkout, not an ID read from `variant_groups`. Never pick an arbitrary candidate when the attributes cannot be confirmed, and keep the IDs and this lookup out of your reply.
+- Use the confirmed response's `product.id` for checkout, not an ID read from `variant_groups`, and confirm its checkout eligibility in that same response before routing it to direct checkout. Never pick an arbitrary candidate when the attributes cannot be confirmed, and keep the IDs and this lookup out of your reply.
 
 ## Check the purchase route
 

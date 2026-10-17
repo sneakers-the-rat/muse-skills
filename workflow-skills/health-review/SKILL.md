@@ -54,7 +54,7 @@
 
 ## Websites
 
-- Open the user's patient or lab portal with `browser.spawn_task` when connected records lack a result, the original report or a visit summary. Tell the task which results and dates to find and to download the official report where the portal offers one. The user signs in when the portal asks.
+- Open the user's patient or lab portal with `browser.browse` when connected records lack a result, the original report or a visit summary. Tell the task which results and dates to find and to download the official report where the portal offers one. The user signs in when the portal asks.
 
 - [MyQuest](https://myquest.questdiagnostics.com/) for Quest Diagnostics results in the US.
 

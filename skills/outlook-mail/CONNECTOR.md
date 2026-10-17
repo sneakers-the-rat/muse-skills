@@ -16,13 +16,13 @@
 
 ## Choose a mailbox
 
-- Commands use the default mailbox unless they carry `--account <account_id>`. When the user means a particular mailbox, run `accounts`, match its `display_name` and pass that `account_id`, and ask when the match is ambiguous.
+- Commands use the default mailbox unless they carry `--account <account_id>`. When the user means a particular mailbox, run `accounts`, match its `display_name` and pass that `account_id`. Ask when the match is ambiguous, no mailbox matches or `accounts` fails, and never fall back to the default mailbox.
 
 - Repeat that `--account` on every follow-up, including `--page-token` pages, `get`, `reply`, `delete` and the mark commands. Message IDs and page tokens belong to the mailbox that returned them.
 
 - Never rerun a failed `--account` command without it. `--status`, `accounts` and `disconnect` cover the whole connector and reject `--account`.
 
-- When the user does not say which mailbox holds a message, search each linked mailbox with its own `--account`. If one cannot be searched, say it could not be checked rather than that the message does not exist.
+- When the user does not say which mailbox holds a message, run `accounts` first and search each linked mailbox with its own `--account`. If one cannot be searched, say it could not be checked rather than that the message does not exist, and follow Recover access for it.
 
 ## Recover access
 
@@ -42,13 +42,13 @@ get <message-id>
 
 - `list` pages with `next_page_token`, which you pass back as `--page-token`. `search` returns a single page of up to `--page-size` results, so narrow the query instead of paging.
 
-- Both leave out likely bulk mail, meaning messages addressed to 25 or more people, unless you add `--include-likely-spam`.
+- Both leave out likely bulk mail, meaning messages addressed to 25 or more people, unless you add `--include-likely-spam`. In summaries, also leave out likely spam, phishing and bulk promotions unless the user asks for them, and say briefly that you filtered them.
 
 - Use `--page-size` for the count. `--top`, `--limit`, `--max-results`, `read`, `get --id` and `search --query` are compatibility forms, so never use them in new commands.
 
 - `list` and `search` return `count` and `messages`, each with `id`, `subject`, `from`, `to`, `date`, `message_received_at`, `preview`, `is_read` and `has_attachments`. `list` also returns `next_page_token` and `total_messages`, and `get` returns one `message` that adds `cc`, `body` and `body_type`.
 
-- Reuse each `id` exactly as returned. `message_received_at.user_local` is when the mailbox received the message, as is `date`, and neither is the time of an event described in the body.
+- Reuse each `id` exactly as returned. `message_received_at.user_local` is when the mailbox received the message, so present it rather than `date`, which is UTC. Neither is the time of an event described in the body.
 
 - A `withheld` entry means the user's Access messages permission removed the named fields, so a missing preview is not an empty message. When the task needs one message's content and `withheld.reason` is `requires_approval`, read it with `get`, which asks the user. Never `get` messages during routine browsing just to fill previews.
 

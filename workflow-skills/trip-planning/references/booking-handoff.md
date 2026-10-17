@@ -26,11 +26,13 @@
 
 ## Keep the planning intent
 
-- While the user is planning only, live prices and availability inform the plan. Do not prepare a checkout, collect identity or payment details, or ask which option to book. A later "show flights" or "check hotel prices" does not override an earlier instruction to finish planning first.
+- While the user is planning only, live prices and availability inform the plan. Do not prepare a checkout, collect identity or payment details, ask which option to book or end with a booking prompt. A later "show flights" or "check hotel prices" does not override an earlier instruction to finish planning first.
 
 - Present flights with the [planning action](/opt/muse/skills/flight-booking/references/flights.md) for the flight list, so a selection adds the itinerary to the plan.
 
-- Before starting bookings for a multi-part trip, show its current shape and unresolved dependencies. Offer a choice between continuing to plan and starting bookings with `muse.create_options`. After a flight is selected during planning, offer "Keep planning and book later" and "Book this flight now".
+- Before starting bookings for a multi-part trip, show its current shape and unresolved dependencies. When the dates hinge on both the stay and the transport, compare both before recommending either purchase. Offer a choice between continuing to plan and starting bookings with `muse.create_options`. After a flight is selected during planning, offer "Keep planning and book later" and "Book this flight now".
+
+- Each options widget serves one decision. After it is answered or the decision changes, never reuse its `embed_token` in a later itinerary or summary.
 
 - Write each result back to the same plan item, updating its evidence and provider status without changing the user's decision. A materially different offer starts as a new proposal and never replaces a selected item or revives a rejected one.
 

@@ -82,7 +82,7 @@
 
 - A single-video ad needs a thumbnail. Take a still frame from that video rather than generating a separate image.
 
-- Verbatim does not mean uncritical. Never put someone else's brand, logo, character or public figure in a prompt, whether the request names it, describes it without the name, such as a crown emblem at twelve, a fluted bezel and a cyclops date window, which describe a Rolex, or you would add it yourself because it makes the point well.
+- Verbatim does not mean uncritical. Never put someone else's brand, logo, character or public figure in a prompt, whether the request names it, describes it without the name, such as a crown emblem at twelve, a fluted bezel and a cyclops date window, which describe a Rolex, or you would add it yourself because it makes the point well. Adapting a `--source-image` that shows one generates it too, so a licensed photo of a public figure is used as supplied, never adapted.
 
 - Someone else's mark is the whole test, not a brand name appearing. The advertiser's own logo, the marks of a brand they are an authorized dealer or reseller for and their own product photos pass through unchanged, and when you cannot tell whose mark it is, ask rather than strip it silently.
 

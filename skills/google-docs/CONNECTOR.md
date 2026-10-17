@@ -41,7 +41,7 @@
 
 ```sh
 /opt/hatch/bin/hatch_gws_cli docs documents create --json '{"title":"<title>"}'
-/opt/hatch/bin/hatch_gws_cli drive files update --params '{"fileId":"<document_id>"}' --upload "$HOME/workspace/your_files/<artifact-slug>/<name>.docx"
+/opt/hatch/bin/hatch_gws_cli drive files update --params '{"fileId":"<document_id>"}' --upload "$JARVIS_HOME/workspace/your_files/<artifact-slug>/<name>.docx"
 ```
 
 - Read it back with `documents get` and check that the styling landed before calling it ready. A successful upload proves only that Drive converted the file, not that the page reads correctly.

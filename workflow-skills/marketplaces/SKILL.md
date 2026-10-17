@@ -52,7 +52,7 @@
 
 ## Websites
 
-- Search and transact on these sites with `browser.spawn_task`, giving the exact item, condition, price range and the city or postcode where it will change hands. Have the task return each listing's price, condition, location, seller rating and payment or shipping terms.
+- Search and transact on these sites with `browser.browse`, giving the exact item, condition, price range and the city or postcode where it will change hands. Have the task return each listing's price, condition, location, seller rating and payment or shipping terms.
 
 - [eBay](https://www.ebay.com/) for new and used goods that ship, sold-listing prices and its Money Back Guarantee.
 

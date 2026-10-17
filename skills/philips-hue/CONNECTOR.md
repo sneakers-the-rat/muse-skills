@@ -16,7 +16,7 @@
 
 - If `has_application_key` is false, run `link-bridge` yourself without asking the user. It pairs remotely and needs no button press.
 
-- Check `status` again. Once `ready` is true, carry on with the user's request, or list the lights and rooms and summarize what you found when they were only setting up.
+- Check `status` again. Once `ready` is true, carry on with the user's request. When they were only setting up, list the lights and rooms, summarize what you found and offer a few starter ideas such as warm sunset tones, a favorite color or the `fire` effect.
 
 - The bridge must already be on the home network and linked to the user's Hue account through the Hue app.
 

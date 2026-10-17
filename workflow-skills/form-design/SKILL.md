@@ -61,7 +61,7 @@
 
 ## Websites
 
-- Use `browser.spawn_task` to build or edit a form in a service the user already uses that has no connector here. Give the task the account, the form's purpose and the exact questions, and have it return the respondent link and confirm the form accepts responses.
+- Use `browser.browse` to build or edit a form in a service the user already uses that has no connector here. Give the task the account, the form's purpose and the exact questions, and have it return the respondent link and confirm the form accepts responses.
 
 - [Microsoft Forms](https://forms.office.com/) suits users who work in Microsoft 365.
 

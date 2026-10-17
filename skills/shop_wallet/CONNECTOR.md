@@ -1,12 +1,12 @@
 # Shop Pay
 
-- Shop Pay is the consumer wallet that Shopify merchants accept. Muse uses it through the `wallet` tools with `provider: "shop-pay"` and through the browser checkout's native payment step. A merchant's own Shopify store is the separate Shopify connector.
+- Shop Pay is the consumer wallet that Shopify merchants accept. Muse uses it through the `wallet` tools with `provider: "shop-pay"` and through the browser checkout's payment step. A merchant's own Shopify store is the separate Shopify connector.
 
 - Follow `~/docs/chat/payments-and-purchases.md` for the checkout review and approval. This doc covers what is specific to Shop Pay.
 
 ## Check that Shop Pay is offered
 
-- Offer Shop Pay for a browser checkout only when the final-review handoff lists `shop-pay` in `available_payment_providers`. A Shop Pay button on the merchant's page starts the merchant's own sign-in and does not show that the wallet route is available.
+- In a browser checkout, the checkout workflow resolves whether Shop Pay is a supported route and presents the payment choice. A Shop Pay button on the merchant's page starts the merchant's own sign-in and does not show that the wallet route is available.
 
 - For direct Shopify UCP checkout, offer Shop Pay as a route before the checkout is created, as the [Shopify UCP](/opt/hatch/connectors/shopify-ucp/CONNECTOR.md) docs describe.
 
@@ -20,27 +20,21 @@
 
 - Use only methods whose `type` is `card`. Keep a card the user already chose for this purchase if it is still listed, otherwise use the only card or the default. With several cards and no default, let the user choose by masked label, written like `Visa ....1234`.
 
-- With no usable card, call `wallet.add_payment_method` and send its `next_action.markdown` unchanged, saying it opens Shopify's secure Shop Pay wallet page where the user manages cards. End the message and never ask for card details in chat.
+- With no usable card, call `wallet.add_payment_method` and send its `next_action.markdown` unchanged, saying it opens Shopify's secure Shop Pay wallet page where the user manages cards. End the message there. When the user sends a card in chat instead, accept it and pass it to the browser checkout as text.
 
 - Before asking for a missing name, email address or phone number, call `wallet.get_user_info`. For a missing delivery address, call `wallet.list_shipping_addresses` and use the only or default address. Use these values only to fill matching empty checkout fields, never to sign in to a merchant.
 
-- Treat each payment-method ID as opaque. It goes only in the `wallet_payment` field of `browser.steer_task` or in the UCP completion input, never in a task brief, message, file or memory.
+- Treat each payment-method ID as opaque. It goes only in the UCP completion input or in the `wallet` field of `browser.browse`, never in a task brief, message, file or memory.
 
 - Use `wallet.get_connection_status` only to manage the connection outside a purchase. Share its `next_action.markdown` only when it matches a request to connect, reconnect or disconnect.
 
 ## Pay
 
-- After the user accepts the checkout review and the card, resume the same browser task with `browser.steer_task` and this field:
-
-```json
-{"wallet_payment": {"provider": "shop-pay", "payment_method_id": "<exact id from wallet.list_payment_methods>"}}
-```
-
-- The browser task then presents Shop Pay's native approval for the exact merchant, total and card, and Shop Pay pays with a one-time token. Do not ask for a separate chat confirmation, and treat the approval decision as final.
+- In a browser checkout, pass the chosen card in the `wallet` field of `browser.browse`, as `{"provider": "shop-pay", "payment_method_id": "<exact id>"}`, on the call that starts the task, updates it or answers its question with `answer_to`, and name Shop Pay and the card's masked label in the brief. A later call without `wallet` keeps that card; send it again when the user picks another card, and `wallet: null` when they choose to pay another way. The browser's checkout pays with that card through Shop Pay and shows the user Muse's payment approval for the exact merchant, total and card, never the merchant's own Shop Pay button; Shop Pay pays with a one-time token. Do not ask for a separate chat confirmation, and treat the approval decision as final.
 
 - A declined approval ends the attempt without a charge. A later attempt with a card the user picks starts a fresh approval.
 
-- Include `wallet_payment` with the selected card whenever you resume this task to continue the payment, such as when you relay the user's acceptance of a replacement approval. A steer without it clears the selection, and the browser task then hands off again instead of paying.
+- Pending secure actions, such as a replacement approval, resume automatically. Do not relay another approval question or start a replacement task.
 
 - Report the card the result says was approved, which can differ from the one proposed because the user may change it in the approval sheet.
 

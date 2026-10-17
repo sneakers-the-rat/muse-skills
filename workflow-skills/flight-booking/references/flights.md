@@ -10,7 +10,7 @@
 
 - Use relevant preferences for airlines, airports, seats and connections. One past trip is a hint, not a standing preference. Do not infer identity, accessibility needs or permission to exceed a budget.
 
-- Check loyalty status, credits and card benefits when they could change the choice. A linked card shows which card the user holds, not its reward rules or a points balance. Mention a useful program and tier name once, without the membership number.
+- Check loyalty status, credits and card benefits when they could change the choice, and confirm that a credit applies to the operating or marketing carrier and has not expired. A linked card shows which card the user holds, not its reward rules or a points balance. Mention a useful program and tier name once, without the membership number.
 
 ## Search promising sources
 

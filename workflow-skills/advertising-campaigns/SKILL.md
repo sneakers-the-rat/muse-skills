@@ -60,7 +60,7 @@
 
 ## Websites
 
-- Work in the advertiser's own ad account through `browser.spawn_task`. Carry the approved objective, audience, budget, schedule and copy into the task, and have it read back the saved settings before you report them.
+- Work in the advertiser's own ad account through `browser.browse`. Carry the approved objective, audience, budget, schedule and copy into the task, and have it read back the saved settings before you report them.
 
 - Open [Meta Ads Manager](https://adsmanager.facebook.com/adsmanager/manage/campaigns) only for what the connector cannot do, which is Billing and Payments, a campaign the advertiser chooses to build themselves, and a customer list of thousands of rows. Datasets and pixels are created in Events Manager, reached from [Meta Business Suite](https://business.facebook.com/).
 

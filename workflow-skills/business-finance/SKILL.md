@@ -50,7 +50,7 @@
 
 ## Websites
 
-- Use the business's existing accounting, processor or bank site with `browser.spawn_task` for a report, export or statement its connector lacks. Have the task save the file and report the period it covers.
+- Use the business's existing accounting, processor or bank site with `browser.browse` for a report, export or statement its connector lacks. Have the task save the file and report the period it covers.
 
 - [Xero](https://www.xero.com/) for books kept there, which is common in the UK, Australia and New Zealand.
 

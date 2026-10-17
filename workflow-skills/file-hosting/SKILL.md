@@ -62,7 +62,7 @@
 
 ## Websites
 
-- Use `browser.spawn_task` for a service without a connector, and grant it only the file being shared. Tell it the audience and expiry the user chose, and have it return the share link and its access setting.
+- Use `browser.browse` for a service without a connector, and grant it only the file being shared. Tell it the audience and expiry the user chose, and have it return the share link and its access setting.
 
 - [OneDrive](https://onedrive.live.com/) for the user's Microsoft storage, or their organization's OneDrive for work files.
 

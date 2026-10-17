@@ -24,7 +24,7 @@
 
 ## Websites
 
-- Use `browser.spawn_task` to check live tables on the restaurant's own booking page or its reservation partner. Carry the exact branch, local date and time and party size, and ask for the available times with their deposit and cancellation terms.
+- Use `browser.browse` to check live tables on the restaurant's own booking page or its reservation partner. Carry the exact branch, local date and time and party size, and ask for the available times with their deposit and cancellation terms.
 
 - [Resy](https://resy.com/) and [Tock](https://www.exploretock.com/) cover many restaurants in the US and some abroad. Use a [SevenRooms](https://www.sevenrooms.com/) booking page when the restaurant links to one.
 

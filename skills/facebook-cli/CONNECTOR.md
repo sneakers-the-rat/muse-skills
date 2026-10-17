@@ -26,7 +26,7 @@
 
 ## Open Facebook links
 
-- Never open a pasted Marketplace item link or share link in the browser, because the browser cannot pass Facebook's login wall. Read every pasted Facebook link through this connector, single-quoting the URL in the shell.
+- Never open a pasted Marketplace item link or share link in the browser, which is not signed in to Facebook and stops at its login wall. Read every pasted Facebook link through this connector, single-quoting the URL in the shell.
 
 - Read a Marketplace item link (`facebook.com/marketplace/item/<id>`, with or without a title slug) with `marketplace listing details --url`. It needs no linked account.
 
@@ -66,9 +66,35 @@
 
 - `groups search` gives `group_id` for `groups details` and `groups posts`, and `events search` gives the event `id` for `events details`. `saved list` gives `savable_id` and `type`, and `marketplace search` gives `listing_id` for listing details and seller information.
 
+```sh
+/opt/hatch/bin/facebook-cli me friends [--name '<name>'] [--city '<city>'] [--work '<employer>'] [--json-query '<FindPeople JSON>'] [--birthday-within-days [N]] [--limit N] [--after '<cursor>']
+/opt/hatch/bin/facebook-cli profile info --profile-id '<profile_id>'
+/opt/hatch/bin/facebook-cli timeline fetch --profile-id '<profile_id>' [--limit N] [--after '<next_cursor>']
+/opt/hatch/bin/facebook-cli post read (--post-id '<post_id>' | --url '<url>')
+/opt/hatch/bin/facebook-cli post comments read --post-id '<post_id>' [--limit N] [--after '<cursor>']
+/opt/hatch/bin/facebook-cli post reactions read --post-id '<post_id>'
+/opt/hatch/bin/facebook-cli feed newsfeed [--limit N] [--after '<next_cursor>']
+/opt/hatch/bin/facebook-cli feed friends [--limit N] [--after '<next_cursor>']
+/opt/hatch/bin/facebook-cli story feed [--limit N]
+/opt/hatch/bin/facebook-cli groups search [--keywords '<text>'] [--role connected|admin|admod|any] [--limit N] [--after '<cursor>']
+/opt/hatch/bin/facebook-cli groups details --group-id '<group_id or vanity name>'
+/opt/hatch/bin/facebook-cli groups posts --group-id '<group_id>' [--query '<text>'] [--limit N] [--after '<cursor>']
+/opt/hatch/bin/facebook-cli events search [--scope connected|discover] [--keywords '<text>'] [--location '<city>'] [--start-date YYYY-MM-DD] [--end-date YYYY-MM-DD] [--limit N] [--after '<cursor>']
+/opt/hatch/bin/facebook-cli events details --event-id '<event id>'
+/opt/hatch/bin/facebook-cli saved list [--type '<type>'] [--collection-id '<collection_id>'] [--limit N] [--after '<cursor>']
+/opt/hatch/bin/facebook-cli saved collections list
+/opt/hatch/bin/facebook-cli marketplace search --query '<text>' [--query '<text>' ...] --out '<new file>'
+/opt/hatch/bin/facebook-cli marketplace listing details --listing-id '<listing_id>' [--listing-id '<listing_id>' ...] --out '<new file>'
+/opt/hatch/bin/facebook-cli marketplace seller-info --listing-id '<listing_id>' [--listing-id '<listing_id>' ...]
+/opt/hatch/bin/facebook-cli marketplace saved [--keywords '<text>'] [--limit N] [--after '<cursor>'] --out '<new file>'
+/opt/hatch/bin/facebook-cli marketplace my-listings [--status active|pending|sold|draft] [--limit N] [--after '<cursor>'] --out '<new file>'
+```
+
+- Read the command's guide under Feature guides for any other flag, result field or paging detail, and when a command fails.
+
 - For friends' activity in a group, run `me friends` and compare the friend list with the authors returned by `groups posts`. Never ask the user to provide their friend list.
 
-- A timeline contains the owner's posts and other people's wall posts. Keep `author_id` distinct from `owner_id`, as [Timelines](references/timeline.md) explains.
+- A timeline contains the owner's posts and other people's wall posts. For posts from a person, report only those whose `author_id` equals `owner_id`, and mention others' wall posts separately, as [Timelines](references/timeline.md) explains.
 
 - Run a multistep chain, such as friend lookup, timeline and comments, back to back without narrating each step. Present the result after the final command.
 

@@ -14,7 +14,7 @@
 
 - To disconnect every institution, run `disconnect` and post its `disconnect_url` as `[Disconnect Plaid](<disconnect_url>)`. Claim the disconnection only after the user confirms through that link, and if no URL comes back, say Plaid is already disconnected.
 
-- Removing a single institution is not available from chat, so point the user to that institution's row in Settings. Never set up a background check, goal or reminder to watch for a disconnection.
+- Removing a single institution is not available from chat, so point the user to that institution's row in Settings and never run `disconnect`, whose link unlinks every institution. Never set up a background check, goal or reminder to watch for a disconnection.
 
 ## Choose the read
 
@@ -42,6 +42,8 @@
 
 - Transactions are in `body.transactions`. Match each to `body.accounts` by both `_plaid_source.credential_id` and `account_id`. Positive amounts are outflows, and negative amounts are inflows, including refunds.
 
+- Leave money moving between the user's own accounts, such as a transfer to savings or a payment to their own card, out of spending and income.
+
 - Merchant names vary. Before saying a charge is not there, try other names, search by amount and date, and include pending rows.
 
 - A failed read can still hold useful partial results. When `ok` is false, use `body.institutions` to say which coverage is missing, and never present a partial total as complete.
@@ -64,6 +66,8 @@
 
 - Balances are Plaid's last reported figures, not live, and the data can lag the bank. Missing accounts or fields are unknown, not zero, and one recent transaction does not show when an account last refreshed.
 
+- When a balance or recent charge looks stale or missing, say the data may not be up to date rather than calling it wrong or complete.
+
 - Keep date-only values as dates. Sync, recurring and investment reads add `transaction_posted_at` and `transaction_authorized_at` when real timestamps exist.
 
 - In recurring streams, `average_amount` and `last_amount` are objects with `amount` and `iso_currency_code`, so read `.amount` and keep its currency. Keep `is_active` and `last_date` when you parse streams. Exclude streams whose `is_active` is false from current bills, and check recent transactions before quoting a monthly cost, because `average_amount` can include one-off payments.
@@ -81,6 +85,8 @@
 - Say which accounts and dates every figure covers, so it matches what the user sees at the bank.
 
 - Never print or repeat secrets, tokens or full account or routing numbers, and never reconstruct a number from its mask.
+
+- Report what the data shows, and follow the advice limits in [Financial Planning](/opt/muse/skills/financial-planning/SKILL.md).
 
 ## Related skills
 

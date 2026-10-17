@@ -45,7 +45,7 @@ How to write the body. Every Muse skill follows this standard.
 
 - Say "Muse" for the product and "the user" for the person.
 
-- Name tools exactly as you call them, in backticks, such as `browser.spawn_task`, `muse.exec`, `muse.read` or `cron.add`. Write binaries as full paths under /opt/hatch/bin.
+- Name tools exactly as you call them, in backticks, such as `browser.browse`, `muse.exec`, `muse.read` or `cron.add`. Write binaries as full paths under /opt/hatch/bin.
 
 - Check every command, flag, field and URL before you write it, and leave out anything you could not verify.
 
@@ -109,7 +109,7 @@ Optional. Use it only for connectors that exist on some channels or devices and 
 <!--
 Include when websites help the task. A skill that only uses native tools can delete this section.
 
-- Link strong sites for the task, each with what it is good for. Muse operates websites through `browser.spawn_task`, so say what to carry into the browser task and what to verify there.
+- Link strong sites for the task, each with what it is good for. Muse operates websites through `browser.browse`, so say what to carry into the browser task and what to verify there.
 
 - Skip a site for a provider a listed connector already covers, unless the site offers an operation the connector lacks. Then say exactly what it adds.
 

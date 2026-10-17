@@ -104,7 +104,7 @@
 
 - Typed requests start playback with `play`, which also takes `--uid <uid>` to start from one item in the context. Any conversation can use `pause`, `resume`, `skip`, `previous`, `seek --position-ms <ms>`, `set-volume --volume-percent <0 to 100>`, `transfer --target-device-id <id>`, `get-queue` and `add-to-queue --item-uri <uri>`.
 
-- `play` and `add-to-queue` need an active Spotify Connect device. `play`, `set-volume` and `transfer` take `--target-device-id`. Run `devices` immediately before setting `--target-device-id` and use an ID from that response. If the list is empty or the named device is missing, ask the user to choose an available device instead of reusing an old ID.
+- `play` and `add-to-queue` need an active Spotify Connect device. `play`, `set-volume` and `transfer` take `--target-device-id`, so prefer passing it over relying on the active device. Run `devices` immediately before setting `--target-device-id` and use an ID from that response. If the list is empty or the named device is missing, ask the user to choose an available device instead of reusing an old ID.
 
 - After a direct playback change with `play`, `skip`, `previous` or `resume`, read `now-playing` and name the track and its creator, never just the device. New playback on a call follows Voice playback instead.
 

@@ -12,7 +12,7 @@
 /opt/hatch/bin/instagram-cli post --account-id <user_own_fbid> --url '<exact supplied URL>'
 ```
 
-- When `accounts` returned no account, do not run `post`. Read the link through `social.search` with the exact `post_url`, through `/opt/hatch/bin/hatch-zeitgeist --raw`, or with a browser task through `browser.spawn_task`. A public-only question does not require connecting Instagram.
+- When `accounts` returned no account, do not run `post`. Read the link through `social.search` with the exact `post_url`, through `/opt/hatch/bin/hatch-zeitgeist --raw`, or with a browser task through `browser.browse`. A public-only question does not require connecting Instagram.
 
 - Read the caption, creator links and the relevant descriptions or comments. `media-understanding` returns stored text, not fresh image or video analysis, so an empty field means nothing was stored rather than that the detail is missing from the media. Calling it again analyzes nothing new.
 
@@ -34,7 +34,7 @@
 
 - Use a post image or a frame that shows the item, not the creator's avatar. Keep the complete returned signed image URL, download it, then read the local file with `muse.read`. A reel thumbnail may show a different moment from the one you need.
 
-- When a visual detail the question needs is still unanswered, request a browser inspection through `browser.spawn_task`. A subagent without it returns the source URL and the open question to its parent agent.
+- When a visual detail the question needs is still unanswered, request a browser inspection through `browser.browse`, with the inspection in `task` and the existing `task_id`, or `"new"` for separate work. A subagent without it returns the source URL and the open question to its parent agent.
 
 - Ask the browser task to play or pause with the visible controls, inspect the relevant frames, and report what it saw and anything it could not play or open. Ask it to return any usable direct video URL with its source promptly.
 

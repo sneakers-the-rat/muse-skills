@@ -74,7 +74,7 @@
 
 ## Websites
 
-- Use `browser.spawn_task` for live availability and booking on operator and reseller sites. Give the task the local dates and times, the travelers, the vehicle or ticket type, and ask for the full price with its fees and cancellation terms.
+- Use `browser.browse` for live availability and booking on operator and reseller sites. Give the task the local dates and times, the travelers, the vehicle or ticket type, and ask for the full price with its fees and cancellation terms.
 
 - For rental cars, compare a rental company's own site, such as [Hertz](https://www.hertz.com/), [Enterprise](https://www.enterprise.com/), [Avis](https://www.avis.com/), [Sixt](https://www.sixt.com/) or [Europcar](https://www.europcar.com/), with a broker such as [Kayak](https://www.kayak.com/cars), [Discover Cars](https://www.discovercars.com/) or [Auto Europe](https://www.autoeurope.com/). [Turo](https://turo.com/) rents cars from their owners.
 

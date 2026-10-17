@@ -31,7 +31,7 @@
 
 ## Read shortcuts
 
-- These commands return compact metadata without a schema lookup. `--channel` takes `email`, `sms` or `mobile-push`, and `list-flows --page-size` accepts 1 to 100.
+- These commands return compact metadata without a schema lookup. `list-campaigns` requires `--channel`, which takes `email`, `sms` or `mobile-push`, and `list-flows --page-size` accepts 1 to 100.
 
 - Pass the cursor from a previous page unchanged with `--page-cursor` to continue a list.
 
@@ -55,7 +55,7 @@
 
 - Permission to edit content does not authorize sending a campaign or deleting data.
 
-- Each approval previews the exact operation and inputs. Campaign creation and edits show the audience, sender, subject and message when present, and sends, cancellations and flow changes add Klaviyo's metadata when the lookup succeeds.
+- Each approval previews the exact operation and inputs. Campaign creation and edits show the audience, sender, subject and message when present, and sends, cancellations and flow changes add Klaviyo's metadata when the lookup succeeds. Cards show audience IDs, not names, so tell the user which list or segment each ID is.
 
 ## Send a campaign
 
@@ -85,7 +85,7 @@
 
 ## Bulk changes and deletion
 
-- Resolve the full target set and its consequences before a bulk change, merge or deletion. Profile deletion through `request_profile_deletion` is permanent.
+- Confirm the full target set and its consequences with the user before a bulk change, merge or deletion, even when Settings lets it run without asking. Profile deletion through `request_profile_deletion` is permanent.
 
 - Keep returned job IDs and read the matching job status before claiming a bulk operation finished.
 

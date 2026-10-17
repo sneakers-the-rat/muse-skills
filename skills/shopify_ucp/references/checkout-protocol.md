@@ -40,7 +40,7 @@
 
 - Start from details already known in the conversation and `~/USER.md`. Before asking for a missing name, email address or phone number, call `wallet.get_user_info`, and for a missing recipient name or shipping address call `wallet.list_shipping_addresses`. Use wallet values only for matching missing fields.
 
-- After applying known, sole or default values, ask one grouped question for every required detail still missing or ambiguous. Do not tell the user details are needed before these lookups finish.
+- After applying known, sole or default values, ask one grouped question for every required detail still missing or ambiguous. Never guess or fill in a buyer email, recipient name or address field. Do not tell the user details are needed before these lookups finish.
 
 - Direct completion needs the buyer email, the recipient's first and last name and a complete shipping address with street, city, state or region, postal code and two-letter country code. Direct checkout ships only to the United States and Canada, so use the browser route for another destination. Include a phone number when known, and ask for one only when the user or merchant requires it.
 
@@ -114,7 +114,9 @@
 
 - Keep the selected wallet and card. Ask again only when the user asks to switch or the card is no longer listed, and never substitute another card.
 
-- For a switch to another wallet, resolve its exact card with `wallet.list_payment_methods` and keep the existing checkout. For Use another method, continue the existing checkout in the browser from its URL and explain that the user will enter payment during takeover.
+- For a switch to another wallet, resolve its exact card with `wallet.list_payment_methods` and keep the existing checkout, without asking the user to confirm the switch they just requested. For Use another method, continue the existing checkout in the browser from its URL and explain that the user will enter payment during takeover.
+
+- If setup for the requested wallet is declined or leaves no usable card, keep the checkout and ask the user to choose another route.
 
 - Take the first branch that matches the selected wallet:
 
@@ -126,15 +128,18 @@
 
   - Otherwise Link completes directly.
 
+- Missing delivery options or an unsettled total do not choose a browser branch. Handle them with the refresh steps below.
+
 - On a browser branch, finish any wallet connection or card setup in the parent first, briefly acknowledge the handoff and end the reply. Do not poll the browser task, and never call `checkout complete` for that checkout.
 
 ### Continue in the browser
 
-- Name the wallet by provider ID and the card by its masked label in the brief, never the opaque payment-method ID. The browser task does not call wallet tools or discuss other payment routes. After the user accepts its final review, send the provider and exact payment-method ID only in the `wallet_payment` field of `browser.steer_task`.
+- Start a browser task with `browser.browse` and `task_id: "new"`. Name the wallet by provider ID and the card by its masked label in the brief, never the opaque payment-method ID. The browser task does not call wallet tools or discuss other payment routes, and the trusted checkout tool revalidates the exact selected card against a fresh wallet read before it creates the approval.
 
 ```json
 {
-  "task": "<request in the user's words>. Open <exact Shopify checkout URL> for <selected products>. Use provider <shop-pay or stripe-link> with saved card <masked label>. Use these choices for every item: <variants and quantities>. Ask only for missing required purchase choices. Continue through checkout and hand off the exact final terms before submission. Shipping preference: <deadline, budget or speed, or none>."
+  "task_id": "new",
+  "task": "<request in the user's words>. Open <exact Shopify checkout URL> for <selected products>. Use provider <shop-pay or stripe-link> with saved card <masked label>. Use these choices for every item: <variants and quantities>. Ask only for missing required purchase choices. Complete the purchase after the payment decision. Shipping preference: <deadline, budget or speed, or none>."
 }
 ```
 
@@ -187,7 +192,7 @@
 
 - Refresh the same checkout with `checkout get` to verify the buyer update and read its delivery options. A buyer update request does not authorize completing or charging the checkout.
 
-- Apply promo codes by passing the complete desired set in `discount_codes`, in the same call as a delivery choice or on its own with the `checkout_id`. Use codes the user supplied or found in a deal search they asked for, never invent codes and do not interrupt every checkout to ask for one.
+- Apply promo codes by passing the complete desired set in `discount_codes`, in the same call as a delivery choice or on its own with the `checkout_id`, even when the checkout offers no delivery options. Use codes the user supplied or found in a deal search they asked for, never invent codes and do not interrupt every checkout to ask for one.
 
 - Omit `discount_codes` to keep the existing codes, and pass an empty list to clear them. Report the applied discounts, any `result.checkout.rejected_discount_codes` and the refreshed total, because rejected codes can appear even when `ok` is true.
 

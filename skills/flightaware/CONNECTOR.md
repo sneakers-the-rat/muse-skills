@@ -55,13 +55,13 @@
 
 ## Monitor a booked trip
 
-- Flight Tracking's status job follows these rules. Write them into the job's body with the exact command lines each run needs.
+- Create the status job through [Flight Tracking](/opt/muse/skills/flight-tracking/SKILL.md), which sets its owner, name, deduplication, failure handling and stop conditions. Write the rules below into the job's body with the exact command lines each run needs.
 
 - Set the schedule by the next active leg's departure. Run daily while it is more than 48 hours away, hourly from 48 hours to 6 hours before departure, and every 10 to 15 minutes from 6 hours before departure through landing. Create the job at the band that applies now.
 
 - At the start of each run, compare the job's schedule with the current band. When they differ, update the same job with `cron.update` before any FlightAware call. Never keep a frequent schedule that relies on the state file to skip calls.
 
-- Keep the current band until the leg lands or a connection risk is resolved, then move the same job to the next leg.
+- Keep the current band until the leg lands, and longer while a connection risk is unresolved, then move the same job to the next leg.
 
 - Compare schedule changes with the booked baseline, and operational changes with the last notified facts.
 

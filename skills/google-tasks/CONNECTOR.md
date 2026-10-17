@@ -38,6 +38,8 @@
 /opt/hatch/bin/hatch_gws_cli tasks tasks patch --params '{"tasklist":"<list_id>","task":"<task_id>"}' --json '{"status":"completed"}'
 /opt/hatch/bin/hatch_gws_cli tasks tasks move --params '{"tasklist":"<list_id>","task":"<task_id>","parent":"<parent_id>","previous":"<sibling_id>"}'
 /opt/hatch/bin/hatch_gws_cli tasks tasklists insert --json '{"title":"Work"}'
+/opt/hatch/bin/hatch_gws_cli tasks tasklists patch --params '{"tasklist":"<list_id>"}' --json '{"title":"Home"}'
+/opt/hatch/bin/hatch_gws_cli tasks tasklists delete --params '{"tasklist":"<list_id>"}'
 ```
 
 - Manage lists with `tasklists insert`, `tasklists patch` and `tasklists delete`.

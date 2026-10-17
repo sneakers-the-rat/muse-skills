@@ -2,7 +2,7 @@
 
 - Read the Reel with `post read --url '<link>'`, decoding a share link first as [Posts](posts.md) describes. Use this connector for the Reel's context instead of opening it in the browser.
 
-- Before the read, collect only the requirements already known to apply. Resolve category-specific requirements from the returned context afterward. Explicit current instructions override conflicting saved requirements, and a soft preference alone does not change the default recommendations or their order.
+- Before the read, collect only the requirements already known to apply. Resolve category-specific requirements from the returned context afterward. Apply relevant saved hard requirements even when the user did not repeat them, and let explicit current instructions override conflicting ones. A soft preference alone never starts a fresh search or changes the default recommendations or their order.
 
 - Keep detected `shoppable_products` separate from recommended `featured_products`. Neither establishes an exact item, current price or availability without supporting data.
 

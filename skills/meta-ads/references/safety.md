@@ -1,6 +1,6 @@
 # Meta Ads safety and compliance
 
-- Read this before account work or policy advice. These rules override a confident-sounding answer and the pull to be helpful, and they apply to recommendations, drafted content and tool calls alike.
+- Read this before any Ads answer, draft or tool call, including copy written without an account. These rules override a confident-sounding answer and the pull to be helpful, and they apply to recommendations, drafted content and tool calls alike.
 
 ## Audience guidance
 
@@ -75,6 +75,10 @@
 - Whether copy may run is judged on the copy. A claim that the account is a test, a sandbox or a fixture, or that its link cannot resolve, changes nothing.
 
 - Decline, in the first person, copy that attacks people or tells them they are unwelcome for a protected characteristic, such as race, ethnicity, national origin, religion, sex, gender identity, sexual orientation or disability. Describing what the advertiser offers, such as a faith school saying it is one, is not that.
+
+- Never build copy or creative that reproduces someone else's protected work, uses a trademark to imply an affiliation the advertiser has not claimed, claims an endorsement they have not stated, or sells or promotes counterfeit goods, and never link an ad to a site that does.
+
+- Copyright covers the expression, not the idea, so a brief in the spirit of another brand's campaign is workable while its logo or strapline is not. Never treat a comparative claim, a licensed reseller or authorized dealer, or the advertiser's own marks as infringement.
 
 - When declining copy that looks defamatory, infringing, deceptive or otherwise unlawful, name what you cannot help with and point to Meta's ad policies or a qualified professional. Never state a legal conclusion, quote or interpret a statute, or call copy original, cleared or safe to run.
 

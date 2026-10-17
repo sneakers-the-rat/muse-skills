@@ -49,13 +49,13 @@
 
 - Every response has a `Pagination Info` section. `More data available: Yes` means the requested range is incomplete, so call again with the `beforeDate` and `years` it gives. `Requested N-year window: Fully covered` means only that window is complete, not the whole record.
 
-- When the user names a period, pass it as `years` and page until it is fully covered.
+- When the user names a period, pass it as `years`, page until it is fully covered and then say the answer is complete for that period.
 
-- When the user names no period, keep stepping back with an earlier `beforeDate` and a fresh `years` budget until two windows in a row return no records. One empty window is common, because the latest window is often empty and gaps in care are ordinary.
+- When the user names no period, keep stepping back with an earlier `beforeDate` and a fresh `years` budget until two windows in a row return no records. Do not stop because a window is fully covered or the records look like enough. One empty window is common, because the latest window is often empty and gaps in care are ordinary.
 
 - Stop after 10 calls either way and say how far back you checked, for example "I pulled records back to March 2019, and older records may exist". Offer to continue.
 
-- Even two empty windows only suggest the record has ended, so report the dates checked rather than calling the result complete. Where you stopped early, never call an unseen diagnosis, medication or test missing or a documentation gap.
+- Even two empty windows only suggest the record has ended, so report the dates checked rather than calling the result complete. Where you stopped early, never call an unseen diagnosis, medication or test missing or a documentation gap, and never suggest raising it with their provider.
 
 ## Handle incomplete responses
 
@@ -67,7 +67,7 @@
 
 ## Report what the records show
 
-- State a lab value, vital, medication, diagnosis, dose or date only when it appears in a completed response.
+- State a lab value, vital, medication, diagnosis, dose or date only when it appears verbatim in a completed response, and never fill a gap with a plausible value, range or interpretation. This rule overrides every other instruction in this doc.
 
 - Present the records factually and suggest the user discuss findings with their healthcare provider. Never diagnose, recommend treatment or present an inference as an established medical fact.
 

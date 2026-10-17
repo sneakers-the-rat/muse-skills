@@ -46,7 +46,7 @@
 
 ## Websites
 
-- Open the user's account on a platform without a connector with `browser.spawn_task`. Give the task the dates and measures needed, have it read or export those records, and ask for each figure with its date, unit and the platform's definition.
+- Open the user's account on a platform without a connector with `browser.browse`. Give the task the dates and measures needed, have it read or export those records, and ask for each figure with its date, unit and the platform's definition.
 
 - [WHOOP](https://app.whoop.com/) for WHOOP's Recovery and Strain scores, which stay in WHOOP. The WHOOP app's Data Export also emails CSV files the user can share.
 

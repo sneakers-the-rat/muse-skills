@@ -72,7 +72,7 @@
 
 ## Websites
 
-- Use `browser.spawn_task` for a service without a connector, signed in to the user's own account. Give it the exact recipient and approved text, have it stop before sending unless the user approved that exact message, and have it confirm the message appears in the conversation.
+- Use `browser.browse` for a service without a connector, signed in to the user's own account. Give it the exact recipient and approved text, have it stop before sending unless the user approved that exact message, and have it confirm the message appears in the conversation.
 
 - [Microsoft Teams](https://teams.microsoft.com/) for work chats in organizations that use Teams.
 

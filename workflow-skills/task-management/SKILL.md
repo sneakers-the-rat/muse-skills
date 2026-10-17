@@ -62,7 +62,7 @@
 
 ## Websites
 
-- Use `browser.spawn_task` for a task app without a connector, signed in to the user's account. Give it the list or project, the exact task wording, dates and assignee, and have it report the saved task.
+- Use `browser.browse` for a task app without a connector, signed in to the user's account. Give it the list or project, the exact task wording, dates and assignee, and have it report the saved task.
 
 - [Microsoft To Do](https://to-do.office.com/) for tasks in a Microsoft account.
 

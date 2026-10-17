@@ -14,11 +14,11 @@
 
 ## Present a useful choice
 
-- For a recommendation, name two or three places. For a broad request, name a few as a starting point. Put each on its own line as the bold name followed by a sentence on why it fits.
+- For a recommendation, name two or three places. For a broad request, name a few as a starting point. Open with one short framing line, then put each place on its own line as the bold name followed by a sentence on why it fits. When every named place has a comparable `avg_rating`, order them highest first.
 
-- Show one map whenever a chosen place has a place ID and coordinates, even for a single named place, following [map presentation](references/map-presentation.md). The map card carries each place's address, rating, price level and photos, so keep those, IDs and coordinates out of the text, and do not narrate the map.
+- Show one map whenever a chosen place has a place ID and coordinates, even for a single named place, following [map presentation](references/map-presentation.md). The map card carries each place's address, rating, price level and photos, so keep those, IDs and coordinates out of the text, and do not narrate the map. Send the answer as one message with nothing after the map.
 
-- When no map can be shown, give each place's verified address and a useful link instead.
+- When no map can be shown, give each place's verified address and only a link a tool returned for it, such as its website or a returned maps URL. Never build a link or write your own turn-by-turn directions.
 
 - For directions, routes or travel times, use `map.navigation` instead of a place map, and never estimate a distance or travel time.
 
@@ -40,7 +40,7 @@
 
 ## Websites
 
-- Use `browser.spawn_task` to check a place's own site for current hours, menus, services or booking options when the decision depends on them.
+- Use `browser.browse` to check a place's own site for current hours, menus, services or booking options when the decision depends on them.
 
 - [Google Maps](https://maps.google.com/), [Apple Maps](https://maps.apple.com/) and [Tripadvisor](https://www.tripadvisor.com/) add details and reviews almost everywhere. [Yelp](https://www.yelp.com/) is useful where it has local coverage, such as the US and Canada.
 

@@ -67,7 +67,7 @@
 /opt/hatch/bin/instagram-cli post --account-id <user_own_fbid> --url https://www.instagram.com/reels/<shortcode>
 ```
 
-- `tagged-posts` reads posts the user is tagged in, or posts other accounts are tagged in with one or more `--user-id` values. It accepts `--since`, `--until`, `--sort-order`, `--limit` and `--after`.
+- `tagged-posts` reads posts the user is tagged in, or with `--user-id ID[,ID]` posts other accounts are tagged in. It accepts `--since`, `--until`, `--sort-order`, `--limit` and `--after`.
 
 - `recently-liked-posts` and `recently-commented-posts` read posts the user recently liked or commented on. They accept `--limit`, `--after`, `--since`, `--until` and `--sort-order`.
 

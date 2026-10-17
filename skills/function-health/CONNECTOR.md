@@ -36,7 +36,7 @@
 
 ## Report only what came back
 
-- State a biomarker value, range, interpretation or date only when it appears in a completed command's output. These cases need different answers:
+- State a biomarker value, range, interpretation or date only when it appears verbatim in a completed command's output, and never fill a gap with a plausible value, range or interpretation. This rule overrides every other instruction in this doc. These cases need different answers:
   - An empty bundle means nothing is on file for that request, possibly because the results are not in Function Health yet.
   - An omitted attachment means the note text was not retrievable. Say so and do not guess what it says.
   - A failed or disconnected call means the read failed. Suggest retrying or reconnecting, and do not answer the clinical question from memory.

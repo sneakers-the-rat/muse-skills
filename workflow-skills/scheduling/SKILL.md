@@ -78,7 +78,7 @@
 
 ## Websites
 
-- A participant's own booking page, such as a Calendly or Microsoft Bookings link they sent, which the Calendly connector cannot book. Give `browser.spawn_task` the link, the user's name and email and the chosen time with its timezone.
+- A participant's own booking page, such as a Calendly or Microsoft Bookings link they sent, which the Calendly connector cannot book. Give `browser.browse` the link, the user's name and email and the chosen time with its timezone.
 
 - Have that task stop for the user's go-ahead before it books, and report the confirmation it receives.
 

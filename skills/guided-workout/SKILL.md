@@ -44,7 +44,7 @@
 
 ## Websites
 
-- Read recovery or training data from a platform without a connector with `browser.spawn_task`, giving the task the dates and measures to return. Share exercise demonstrations and guided workouts as links.
+- Read recovery or training data from a platform without a connector with `browser.browse`, giving the task the dates and measures to return. Share exercise demonstrations and guided workouts as links.
 
 - [WHOOP](https://app.whoop.com/) for the day's Recovery and recent Strain when deciding whether to push or ease a session.
 

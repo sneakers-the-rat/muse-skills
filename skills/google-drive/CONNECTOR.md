@@ -66,14 +66,13 @@
 
 - Sharing exposes the file to someone else. Before sharing, tell the user who will get which access and wait for their yes, even when they asked you not to check.
 
-- Confirm the result by the file's name and the `webViewLink` Drive returns, fetching that field when needed. Never construct a Drive URL.
-
 ## Remove
 
 - Prefer trash, which the user can undo, and tell them a trashed file can be restored. Restore with `{"trashed":false}`.
 
 ```sh
 /opt/hatch/bin/hatch_gws_cli drive files update --params '{"fileId":"<id>"}' --json '{"trashed":true}'
+/opt/hatch/bin/hatch_gws_cli drive files delete --params '{"fileId":"<id>"}'
 ```
 
 - Permanent deletion with `files delete` cannot be undone, so use it only when the user clearly wants the item gone for good. Say plainly that it cannot be recovered and wait for their yes, even when they asked you not to check.
@@ -93,6 +92,8 @@
 - Read results keep Google's raw timestamps and add UTC and local forms for creation, modification, viewing, sharing, trashing and change times.
 
 ## Talk about results plainly
+
+- Report each result by the file's name and the `webViewLink` Drive returns, fetching that field when needed. Never construct a Drive URL.
 
 - Use only file and folder IDs returned by earlier commands, and never invent or rewrite one. Keep IDs in your working context to chain commands.
 

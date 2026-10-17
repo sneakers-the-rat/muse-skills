@@ -91,4 +91,4 @@ with urllib.request.build_opener(NoRedirect()).open(request, timeout=30) as resp
 
 - Compare an existing connector, a hub, an official API, an MCP server and a browser route on capability, access, reliability and cost. Use the simplest route that does the work well.
 
-- For a one-off task, finish it with `browser.spawn_task` on the provider's website or with a file the user supplies. Offer to build a connector when the user will repeat the work.
+- For a one-off task, finish it with `browser.browse` on the provider's website or with a file the user supplies. Offer to build a connector when the user will repeat the work.

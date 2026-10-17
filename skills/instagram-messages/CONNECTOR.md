@@ -66,9 +66,9 @@
 
 - The user may edit the text or remove media on the send approval card. If an approved send fails, report the failure and wait for the user's direction; never resubmit your original text or media, even if the failed result does not mention an edit. After a successful send, the final-message note identifies the copy actually sent.
 
-- `react --thread-fbid ID --message-id ID --emoji 'EMOJI'` needs a message you have read and the exact emoji the user confirmed. Take both IDs from an inbox, thread or filtered-inbox result.
+- `react --thread-fbid ID --message-id 'ID' --emoji 'EMOJI'` needs a message you have read and the exact emoji the user confirmed. Take both IDs from an inbox, thread or filtered-inbox result.
 
-- Use IDs only in commands. In replies, name people by username or display name, and never show FBIDs, cursors, unix timestamps or other internal fields.
+- Use IDs only in commands, and single-quote message IDs, which contain `$`. In replies, name people by username or display name, and never show FBIDs, cursors, unix timestamps or other internal fields.
 
 ## Keep history private
 

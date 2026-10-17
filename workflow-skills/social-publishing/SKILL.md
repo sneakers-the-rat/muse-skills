@@ -76,7 +76,7 @@
 
 ## Websites
 
-- Use these through `browser.spawn_task` for networks without a connector. Carry the exact approved text, media files and publication time into the task, have it publish only that version and return the live link or scheduled time.
+- Use these through `browser.browse` for networks without a connector. Carry the exact approved text, media files and publication time into the task, have it publish only that version and return the live link or scheduled time.
 
 - [LinkedIn](https://www.linkedin.com/) for personal posts and posts from company Pages the user administers.
 
@@ -88,9 +88,9 @@
 
 - [X](https://x.com/) for posts on X.
 
-- Use the [Facebook](https://www.facebook.com/) site only for a personal photo or video post when Facebook Internal is not available, since the Facebook connector publishes personal posts as text only.
+- Use the [Facebook](https://www.facebook.com/) site, once the user signs in there, only for a personal photo or video post when Facebook Internal is not available, since the Facebook connector publishes personal posts as text only.
 
-- Use the [Instagram](https://www.instagram.com/) site only to edit a caption or to delete or archive a post, which the Instagram connector cannot do.
+- Use the [Instagram](https://www.instagram.com/) site, once the user signs in there, only to edit a caption or to delete or archive a post, which the Instagram connector cannot do. Delete a post only after the user confirms that exact post.
 
 ## Alternatives for better results
 

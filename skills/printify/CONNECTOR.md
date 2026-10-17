@@ -40,7 +40,7 @@
 
 - Read the current record and the command's `--help` before changing anything, and keep the chosen variants and print provider through to execution.
 
-- Confirm with the user before creating, updating or publishing a product. A clear request that names the product is enough to delete it without another confirmation.
+- Confirm with the user before creating, updating, publishing or deleting a product.
 
 - Confirm before `create-order`, because an order can charge the merchant.
 

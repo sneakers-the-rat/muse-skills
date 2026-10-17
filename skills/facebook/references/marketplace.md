@@ -30,7 +30,7 @@ MARKETPLACE_RESULTS_JSON=$(mktemp "${TMPDIR:-/tmp}/facebook-marketplace-search.X
 - The search flags are:
   - `--query` or `-q`, required and repeatable, with the first as the primary term
   - `--min-price` and `--max-price` in dollars
-  - `--latitude` and `--longitude` for the search center, plus `--radius-in-miles` or `--radius-in-km` in the unit the user gave, decimals allowed, without converting between them
+  - `--latitude` and `--longitude` for the search center, plus `--radius-in-miles` or `--radius-in-km` only when the user gave a distance or you applied a saved default, in the unit given, decimals allowed, without converting between them
   - `--max-listing-age-in-days`
   - `--sort-by` with `best_match`, `creation_time_descend`, `price_ascend`, `price_descend` or `distance_ascend`
   - `--allowed-item-conditions` as a comma-separated list, such as `new,refurbished`
@@ -64,7 +64,7 @@ MARKETPLACE_RESULTS_JSON=$(mktemp "${TMPDIR:-/tmp}/facebook-marketplace-search.X
 
 - Then call `shopping.create_shopping_results_widget` with the returned `path`, which shows the listing cards with their photos and exact links. Use the returned markers as citations in your text, never as a replacement for the cards.
 
-- Use the same resolver and widget for item details, saved listings and the user's own listings.
+- Use the same resolver and widget for item details, saved listings and the user's own listings. With item details, also give the full description, price, condition, seller name and creation date.
 
 - For each listing in the shortlist, give the title, a prominent price, a short excerpt of the description, the location and a recommendation on value. Never put listing results, links, titles or status in a code block, so links stay clickable.
 
@@ -88,6 +88,8 @@ MARKETPLACE_RESULTS_JSON=$(mktemp "${TMPDIR:-/tmp}/facebook-marketplace-search.X
 ```
 
 - `listing details` takes one or more `--listing-id` values or one `--url` item link, never both. It does not accept share links, and it needs no linked account.
+
+- For several listings, repeat `--listing-id` once per listing in `listing details` and `seller-info`, as in `--listing-id '<id1>' --listing-id '<id2>'`. A comma-joined value is sent as one ID.
 
 - Item details add `currency`, `seller_name` and `created_at`, and use `url` for the listing link. Only the primary photo is included.
 

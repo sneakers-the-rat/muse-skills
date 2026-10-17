@@ -43,7 +43,7 @@
 
 - A link to a post or reel does not need the user's account. Follow [content questions](references/content-questions.md) for it.
 
-- A public profile question does not require connecting Instagram. Without a linked account, use `browser.search` or a browser task through `browser.spawn_task`, and send a connect link only when the user asks to connect. A subagent without `browser.spawn_task` returns the profile URL or username and the open question to its parent agent.
+- A public profile question does not require connecting Instagram. Without a linked account, use `browser.search` or a browser task through `browser.browse`, putting the question in `task` and reusing its existing `task_id` or `"new"` for separate work, and send a connect link only when the user asks to connect. A subagent without `browser.browse` returns the profile URL or username and the open question to its parent agent.
 
 ## Run commands
 
@@ -61,13 +61,15 @@
 
 - If a bulk read keeps returning HTTP 500, stop that read, including in scripts, and state how much you read. A 500 alone does not mean a rate limit, a private post or a deletion.
 
-- For a request covering a whole list, fetch every page while pages add new items. Stop before reusing a cursor already used for that list, or when a page claims more results but adds nothing. If you stop early, state what remains.
+- For a request covering a whole list, fetch every page while pages add new items. Stop before reusing a cursor already used for that list, or when a page claims more results but adds nothing, and build both stops into any pagination script. If you stop early, state what remains.
 
 - When a request needs a separate `user-profile`, `profile` or `post` call for more than 50 accounts or posts, handle the 50 most recent and stop. Report those results and how many remain, because Instagram rate-limits these calls after a few dozen.
 
 ## Read content
 
 - [Read commands](references/read-results.md) lists every read with its flags, examples, result fields and cursor. Check it before using a command for the first time in a task.
+
+- Use `social.search` for general post discovery by topic, and these commands for specific accounts and posts.
 
 - `posts`, `feed` and `post` return the compact `social_posts_v1` collection that `social.search` also uses. Read `posts[]` directly instead of guessing a provider path or piping the output through `jq`.
 
@@ -89,7 +91,7 @@
 }
 ```
 
-- Present a post time from `post_created_at.user_local`. Fields the provider leaves out stay absent, and a feed item can lack `url` or `created_at`. Before quoting, dating or linking such an item, run `post --id <post_id>` and use that record.
+- Present a post time from `post_created_at.user_local`. Fields the provider leaves out stay absent, and a feed item can lack `url` or `created_at`. Before quoting, dating or linking any feed item you select, run `post --id <post_id>` and use that record.
 
 - An optional `provider_error` means the page is partial, so never describe it as complete. When required post data is missing, the command fails with the provider's reason or a schema mismatch instead of returning an empty list.
 
@@ -122,6 +124,10 @@
 - `account-insights` is refused while the user's Access analytics permission is set to deny or ask. Tell the user that setting blocks it rather than retrying.
 
 - For performance analysis and competitor comparisons, the analytics commands return metric definitions, metric cards, top posts and follower changes. [Analytics](references/analytics.md) explains them.
+
+- Follow [Social Content Performance](/opt/muse/skills/social-content-performance/SKILL.md) for trends, comparisons and recommendations across the user's own accounts. When any compared account belongs to someone else, use Social Competitor Analysis, which `muse.skill_search` finds when this session has it.
+
+- When this session lacks Social Competitor Analysis, compare other accounts only on their public `profile`, `posts` and analytics data. Never substitute the user's account totals for theirs or invent a missing value, and name each requested metric or comparison that remains unavailable.
 
 ## Manage saved posts, interests and the profile
 
@@ -243,6 +249,8 @@ EDITOR_JSON='[
 ## What the connector cannot do
 
 - `instagram-cli` cannot follow, unfollow, remove followers, block, like, comment, reply to comments, delete, archive or pin posts, or edit captions. It cannot read the ranked home timeline or another person's following list. Say so plainly when asked.
+
+- A browser task on instagram.com through `browser.browse` can edit a caption or delete or archive a post once the user signs in there, with the change in `task` and the existing `task_id` or `"new"` for separate work. Delete a post only after the user confirms that exact post.
 
 ## Present results
 

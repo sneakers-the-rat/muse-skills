@@ -60,7 +60,7 @@
 
 - A selected brand template can still be copied with `create-design-from-brand-template` or autofilled.
 
-- Treat an explicit creation count as a hard limit. After a design is created, do not create, copy or resize another one to fix its wording, layout or quality unless the user authorizes another design. Report the mismatch and share the Canva link so the user can correct it in the Canva editor.
+- Treat an explicit creation count as a hard limit. After a design is created, do not create, copy or resize another one to fix its wording, layout or quality unless the user explicitly authorizes another design. Report the mismatch and share the Canva link so the user can correct it in the Canva editor.
 
 ## Follow asynchronous jobs
 

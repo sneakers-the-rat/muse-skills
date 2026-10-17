@@ -4,13 +4,13 @@
 
 ## Identify each leg
 
-- Record the origin and destination codes, cities, countries or territories, and any border or customs area. Add local dates and times, the operating carrier, service number, terminal and the next connection or arrival step when known.
+- Record the origin and destination codes, cities, countries or territories, and any border or customs area. Add local dates and times, the operating carrier, service number, the carrier's or authority's published classification, terminal and the next connection or arrival step when known.
 
 - Keep the source and time checked for terminal and official route information.
 
 - Resolve airport codes with current authoritative location data and classify each leg on its own. Never copy a domestic, international, airside, preclearance or terminal label from an adjacent segment.
 
-- A route between countries is international unless an authoritative source establishes an exception. A route within one country can still cross a special border or customs area.
+- A route between countries is international unless an authoritative source establishes an exception. For a route within one country, check an authoritative source for a special border or customs area before classifying it.
 
 ## Use only the necessary traveler details
 

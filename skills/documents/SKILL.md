@@ -62,7 +62,7 @@
 
 ## Websites
 
-- [Microsoft 365](https://www.microsoft365.com/) for Word, Excel and PowerPoint files whose comments, tracked changes or macros must survive. Use `browser.spawn_task` in the user's signed-in account, name the exact file and the change, and have the task report what it saved.
+- [Microsoft 365](https://www.microsoft365.com/) for Word, Excel and PowerPoint files whose comments, tracked changes or macros must survive. Use `browser.browse` in the user's signed-in account, name the exact file and the change, and have the task report what it saved.
 
 - [Overleaf](https://www.overleaf.com/) for an existing LaTeX project the user keeps there.
 

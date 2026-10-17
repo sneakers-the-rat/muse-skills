@@ -52,7 +52,7 @@
 
 ## Websites
 
-- Use the bank's or card issuer's own site with `browser.spawn_task` for a statement, payoff amount or rate that the connector does not return. Have the task report the figure with its date.
+- Use the bank's or card issuer's own site with `browser.browse` for a statement, payoff amount or rate that the connector does not return. Have the task report the figure with its date.
 
 - [Consumer Financial Protection Bureau](https://www.consumerfinance.gov/) for US guidance on budgeting, debt and credit.
 

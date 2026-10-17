@@ -41,7 +41,7 @@
 
 ## Make purchases
 
-- Domains, credits, add-ons and plan upgrades can charge immediately and may not be refundable.
+- Domains, credits, add-ons and plan upgrades can charge immediately, and the charges are non-refundable.
 
 - Get a quote first when the tool offers one, such as `get_purchase_quote` or `get_domain_price`. Show it to the user and wait for their explicit approval, and never infer confirmation.
 

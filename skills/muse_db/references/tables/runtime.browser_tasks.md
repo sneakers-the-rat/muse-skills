@@ -152,13 +152,13 @@ Browser tasks, their ownership, session and execution state.
 
 - `owner_kind` uses `text` and is nullable.
 
-  Creation origin: user, main_agent, or cron; null when unknown. Immutable across takeover and continuation. User leases have a null owner_agent_id and reserve root_message_id, stream_owner_message_id and tool_call_id with task_id and have no executing agent, chat card or terminal chat delivery. Rust owns the vocabulary and lifecycle.
+  Creation origin: user, main_agent, cron, or research; null when unknown. Immutable across takeover and continuation. User leases have a null owner_agent_id and reserve root_message_id, stream_owner_message_id and tool_call_id with task_id and have no executing agent, chat card or terminal chat delivery. A research window is owned and driven by its deep research agent, runs only on the research broker, and is never listed, continued or presented. Rust owns the vocabulary and lifecycle.
 
 - `broker_instance` uses `text` and is required.
 
   Default: `'user'::text`.
 
-  Immutable physical browser owner selected by trusted admission: user or cron. Independent of logical owner_kind and retained across continuation.
+  Immutable physical browser owner selected by trusted admission: user, cron, proactivity, spaces, or research. The research broker runs research windows and nothing else. Otherwise independent of logical owner_kind and retained across continuation.
 
 - `wallet_selection_provider` uses `text` and is nullable.
 
@@ -183,6 +183,16 @@ Browser tasks, their ownership, session and execution state.
   Default: `2`.
 
 - `browser_route` uses `text` and is nullable.
+
+- `profile_id` uses `text` and is nullable.
+
+  Named browser profile identifier from the browser broker's profile registry; NULL is the shared default profile. No Muse PostgreSQL owner table.
+
+- `wallet_choice_revision` uses `bigint` and is required.
+
+  Default: `0`.
+
+  Counts the changes Muse made to this task's wallet selection through browser.browse: a new window, an update, an answer or a continuation that names another card. A card the user picks in the payment approval does not change it. Starts at 0.
 
 ## Keys and relationships
 

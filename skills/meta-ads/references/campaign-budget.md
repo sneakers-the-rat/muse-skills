@@ -27,7 +27,7 @@
 
 - Campaigns default to prospecting. Add `--campaign-stage KEY retargeting` only when current evidence establishes retargeting.
 
-- Compare every ad set's final targeting before the call. When all match, use `--country` for plan context, give each ad set one geography with `--target-country`, `--city-key` or `--region-key`, and add the returned `--interest-id`, `--custom-audience-id` and `--locale-id` values with `--age-range KEY MIN MAX`, `--gender KEY all|men|women` and `--advantage-audience KEY on|off`.
+- Compare every ad set's final targeting before the call. When all match, use `--country` for plan context, give each ad set one kind of geography by repeating `--target-country KEY COUNTRY_CODE`, `--city-key KEY CITY_KEY` or `--region-key KEY REGION_KEY` once per place, and add the returned `--interest-id`, `--custom-audience-id` and `--locale-id` values with `--age-range KEY MIN MAX`, `--gender KEY all|men|women` and `--advantage-audience KEY on|off`.
 
 - For resolved city targeting, keep `--country` as context, replace the keyed country with the returned city key and add only returned interest IDs. `--country` must agree with any country targeting.
 
@@ -38,7 +38,7 @@
 - Never test the rejected divergent shape, merge audiences or broaden them to make pricing succeed.
 
 - Budget and constraint flags are plan-level numbers, never tied to a campaign or ad-set key:
-  - `--daily-budget AMOUNT` or `--lifetime-budget AMOUNT`, never both
+  - `--daily-budget AMOUNT` or `--lifetime-budget AMOUNT` in major currency units, such as `25` for $25, never both
   - `--max-daily AMOUNT` or `--max-lifetime AMOUNT`
   - `--max-cost-per-result AMOUNT`
   - `--min-roas NUMBER`

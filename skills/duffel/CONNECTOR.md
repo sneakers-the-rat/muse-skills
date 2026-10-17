@@ -2,7 +2,7 @@
 
 - `/opt/hatch/bin/duffel` searches, books and manages flights from many airlines. Its commands are `search`, `seat-options`, `validate-booking`, `book`, `booking-status`, `cancellation-quote` and `cancel-booking`. It needs no user login, and payment uses the user's Link by Stripe card.
 
-- [Flight Booking](/opt/muse/skills/flight-booking/SKILL.md) compares Duffel offers with other sources. [Flight Tracking](/opt/muse/skills/flight-tracking/SKILL.md) uses Duffel only for the fare check on a booked trip. Duffel does not report live flight status.
+- Before a user-facing search or booking, read [Flight Booking](/opt/muse/skills/flight-booking/SKILL.md), which compares Duffel offers with other sources, and [checkout](/opt/muse/assets/booking/references/checkout.md). [Flight Tracking](/opt/muse/skills/flight-tracking/SKILL.md) uses Duffel only for the fare check on a booked trip. Duffel does not report live flight status.
 
 ## Search a complete trip
 
@@ -10,11 +10,11 @@
 /opt/hatch/bin/duffel search --origin SFO --destination JFK --departure-date 2026-10-14 --return-date 2026-10-18 --adults 1 --cabin economy --sort duration --limit 300 > /tmp/sfo-jfk-flights.json
 ```
 
-- Use exact three-letter airport IATA codes. Metro codes such as `NYC` are not supported, and results exclude nearby airports. Add `--return-date` for a round trip, or repeat `--leg ORIGIN:DESTINATION:YYYY-MM-DD` for a multi-city trip.
+- Use exact three-letter airport IATA codes, and never guess an obscure or ambiguous one, because the CLI accepts any three letters. Metro codes such as `NYC` are not supported, and results exclude nearby airports. Add `--return-date` for a round trip, or repeat `--leg ORIGIN:DESTINATION:YYYY-MM-DD` for a multi-city trip.
 
 - Price the full passenger mix in the search with `--adults`, one `--child-age` for each seated traveler aged 2 to 17 on the final travel date, and `--lap-infants`. Each lap infant needs a different adult. Search again whenever the mix changes, and never search a known child as an adult.
 
-- An infant under two who needs their own seat has to book with the airline, because this connector cannot validate that case.
+- Ask whether each infant under two will sit on a lap or in their own seat, rather than inferring it. An infant who needs their own seat has to book with the airline, because this connector cannot validate that case.
 
 - Pass the cabin with `--cabin economy`, `premium_economy`, `business` or `first`. Omitting it searches economy.
 
@@ -26,7 +26,9 @@
 
 - Add or widen `--max-connections`, which accepts 0, 1 or 2, only when the user asked for a stop limit or an earlier search found nothing useful.
 
-- When a requested or expected carrier is missing, read `airlines_available` and run one targeted `--airlines` search before turning to the airline's site. A carrier's absence from Duffel does not mean it skips the route.
+- When a requested or expected carrier is missing, even if other carriers returned useful offers, read `airlines_available` and run one targeted `--airlines` search before turning to the airline's site. A carrier's absence from Duffel does not mean it skips the route.
+
+- For a request for an exact flight, book only an offer that carries that flight number. Never substitute a different flight or treat schedule data as proof that it is bookable.
 
 - A domestic premium cabin may be sold as First. Unless the user excluded First, run one matching `--cabin first` search when a domestic business search finds nothing useful, or when a requested carrier sells its premium cabin as First. Keep the itinerary, passengers, price cap, carrier and stop limits.
 
@@ -44,15 +46,15 @@
 
 - When `ok` is false, present any useful `partial_results.offers` with a note that the search failed and coverage is incomplete, before another search or a browser check. If later checks you need add useful offers, present one replacement list that explicitly supersedes the partial one. That is the one exception to keeping each itinerary in a single list. Report the checks that did not finish. Empty incomplete results do not show that no flights match.
 
-- `/offers/INDEX`, using the offer's original zero-based index, points to one complete offer with all its slices and segments. Partial results use `/partial_results/offers/INDEX`. The native flight list reads offers from the unchanged file this way.
+- `/offers/INDEX`, using the offer's original zero-based index, points to one complete offer with all its slices and segments. Partial results use `/partial_results/offers/INDEX`. Give `widget.create_list_widget` one row per offer, pointing into the unchanged file, such as `{"type":"flight","data":{"flight_details_file":"/tmp/sfo-jfk-flights.json","json_pointer":"/offers/0"}}`.
 
-- A tap on a native flight row selects that row's complete offer. Validate and book the same offer, never only its first leg.
+- A tap on a native flight row selects that row's complete offer. For a trip that is still being planned, return it to the plan and stop before seats, traveler details or validation. Otherwise validate and book the same offer, never only its first leg.
 
 - If the original file was lost or altered, rerun the search into a new file. Never rebuild an offer from truncated output or a summary.
 
 - Group offers that share airports, local times, flight numbers and segment order before choosing. Keep a second fare for the same schedule only when its cabin, bags, refund or change terms, or price make a real difference.
 
-- Keep differences between passengers and segments. Convert airport-local times only when the airport's timezone is known.
+- Keep differences between passengers and segments. Show a missing fare brand, cabin, bag, refund or change fact as not stated, never as none, non-refundable or an airline's usual fee. Convert airport-local times only when the airport's timezone is known.
 
 ## Respect search limits
 
@@ -64,15 +66,15 @@
 
 - A 429 rate-limit response ends Duffel calls for the current task. Report the limit without changing the query to get around it.
 
-- `ok: false` with `code: duffel_unavailable` means new Duffel searches and bookings are unavailable right now. Do not retry during this turn. Continue with the airline's site through `browser.spawn_task`.
+- `ok: false` with `code: duffel_unavailable` means new Duffel searches and bookings are unavailable right now. Do not retry during this turn. Continue with the airline's site through `browser.browse`.
 
 ## Prepare passengers and seats
 
 - `seat-options --offer-id OFFER` returns bookable seats for each passenger, and the flag repeats for a short list of offers. A zero price means no added fee, and an omitted seat is unavailable. Adjacent seats share a row and section on the same side of the aisle.
 
-- Choose at most one seat per passenger and segment, passed as `--seat PASSENGER:SEGMENT:SEAT` with one-based numbers, such as `--seat 1:1:28B`. Mention seat choice once without letting it block the booking.
+- Choose at most one seat per passenger and segment. Repeat `--seat PASSENGER:SEGMENT:SEAT`, with one-based numbers, once per seat, such as `--seat 1:1:28B --seat 2:1:28C`, and never join seats with commas. Mention seat choice once without letting it block the booking.
 
-- After the user picks an offer, ask only for what validation requires. That is each traveler's legal given and family name, birth date, title (`mr`, `ms`, `mrs`, `miss` or `dr`) and gender (`m` or `f`), one reachable trip email and phone that every passenger entry can repeat as a shared contact, the adult with each lap infant, and passport details only when validation asks. Use these values for this checkout only and do not repeat them back.
+- After the user picks an offer, ask only for what validation requires. That is each traveler's legal given and family name, birth date, title (`mr`, `ms`, `mrs`, `miss` or `dr`) and gender (`m` or `f`), one reachable trip email and phone, which every passenger entry must carry and can share, the adult with each lap infant, and passport details only when validation asks. Ask for a loyalty account number only when the user wants credit. Use these values only for this booking's `validate-booking` and `book`, never store them, and do not repeat them back.
 
 - Put passengers in `data.passengers` in search order:
 
@@ -92,9 +94,9 @@
 }
 ```
 
-- For a lap infant, add `"accompanying_adult": N` with the adult's one-based position. A required passport goes in the passenger's `identity_documents` array with `type: "passport"`, the number as `unique_identifier`, an uppercase two-letter `issuing_country_code` and `expires_on` as `YYYY-MM-DD`. Never send an empty document, invent identity details or ticket a traveler who has not been born.
+- For a lap infant, add `"accompanying_adult": N` with the adult's one-based position. A required passport goes in the passenger's `identity_documents` array with `type: "passport"`, the number as `unique_identifier`, an uppercase two-letter `issuing_country_code` and `expires_on` as `YYYY-MM-DD`. Never send an empty document, invent identity details or ticket a traveler who has not been born. For an unborn traveler, explain that booking must wait until birth, and promise nothing about later fares, availability or seats.
 
-- When the user wants loyalty credit, add `loyalty_programme_accounts` with `airline_iata_code` and `account_number` to that passenger. Validation must confirm support, and a failed account comes off only with the user's agreement.
+- Offer loyalty credit once without letting it block the booking. When the user wants it, add the account to that passenger as `"loyalty_programme_accounts": [{"airline_iata_code": "UA", "account_number": "ACCOUNT_NUMBER"}]`, with one object per programme. Validation must confirm support, and a failed account comes off only with the user's agreement.
 
 - Leave out the fields the CLI owns, which are `id`, `infant_passenger_id`, `user_id`, `type`, `selected_offers`, `services`, `payment` and `payments`.
 
@@ -110,18 +112,18 @@
 
 - When validation asks for a first-time payment profile, pass the account holder's email and legal name with `--customer-email`, `--customer-given-name` and `--customer-family-name` to both validation and booking. This profile is not a passenger, and it is created only after purchase approval.
 
-- List payment methods, then book once with the same booking JSON and seats:
+- List payment methods and choose the card as [Link by Stripe](/opt/hatch/connectors/stripe-link/CONNECTOR.md) describes. Then book once with its exact ID and the same booking JSON and seats:
 
 ```sh
 /opt/hatch/bin/stripe-link payment-methods list --format json
-/opt/hatch/bin/duffel book --offer-id OFFER --payment-method-id ID --booking-json JSON --seat 1:1:28B
+/opt/hatch/bin/duffel book --offer-id OFFER --payment-method-id ID --booking-json JSON --seat 1:1:28B --seat 2:1:28C
 ```
 
-- `book` revalidates before any payment request. Its single approval covers the itinerary, travelers, seats and fees, fare terms, total, the first-time profile, a one-time virtual card, 3DS and immediate ticketing. Any change to the flight, date, passengers, services or total needs a fresh approval.
+- `book` revalidates before any payment request. Its single approval covers the itinerary, travelers, seats and fees, fare terms, total, the first-time profile, a one-time virtual card, 3DS and immediate ticketing. Any change to the flight, fare, date, passengers, services or total needs a fresh approval.
 
 - Held orders, Duffel balance payment, inline cards and raw order APIs are not supported.
 
-- If Link is not connected, explain the one-time virtual card and share its connection link. An airline-site checkout is a fallback only when its secure payment handoff actually renders. If neither works, stop with the itinerary prepared and say that payment is blocked.
+- If Link is not connected, explain the one-time virtual card and share its connection link. An airline-site checkout is a fallback only when its secure payment handoff actually renders. If neither works, stop with the itinerary prepared and say that payment is blocked. Never ask for card details in chat or enter card data the user sent in chat on a website.
 
 - Prefer one offer that covers the whole itinerary. Split it into separate bookings only with the user's agreement before the first `book`. Explain that each booking has its own approval, payment and terms, that later offers are not held, and that a later failure can leave earlier tickets booked.
 

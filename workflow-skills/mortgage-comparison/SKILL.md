@@ -46,7 +46,7 @@
 
 ## Websites
 
-- Use lenders' sites with `browser.spawn_task` for published rates and quote forms. Give each the same price, down payment, term and credit range, and have the task return the rate, APR, points and fees with the date they were quoted.
+- Use lenders' sites with `browser.browse` for published rates and quote forms. Give each the same price, down payment, term and credit range, and have the task return the rate, APR, points and fees with the date they were quoted.
 
 - [Rocket Mortgage](https://www.rocketmortgage.com/) for published rates and an online quote. Use the Rocket connector instead for a pre-approval or banker call where it is available.
 

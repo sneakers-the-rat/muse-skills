@@ -162,13 +162,13 @@
 
 - Rename, re-budget, reschedule or pause an existing object with `ads_update_entity`, and publish drafts or activate or resume an object with `ads_activate_entity`.
 
-- Creatives cannot be edited in place. To change an ad's image, video, text, link or call to action, create a new creative with `ads_create_creative` and a new ad with `ads_create_ad`, and say the original ad keeps its status and keeps delivering if live, offering to pause it, or archive it in a paused hierarchy, as its own approved step.
+- Creatives cannot be edited in place. To change an ad's image, video, text, link or call to action, create a new creative with `ads_create_creative` and a new ad with `ads_create_ad`, and say the original ad keeps its status and keeps delivering if live, offering to pause it, or archive it in a paused hierarchy, as its own approved step. Any new media or copy follows the generation limits and image screening in [creative preparation](campaign-creative.md).
 
 - A published ad set's pixel or conversion event, and a switch between daily and lifetime budget, cannot be edited. Offer a copy with the new setting through `source_adset_id`, or `source_campaign_id` for a campaign budget, and pausing the original as its own step.
 
 - In draft mode, updates stay staged until publication. Check the result before saying a pause or other change took effect.
 
-- Creation follows dependencies, from campaign to ad sets and from media to creatives to ads. A creative needs its uploaded `image_hash`, or a `video_id` with a thumbnail, and image and carousel creatives need a destination `link_url`, while an existing post's `object_story_id` replaces the media and is never combined with it.
+- Creation follows dependencies, from campaign to ad sets and from media to creatives to ads. A creative needs its uploaded `image_hash`, or a `video_id` with a thumbnail, and image and carousel creatives need a destination `link_url`, or for a message ad its channel's standard link in [creative preparation](campaign-creative.md), while an existing post's `object_story_id` replaces the media and is never combined with it.
 
 - An ad's `creative` names exactly one source. The creative format must suit the campaign objective, so a rejection for an incompatible objective reopens the plan with the advertiser rather than adjusting arguments.
 
@@ -269,7 +269,7 @@
 
 - Extractors are `CSS` or `CONSTANT_VALUE` only. `CSS` reads the text of a matched element, never a URL fragment, an attribute or JavaScript state, so say when a value lives somewhere a selector cannot reach.
 
-- No tool creates a pixel or dataset, generates a Conversions API access token, creates a custom conversion or sends events. Say so in one sentence, name what is possible, and offer the real path of creating the dataset in Events Manager, by the advertiser or through `browser.spawn_task`, after checking `list-tools` rather than calling the pixel tools missing.
+- No tool creates a pixel or dataset, generates a Conversions API access token, creates a custom conversion or sends events. Say so in one sentence, name what is possible, and offer the real path of creating the dataset in Events Manager, by the advertiser or through `browser.browse`, after checking `list-tools` rather than calling the pixel tools missing.
 
 - Browser sign-in is separate from this connector, and the task result decides whether creation succeeded. Offer live watching or takeover only when the advertiser's client supports it.
 

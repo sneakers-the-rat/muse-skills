@@ -102,7 +102,13 @@ users threads get --params '{"userId":"me","id":"<thread_id>","format":"full"}'
 +forward --message-id <id> --to <addresses> [--body '<body>']
 ```
 
-- These share `--cc` and `--bcc` with comma-separated addresses, `--html` for an HTML body, `--from` for a send-as alias and repeatable `--attach <path>`, with up to 25 MB of attachments in total.
+- `--to`, `--cc` and `--bcc` each take one comma-separated value with every address for that field, so give each flag once and keep every address in the field the user approved. The same form applies to `+reply --to`, `+forward --to` and `+draft`.
+
+```text
++send --to 'alice@example.com,bob@example.com' --cc 'carol@example.com,dan@example.com' --subject '<subject>' --body '<body>'
+```
+
+- These commands and `+draft` also share `--html` for an HTML body, `--from` for a send-as alias and repeatable `--attach <path>`, with up to 25 MB of attachments in total. Run `+draft --help` for the full list.
 
 - Single-quote the subject and body so the shell passes `$` and backticks literally, and write an apostrophe inside them as `'\''`.
 

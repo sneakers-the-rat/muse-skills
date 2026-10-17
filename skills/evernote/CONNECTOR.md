@@ -26,7 +26,7 @@
 
 - The reviewed catalogue covers all 28 tools. The connected account may expose fewer: `search_tasks` is for individual accounts; `search_assigned_tasks` is for Business accounts.
 
-- `delete_note` moves a note to the trash; `restore_note` restores it. `delete_task` removes a task. Send task date-time arguments in UTC with a `Z` suffix; the provider can reject numeric timezone offsets.
+- `delete_note` moves a note to the trash; `restore_note` restores it. `delete_task` removes a task. Confirm the exact note or task with the user before deleting it. Send task date-time arguments in UTC with a `Z` suffix; the provider can reject numeric timezone offsets.
 
 - Reads and writes follow the user's connector settings. Manage and delete operations ask for approval by default.
 

@@ -32,9 +32,11 @@ If the selected account fails authentication, run `accounts` again. For an
 entry marked `needs_reauth`, run `status` without `--account`: share its
 `add_account_url` as “Add account” if another workspace is connected, or its
 `connect_url` if none are. If no link is available, direct the user to add the
-account in Settings. After reconnection, list accounts again and confirm the
-intended workspace before retrying. If its ID changed, tell the user and use
-the new ID; ask before switching when the workspace remains ambiguous.
+account in Settings. After reconnection, list accounts again and pick the
+healthy entry for the intended workspace before retrying, because a stale
+`needs_reauth` row can remain beside it. If its ID changed, tell the user and
+use the new ID; ask before switching when the workspace remains ambiguous.
+Never retry the old `needs_reauth` ID.
 
 To remove one account, healthy or stale, direct the user to that account under
 Connectors → Asana in Settings. Run `disconnect` only when the user asks to

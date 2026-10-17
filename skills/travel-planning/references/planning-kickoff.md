@@ -8,7 +8,7 @@
 
 - After acceptance, call `chat.create` with `context_mode: "fork"` and a short trip name, then start the planning turn with `chat.send_message` using the returned `chat_id`. The `message` field on `chat.create` only helps name the chat and does not send a turn.
 
-- Ask the new chat to continue Trip Planning, summarize the known brief and ask only about material gaps. The fork already has the relevant history, so do not copy private material into the message.
+- Ask the new chat to continue Trip Planning, check relevant connected context, summarize the known brief and ask only about material gaps. The fork already has the relevant history, so do not copy private material into the message.
 
 - Do not wait for its answer. If the client supports `ui.list` and `ui.navigate`, find the `chat.session` UI target and navigate to the new chat in `perform` mode, and say the chat opened only after navigation succeeds.
 
@@ -22,13 +22,13 @@
 
 - If mail is connected with read access, read the Gmail or Outlook Mail connector docs and search narrowly for relevant confirmations. A connector search finds instructions, not the user's messages. Never pause a plan or ask for a mail connection just to personalize it.
 
-- Look for recent, repeated choices by this traveler, such as airlines and airports for flights, or room type, location and stated likes for stays. A seat or room assigned by availability, or a booking made for someone else, is not the user's preference.
+- Look for recent, repeated choices by this traveler, such as airlines and airports for flights, room type, location and stated likes for stays, or the company, car class and insurance choice for rental cars. A seat or room assigned by availability, or a booking made for someone else, is not the user's preference.
 
 - Keep context scoped to the trip. A temporary location does not replace the user's home, and a preference seen in one city or travel party carries to another only when the user stated it generally or confirms it.
 
 - Do not expose unrelated mail or identifiers found during this research.
 
-- Summarize the facts, likely preferences and open choices, give the user a plausible direction to react to, and ask about the few gaps that matter. Access to an account does not authorize bookings or spending.
+- Summarize the facts, likely preferences and open choices, ask the user to correct any inferred default that matters, give the user a plausible direction to react to, and ask about the few gaps that matter. Access to an account does not authorize bookings or spending.
 
 ## Show places clearly
 

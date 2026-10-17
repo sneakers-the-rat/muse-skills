@@ -8,9 +8,11 @@
 
 - Track three separate states for each item. Its decision is proposed, selected or rejected. Its evidence is unchecked, estimated or verified, with the source and time checked. Its provider status is not applicable, not checked, found, available, requested, held, waitlisted, confirmed, unknown, failed or cancelled.
 
+- Call an unverified item selected or tentative, never locked in, secured, available or confirmed.
+
 - A recommendation stays proposed until the user selects it or has delegated that choice. Silence or a follow-up question is not a selection. Keep rejected items in the history and out of the active itinerary.
 
-- A request to build an itinerary authorizes a proposed schedule, not a selection of every item in it.
+- A request to build an itinerary authorizes a proposed schedule, not a selection of every item in it, so keep those items visibly tentative.
 
 ## Track what remains
 
@@ -26,7 +28,7 @@
 
 ## Revise without losing decisions
 
-- Edit the active plan and keep enough history to explain or undo a planning change. Keep unrelated days, constraints, rejected ideas and commitments as they are.
+- Edit the active plan and keep enough history to explain or undo a planning change. Keep unrelated days, constraints, rejected ideas and commitments as they are, and never add a stop just to make the revised plan look complete.
 
 - When moving an item, keep its identity and decision, then recheck hours, transport, tickets and the steps that depend on it. A replacement starts as proposed unless the user selects it, and the old decision stays on record.
 
@@ -38,15 +40,15 @@
 
 ## Make each day feasible
 
-- Resolve the exact local dates and the overnight base, or the arrival and departure points. If a missing detail prevents a reliable schedule, give a useful conditional sketch and ask for that detail without claiming the plan works.
+- Resolve the exact local dates, including the year, and the overnight base, or the arrival and departure points. If a missing detail prevents a reliable schedule, give a useful conditional sketch and ask for that detail without claiming the plan works.
 
-- Arrange the day in a plausible order. Give each item a time or honest window, the place, a duration, travel from the previous stop, realistic buffers, meal or rest needs, known cost and reservation status, with a short reason it fits.
+- Arrange the day in a plausible order, clustering nearby stops when it improves the day. Give each item a time or honest window, the place, a duration, travel from the previous stop, realistic buffers, meal or rest needs, known cost and reservation status, with a short reason it fits.
 
 - Add a proposed backup when weather, a closure, scarcity or a tight connection could disrupt an important item.
 
-- Check opening days, last admission, reservation windows, check-in times and transport connections. Label travel estimates as estimates, since an exact scheduled departure is not a predicted journey time.
+- Check opening days, last admission, reservation windows, check-in times and transport connections. A future travel time from a route tool or operator is an estimate unless it is an exact scheduled service time, so label it as one.
 
-- Keep the source, time checked and important assumptions for each fact. Recheck volatile facts at booking and near departure, especially seasonal schedules that are not yet published.
+- Keep the source, time checked and important assumptions for each fact, and show the source link and time checked for consequential facts and calculations. Recheck volatile facts at booking and near departure, especially seasonal schedules that are not yet published.
 
 - Carry the party's needs through every day, including age rules, walking load, stroller or mobility access, breaks and meal times. Flag an overloaded day and offer a small useful adjustment instead of shortening realistic durations.
 
@@ -56,9 +58,11 @@
 
 - Official venues, operators and governments support schedules and rules. Guides, reviews and social posts help judge fit, but operating details from them need checking.
 
-- Resolve the exact place or service and keep its source URL and time checked for facts whose failure would change the trip. Open important links to confirm they reach the intended item. A dead link or an unrelated page needs a current source or a stated uncertainty, and neither a broken link nor a working homepage establishes availability.
+- Resolve the exact place or service and keep its source URL and time checked for facts whose failure would change the trip. Open important links to confirm they reach the intended item, allowing a normal canonical or locale redirect. A dead link or an unrelated page needs a current source or a stated uncertainty, but it never shows that the item is closed, sold out or gone. A working homepage does not establish availability.
 
 - Published admission and pass prices support a planning estimate. Date-specific inventory, checkout fees and final terms still need a live booking check. When sources disagree, prefer the authority responsible for the fact and state any discrepancy you cannot resolve.
+
+- Never fill a gap with a plausible venue, event, schedule, price or link. Mark the item unverified instead.
 
 ## Calculate useful savings
 
@@ -66,7 +70,7 @@
 
 - Compare only the journeys or admissions this traveler would use. For each, establish whether the product covers it, discounts it, needs a reservation or supplement, or excludes it.
 
-- Show adult and child quantities, taxes, fees, uncovered costs and the arithmetic behind the difference, with the source and date of any exchange rate. Never invent an unlisted duration or infer coverage from a product's name.
+- Show adult and child quantities, taxes, fees, uncovered costs and the arithmetic behind the difference, with the source and date of any exchange rate. Recalculate every subtotal you show and label it with exactly what it includes. Never invent an unlisted duration or infer coverage from a product's name.
 
 - If a material price or eligibility rule is missing, show the known parts without claiming a savings total.
 

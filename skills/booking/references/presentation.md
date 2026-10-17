@@ -2,17 +2,19 @@
 
 - Help the user see the recommendation, the useful tradeoffs, the full cost and the next action in one place. Use this guide for comparisons, final reviews and confirmations.
 
+- Keep one question open at a time, and offer a recommended default when it is a choice.
+
 ## Shape the comparison
 
 - Lead with one sentence naming the recommended option and the decisive reason. For travel, state the meaningful difference in price and in time or distance.
 
-- Show a few distinct choices, best first. Add another option only when it changes the decision.
+- Show three to five distinct choices, best first, or fewer when fewer qualify. Add another option only when it changes the decision.
 
 - Follow [flight comparison](/opt/muse/skills/flight-booking/references/flights.md) and [hotel comparison](/opt/muse/skills/hotel-booking/references/hotels.md) for native results. Use the Markdown table below for their fallback, restaurants and tickets.
 
 - Do not add another picker or use `muse.create_options` to repeat a booking selection. For a single exact match, use short labeled lines instead of a one-row table.
 
-- Name the airline, property, venue and actual seller when they affect the price, terms or later support. Keep commands, raw offer IDs and internal details out of the reply.
+- Name the airline, property, venue and actual seller when they affect the price, terms or later support. Keep commands, raw offer IDs and internal details out of the reply, and summarize a preference you found without naming the emails, transactions or past bookings you read.
 
 ## Write the comparison table
 

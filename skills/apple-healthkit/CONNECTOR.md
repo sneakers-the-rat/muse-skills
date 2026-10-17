@@ -88,7 +88,7 @@
 
 - Every record kind for Apple Health goes at once, with no per-category or per-record option. A delete never touches Health Connect, so clearing both takes one run for each provider.
 
-- Settle the device and dates in conversation, then run the command once. A declined or expired approval exits with code 3 and deletes nothing, so report it and stop without trying other filters or the other provider.
+- A delete is irreversible, so settle the device and dates in conversation, then run the command once. A declined or expired approval exits with code 3 and deletes nothing, so report it and stop without trying other filters or the other provider.
 
 - Zero matches is a success. Say nothing matched rather than widening the dates or switching to `--all`.
 

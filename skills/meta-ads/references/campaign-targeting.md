@@ -6,11 +6,11 @@
 
 - A search rejected as a restricted topic means that audience cannot be targeted at all. Never search a synonym, a narrower term or an adjacent interest for the same people, and say it is unavailable while keeping the audience broad or using what the advertiser can target.
 
-- For a place, send its actual name with the correct `location_type_hint` and the known country code. The hints cover city, subcity or borough, neighborhood, region, ZIP, address or place, and market, so never append a guessed state or region, and add a radius only for an actual address or place requirement.
+- For a place, send its actual name with the known country code and the schema's matching `location_type_hint`, such as `city`, `subcity` for a borough, `neighborhood`, `region`, `zip`, `address`, `place` or `geo_market`. Never append a guessed state or region, and add a radius only for an actual address or place requirement.
 
 - Validate each returned place's name, type, country and region together. A same-name place in another region is not a match.
 
-- Map only returned `targeting_results` to interests, `location_results` to geography and `locale_results` to languages. Keep each selected result's canonical key or ID, with the display metadata the commands need, across the budget and creation commands, and let those commands build their own targeting shapes.
+- Map only returned `targeting_results` to interests, `location_results` to geography and `locale_results` to languages. Keep each selected result's canonical key or ID, with the display metadata the commands need, across the budget and creation commands. `estimate-budget` builds its own targeting shape, while a direct `ads_create_ad_set` call puts those results unchanged in `targeting.interests`, `targeting.geo_locations` and `targeting.locales` respectively.
 
 - Keep raw IDs out of the reply, and review every unresolved item and warning. When several places remain plausible, choose only when the advertiser's words or verified business evidence distinguishes one, and otherwise ask.
 

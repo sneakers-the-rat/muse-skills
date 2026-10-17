@@ -72,7 +72,7 @@
 
 ## Websites
 
-- Use the user's existing email or CRM platform through `browser.spawn_task` when its connector lacks an operation or no connector exists. Carry the approved audience, content, sender and schedule into the task, keep the same exclusions, and have it return the campaign status and link.
+- Use the user's existing email or CRM platform through `browser.browse` when its connector lacks an operation or no connector exists. Carry the approved audience, content, sender and schedule into the task, keep the same exclusions, and have it return the campaign status and link.
 
 - [Mailchimp](https://mailchimp.com/) for audiences and campaigns already managed there.
 

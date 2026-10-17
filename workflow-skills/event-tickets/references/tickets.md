@@ -18,6 +18,8 @@
 
 - For each ticket group, compare the count, section, row, assigned seats and how many sit together, the sightline and any stated view restriction, the seller and its guarantee, every fee and the full total, delivery timing and format, transfer rules, refund or postponement terms, and any verified membership or presale benefit.
 
+- Present the shortlist as [booking presentation](/opt/muse/assets/booking/references/presentation.md) describes.
+
 - A venue map alone does not establish availability, and a section name does not establish shade, roof cover or weather exposure. Those need evidence for the actual section or ticket group, and general venue information supports only a labeled estimate, never a guarantee.
 
 - Keep the requested date, venue, performance, party size and seat constraints. Present a material change as a choice for the user.

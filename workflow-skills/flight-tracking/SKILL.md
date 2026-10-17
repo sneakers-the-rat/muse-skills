@@ -2,9 +2,9 @@
 
 ## Answer a status question
 
-- Identify the operating carrier, flight number, local departure date and airports from the request or an authorized confirmation. Codeshares, repeated flight numbers and local dates make a flight number alone ambiguous. Use Flight Booking when the user is choosing a new flight.
+- Identify the operating carrier, flight number, local departure date and airports from the request, memory or an authorized confirmation. Codeshares, repeated flight numbers and local dates make a flight number alone ambiguous. Use Flight Booking when the user is choosing a new flight.
 
-- Read live status from a flight-status source such as FlightAware, and confirm a consequential change with the operating airline or airport. Label scheduled, estimated and actual times as such, and add the terminal, gate or connection impact when it helps.
+- Read the dated flight's live status from a flight-status source such as FlightAware, even for "when's my flight?" or a remembered time, since memory identifies the trip but does not verify its schedule. Confirm a consequential change with the operating airline or airport. Label scheduled, estimated and actual times as such, and add the terminal, gate or connection impact when it helps.
 
 - A missing signal or a delayed feed establishes neither a cancellation nor a safe connection.
 
@@ -78,7 +78,7 @@
 
 ## Websites
 
-- Use `browser.spawn_task` to confirm a change on the operating airline's flight-status page or the airport's departures and arrivals board. These carry gate and rebooking details first, in every country.
+- Use `browser.browse` to confirm a change on the operating airline's flight-status page or the airport's departures and arrivals board. These carry gate and rebooking details first, in every country.
 
 - [Flightradar24](https://www.flightradar24.com/) shows where the aircraft is. Its map position does not confirm boarding, gate or departure instructions.
 

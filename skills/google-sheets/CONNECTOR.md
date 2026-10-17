@@ -39,7 +39,7 @@
 
 - Write values with `spreadsheets create`, `values update` or `values append`. The `+append --spreadsheet <spreadsheet_id> --values 'a,b,c'` shortcut adds one row to the first visible tab, and `--json-values '[["a","b"],["c","d"]]'` adds several. Use `values append` with a range for any other tab.
 
-- Set `valueInputOption` to `USER_ENTERED` when Sheets should parse dates, currency and formulas, and use raw input when those strings are data.
+- Set `valueInputOption` to `USER_ENTERED` when Sheets should parse dates, currency and formulas, and to `RAW` when those strings are data. `+append` always parses, so use `values append` or `values update` for `RAW`.
 
 - Apply styling in one `spreadsheets batchUpdate` call. `repeatCell` with `userEnteredFormat` sets header styles and number formats, `updateSheetProperties` freezes the header row and `updateDimensionProperties` sets column widths. A new spreadsheet can carry these formats in its `spreadsheets create` body instead.
 

@@ -81,7 +81,7 @@ events delete --params '{"calendarId":"<calendar-id>","eventId":"<event-id>","se
 
 - A hold, block or focus event must show as busy, so leave `transparency` unset or set it to `opaque`. Use `transparent` only when the user wants the time to read as free.
 
-- Carry the account, calendar ID and event ID from the read that found the event into the write. `primary` is only the default before a read has located the event on another calendar.
+- Carry the account, calendar ID and event ID from the read that found the event into the write. `primary` is the default only when the user names no other calendar and no read has located the event on another one.
 
 - `events patch` changes only the fields you send, but an array replaces the whole list. To add or remove a guest, read the event and send the complete attendee list with the change applied, and when moving an event, send both `start` and `end` so its duration stays the same.
 
@@ -102,6 +102,8 @@ events delete --params '{"calendarId":"<calendar-id>","eventId":"<event-id>","se
 - Creating, changing or deleting a private event with no guests can proceed from a clear request without another confirmation.
 
 - Creating an event with guests, any change or deletion that notifies guests, and calendar sharing or access changes need confirmation first. Restate the event, the time with its timezone, the guests and the notification effect.
+
+- Creating, deleting, clearing, unsubscribing from or transferring a whole calendar also needs confirmation first. Name the calendar and the effect, such as `calendars clear` erasing every event on it.
 
 - Creating an event with guests, and any change that notifies guests or sends an attendee list, normally also asks the user on an approval card. Settings cannot grant a standing Allow for these, though a card that names a single guest can let the user always allow that guest. Deleting an event raises no card by default, so your confirmation is the only check before guests get a cancellation.
 

@@ -26,6 +26,8 @@
 
 - Show the exact available time and seating, the cuisine and fit, the price level or menu format, and the location with travel time when it matters. Include deposits, prepayment, service charges, cancellation or no-show fees, and conditions such as a set menu, an age limit, outdoor seating or a time limit at the table.
 
+- Present the shortlist as [booking presentation](/opt/muse/assets/booking/references/presentation.md) describes.
+
 - If the requested time is unavailable, offer nearby times. Never quietly switch to another branch, time, seating type or a waitlist, and keep the shortlist to tables that fit the party and place.
 
 ## Review and confirm

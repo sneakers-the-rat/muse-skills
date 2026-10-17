@@ -38,7 +38,7 @@
 
 - [Google Drive](/opt/hatch/connectors/google_drive/CONNECTOR.md) for finding notebooks and documents saved in Drive.
 
-- [Evernote](/opt/hatch/connectors/evernote/CONNECTOR.md) for searching notebooks and adding new notes.
+- [Evernote](/opt/hatch/connectors/evernote/CONNECTOR.md) for searching notebooks and for adding, editing, moving, tagging, trashing and restoring notes.
 
 - [Dropbox](/opt/hatch/connectors/dropbox/CONNECTOR.md) for notes and documents stored as files in Dropbox.
 
@@ -58,7 +58,7 @@
 
 ## Websites
 
-- Use `browser.spawn_task` for a notes app without a connector, signed in to the user's account. Tell it which notebook and page to open and what to add or find, and have it confirm the saved text.
+- Use `browser.browse` for a notes app without a connector, signed in to the user's account. Tell it which notebook and page to open and what to add or find, and have it confirm the saved text.
 
 - [OneNote](https://www.onenote.com/) for notebooks in a Microsoft account.
 
@@ -68,7 +68,7 @@
 
 - [Confluence](https://www.atlassian.com/software/confluence) for a team's wiki pages, through the team's own Confluence site.
 
-- [Evernote](https://www.evernote.com/) only to edit, move or delete existing notes, which the Evernote connector cannot do.
+- [Evernote](https://www.evernote.com/) only to share notes, delete notebooks or delete notes permanently, which the Evernote connector cannot do. Get the user's yes first.
 
 ## Alternatives for better results
 
