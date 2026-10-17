@@ -182,6 +182,8 @@ Browser tasks, their ownership, session and execution state.
 
   Default: `2`.
 
+- `browser_route` uses `text` and is nullable.
+
 ## Keys and relationships
 
 - PRIMARY KEY `browser_tasks_pkey` covers `task_id`.

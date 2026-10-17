@@ -150,6 +150,8 @@
 
 ### When available
 
-- These skills depend on the user's channel or devices. `muse.skill_search` shows which ones this session has.
+- These skills depend on the user's channel, devices, VM type or rollout eligibility. Before following a link, use `muse.skill_search` to confirm the skill is available in this session.
+
+- [Product shots](/opt/muse/skills/smb-product-shots/SKILL.md)
 
 - [Social Competitor Analysis](/opt/muse/skills/social-competitor-analysis/SKILL.md)

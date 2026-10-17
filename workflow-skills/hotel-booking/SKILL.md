@@ -4,7 +4,7 @@
 
 - Establish the destination, dates, number of rooms and who sleeps in each, with every child's exact age. Use the known budget, location and accessibility needs. Guest identity and payment can wait until the user chooses a rate.
 
-- Read [hotel comparison](references/hotels.md) before searching. It covers sources, ranking the full stay and the map.
+- Read [hotel comparison](references/hotels.md) before searching. It covers sources, ranking the full stay and how to show results.
 
 ## Compare full stays across sources
 

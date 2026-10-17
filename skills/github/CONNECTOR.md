@@ -54,6 +54,11 @@
 
 ## Make changes safely
 
+- For requests to upload or push local files, read
+  [references/snapshot-push.md](references/snapshot-push.md) before creating a
+  branch or writing, including when files may be binary or their encoding is
+  unknown. The guide determines whether a snapshot fits the request.
+
 - Resolve the repository, branch and issue or pull request before acting, and preserve unrelated work.
 
 - Read the result back after a change. After a timeout or an uncertain write, inspect the current state before trying again, because the first attempt may have succeeded.

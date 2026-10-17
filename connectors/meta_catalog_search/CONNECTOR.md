@@ -44,11 +44,15 @@ catalog_results=$(mktemp "${TMPDIR:-/tmp}/shopping-catalog-search.XXXXXX")
 
 - `--category` requires a category, and `--gender male|female|unisex` requires the wearer category the user gave. Keep it on refinements and never infer it from styling.
 
-- Repeat `--brand` for each acceptable brand and `--domain` for each requested seller's hostname, without a scheme, path or port.
+- `--brand` takes one brand the user limits acceptable results to. Repeat it for multiple brands.
+
+- `--prefer-brand` takes one brand the user favors but does not require, whether from the current request or their shopping profile. Profile preferences use `--prefer-brand`, never `--brand`. Repeat it for multiple brands. Also include each preferred brand in a `--query` with the product requirements.
+
+- `--domain` specifies a requested retailer by hostname, without a scheme, path or port. Repeat it for multiple retailers.
 
 - `--currency` takes a three-letter code, which also selects the market, and defaults to the shopper's currency. `--min-price` and `--max-price` are inclusive bounds in hundredths of that currency, so `2500` means 25.00.
 
-- `--seller-type secondhand` suits used, pre-owned, thrifted, vintage or refurbished inventory, and `direct` favors direct sellers. Repeat `--prefer-brand` for brands the user is known to like, adding a query that names each one with the required attributes.
+- `--seller-type secondhand` suits used, pre-owned, thrifted, vintage or refurbished inventory, and `direct` favors direct sellers.
 
 - When the current message attaches an image with a clear target, start with `--image-path` and the uploaded file's path, adding `--query` only to clarify. Never replace an available image with a text description.
 <!-- catalog-search-v2-only:end -->

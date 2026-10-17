@@ -34,13 +34,9 @@
 
 - Present the comparison as [booking presentation](/opt/muse/assets/booking/references/presentation.md) describes, with stable option labels. Follow a connector's own result layout when its docs supply one.
 
-- For several properties, create one map with `widget.create_map_widget`, using `kind: marker` elements with the same labels, names and order as the comparison. Use provider coordinates or coordinates verified through a maps or places tool, and never geocode a property that already has them or guess missing ones.
+- For Expedia-only results, follow the connector’s guidance on cards and tables. Use the comparison table to compare different sellers.
 
-- Put the full-stay price and the decisive term in each marker's `subtitle`, and attach a verified property photo as `background_image_url` when one exists. Do not delay the map for missing photos.
-
-- If coordinates cannot be verified or the map fails, use `widget.create_list_widget` with the same labels and one verified image per property. If neither widget is available, place each labeled image beside its hotel's entry rather than in an unlabeled gallery.
-
-- The map or list is a visual aid, not a selection control. The comparison table keeps the complete terms and the user's lettered choice.
+- With cards, add cancellation, payment or fee terms that could affect the choice and are missing from the cards.
 
 ## Complete the chosen reservation
 

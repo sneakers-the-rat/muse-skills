@@ -6,7 +6,7 @@
 
 - For two or more products, ask "Want to see a few on you?" with "Visualize <category> on me". For one, ask "Want to see it on you?" with "Try it on me".
 
-- Never offer it for swimwear, lingerie, rings, bracelets or watches. Offer it once per request, and not again in this conversation after the user declines.
+- Offer it once per request, for anything but swimwear, lingerie, rings, bracelets and watches. After the user declines, leave it out for the rest of the conversation.
 
 ## Run it
 
