@@ -9,6 +9,9 @@ footnotes. Line counts are trailing metadata only. Maintained by the
 nightly check-in; entries through 2026-10-15 backfilled 2026-10-15.
 Times are America/Los_Angeles.
 
+## 2026-10-18
+- 26 snapshots ran; no skill files changed.
+
 ## 2026-10-17
 - [`7bce867`](https://github.com/sneakers-the-rat/muse-skills/commit/7bce867d10e7cb66e815ca93d7a1b56638a9a473) 12:21 — **voice-selector**: expert-review scores arrive — 749 of the 970 entries in `voice_source.json` gain `aesthetics_mean` and `adherence_mean` (no entries added, removed or otherwise changed), and the README now explains they are ranking-only quality signals the picker uses to settle otherwise close, non-contradictory matches, with missing scores neutral rather than making an entry unavailable. (+758/−753, 3 files)
 - [`b18fe25`](https://github.com/sneakers-the-rat/muse-skills/commit/b18fe25f4336756b5ce059ddcd5808b0202fdcad) 00:15
