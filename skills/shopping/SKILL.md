@@ -4,7 +4,9 @@
 
 ## Understand what the user needs
 
-- Establish whether the user wants a specific product or a recommendation, who it is for and whether used or refurbished is acceptable. Apply this conversation first, then relevant preferences in `~/memory/shopping/PROFILE.md` and `~/USER.md`, or the person's `~/memory/people/` page when buying for someone else.
+- Establish whether the user wants a specific product or a recommendation, who it is for and whether used or refurbished is acceptable.
+
+- Before searching, read `~/memory/shopping/PROFILE.md`. Apply the current conversation first, then relevant preferences from the profile and `~/USER.md`, or the person's `~/memory/people/` page when buying for someone else.
 
 - Resolve the attributes that decide whether a product is correct before searching, such as the wearer's gender and size, the device a part must fit or the software platform. Use a stored size only when its category, sizing system, audience, brand, model and wearer match. Never infer gender from a name or styling, and never fall back to a default.
 

@@ -37,16 +37,16 @@ catalog_results=$(mktemp "${TMPDIR:-/tmp}/meta-catalog-search.XXXXXX")
 catalog_results=$(mktemp "${TMPDIR:-/tmp}/shopping-catalog-search.XXXXXX")
 /opt/hatch/bin/shopping catalog-search \
   --query "Nike men's cushioned daily training shoes from Nordstrom" \
-  --category footwear --gender male --brand Nike \
+  --category footwear --gender male --restrict-brand Nike \
   --domain nordstrom.com --currency USD \
   --retries 2 --out "$catalog_results"
 ```
 
 - `--category` requires a category, and `--gender male|female|unisex` requires the wearer category the user gave. Keep it on refinements and never infer it from styling.
 
-- Always pass `--brand` when the user limits acceptable results to certain brands, repeating it once per brand.
+- `--restrict-brand` takes one brand the user limits acceptable results to. Repeat it for multiple brands.
 
-- `--prefer-brand` takes one brand the user favors but does not require, whether from the current request or their shopping profile. Profile preferences use `--prefer-brand`, never `--brand`. Repeat it for multiple brands. Also include each preferred brand in a `--query` with the product requirements.
+- `--prefer-brand` takes one brand the user favors but does not require. Repeat it for multiple brands. Also include each preferred brand in a `--query` with the product requirements.
 
 - Always pass `--domain` when the user names a retailer, giving its hostname without a scheme, path or port. Repeat it for multiple retailers.
 
@@ -67,7 +67,7 @@ catalog_results=$(mktemp "${TMPDIR:-/tmp}/shopping-catalog-search.XXXXXX")
 jq -r '.products[0:20][] | [.product_id, .brand, .name, (.sale_price // .price), .seller_type, .seller_quality, .rating, .size] | @tsv' "$catalog_results"
 ```
 
-- Check every result against each firm requirement before selecting it, because `--brand` and `--domain` can backfill with others. For example, keep only one seller's products at or under 100.00:
+- Check every result against each firm requirement before selecting it, because `--prefer-brand` and `--domain` can backfill with others. For example, keep only one seller's products at or under 100.00:
 
 ```text
 jq -r '
