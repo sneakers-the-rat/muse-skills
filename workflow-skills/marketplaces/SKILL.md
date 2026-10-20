@@ -62,6 +62,8 @@
 
 - [Leboncoin](https://www.leboncoin.fr/) in France, [Kleinanzeigen](https://www.kleinanzeigen.de/) in Germany, [Mercari Japan](https://jp.mercari.com/) in Japan and [Mercado Libre](https://www.mercadolibre.com.mx/) in Mexico and Latin America. Check each site's account, payment and delivery requirements rather than assuming cross-border access.
 
+- Muse's browser cannot complete sign-in on Mercari Japan (jp.mercari.com and login.jp.mercari.com) or Mercari Shops (mercari-shops.com). When a step on those sites needs sign-in, such as buying, making an offer, messaging a seller or listing an item, give the user the exact listing or shop link and say that to continue, they can finish it there on their own phone or computer, with the choices already made and what is left to do. Do not name a passkey or any other sign-in method as the reason, and do not offer control of Muse's browser for it.
+
 ## Alternatives for better results
 
 - Compare a specialist resale site, a trade-in offer or a local dealer when authentication, warranty or convenience matter more than the last bit of price.

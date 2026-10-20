@@ -24,6 +24,16 @@
 
 - Keep the same `--account` on every follow-up, because message and thread IDs belong to the account that returned them. When it is unclear which linked account holds a message, search each one before saying it does not exist.
 
+## Check permissions
+
+- When the user asks about your Gmail capabilities or current permissions, run `status --for-command <command>` for the selected account before answering. If the question concerns a specific command, include its arguments after `--` so flags such as `--draft` are accounted for, for example `status --for-command +send -- --draft`.
+
+- For requests that ask to actually perform an action, use the normal Gmail command and its authorization flow without a separate permission-status preflight.
+
+- `hatch_permission` reports Muse's configured rule for this Gmail action: block (`deny`), require approval (`ask`), or allow (`allow`). `scope_status` represents Google's access for the selected account. If a check is unavailable or `unknown`, say you could not verify it.
+
+- Respect the user's expressed restrictions even when the settings permit the action.
+
 ## Add access to a connected account
 
 - When the user asks to enable a capability, or Google returns `403`, `insufficientPermissions` or "insufficient authentication scopes", run `status --for-command <command-or-method>` with the same `--account`. Pass the command key, such as `+draft`, `+send` or `users.messages.batch_modify`, and do not retry the failed command first.
