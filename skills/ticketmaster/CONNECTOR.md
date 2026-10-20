@@ -20,8 +20,6 @@
 
 - Timed events add `event_starts_at` and `event_ends_at` in UTC and user-local forms, plus `retrieved_at`. Prefer the user-local form, and keep a date-only value as a date.
 
-- `tmol_available: false` means Ticketmaster is not selling the event. Say so, offer its non-null `box_office_url`, and never read seats for it. When `box_office_url` is null, say no official purchase link came back. When `tmol_available` is absent, availability is unknown.
-
 - Search-level `priceRanges` is often missing or incomplete. Never say there is no pricing until `top-picks` has run.
 
 ## Read seats and prices
