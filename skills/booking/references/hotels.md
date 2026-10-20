@@ -36,8 +36,6 @@
 
 - For Expedia-only results, follow the connector’s guidance on cards and tables. Use the comparison table to compare different sellers.
 
-- With cards, add cancellation, payment or fee terms that could affect the choice and are missing from the cards.
-
 ## Complete the chosen reservation
 
 - Follow [checkout](/opt/muse/assets/booking/references/checkout.md) for the final refresh. For a stay, look for changes to the room, bed, view, fees, cancellation terms and benefits.
