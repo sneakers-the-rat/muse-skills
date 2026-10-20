@@ -180,7 +180,7 @@
 /opt/hatch/bin/duffel cancel-booking QUOTE_ID
 ```
 
-- `booking-status` without an ID lists the orders booked here, with `--limit N`, and recovers a lost order ID. A booking made elsewhere is not visible.
+- `booking-status ORDER_ID` looks up a booking. If you don't have the ID, run `booking-status` and match the trip's dates, route and total before sharing a confirmation number. It checks up to 25 bookings made here, so the list may be incomplete.
 
 - `cancellation-quote` does not cancel. Report its refund amount, refund destination, airline credits and expiry. A null refund amount means the carrier gave no quote, not zero.
 

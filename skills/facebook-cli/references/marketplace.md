@@ -39,7 +39,7 @@ MARKETPLACE_RESULTS_JSON=$(mktemp "${TMPDIR:-/tmp}/facebook-marketplace-search.X
   - `--limit`, 20 by default and at most 20
   - `--after` with the previous page's `paging.cursors.after`
 
-- Write negative numbers in the `--longitude=-121.8863` form so they are not read as another flag. This applies to `--latitude`, `--longitude`, `--min-price` and `--max-price`.
+- Pass negative numbers in either form, `--longitude -121.8863` or `--longitude=-121.8863`.
 
 - For a vehicle, use `--min-year`, `--max-year`, `--min-mileage-in-miles`, `--max-mileage-in-miles` or `--transmission automatic|manual` for the requested constraints. Years start at 1900 and mileage accepts 1 to 1,000,000 miles, so convert kilometers to miles first.
 

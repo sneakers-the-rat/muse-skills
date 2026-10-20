@@ -33,12 +33,63 @@ catalog_results=$(mktemp "${TMPDIR:-/tmp}/meta-catalog-search.XXXXXX")
 <!-- catalog-search-v2-only:start -->
 - Run `/opt/hatch/bin/shopping catalog-search` with up to eight semantic `--query` values, using only as many as help, and put every required attribute in each query. Write the results to a new file with `--out` and pass `--retries 2`. The default is 20 products per query, and `--num-results` or `-n` changes it.
 
+Example usage:
+- Base search showing the shared flags. `--intent` is optional:
 ```text
 catalog_results=$(mktemp "${TMPDIR:-/tmp}/shopping-catalog-search.XXXXXX")
 /opt/hatch/bin/shopping catalog-search \
   --query "Nike men's cushioned daily training shoes from Nordstrom" \
   --category footwear --gender male --restrict-brand Nike \
   --domain nordstrom.com --currency USD \
+  --retries 2 --out "$catalog_results"
+```
+
+- User demonstrated targeted shopping intent for a particular product:
+```text
+catalog_results=$(mktemp "${TMPDIR:-/tmp}/shopping-catalog-search.XXXXXX")
+/opt/hatch/bin/shopping catalog-search \
+  --query "Alo yoga women white hoodie" \
+  --category clothing --gender female --restrict-brand Alo \
+  --intent targeted --currency USD \
+  --retries 2 --out "$catalog_results"
+```
+
+- User wants a brand's or store's range ("what does Arc'teryx have for hiking"); still targeted when split by product type:
+```text
+catalog_results=$(mktemp "${TMPDIR:-/tmp}/shopping-catalog-search.XXXXXX")
+/opt/hatch/bin/shopping catalog-search \
+  --query "Arc'teryx hiking jacket" --query "Arc'teryx hiking pants" \
+  --restrict-brand "Arc'teryx" --intent targeted --currency USD \
+  --retries 2 --out "$catalog_results"
+```
+
+- User asks where to buy one particular product, its price or the best deal:
+```text
+catalog_results=$(mktemp "${TMPDIR:-/tmp}/shopping-catalog-search.XXXXXX")
+/opt/hatch/bin/shopping catalog-search \
+  --query "Alo yoga women bae hoodie beige" \
+  --category clothing --gender female --restrict-brand Alo \
+  --intent targeted --compare-sellers --currency USD \
+  --retries 2 --out "$catalog_results"
+```
+
+- User demonstrated exploratory shopping intent based on a need or use case:
+```text
+catalog_results=$(mktemp "${TMPDIR:-/tmp}/shopping-catalog-search.XXXXXX")
+/opt/hatch/bin/shopping catalog-search \
+  --query "lightweight packable rain jacket women for travel" \
+  --category clothing --gender female \
+  --intent explore --currency USD \
+  --retries 2 --out "$catalog_results"
+```
+
+- User wants something like a named product but cheaper or different ("like Levi's trucker jacket but cheaper"):
+```text
+catalog_results=$(mktemp "${TMPDIR:-/tmp}/shopping-catalog-search.XXXXXX")
+/opt/hatch/bin/shopping catalog-search \
+  --query "classic denim trucker jacket women" \
+  --category clothing --gender female \
+  --intent explore --currency USD \
   --retries 2 --out "$catalog_results"
 ```
 
@@ -53,6 +104,10 @@ catalog_results=$(mktemp "${TMPDIR:-/tmp}/shopping-catalog-search.XXXXXX")
 - `--currency` takes a three-letter code, which also selects the market, and defaults to the shopper's currency. `--min-price` and `--max-price` are inclusive bounds in hundredths of that currency, so `2500` means 25.00.
 
 - `--seller-type secondhand` suits used, pre-owned, thrifted, vintage or refurbished inventory, and `direct` favors direct sellers.
+
+- `--intent` says what the user is shopping for. It changes how results are ordered, not which products are retrieved:
+  - `targeted`: the user named what they want, e.g., one specific product (model, SKU, product line or variant), an item with binding requirements that any matching item satisfies (size, fit, compatibility, exact dimensions, capacity or color), or a brand's or store's range ("Polar H10 chest strap", "women's white leather sneakers size 7", "Lululemon leggings", "what's new at Uniqlo"). Pass the brand with `--restrict-brand` when one is named. Several phrasings of that one item as multiple `--query` are fine, and a brand's or store's range stays `targeted` when you split it into product types. A product type with required specs is `targeted` even when no brand is named; a budget, recipient or occasion alone is not a requirement. Add `--compare-sellers` only when the user's words ask where to buy one targeted product, what it costs or where the best deal is ("where can I get", "cheapest", "best price"). Naming an exact model, size or color is not enough, and it never applies to a comparison of different products. Results then contain that product from several good stores. When the user names retailers, pass `--domain` for each and leave out `--compare-sellers`; otherwise do not pass `--domain`.
+  - `explore`: the user wants help choosing a need or use case, "best X", a comparison of two or more named products (even though each one is named), similar product but cheaper or different, or several different items in one request. Give each option or item its own `--query` and do not add paraphrases; results interleave the queries so each one appears near the top. A gift or occasion request that names only a product type and a budget is `explore`. For queries that look for similar products to a named one, do not name that product in a query. Leave its brand out of `--restrict-brand` and the queries unless the user requires that brand.
 
 - When the current message attaches an image with a clear target, start with `--image-path` and the uploaded file's path, adding `--query` only to clarify. Never replace an available image with a text description.
 <!-- catalog-search-v2-only:end -->

@@ -42,6 +42,19 @@
 
 - Run the request's product searches in parallel, with every requirement in each one:
   - Meta Catalog, adding the flags the [Meta Catalog](/opt/hatch/connectors/meta_catalog_search/CONNECTOR.md) docs give for categories, gender, brands, sellers, prices and images.
+<!-- catalog-search-v1-only:start -->
+    ```text
+    catalog_results=$(mktemp "${TMPDIR:-/tmp}/meta-catalog-search.XXXXXX")
+    /opt/hatch/bin/meta-catalog-search --query "<product with every requirement>" --retries 2 --out "$catalog_results"
+    ```
+<!-- catalog-search-v1-only:end -->
+<!-- catalog-search-v2-only:start -->
+    ```text
+    catalog_results=$(mktemp "${TMPDIR:-/tmp}/shopping-catalog-search.XXXXXX")
+    /opt/hatch/bin/shopping catalog-search --query "<product with every requirement>" --retries 2 --out "$catalog_results"
+    ```
+    Add `--intent targeted` when the user named the product, a brand's or store's range, or an item with required specs, and `--intent explore` when they want help choosing (including "best X" and comparisons of two or more named products), alternatives or several different items. With `--intent targeted`, add `--compare-sellers` only when the user asks where to buy that one product, what it costs or where the best deal is, and has not named the retailers; for named retailers pass `--domain` instead. The [Meta Catalog](/opt/hatch/connectors/meta_catalog_search/CONNECTOR.md) docs give the details.
+<!-- catalog-search-v2-only:end -->
   - A browser product search with `browser.browse` and `task_id: "new"`, briefed as below. Always run it, especially for home goods, unless the user asked only for Facebook Marketplace.
   - Facebook Marketplace with `/opt/hatch/bin/facebook-cli marketplace search` for used, local, pickup, tight-budget or deal-hunting requests, following the Facebook connector's [Marketplace guide](/opt/hatch/connectors/facebook_cli/references/marketplace.md).
 

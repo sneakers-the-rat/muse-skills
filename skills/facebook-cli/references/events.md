@@ -10,7 +10,7 @@
 /opt/hatch/bin/facebook-cli events search --scope discover --keywords 'music' --after '<cursor>'
 ```
 
-- `--scope connected`, the default, searches events the user is going to, interested in, invited to or hosting. `--scope discover` searches popular events nearby.
+- `--scope connected`, the default, returns only events the user is going to, interested in, invited to or hosting. These can include public events. Use `--scope discover` for public event discovery in or near a place. For the user's own events in a place, use connected and keep any requested date filters. Use `--location` to match venue text, or omit it and filter the returned `location` values when the place requires geographic interpretation. Follow `paging.cursors.after` with `--after` until no cursor remains before saying none match, or say the search covered only the pages read.
 
 - `--keywords` takes free text such as `music` or `farmers market`. `--category` takes a category name such as `MUSIC_AND_AUDIO`.
 
@@ -20,17 +20,17 @@
 
 ## Choose the search location
 
-- Location flags apply to discover scope. `--latitude` and `--longitude` set an exact center and must be passed together. The pair overrides `--location`, and `--radius-in-miles` needs them, defaulting to 25 miles.
+- With connected scope, `--location` filters venue text. Coordinates and radius do not turn it into a nearby public event search. With discover scope, `--latitude` and `--longitude` set an exact center and must be passed together. The pair overrides `--location`, and `--radius-in-miles` needs them, defaulting to 25 miles.
 
-- `--location` takes a place name, which the server geocodes to a city center. It cannot express a neighborhood or an address.
+- For discover, `--location` takes a place name, which the server geocodes to a city center. It cannot express a neighborhood or an address.
 
-- When the conversation already carries the user's coordinates, such as a `message_location` tag, pass them straight to `--latitude` and `--longitude` instead of turning them into a place name.
+- For discover, when the conversation already carries the user's coordinates, such as a `message_location` tag, pass them straight to `--latitude` and `--longitude` instead of turning them into a place name.
 
-- For a named neighborhood or address, get coordinates with `map.geocode`. A city name in `--location` is enough for a city-level request.
+- For discover in a named neighborhood or address, get coordinates with `map.geocode`. A city name in `--location` is enough for a city-level request.
 
 - If nothing establishes the location, ask the user. Discovery without a location falls back to a server-side guess, and the response never says which place it used.
 
-- Write a negative coordinate in the `--longitude=-122.2605` form so the value is not read as another flag. The same applies to a southern `--latitude`.
+- Pass a negative coordinate in either form, `--longitude -122.2605` or `--longitude=-122.2605`.
 
 ## Read event details
 
