@@ -2,6 +2,9 @@
 # Hourly snapshot of Muse's skill trees into this git repo:
 #   skills/          <- /opt/hatch/skills          (symlinks resolved)
 #   workflow-skills/ <- /opt/hatch/workflow-skills (symlinks resolved)
+#   docs/            <- ~/docs                     (symlinks resolved;
+#                       added 2026-10-20 at the user's request, so the
+#                       product docs are versioned alongside the skills)
 #   connectors/      <- the /opt/hatch/connectors directories that NO
 #                       symlink in /opt/hatch/skills resolves into — the
 #                       connectors with no skill surface. Computed fresh
@@ -74,6 +77,7 @@ mirror() {
 }
 mirror /opt/hatch/skills "$REPO/skills"
 mirror /opt/hatch/workflow-skills "$REPO/workflow-skills"
+mirror "$HOME/docs" "$REPO/docs"
 
 # Connectors with no skill surface. A connector directory is covered when
 # at least one symlink in /opt/hatch/skills resolves to the directory
@@ -112,12 +116,15 @@ for d in "$REPO/connectors"/*/; do
 done
 
 # Measure this run's skill-file diff (the two skill trees only): the
-# counts are the plot's current point. A separate connectors count keeps
-# a connectors-only change from being labelled (no changes).
+# counts are the plot's current point. Separate connectors and docs
+# counts keep a connectors-only or docs-only change from being labelled
+# (no changes).
 git -C "$REPO" add -A
 read -r ADDED REMOVED <<< "$(git -C "$REPO" diff --cached --numstat -- skills workflow-skills \
   | awk '{ if ($1 ~ /^[0-9]+$/) a += $1; if ($2 ~ /^[0-9]+$/) r += $2 } END { print a + 0, r + 0 }')"
 read -r CONN_ADDED CONN_REMOVED <<< "$(git -C "$REPO" diff --cached --numstat -- connectors \
+  | awk '{ if ($1 ~ /^[0-9]+$/) a += $1; if ($2 ~ /^[0-9]+$/) r += $2 } END { print a + 0, r + 0 }')"
+read -r DOCS_ADDED DOCS_REMOVED <<< "$(git -C "$REPO" diff --cached --numstat -- docs \
   | awk '{ if ($1 ~ /^[0-9]+$/) a += $1; if ($2 ~ /^[0-9]+$/) r += $2 } END { print a + 0, r + 0 }')"
 
 # Regenerate the plot with this run's point appended, then stage it too.
@@ -131,12 +138,12 @@ git -C "$REPO" add -A
 if git -C "$REPO" diff --cached --quiet; then
   echo "nothing to commit at $TS (plot unchanged); skipping commit"
 else
-  if [ "$ADDED" -eq 0 ] && [ "$REMOVED" -eq 0 ] && [ "$CONN_ADDED" -eq 0 ] && [ "$CONN_REMOVED" -eq 0 ]; then
+  if [ "$ADDED" -eq 0 ] && [ "$REMOVED" -eq 0 ] && [ "$CONN_ADDED" -eq 0 ] && [ "$CONN_REMOVED" -eq 0 ] && [ "$DOCS_ADDED" -eq 0 ] && [ "$DOCS_REMOVED" -eq 0 ]; then
     git -C "$REPO" commit -q -m "skills snapshot $TS (no changes)"
   else
     git -C "$REPO" commit -q -m "skills snapshot $TS"
   fi
-  echo "committed $(git -C "$REPO" rev-parse --short HEAD) at $TS (+$ADDED/-$REMOVED skill lines, +$CONN_ADDED/-$CONN_REMOVED connector lines)"
+  echo "committed $(git -C "$REPO" rev-parse --short HEAD) at $TS (+$ADDED/-$REMOVED skill lines, +$CONN_ADDED/-$CONN_REMOVED connector lines, +$DOCS_ADDED/-$DOCS_REMOVED docs lines)"
 fi
 
 # Push to GitHub. Auth is a write-scoped deploy key for this repo only

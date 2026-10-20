@@ -13,6 +13,8 @@ real skill file content, browsable in place:
   skill surface (currently `meta_catalog_search` and `stripe-link`). The
   set is recomputed every run — a connector that gains a skill symlink
   leaves this tree and is archived through `skills/` instead.
+- `docs/` — mirror of `~/docs`, the product documentation tree, added
+  2026-10-20 so doc changes are versioned alongside the skill changes.
 
 ## Change volume
 
