@@ -6,21 +6,33 @@
 
 - Establish whether the user wants a specific product or a recommendation, who it is for and whether used or refurbished is acceptable.
 
-- Before searching, read `~/memory/shopping/PROFILE.md`. Apply the current conversation first, then relevant preferences from the profile and `~/USER.md`, or the person's `~/memory/people/` page when buying for someone else.
+- At the start of every shopping request, before deciding whether to ask anything, read `~/memory/shopping/PROFILE.md`. Apply the current conversation first, then relevant preferences from the profile and `~/USER.md`, or the person's `~/memory/people/` page when buying for someone else.
 
-- Resolve the attributes that decide whether a product is correct before searching, such as the wearer's gender and size, the device a part must fit or the software platform. Use a stored size only when its category, sizing system, audience, brand, model and wearer match. Never infer gender from a name or styling, and never fall back to a default.
+- Don't refer to the profile or your memory in replies, including in your questions, unless a user asks you to. When a stored fact explains a pick, state the fact itself, like their size.
 
-- Ask for one missing attribute per message before searching, starting with the one that most changes the results, such as the wearer's gender before their size. Wait for the answer before asking the next one.
+- Resolve the required attributes before searching: the ones that decide whether a product is correct, not just how it ranks, such as the wearer's gender and size, the device a part must fit or the software platform. Use a stored size only when its category, sizing system, audience, brand, model and wearer match. Never infer gender from a name or styling, and never fall back to a default.
 
-- Use `muse.create_options` for a bounded choice and plain text for an open question. Never put two option widgets in one message, because a second widget appears as a stray list beside the one the user is answering.
+- Do not search first and narrow afterwards, because an unresolved required attribute returns wrong products.
 
-- Resolve required attributes before the first search rather than narrowing the results afterwards, because an unresolved attribute returns wrong products.
+- Apply every resolved attribute to every search for the request, refinements included.
 
 - During a browser checkout, ask for every missing choice together in one message, in plain text when several need answers, as `~/docs/chat/payments-and-purchases.md` describes.
 
-- If the user cannot say or declines, search each plausible value separately, such as one catalog search with `--gender male` and one with `--gender female`, and label the results by value, rather than guessing or using the user's own value.
+### Decide whether to ask before searching
 
-- Apply every resolved attribute to every search for the request, refinements included.
+- Search without asking when the product type, required attributes and relevant known preferences are enough for a useful search. Missing recipient or acceptable-condition information is not a separate prerequisite: ask about it only when it is a required attribute or a soft preference whose answer would improve the search.
+
+- Ask with one `muse.create_options` question when a single required attribute with a known set of answers is missing, or when you can't run a useful search until you know the product type within the category (a coffee maker could be a drip coffee maker or an espresso machine). Style, fit, material, and occasion are types of soft preferences.
+
+- When several required attributes are open, ask for them together in one plain-text message: two `option` widgets in one message render as a stray, unanswerable list beside the one the user is answering.
+
+- Otherwise, when relevant results depend on soft preferences, ask about them in plain text, all in one message: at most three short questions, exactly one preference per question whose answers would improve your search queries. A quick question about taste gets the user better products than a broad search. Before searching, never ask them in addition to a product-type or required-attribute question.
+
+- Never use `muse.create_options` for soft preferences or budget, and never put other questions in the same message as a card.
+
+- After the answer, consider whether you can now run a useful search. If you can, search. If not, ask one more focused question about what's missing.
+
+- If the user skips a question or says go ahead, search with what you know. For a required attribute they don't provide, don't guess: search each likely value separately, such as one catalog search with `--gender male` and one with `--gender female`, and label each set of results by its value.
 
 ## Search every source in parallel
 
