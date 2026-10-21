@@ -14,27 +14,39 @@
 
 - A render is a preview, not a fit promise. The listing is the source of truth.
 
-- Remember only where the photo is saved, nothing about the user's looks.
+- Save only the approved photo's path, nothing about the user's looks.
 
 ## 1. Find the user's photo
 
-- Use the photo the user attaches for try-on, else the latest photo they sent for try-on earlier in this chat, else the latest saved one from `muse.memory_search` for "photo for try-on". Their social profile photos (including `~/workspace/profile-images/`) and media library aren't try-on sources, because the user didn't choose them for this.
+- Use the photo the user attaches now for try-on, or the one they just approved with "Use this photo". Otherwise read `~/workspace/style-tryon/photo.txt`. Its saved likeness photo counts only if the image it names still exists.
 
-- If none of these gives a photo, ask the user for a photo of themselves in good lighting, mentioning that a full-body photo works best, and wait. If they decline, show only the product.
+- Use no other photos, even if earlier chats, memory notes, the media library or their profile photos (including `~/workspace/profile-images/`) show one, because these are the only photos the user approved for try-ons.
 
-- Check each newly sent photo with `muse.read` before using or saving it, and a saved photo before its first render in a chat. If it won't open, ask for another.
+- If there's no usable photo, ask the user for a photo of themselves in good lighting, mentioning that a full-body photo works best, and wait. If they decline, show only the product.
 
-- If the photo isn't a real photo of only one person, ask for another.
+- Check each newly sent likeness photo with `muse.read` before using or saving it, and a saved photo before its first render in a chat. If the image won't open or shows nothing, ask for another.
 
-- When a newly sent photo passes these checks, append just this line to today's `~/memory/YYYY-MM-DD.md` with `muse.write` in `mode="append"`:
+- If it isn't a real photo, shows more than one main person or doesn't show their face at all, such as when their face is fully covered or turned away, ask for another with no option to use it, since the render can't show them without it.
+
+- If a newly sent photo has their face partly obscured, such as by sunglasses, or is blurry or dark, describe the issue in the photo to the user before rendering so they are aware the try-on may look less like them. End the reply with a `muse.create_options` row of "Use this photo" and "Send another", and wait for their choice.
+
+- A saved photo with these issues was already approved, so render without pausing and mention the issue after the images, once per photo in a chat, saying they can send a clearer photo anytime.
+
+- If the photo doesn't show their full body, note that their body shape and size will be approximated, and that they can send a full-body photo anytime for a more realistic result. Put this in the reply sent before rendering if there is one, else after the images, once per photo in a chat. Skip it when every render uses `product_try_on_head_and_shoulders`.
+
+- Seated or posed photos, mirror selfies and people in the background need no note.
+
+- When a newly sent photo passes these checks or the user chooses to use it, save its path to `~/workspace/style-tryon/photo.txt` with `muse.write` in `mode="overwrite"`, so the file holds only this line. If the file exists, read it with `muse.read` first, since the write tool overwrites only a file it has read:
 
 ```text
-- User provided photo for try-on: workspace/user/media_library/image/<xx>/<hash>.jpg
+workspace/user/media_library/image/<xx>/<hash>.jpg
 ```
 
 - Write file paths starting with `workspace/`, without `sandbox://`, `~/` or `/home/hatch/`.
 
 ## 2. Choose products
+
+- Choose only from shopping results already shown in a results card, so each product is verified and its card is ready. If the search is still running, say you'll show them on the user once the results are ready, then finish the search and show the results before rendering.
 
 - A single try-on uses the product the user named, else the first catalog product in the results, or the first product. Say which ("Here's the <marker> on you").
 

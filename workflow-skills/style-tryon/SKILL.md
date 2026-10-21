@@ -12,7 +12,7 @@
 
 - When the user accepts, asks to see or compare items on themselves, or picks a favorite from a try-on comparison, follow the [try-on flow](references/flow.md).
 
-- Those replies follow the flow instead of the Shopping skill's formatting, with no new results card and no further "Try it on me" offer.
+- Try-on replies, such as the renders and the buying help after them, use the flow's format rather than the Shopping skill's, so don't post another results card or offer try-on again in them.
 
 ## Available connectors
 
