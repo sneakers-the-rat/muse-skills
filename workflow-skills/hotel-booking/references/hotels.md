@@ -38,6 +38,8 @@
 
 ## Complete the chosen reservation
 
+- Once the user picks a rate, continue with its seller and answer questions from that seller's data.
+
 - Follow [checkout](/opt/muse/assets/booking/references/checkout.md) for the final refresh. For a stay, look for changes to the room, bed, view, fees, cancellation terms and benefits.
 
 - The final review shows the property and address, dates, occupancy, exact room and rate, full total, payment timing, deposit or card hold, inclusions, benefits, and the cancellation deadline with its timezone.

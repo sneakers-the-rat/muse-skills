@@ -24,6 +24,8 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
+from podcast_telemetry import GenerationTelemetry
+
 
 SPOTIFY_NO_EXTERNAL_ATTEMPT_MARKER = (
     "HATCH_SAVE_TO_SPOTIFY_NO_EXTERNAL_ATTEMPT"
@@ -55,6 +57,10 @@ def main():
     sp_gen.add_argument("--title", required=True, help="Episode title")
     sp_gen.add_argument("--description", default="", help="Episode description")
     sp_gen.add_argument("--generation-id", help="Stable prepared-<sha256> identity for private preparation; reuses completed audio and cannot publish")
+    sp_gen.add_argument(
+        "--retry-generation", type=uuid.UUID,
+        help="generation_trace_id returned by a failed attempt; links this retry's telemetry",
+    )
     sp_gen.add_argument(
         "--language",
         help="Language code for synthesis (e.g. en, es, pt, pt_BR). Defaults to "
@@ -241,7 +247,7 @@ class _UnixSocketHTTPConnection(http.client.HTTPConnection):
         self.sock.connect(self._socket_path)
 
 
-def daemon_api_request(method, path, payload=None):
+def daemon_api_request(method, path, payload=None, *, timeout=DAEMON_API_TIMEOUT_SECS, request_id=None):
     """Request the required daemon metadata API over the sandbox UDS."""
     socket_path = daemon_api_socket()
     if not socket_path:
@@ -250,13 +256,15 @@ def daemon_api_request(method, path, payload=None):
         )
     body = None
     headers = {"Accept": "application/json"}
+    if request_id:
+        headers["X-Request-Id"] = request_id
     presentation_locale = os.environ.get(JARVIS_PRESENTATION_LOCALE_ENV)
     if presentation_locale and presentation_locale.strip():
         headers["Accept-Language"] = presentation_locale.strip()
     if payload is not None:
         body = json.dumps(payload).encode("utf-8")
         headers["Content-Type"] = "application/json"
-    connection = _UnixSocketHTTPConnection(socket_path, DAEMON_API_TIMEOUT_SECS)
+    connection = _UnixSocketHTTPConnection(socket_path, timeout)
     try:
         connection.request(method, path, body=body, headers=headers)
         response = connection.getresponse()
@@ -594,40 +602,59 @@ def find_series_cover(series_id):
 
 
 def cmd_generate(args):
+    telemetry = GenerationTelemetry(
+        getattr(args, "retry_generation", None),
+        lambda payload, request_id: daemon_api_request(
+            "POST", "/podcasts/generation/observe", payload,
+            timeout=0.25, request_id=request_id,
+        ),
+    )
+    try:
+        output = generate_attempt(args, telemetry)
+    except KeyboardInterrupt:
+        telemetry.finish("cancelled")
+        raise
+    except Exception as error:
+        telemetry.finish("error")
+        print(json.dumps(
+            {"ok": False, "error": str(error), **telemetry.result_fields()},
+            separators=(",", ":"),
+        ))
+        sys.exit(1)
+    output.update(telemetry.result_fields())
+    print(json.dumps(output, separators=(",", ":")))
+
+
+def generate_attempt(args, telemetry):
     generation_id = getattr(args, "generation_id", None)
     if generation_id is None:
-        return _generate(args)
+        return _generate(args, telemetry)
     if not re.fullmatch(r"prepared-[a-f0-9]{64}", generation_id) or args.publish:
-        print(json.dumps({"ok": False, "error": "A prepared generation requires its stable identity and cannot publish"}, separators=(",", ":")))
-        sys.exit(1)
+        raise ValueError("A prepared generation requires its stable identity and cannot publish")
     directory = podcasts_dir() / generation_id
     directory.mkdir(parents=True, exist_ok=True)
     with (directory / ".generation.lock").open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
+        telemetry.stage = "catalog_read"
         episode = next((entry for entry in read_manifest().get("episodes", [])
                         if entry.get("slug") == generation_id), None)
         audio = Path(episode.get("path", "")) if episode else None
         if (audio and audio.is_file() and audio.stat().st_size > 0
                 and (episode.get("duration_secs") or 0) > 0):
-            print(
-                json.dumps(
-                    {"ok": True, "slug": generation_id, "title": episode.get("title"),
-                     "path": episode["path"], "duration_secs": episode.get("duration_secs"),
-                     "published": False, "reused": True},
-                    separators=(",", ":"),
-                )
-            )
-            return
-        return _generate(args)
+            telemetry.stage = "reused"
+            telemetry.finish("success")
+            return {"ok": True, "slug": generation_id, "title": episode.get("title"),
+                    "path": episode["path"], "duration_secs": episode.get("duration_secs"),
+                    "published": False, "reused": True}
+        return _generate(args, telemetry)
 
 
-def _generate(args):
+def _generate(args, telemetry):
+    telemetry.stage = "prepare"
     if args.publish and not args.feed_title:
-        print(
-            json.dumps({"ok": False, "error": "--feed-title required with --publish"}, separators=(",", ":"))
-        )
-        sys.exit(1)
+        raise ValueError("--feed-title required with --publish")
 
+    telemetry.stage = "catalog_read"
     catalog = read_manifest()
     slug = getattr(args, "generation_id", None) or make_slug(args.title)
     published_collision = next(
@@ -646,18 +673,13 @@ def _generate(args):
         # refuse the corrected take. Mint a new local/feed identity before
         # synthesis so both the original and the corrected episode survive.
         slug = f"{slug}-{uuid.uuid4().hex[:8]}"
+    telemetry.stage = "script"
     episode_dir = podcasts_dir() / slug
     episode_dir.mkdir(parents=True, exist_ok=True)
 
     script_src = Path(args.script)
     if not script_src.is_file():
-        print(
-            json.dumps(
-                {"ok": False, "error": f"script file not found: {args.script}"},
-                separators=(",", ":"),
-            )
-        )
-        sys.exit(1)
+        raise ValueError(f"script file not found: {args.script}")
 
     script_dst = episode_dir / "script.txt"
     shutil.copy2(str(script_src), str(script_dst))
@@ -674,13 +696,7 @@ def _generate(args):
     if args.topics_file:
         topics_src = Path(args.topics_file)
         if not topics_src.is_file():
-            print(
-                json.dumps(
-                    {"ok": False, "error": f"topics file not found: {args.topics_file}"},
-                    separators=(",", ":"),
-                )
-            )
-            sys.exit(1)
+            raise ValueError(f"topics file not found: {args.topics_file}")
         topics_text = topics_src.read_text(encoding="utf-8").strip() or None
 
     output_path = episode_dir / f"{slug}.mp3"
@@ -698,11 +714,11 @@ def _generate(args):
     for speaker_mapping in args.speaker:
         tts_cmd.extend(["--speaker", speaker_mapping])
 
+    telemetry.stage = "synthesis"
     result = subprocess.run(tts_cmd, capture_output=True, text=True)
     if result.returncode != 0:
         stderr = result.stderr.strip() if result.stderr else "unknown error"
-        print(json.dumps({"ok": False, "error": f"tts failed: {stderr}"}, separators=(",", ":")))
-        sys.exit(1)
+        raise RuntimeError(f"tts failed: {stderr}")
 
     tts_output = json.loads(result.stdout)
     duration_secs = tts_output.get("duration_secs", 0)
@@ -711,10 +727,12 @@ def _generate(args):
     audio_artifact_id = _normalize_artifact_id(tts_output.get("artifact_id"))
 
     # Resolve cover art for this episode
+    telemetry.stage = "cover"
     cover_path, cover_artifact_id = resolve_episode_cover(args, slug, episode_dir)
 
     # Persist the trusted handles so a later, separate `publish` can resolve the
     # provenance-bound audio/cover instead of a raw path.
+    telemetry.stage = "provenance"
     write_episode_provenance(slug, audio_artifact_id, cover_artifact_id)
 
     episode_entry = {
@@ -740,7 +758,9 @@ def _generate(args):
     else:
         catalog["episodes"].append(episode_entry)
 
+    telemetry.stage = "catalog_write"
     upsert_catalog_episode(episode_entry)
+    telemetry.finish("success")
 
     output = {
         "ok": True,
@@ -781,7 +801,7 @@ def _generate(args):
             if "retryable" in pub_result:
                 output["retryable"] = bool(pub_result["retryable"])
 
-    print(json.dumps(output, separators=(",", ":")))
+    return output
 
 
 # ── update-cover ────────────────────────────────────────────────────

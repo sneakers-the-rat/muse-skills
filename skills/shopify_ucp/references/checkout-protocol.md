@@ -30,7 +30,7 @@
 
 ## Choose the payment route
 
-- Keep a payment route explicitly selected for this purchase. Otherwise ask with `muse.create_options` and wait, offering Shop Pay, Link and Use another method. A saved default or an existing connection does not select a route.
+- Keep a payment route explicitly selected for this purchase, including Link selected by the purchase handoff. Otherwise ask with `muse.create_options` and wait, offering Shop Pay, Link and Use another method. A saved default or an existing connection alone does not select a route.
 
 - For Use another method, follow `/opt/muse/skills/shopping/references/browser-checkout.md` from the selected product URLs, explain that the user will enter payment during browser takeover and do not create a UCP checkout.
 

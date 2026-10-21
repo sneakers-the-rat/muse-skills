@@ -59,6 +59,8 @@
 
 - Most failures are transient. Retry the same command later with the same voices, backing off about 5 minutes, then 10, 30 and 60. Schedule each retry rather than waiting, and tell the user you will deliver the episode once synthesis recovers.
 
+- When the helper returns `generation_trace_id`, pass it as `--retry-generation <generation_trace_id>` on every retry of that generation. Keep that ID across retries; it links the attempts for reliability measurement and does not schedule or perform a retry itself. A new episode or a corrected request starts without this flag.
+
 - If it still fails after the hour-long retry, stop. Cancel the scheduled retry, report the error and suggest trying again later.
 
 - Never swap in a different voice or speech engine to get around a transient failure.

@@ -10,7 +10,7 @@
 
 ## Find a time that works
 
-- Read every calendar that matters, including other linked accounts, shared calendars and a paired phone's calendar through `device.invoke` with its `calendar.search` command. A calendar you could not read does not mean that person is free.
+- Read every calendar that matters, including other linked accounts and shared calendars. A calendar you could not read does not mean that person is free.
 
 - Treat tentative events and holds as possible conflicts, and say which people or calendars you could not check.
 
