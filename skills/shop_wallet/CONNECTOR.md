@@ -12,7 +12,7 @@
 
 - If a wallet call says Shop Pay is not supported for this account yet, tell the user it is unavailable and offer another route.
 
-- Shop Pay pays checkouts in US dollars, Canadian dollars, Mexican pesos and euros.
+- Shop Pay pays checkouts in US dollars, Canadian dollars, Mexican pesos, euros, Singapore dollars and Japanese yen. Use the checkout's stated currency and exact total; Japanese yen amounts have no fractional units.
 
 ## Connect and choose a card
 
