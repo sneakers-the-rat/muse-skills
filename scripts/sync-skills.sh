@@ -162,6 +162,7 @@ done
 # that breaks extraction is reported, never silently archived around.
 python3 "$REPO/scripts/extract_binary_files.py"
 python3 "$REPO/scripts/extract_binary_strings.py"
+python3 "$REPO/scripts/extract_binary_persona.py"
 python3 "$REPO/scripts/build_topics.py"
 
 # binary-etc/ holds extracted files the user has not sorted yet. Updates
