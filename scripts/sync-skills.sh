@@ -32,14 +32,15 @@
 # This repo is an archive of Muse's own skills over time; workspace-local
 # custom skills are instance-specific and deliberately not archived here.
 # Only these trees are mirrored or extracted; other repo files
-# (README.md, CHANGELOG.md, plot.svg, these scripts) are maintained
-# alongside and committed by the same `git add -A` sweep.
+# (README.md, CHANGELOG.md, plot.svg, the scripts in scripts/) are
+# maintained alongside and committed by the same `git add -A` sweep.
+# Every run starts by pulling (rebasing) from origin — see below.
 # Every run makes a real commit: plot.svg always gains the current run's
 # point, so there are no empty heartbeat commits. When the skill files
 # themselves did not change, the commit message says (no changes).
 set -euo pipefail
 
-REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # First run: init the repo.
 if [ ! -d "$REPO/.git" ]; then
@@ -47,6 +48,28 @@ if [ ! -d "$REPO/.git" ]; then
   git -C "$REPO" init -q
   git -C "$REPO" config user.name "skill-history"
   git -C "$REPO" config user.email "skill-history@local"
+fi
+
+# Pull first: this repo is also committed to by hand (topical
+# collections made outside the snapshot, binary-etc classifications).
+# Fetch and rebase onto the remote BEFORE the mirrors and extraction
+# write anything, so the push at the end fast-forwards instead of
+# colliding with that work. --autostash carries any uncommitted edits
+# across the rebase. If the remote cannot be reached on either route,
+# fail loudly with the local tree untouched; the next run retries
+# (the same policy as the push below).
+if git -C "$REPO" remote get-url origin >/dev/null 2>&1; then
+  if ! git -C "$REPO" pull --rebase --autostash origin main; then
+    echo "pull failed; retrying through Oracle relay SOCKS (127.0.0.1:1080)" >&2
+    SSH_CMD="$(git -C "$REPO" config core.sshCommand || true)"
+    RELAY_SSH_CMD="${SSH_CMD//nc -X connect -x 198.19.0.1:3128/nc -X 5 -x 127.0.0.1:1080}"
+    if [ -z "$SSH_CMD" ] || [ "$RELAY_SSH_CMD" = "$SSH_CMD" ]; then
+      echo "could not derive relay sshCommand from core.sshCommand; giving up" >&2
+      exit 1
+    fi
+    git -C "$REPO" -c core.sshCommand="$RELAY_SSH_CMD" pull --rebase --autostash origin main
+    echo "pulled from origin/main via Oracle relay"
+  fi
 fi
 
 # Mirror a source tree, resolving symlinks (-L / --copy-links): the repo
@@ -137,9 +160,9 @@ done
 # the hatch binary into their repo trees and refresh binary-map.json.
 # A failure here fails the whole snapshot (set -e), so a binary roll
 # that breaks extraction is reported, never silently archived around.
-python3 "$REPO/extract_binary_files.py"
-python3 "$REPO/extract_binary_strings.py"
-python3 "$REPO/build_topics.py"
+python3 "$REPO/scripts/extract_binary_files.py"
+python3 "$REPO/scripts/extract_binary_strings.py"
+python3 "$REPO/scripts/build_topics.py"
 
 # binary-etc/ holds extracted files the user has not sorted yet. Updates
 # to files already versioned there commit as usual, but a NEW file there
@@ -178,7 +201,7 @@ read -r BIN_ADDED BIN_REMOVED <<< "$(git -C "$REPO" diff --cached --numstat -- s
 
 # Regenerate the plot with this run's point appended, then stage it too.
 TS="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-python3 "$REPO/make_plot.py" --repo "$REPO" --out "$REPO/plot.svg" \
+python3 "$REPO/scripts/make_plot.py" --repo "$REPO" --out "$REPO/plot.svg" \
   --current-added "$ADDED" --current-removed "$REMOVED" --current-date "$TS"
 stage_all
 

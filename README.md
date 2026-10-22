@@ -23,7 +23,7 @@ are extracted from the `hatch` binary itself (`/opt/hatch/bin/hatch`),
 which embeds hundreds of prompt, skill and tool files that exist
 nowhere on disk. The extraction runs as part of every snapshot:
 
-- `extract_binary_files.py` — the generic, exhaustive extractor. It
+- `scripts/extract_binary_files.py` — the generic, exhaustive extractor. It
   censuses the filename markers in the binary, slices each embedded
   file out, and writes it to its sorted place:
   - `system_prompts/` — the binary's `blocks/` (system-prompt
@@ -48,8 +48,8 @@ nowhere on disk. The extraction runs as part of every snapshot:
   and the byte `offset` its content was read from.
 - Topical string curations — string material that has no filename of
   its own, gathered per topic. The general machinery lives in
-  `binary_string_methods.py`; each curation (e.g.
-  `extract_binary_strings.py`, the **bot_challenge** curation) holds
+  `scripts/binary_string_methods.py`; each curation (e.g.
+  `scripts/extract_binary_strings.py`, the **bot_challenge** curation) holds
   only its topic's needles and choices and calls those methods. The
   bot_challenge curation writes tool definitions split by tool name
   under `binary-strings/tools/`, browser error strings in
@@ -66,7 +66,7 @@ nowhere on disk. The extraction runs as part of every snapshot:
   `topic` field naming the curation, which is what tells a topical
   curation apart from the generic extraction.
 - `topics/` — topical views over the whole archive, built by
-  `build_topics.py`: one directory per subject (e.g.
+  `scripts/build_topics.py`: one directory per subject (e.g.
   `topics/bot_challenge/`), gathering that subject's files — wherever
   the extractions sorted them — as symlinks grouped by kind, with a
   README telling the subject's story and indexing the links.

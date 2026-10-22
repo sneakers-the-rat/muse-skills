@@ -22,8 +22,9 @@ extraction recovered.
 import sys
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parent
-sys.path.insert(0, str(REPO))
+SCRIPT_DIR = Path(__file__).resolve().parent
+REPO = SCRIPT_DIR.parent
+sys.path.insert(0, str(SCRIPT_DIR))
 from extract_binary_files import SLUGS  # the challenge-guide slugs
 
 
@@ -103,7 +104,11 @@ def readme_bot_challenge(made):
             return ""
         lines = [f"## {group} ({len(items)})\n", intro, ""]
         for link_name, source_rel in items:
-            lines.append(f"- [{link_name}]({group}/{link_name}) — "
+            # Link straight at the canonical file, not at this
+            # directory's symlink: GitHub renders a symlink as a
+            # text blob showing its path, so a link to the symlink
+            # costs a manual hop; the direct link clicks through.
+            lines.append(f"- [{link_name}](../../{source_rel}) — "
                          f"`{source_rel}`")
         return "\n".join(lines) + "\n"
 

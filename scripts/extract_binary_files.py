@@ -67,7 +67,7 @@ import sys
 from collections import Counter
 from datetime import datetime, timezone
 
-REPO = pathlib.Path(__file__).resolve().parent
+REPO = pathlib.Path(__file__).resolve().parent.parent
 BIN = pathlib.Path("/opt/hatch/bin/hatch")
 PATHCH = set(b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_./-")
 EXTS = (".md", ".yaml", ".yml", ".json", ".toml")

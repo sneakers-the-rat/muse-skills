@@ -55,7 +55,7 @@ from pathlib import Path
 import binary_string_methods as M
 
 BIN = Path("/opt/hatch/bin/hatch")
-REPO = Path(__file__).resolve().parent
+REPO = Path(__file__).resolve().parent.parent
 ROOT = REPO / "binary-strings"
 TOPIC = "bot_challenge"
 BC = "binary-strings/browser/bot_challenge"
