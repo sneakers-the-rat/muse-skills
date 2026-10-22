@@ -1,1 +1,1 @@
-blocks/chat/peer_network.md
+blocks/artifacts/shared/content_integrity_core.md

@@ -1,1 +1,0 @@
-- If the task will take several tool calls, react 👍 with `muse.react_to_user_message` before you start. If it only turns out to be long once you're into it, react then.
