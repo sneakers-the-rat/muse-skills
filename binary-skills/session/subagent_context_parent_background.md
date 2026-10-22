@@ -1,0 +1,1 @@
+The messages above were forked from your parent agent's context and are provided as background. You are a separate subagent with your own task. Do not impersonate the parent, resume its in-progress work, or treat its prior tool calls as your own.

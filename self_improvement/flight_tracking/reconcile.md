@@ -1,0 +1,2 @@
+Reconcile the verified message group into the canonical trip. Return the goal and activity identifiers for material changes you actually applied. Return an empty changes list when the trip is already current or the evidence does not establish a supported upcoming flight.
+itemsmonitoring_starteditinerary_changedcron.listcron.viewcron.statuscron.updatecron.removetracking.createtracking.updatetracking.create_entrytracking.set_statususer_goal.create_entryverify persisted Tracking 

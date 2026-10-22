@@ -26,4 +26,100 @@ Restraint is the quality bar. Most audit runs should propose nothing, because se
 
 - Before you write, read a few system skills under `/opt/muse/skills/`, a few system connector docs under `/opt/hatch/connectors/` and the templates under `/opt/muse/skills/custom-connector-setup/templates/`. Match their structure, tone and level of detail so a new file reads like the files around it. A well-written nearby file can guide the structure without supplying wording to copy.
 
-- Write from the skill template ([`
+- Write from the skill template ([`skill.yaml`](/opt/muse/skills/custom-connector-setup/templates/skill/skill.yaml) and [`SKILL.md`](/opt/muse/skills/custom-connector-setup/templates/skill/SKILL.md)) or the connector template ([`connector.yaml`](/opt/muse/skills/custom-connector-setup/templates/connector/connector.yaml) and [`CONNECTOR.md`](/opt/muse/skills/custom-connector-setup/templates/connector/CONNECTOR.md)), following their instructions and removing their comments. Read [amendments](/opt/muse/skills/custom-connector-setup/references/amendments.md) before correcting a system file. These guides do not authorize account setup or external actions during this review.
+
+- Combine or adapt existing methods when they cover the need, and propose a new skill only for a distinct reusable method. A single command belongs in connector docs, not in a new skill.
+
+- Keep a temporary workaround or untested explanation qualified. A lesson should improve future work without making the agent assume that one connector, one source or one observed failure is universal.
+
+## Write skill.yaml
+
+- `name` is the skill's identity. It is snake_case, with lowercase letters, digits and underscores, and it matches the folder name under `~/workspace/custom-skills/`. System skill names are reserved, so choose a distinct one.
+
+- `title` is the task's plain name.
+
+- `description` is one sentence naming the outcome and when to use it. It is what the model sees in the skill list.
+
+- `category` places the skill beside related skills. Use one of Business, Communication, Creation, Finance, Health and fitness, Home, Learning and customization, Media, Personal planning, Privacy, Shopping, Travel and local plans, Work and knowledge or Writing.
+
+- `include_in_prompt` set to true lists the skill in every conversation, and false leaves it to `muse.skill_search`. Keep the existing value when you update a skill.
+
+- `availability` is optional and limits where the skill appears. `scopes` names release channels and normally stays unset for a custom skill. `confidential_vm` defaults to true, and false withholds the skill on a confidential VM. `needs_speech` set to true withholds it wherever spoken audio cannot be produced. `devices` lists the request devices that may discover it, from app, app-audio, audio-wearable, mcu-wearable, display-wearable, micro and unknown, and leaving it out means every device.
+
+- `requires` is optional and hides the skill until its needs are met. `bins` lists binaries that must all exist, `anyBins` lists binaries of which at least one must exist, and `config` lists skill settings that must be turned on. Never declare environment variables.
+
+- `amends` appears only on an amendment. It holds `skill`, the base system skill's `name` from its own `skill.yaml`, and `reviewed_revision`, the base's full SHA-256 from the inventory.
+
+- `skill_improvement` marks the skills this loop manages. Set `managed: true` and `status: active`, or `status: retired` to retire the skill. The writer records the review history beside these fields, so keep every field an update already carries.
+
+## Write SKILL.md
+
+- `SKILL.md` holds the instructions alone, with no frontmatter. Open with one `#` title, then two to five method sections, each named for what it does, such as "Compare the options" or "Book and confirm". Cover what good looks like, what to check, how to choose and how to present the result.
+
+- Every skill has `## Available connectors`. Link each connector doc that helps the task with a few words on what it adds, then keep the template's two closing bullets exactly as written. Connectors that exist only on some channels or devices go under `### When available` after those bullets, which opens with the template's first bullet.
+
+- Add `## Websites` when websites help the task. Link strong sites, say what each is good for, and say what to carry into `browser.browse` and what to verify there.
+
+- Close with `## Alternatives for better results`, listing methods that improve the outcome rather than more websites.
+
+- Write to the agent in plain second person and start each instruction with the action. Make each instruction a `-` bullet with one blank line between bullets, one idea per bullet in one to three short sentences. Name tools exactly as you call them, in backticks, and write binaries as full paths under `/opt/hatch/bin`. Leave out semicolons, em and en dashes, curly quotes, tables and label-style bullets, as the templates direct.
+
+## Write connector.yaml
+
+- `id` is `custom.<provider>` in lowercase, and it matches the folder name under `~/workspace/custom-connectors/`. When the service has a registered connection, use the slug it was registered with.
+
+- `title` is the service's own name, which search also matches.
+
+- `description` is one sentence on what the user can do through the connector. It is what the model sees in the connector list.
+
+- `icon` is optional and names an icon Muse already has, such as `mail`. Leave it out when none fits.
+
+- `aliases` lists other names users call the service, so search and lookups find it under those names too.
+
+- `include_in_prompt` set to true lists the connector in every conversation, and false keeps it out of the list while `muse.connector_search` still finds it.
+
+- `require_auth` set to true hides the connector from the list while its credential is not connected. Use false for a public API that needs no credential.
+
+- `amends` appears only on an amendment. It holds `connector`, the base system connector's `id`, and `reviewed_revision`, the base's SHA-256 from the inventory.
+
+- `skill_improvement` holds `managed: true` and `status: active`, or `status: retired` to retire the doc. Leave out the release fields that only system connectors carry, such as `availability`, `auth` and `sync`.
+
+## Write CONNECTOR.md
+
+- `CONNECTOR.md` holds the instructions alone, with no frontmatter. Open with one `#` title and one to three bullets on what the connector reaches, how it authenticates and which helpers exist, each by its full path.
+
+- Follow with `## Connect` for the registered setup details and a harmless read that proves access, then the template's `## Credentials` section as written.
+
+- Give each verified operation its own section named for what it does, with the exact command in a fenced code block, its inputs, the output fields to read, the IDs to keep and how pagination works.
+
+- Say how to read and present the results, as system docs do under headings such as `## Check the result`. Cover failures and safe retries in `## Recover from errors` and what the connector cannot do in `## Limits`.
+
+- End with `## Related skills`, the last section. Link the skills that use the connector and keep the template's closing bullet exactly as written. Keep these links reciprocal with each skill's `## Available connectors`, and propose a separate amendment when the other end is a system file. Mark narrower channel or device availability and require discovery before opening those links.
+
+## Propose a skill
+
+- Set `kind: skill`. In `document`, put the complete `skill.yaml` in `descriptor` and the `SKILL.md` instructions in `markdown`.
+
+- Preserve explicit partner preferences, their scope and the conditions for another route. Do not create or remove a preference based on one successful task, a connected account or a provider's claim.
+
+- Set `expected_revision` to null for a new skill, or to the exact inventory revision for an update. Preserve valid existing instructions, scope, helper links, the `include_in_prompt` choice and the learning history in the metadata.
+
+## Correct a system skill
+
+- System skills are immutable. Create a separate custom skill with a distinct name and these lines in its `skill.yaml`.
+
+```yaml
+amends:
+  skill: system_skill_name
+  reviewed_revision: full_sha256_from_inventory
+```
+
+- Read the current base, then explain the precise correction and when it applies. When the inventory marks an amendment for review, compare the updated base before renewing the reviewed revision. Retire an amendment once the base contains the fix.
+
+## Propose connector docs
+
+- Set `kind: connector` when the lesson concerns connection or usage. In `document`, put the complete `connector.yaml` in `descriptor` and the `CONNECTOR.md` instructions in `markdown`. This review writes documentation. It does not create credentials, connect accounts or perform actions in them.
+
+- Custom docs live in `~/workspace/custom-connectors/<id>/` as `connector.yaml` and `CONNECTOR.md`. Documentation does not establish connection state. To correct a system connector, create a separate amendment with `amends.connector` and `amends.reviewed_revision` from the inventory. Explain its scope and reconcile it when the base changes.
+
+- Use `expected_revision: null` for a new document and its inventory revision for an update. Preserve existing helpers, supporting files and the learning history in the metadata.

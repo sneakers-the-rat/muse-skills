@@ -11,11 +11,23 @@
 #                       every run, never a hard-coded list: the moment a
 #                       connector gains a skill symlink it is archived
 #                       through skills/ instead and drops out of here.
+#   binary trees     <- extracted from the hatch binary itself by
+#                       extract_binary_files.py (system-prompt/,
+#                       binary-skills/, binary-tools/, binary-etc/,
+#                       browser/, self_improvement/, artifacts/ plus
+#                       binary-map.json, the provenance manifest — which
+#                       binary, and the byte offset each file came from).
+#                       New files landing in binary-etc/ are UNSORTED:
+#                       they are held out of the commit (updates to
+#                       already-versioned binary-etc files still commit)
+#                       and reported on stdout as BINARY_ETC_UNVERSIONED
+#                       lines, so the calling hook can ask the user to
+#                       classify them.
 # This repo is an archive of Muse's own skills over time; workspace-local
 # custom skills are instance-specific and deliberately not archived here.
-# Only these trees are mirrored; other repo files (README.md,
-# CHANGELOG.md, plot.svg, these scripts) are maintained alongside and
-# committed by the same `git add -A` sweep.
+# Only these trees are mirrored or extracted; other repo files
+# (README.md, CHANGELOG.md, plot.svg, these scripts) are maintained
+# alongside and committed by the same `git add -A` sweep.
 # Every run makes a real commit: plot.svg always gains the current run's
 # point, so there are no empty heartbeat commits. When the skill files
 # themselves did not change, the commit message says (no changes).
@@ -115,35 +127,64 @@ for d in "$REPO/connectors"/*/; do
   if [ "$keep" -eq 0 ]; then rm -rf "$d"; fi
 done
 
+# Binary extraction: pull the embedded prompt/skill/tool files out of
+# the hatch binary into their repo trees and refresh binary-map.json.
+# A failure here fails the whole snapshot (set -e), so a binary roll
+# that breaks extraction is reported, never silently archived around.
+python3 "$REPO/extract_binary_files.py"
+
+# binary-etc/ holds extracted files the user has not sorted yet. Updates
+# to files already versioned there commit as usual, but a NEW file there
+# is held out of the commit until the user classifies it (ignore it,
+# commit it as-is, or say where it sorts). Held-out paths are printed as
+# BINARY_ETC_UNVERSIONED lines for the calling hook to surface.
+NEW_ETC=()
+while IFS= read -r p; do
+  [ -n "$p" ] && NEW_ETC+=("$p")
+done < <(git -C "$REPO" ls-files --others --exclude-standard -- binary-etc)
+for p in ${NEW_ETC[@]+"${NEW_ETC[@]}"}; do
+  echo "BINARY_ETC_UNVERSIONED $p"
+done
+
+# Stage everything, then unstage the held-out binary-etc paths.
+stage_all() {
+  git -C "$REPO" add -A
+  if [ "${#NEW_ETC[@]}" -gt 0 ]; then
+    git -C "$REPO" reset -q -- "${NEW_ETC[@]}"
+  fi
+}
+
 # Measure this run's skill-file diff (the two skill trees only): the
-# counts are the plot's current point. Separate connectors and docs
-# counts keep a connectors-only or docs-only change from being labelled
-# (no changes).
-git -C "$REPO" add -A
+# counts are the plot's current point. Separate connectors, docs and
+# binary-extraction counts keep a change in only one of those trees
+# from being labelled (no changes).
+stage_all
 read -r ADDED REMOVED <<< "$(git -C "$REPO" diff --cached --numstat -- skills workflow-skills \
   | awk '{ if ($1 ~ /^[0-9]+$/) a += $1; if ($2 ~ /^[0-9]+$/) r += $2 } END { print a + 0, r + 0 }')"
 read -r CONN_ADDED CONN_REMOVED <<< "$(git -C "$REPO" diff --cached --numstat -- connectors \
   | awk '{ if ($1 ~ /^[0-9]+$/) a += $1; if ($2 ~ /^[0-9]+$/) r += $2 } END { print a + 0, r + 0 }')"
 read -r DOCS_ADDED DOCS_REMOVED <<< "$(git -C "$REPO" diff --cached --numstat -- docs \
   | awk '{ if ($1 ~ /^[0-9]+$/) a += $1; if ($2 ~ /^[0-9]+$/) r += $2 } END { print a + 0, r + 0 }')"
+read -r BIN_ADDED BIN_REMOVED <<< "$(git -C "$REPO" diff --cached --numstat -- system-prompt binary-skills binary-tools binary-etc browser self_improvement artifacts binary-map.json \
+  | awk '{ if ($1 ~ /^[0-9]+$/) a += $1; if ($2 ~ /^[0-9]+$/) r += $2 } END { print a + 0, r + 0 }')"
 
 # Regenerate the plot with this run's point appended, then stage it too.
 TS="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 python3 "$REPO/make_plot.py" --repo "$REPO" --out "$REPO/plot.svg" \
   --current-added "$ADDED" --current-removed "$REMOVED" --current-date "$TS"
-git -C "$REPO" add -A
+stage_all
 
 # Commit — the regenerated plot guarantees content, so no --allow-empty.
 # If somehow nothing is staged, say so instead of papering over it.
 if git -C "$REPO" diff --cached --quiet; then
   echo "nothing to commit at $TS (plot unchanged); skipping commit"
 else
-  if [ "$ADDED" -eq 0 ] && [ "$REMOVED" -eq 0 ] && [ "$CONN_ADDED" -eq 0 ] && [ "$CONN_REMOVED" -eq 0 ] && [ "$DOCS_ADDED" -eq 0 ] && [ "$DOCS_REMOVED" -eq 0 ]; then
+  if [ "$ADDED" -eq 0 ] && [ "$REMOVED" -eq 0 ] && [ "$CONN_ADDED" -eq 0 ] && [ "$CONN_REMOVED" -eq 0 ] && [ "$DOCS_ADDED" -eq 0 ] && [ "$DOCS_REMOVED" -eq 0 ] && [ "$BIN_ADDED" -eq 0 ] && [ "$BIN_REMOVED" -eq 0 ]; then
     git -C "$REPO" commit -q -m "skills snapshot $TS (no changes)"
   else
     git -C "$REPO" commit -q -m "skills snapshot $TS"
   fi
-  echo "committed $(git -C "$REPO" rev-parse --short HEAD) at $TS (+$ADDED/-$REMOVED skill lines, +$CONN_ADDED/-$CONN_REMOVED connector lines, +$DOCS_ADDED/-$DOCS_REMOVED docs lines)"
+  echo "committed $(git -C "$REPO" rev-parse --short HEAD) at $TS (+$ADDED/-$REMOVED skill lines, +$CONN_ADDED/-$CONN_REMOVED connector lines, +$DOCS_ADDED/-$DOCS_REMOVED docs lines, +$BIN_ADDED/-$BIN_REMOVED binary lines)"
 fi
 
 # Push to GitHub. Auth is a write-scoped deploy key for this repo only

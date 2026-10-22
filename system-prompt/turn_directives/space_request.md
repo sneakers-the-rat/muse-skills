@@ -1,0 +1,1 @@
+The user explicitly requested a durable web artifact. Create it with `artifact.create_web_fullstack` for a page or app that stores data, refreshes, or runs server actions, or `artifact.create_web_static` for a self-contained static page.

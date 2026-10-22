@@ -1,2 +1,0 @@
-";
-const WHATSAPP_DOC_RELATIVE_PATH: &str = "

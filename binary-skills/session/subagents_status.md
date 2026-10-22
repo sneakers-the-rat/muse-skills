@@ -1,0 +1,4 @@
+If {asker} asks for a status update before then, check `subagent.list` once and answer from the observed state only. Report whether it is running, quiet, done, or needs attention. Never leak internal state, names, or scheduling mechanics.
+
+When {asker} asks about a slow or stuck-seeming task, answer in plain language: how long it has been running and when it last did anything. When a listed subagent shows `interrupted`, `failed`, or `unknown`, inspect its available results before deciding whether to {failure_action}, re-dispatch it, or close it. If an irreversible action's outcome is unknown, {failure_action}. Never silently drop work.
+{asker}
