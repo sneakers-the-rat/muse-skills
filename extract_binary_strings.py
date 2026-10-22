@@ -49,7 +49,7 @@ ROOT = REPO / "binary-strings"
 PRINT_RUN = re.compile(rb"[\x09\x0a\x0d\x20-\x7e]{4,}")
 ERROR_RE = re.compile(
     r"(error|fail|unavailable|invalid|not found|denied|refus|unable|"
-    r"could not|cannot|missing|expired|blocked|no guide|not loaded)",
+    r"could not|missing|expired|blocked|no guide|not loaded)",
     re.I)
 
 
@@ -150,44 +150,80 @@ def main():
         p.write_bytes(blob)
 
     # ---- tool definitions, split by tool name -------------------------
-    tool_hits = {}
-    for m in re.finditer(rb'"name":\s*"((?:browser|bot_challenge)'
-                         rb'\.[a-z0-9_.]+)"', data):
-        tool_hits.setdefault(m.group(1).decode(), []).append(m.start())
+    # Catalog format (found at the bot_challenge schemas): consecutive
+    # strings — [name][description][schema JSON] — back to back, the
+    # name abutting the description. So: find every pretty-printed
+    # object schema, brace-match it, and read the name off the start of
+    # the text gap since the previous schema.
+    schemas = []
+    for m in re.finditer(rb'\{\n  "type": "object",', data):
+        end = balanced_json(data, m.start())
+        if end is None:
+            continue
+        try:
+            obj = json.loads(data[m.start():end])
+        except ValueError:
+            continue
+        if obj.get("type") == "object" and "properties" in obj:
+            schemas.append((m.start(), end, obj))
+    schemas.sort()
     tools_done = 0
     catalog_offsets = []
-    for name, offs in sorted(tool_hits.items()):
-        blob = None
-        obj_off = None
-        for off in offs:
-            brace = data.rfind(b"{", off - 16, off)
-            if brace < 0:
-                continue
-            end = balanced_json(data, brace)
-            if end is None:
-                continue
-            try:
-                json.loads(data[brace:end])
-            except ValueError:
-                continue
-            blob = data[brace:end]
-            obj_off = brace
-            break
-        if blob is not None:
-            target = f"binary-strings/tools/{name}.json"
-            write(target, blob)
-            register(f'tool definition "name":"{name}"', target, obj_off)
-            catalog_offsets.append(obj_off)
-            tools_done += 1
+    # Entry layout: [label][description][schema]. The label is a short
+    # tag (for one family literally "checked-in browser tool schema";
+    # for the bot_challenge tools it is the tool's own name). Where the
+    # label is not the name, identify the tool by its schema's
+    # signature — property names and enum values are distinctive.
+    def identify(obj, blob, desc):
+        props = set(obj.get("properties", {}).keys())
+        if props == {"guide"}:
+            return "bot_challenge.guide"
+        if props == {"tab", "instruction"}:
+            return "browser.bot_challenge"
+        if b"reload_page" in blob:
+            return "bot_challenge.recover"
+        if b"environment_error" in blob:
+            return "bot_challenge.assess"
+        if desc.startswith("Read the current page in a tab"):
+            return "browser.observe"
+        if desc.startswith("Perform a short sequence of actions"):
+            return "browser.act"
+        if desc.startswith("Upload granted files"):
+            return "browser.files"
+        return None
+
+    prev_end = None
+    for s_off, s_end, obj in schemas:
+        blob = data[s_off:s_end]
+        desc = ""
+        label = None
+        if prev_end is not None and s_off - prev_end < 30000:
+            gap = data[prev_end:s_off].decode("utf-8", "replace")
+            desc = gap.strip("\n")
+            for tag in ("checked-in browser tool schema",):
+                if desc.startswith(tag):
+                    label = tag
+                    desc = desc[len(tag):]
+            m = re.match(r"((?:browser|bot_challenge)\.[a-z_]+)", desc)
+            if m:
+                label = m.group(1)
+                desc = desc[m.end():]
+            desc = desc.strip()
+        prev_end = s_end
+        name = label if label and "." in label else identify(
+            obj, blob, desc)
+        if name:
+            fname = name
+            match = f'tool definition strings for "{name}"'
         else:
-            off = offs[0]
-            start, win = window_run(data, off, 2400)
-            target = f"binary-strings/tools/{name}.txt"
-            write(target, win)
-            register(f'tool definition window for "name":"{name}"',
-                     target, start)
-            catalog_offsets.append(off)
-            tools_done += 1
+            fname = f"unidentified-{s_off:x}"
+            match = f"tool definition strings at 0x{s_off:x} (unidentified)"
+        target = f"binary-strings/tools/{fname}.json"
+        doc = {"name": name, "description": desc, "input_schema": obj}
+        write(target, json.dumps(doc, indent=2) + "\n")
+        register(match, target, s_off)
+        catalog_offsets.append(s_off)
+        tools_done += 1
 
     # ---- browser error strings ----------------------------------------
     # Regions: every extracted browser/ file's span, the challenge
@@ -244,12 +280,23 @@ def main():
     # ---- bot_challenge curations ---------------------------------------
     bc = "binary-strings/browser/bot_challenge"
 
-    # role registry window
+    # role registry window — prefer the TOML role block; anchor the
+    # window at the needle (the registry run is far longer than the
+    # window, so centre-trimming would lose the needle itself)
     best = None
-    for m in re.finditer(rb'"browser_bot_challenge"', data):
-        start, win = window_run(data, m.start(), 1800)
-        if b'"tools"' in win or b"tools" in win:
-            best = (start, win)
+    for pat in (rb'id = "browser_bot_challenge"',
+                rb'"browser_bot_challenge"'):
+        for m in re.finditer(pat, data):
+            rs = m.start()
+            while rs > 0 and (data[rs - 1] in (9, 10, 13)
+                              or 0x20 <= data[rs - 1] <= 0x7E):
+                rs -= 1
+            start = max(rs, m.start() - 100)
+            win = data[start:start + 1500]
+            if b"tools" in win:
+                best = (start, win)
+                break
+        if best:
             break
     if best:
         write(f"{bc}/roles.txt", best[1])

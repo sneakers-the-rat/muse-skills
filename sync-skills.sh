@@ -132,6 +132,7 @@ done
 # A failure here fails the whole snapshot (set -e), so a binary roll
 # that breaks extraction is reported, never silently archived around.
 python3 "$REPO/extract_binary_files.py"
+python3 "$REPO/extract_binary_strings.py"
 
 # binary-etc/ holds extracted files the user has not sorted yet. Updates
 # to files already versioned there commit as usual, but a NEW file there
@@ -165,7 +166,7 @@ read -r CONN_ADDED CONN_REMOVED <<< "$(git -C "$REPO" diff --cached --numstat --
   | awk '{ if ($1 ~ /^[0-9]+$/) a += $1; if ($2 ~ /^[0-9]+$/) r += $2 } END { print a + 0, r + 0 }')"
 read -r DOCS_ADDED DOCS_REMOVED <<< "$(git -C "$REPO" diff --cached --numstat -- docs \
   | awk '{ if ($1 ~ /^[0-9]+$/) a += $1; if ($2 ~ /^[0-9]+$/) r += $2 } END { print a + 0, r + 0 }')"
-read -r BIN_ADDED BIN_REMOVED <<< "$(git -C "$REPO" diff --cached --numstat -- system-prompt binary-skills binary-tools binary-etc browser self_improvement artifacts binary-map.json \
+read -r BIN_ADDED BIN_REMOVED <<< "$(git -C "$REPO" diff --cached --numstat -- system-prompt binary-skills binary-tools binary-etc binary-strings browser self_improvement artifacts binary-map.json \
   | awk '{ if ($1 ~ /^[0-9]+$/) a += $1; if ($2 ~ /^[0-9]+$/) r += $2 } END { print a + 0, r + 0 }')"
 
 # Regenerate the plot with this run's point appended, then stage it too.

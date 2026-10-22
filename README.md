@@ -45,6 +45,20 @@ nowhere on disk. The extraction runs as part of every snapshot:
   size and the extraction time, and for every extracted file its
   `source` path inside the binary, its `target` path in this repo,
   and the byte `offset` its content was read from.
+- `binary-strings/` — string material that has no filename of its
+  own, extracted by `extract_binary_strings.py`: tool definitions
+  split by tool name under `tools/`, browser error strings in
+  `browser/errors.csv` (one `offset,string` row per string), and
+  everything else recovered about a topic under a topical directory
+  (e.g. `browser/bot_challenge/` — role registry, enum vocabulary,
+  the task-tagger classifier, dispatch-string fragments, per-site
+  bot-detection notes). These are **manual curations, not all the
+  strings in the binary**: each file exists because a person (or a
+  stated match) went looking for that kind of string. They may be
+  grouped topically or by kind, and the same string may repeat
+  across files. In `binary-map.json` they are registered like the
+  extracted files, except the entry carries a `match` field —
+  what was matched to find it — instead of a `source` path.
 
 If a file in these trees looks wrong, check `binary-map.json` and the
 extractor before assuming the binary changed — and if the binary did

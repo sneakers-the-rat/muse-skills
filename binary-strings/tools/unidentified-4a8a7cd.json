@@ -1,0 +1,394 @@
+{
+  "name": null,
+  "description": "Record and validate the checkout on the current tab.\n\nSupply your assessment of the tab's current view, with the terms as the page shows them. Include the displayed subtotal and each line's displayed total when the page shows them, and leave them null when it does not. The result gives a checkout reference, the recorded terms, a quote once every term is established, how a purchase can be paid and the fields still unresolved. `checkout.review_cart` and `checkout.commit` act on the terms it records, so call it again as the page changes them. When the order this checkout last submitted has an unknown outcome, the result names it, and `order_outcome` with `order_evidence` records what the merchant's pages show about it. It never requests approval or buys anything.\n\n`order_outcome: placed` requires `status: complete` and the merchant's confirmation in the receipt fields. A complete assessment cannot also report an unknown or failed order. A request acknowledgment without confirmation leaves the outcome unknown.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "tab": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^[A-Za-z][A-Za-z0-9:_-]*$"
+      },
+      "status": {
+        "type": "string",
+        "enum": [
+          "draft",
+          "ready",
+          "complete",
+          "other"
+        ]
+      },
+      "merchant": {
+        "description": "The merchant as the page names it. Null when the page names none, and the page's site stands for it.",
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "merchant_country": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "account": {
+        "description": "The page's text, or null when the checkout has no place for it or not_applicable lists it.",
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "destination": {
+        "description": "The page's text, or null when the checkout has no place for it or not_applicable lists it.",
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "delivery_service": {
+        "description": "The page's text, or null when the checkout has no place for it or not_applicable lists it.",
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "arrival": {
+        "description": "The page's text, or null when the checkout has no place for it or not_applicable lists it.",
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "pickup_location": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "contact": {
+        "description": "The page's text, or null when the checkout has no place for it or not_applicable lists it.",
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "payment_method": {
+        "description": "The page's text, or null when the page shows none or not_applicable lists it.",
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "not_applicable": {
+        "description": "The terms the page says do not apply, such as the account in guest checkout. Each term listed here is null in its own field.",
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "field": {
+              "type": "string",
+              "enum": [
+                "account",
+                "destination",
+                "delivery_service",
+                "arrival",
+                "contact",
+                "payment_method"
+              ]
+            },
+            "page_text": {
+              "description": "The page text that says it does not apply.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "field",
+            "page_text"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "product": {
+              "type": "string"
+            },
+            "seller": {
+              "type": "string"
+            },
+            "quantity": {
+              "type": "number"
+            },
+            "variants": {
+              "description": "Each selected variant as Name: Value, such as Color: Blue.",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "obligations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "unit_amount": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "line_total": {
+              "type": [
+                "number",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "product",
+            "seller",
+            "quantity",
+            "variants",
+            "obligations",
+            "unit_amount",
+            "line_total"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "obligations": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "currency": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "subtotal": {
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "total": {
+        "type": [
+          "number",
+          "null"
+        ],
+        "description": "The displayed amount due now. Record any additional conditional charge separately."
+      },
+      "conditional_amount": {
+        "description": "Maximum additional conditional amount for the whole purchase, in the checkout currency. Account for the applicable quantity when a fee is per person or item. Null when unknown or not applicable.",
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "conditional_terms": {
+        "description": "The conditions under which the merchant may collect the additional charge, as stated. Null when unknown or not applicable.",
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "payment_credential_valid_for_seconds": {
+        "description": "Requested Link card lifetime after payment approval, in seconds. Set it for a delayed charge; null uses the default. Keep it unchanged across inspections unless the payment timing changes.",
+        "type": [
+          "integer",
+          "null"
+        ],
+        "minimum": 1,
+        "maximum": 31536000
+      },
+      "ship_first_name": {
+        "description": "The first name of the shipping address. Shop Pay reads the whole address, from ship_first_name to ship_postal_code.",
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "ship_last_name": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "ship_street": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "ship_extended": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "ship_locality": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "ship_region": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "ship_country": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "ship_postal_code": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "missing": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "receipt_identifier": {
+        "description": "The confirmation number on the merchant's confirmation, or null when the page shows none.",
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "receipt_summary": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "receipt_currency": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "receipt_total": {
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "receipt_products": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "payment_route": {
+        "description": "One selected route; shop_pay requires the runtime's Shop Pay support signal on this view.",
+        "type": [
+          "string",
+          "null"
+        ],
+        "enum": [
+          "card",
+          "shop_pay",
+          "saved",
+          "none",
+          null
+        ]
+      },
+      "order_outcome": {
+        "description": "What the merchant's pages show about the order this checkout last submitted. Null when you record none.",
+        "type": [
+          "string",
+          "null"
+        ],
+        "enum": [
+          "placed",
+          "not_placed",
+          "unknown",
+          null
+        ]
+      },
+      "order_evidence": {
+        "description": "With order_outcome: what the page shows about the order, in your words. Null otherwise.",
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "saved_card_label": {
+        "description": "How the page names a card the merchant saved for the user that this page offers to pay with, in its own words, such as Visa ending in 4242. Null when the page offers no saved card.",
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "saved_card_brand": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "description": "With saved_card_label: the card brand the page shows, or null."
+      },
+      "saved_card_last4": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "description": "With saved_card_label: the last four digits the page shows, or null."
+      }
+    },
+    "required": [
+      "tab",
+      "status",
+      "merchant",
+      "merchant_country",
+      "account",
+      "destination",
+      "delivery_service",
+      "arrival",
+      "pickup_location",
+      "contact",
+      "payment_method",
+      "not_applicable",
+      "items",
+      "obligations",
+      "currency",
+      "subtotal",
+      "total",
+      "ship_first_name",
+      "ship_last_name",
+      "ship_street",
+      "ship_extended",
+      "ship_locality",
+      "ship_region",
+      "ship_country",
+      "ship_postal_code",
+      "missing",
+      "receipt_identifier",
+      "receipt_summary",
+      "receipt_currency",
+      "receipt_total",
+      "receipt_products",
+      "payment_route",
+      "order_outcome",
+      "order_evidence",
+      "saved_card_label",
+      "saved_card_brand",
+      "saved_card_last4"
+    ],
+    "additionalProperties": false
+  }
+}

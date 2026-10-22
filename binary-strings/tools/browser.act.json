@@ -1,0 +1,232 @@
+{
+  "name": "browser.act",
+  "description": "Perform a short sequence of actions on a tab, such as clicking, typing, choosing an option, scrolling, dragging or navigating.\n\nState the intent of the actions briefly. Always start with the element's reference from the view, in `ref`. When the element has no reference, such as a picture, a map, a canvas, a CAPTCHA tile or a slider, or an action on its reference failed, describe it in `look`: say what it is, its visible text or picture, and where it sits, for example \"the Indoor Pick-Up card under Pickup type\" or \"the slider handle at the left end of the track\". Name several targets in one click when the task needs them all, such as every tile showing a bus. A drag describes where it starts in `from_look` and where it ends in `to_look`, and a hold describes the control to press. Add `within` with an element's reference to search only inside it, such as a CAPTCHA widget; a drag takes `from_within` and `to_within`.\n\nA click, fill, hover or scroll can give `ref` and `look` together: the element, or else the element the description finds. The browser uses the reference. When it cannot find that element anymore, for example after the page redrew it, it places the description on a fresh screenshot and acts there only when the description matches exactly one place; otherwise nothing more is sent and the result shows the current view. Actions after that one in the same call are not sent, because their references came from the earlier view. The description never stands in for the order control a checkout reserved or for a sign-in field.\n\nChoosing an option and ticking a box take element references, and waiting takes an element's reference or the text to wait for. Typing takes the field's reference too; to type into a field that has no reference, or whose reference failed, describe the field in `look`, and the browser clicks it and types into it. A key press takes the element's reference, or no target to press the key wherever the focus is. A scroll takes the reference of the area to scroll inside, a `look` description of an area that has none, such as a map or a list, or no target to scroll the page. Drags take `from_look` and `to_look` descriptions, and holds take a `look` description. Include only steps whose targets are already known, and stop where the next step depends on what happens.\n\nMost fills leave out `entry`, and the browser enters the text its usual way. `typing` presses a key for each character, for a field that reacts to each key. `paste` pastes the whole text at once, for a field that expects pasted text. With either, `replace` still puts the text in place of the field's text and `append` still adds it after. `entry` takes the field's reference alone, without a look description.\n\nKeep the mouse button down across acts to watch the page while you drag. `mouse_down` presses the left button on the target its `look` describes and keeps it down. `mouse_move` moves the held button to the target its `look` describes, or by `dx` and `dy` screenshot pixels from where it rests. `mouse_up` lets go where it rests. While the button is held, each view says where it rests on the screenshot, so read the page between moves and correct the next one. Waiting and observing keep it held; any other action lets go first, and so do a takeover and two minutes without a mouse action.\n\nA grounding model places each look target on a screenshot taken just before the action runs. When it cannot place a target, nothing runs and the result says why: `not_visible` when the target is not on screen, so scroll or open what holds it; `ambiguous` when several things match, so describe the one you mean more precisely; `unsupported` when one gesture cannot do it, so split the step. For each placed target the result reports the gesture, how confident the placement was and why.\n\nThe result reports each action and includes the updated view with a current screenshot. When an action opens a new tab, the result names the tab and shows its view. The sequence stops early when the page changes, a target is refused, a decision is needed or an outcome is uncertain. Do not repeat an action whose outcome is uncertain.\n\nA refused step says why. `covered` means something lies over the target, so close it or reach the target another way. `not_visible` means the target is off-screen or hidden, so scroll or open what holds it. `disabled` means the page waits for something first. `page_unresponsive` means the page did not answer in time and the action may still have run, so observe with `browser.observe` before repeating it. `page_busy` means the page was still busy and nothing was sent, so repeat the step. `site_in_use` means another Muse browser has this site open right now, and the result names which one and for how long, so wait a minute before you try again or work on another site meanwhile. `needs_reference` means this browser can do that step only through the element's reference, such as scrolling inside an area on some browsers or typing text with line breaks. If the reference was refused for a reason you can fix, such as something covering it, fix that and use the reference from the current view. If the target has no reference, this browser cannot do that there: reach the goal another way the site offers, or say so in `browser.report`. `entry_unsupported` means this browser cannot type or paste the way `entry` asks, so fill without `entry` or reach the goal another way. `picker_unavailable` means this browser cannot open the control's own picker, so nothing was sent: fill a date or time field with the value, and choose a list's option through its reference instead of clicking the list open. `pointer_not_held` means no mouse button is held, because none was pressed or something let it go, so press it again with `mouse_down`. `pointer_hold_unsupported` means this browser cannot keep the button down between acts, so use one `drag` instead.\n\nAdd `listen` with a number of seconds, up to 600, to hear what the actions start, such as a video after its play button. The browser starts listening before the first action, and the final view carries a transcript of what the tab played, as `browser.observe` describes.\n\nThis tool cannot enter secrets, upload or download files, or save pages as PDFs. It refuses a direct click on the control the latest checkout assessment reserved as the one that places the order, because only the checkout service places orders.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "tab": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^[A-Za-z][A-Za-z0-9:_-]*$"
+      },
+      "intent": {
+        "type": "string",
+        "minLength": 1,
+        "description": "What these actions do, in a few words the user sees on the browser card, such as \"Opening the cart\" or \"Choosing a delivery time\"."
+      },
+      "actions": {
+        "type": "array",
+        "items": {
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "navigate",
+                "back",
+                "forward",
+                "reload",
+                "click",
+                "fill",
+                "set_checked",
+                "select",
+                "press",
+                "scroll",
+                "hover",
+                "drag",
+                "hold",
+                "mouse_down",
+                "mouse_move",
+                "mouse_up",
+                "wait"
+              ]
+            },
+            "url": {
+              "type": "string",
+              "minLength": 1,
+              "format": "uri",
+              "pattern": "^https?://",
+              "description": "With navigate: the page to open."
+            },
+            "ref": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^[A-Za-z][A-Za-z0-9:_-]*$",
+              "description": "The target's element reference from the current view. With click, fill, hover or scroll, ref and look can go together: the element, or else the element the description finds. Of ref and look, set_checked, select, press and wait take only ref, and hold, mouse_down and mouse_move only look. A press without a target goes to whatever has focus, and a scroll without a target scrolls the page."
+            },
+            "look": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The target in words, as it appears on screen: what it is, its visible text or picture, and where it sits. With ref, the same element, used only when the browser cannot find the referenced one."
+            },
+            "within": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^[A-Za-z][A-Za-z0-9:_-]*$",
+              "description": "With look and no ref, an element reference to search inside, such as a CAPTCHA widget."
+            },
+            "button": {
+              "type": "string",
+              "enum": [
+                "left",
+                "middle",
+                "right"
+              ],
+              "description": "With click."
+            },
+            "count": {
+              "type": "integer",
+              "enum": [
+                1,
+                2
+              ],
+              "description": "With click: 2 for a double click."
+            },
+            "text": {
+              "type": "string",
+              "description": "With fill: the text to type. With wait: the text to wait for, anywhere on the page, instead of ref."
+            },
+            "mode": {
+              "type": "string",
+              "enum": [
+                "replace",
+                "append"
+              ],
+              "description": "With fill: replace the field's text or append to it."
+            },
+            "entry": {
+              "type": "string",
+              "enum": [
+                "typing",
+                "paste"
+              ],
+              "description": "With fill on a field's reference: typing presses a key for each character, and paste pastes the whole text at once. Leave it out to let the browser enter the text its usual way."
+            },
+            "checked": {
+              "type": "boolean",
+              "description": "With set_checked."
+            },
+            "key": {
+              "type": "string",
+              "enum": [
+                "Enter",
+                "Tab",
+                "Escape",
+                "Backspace",
+                "Delete",
+                "Space",
+                "ArrowUp",
+                "ArrowDown",
+                "ArrowLeft",
+                "ArrowRight",
+                "Home",
+                "End",
+                "PageUp",
+                "PageDown"
+              ],
+              "description": "With press."
+            },
+            "modifiers": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "Shift",
+                  "Control",
+                  "Alt",
+                  "Meta"
+                ]
+              },
+              "minItems": 0,
+              "uniqueItems": true,
+              "description": "With press: the keys held down during the press."
+            },
+            "direction": {
+              "type": "string",
+              "enum": [
+                "up",
+                "down",
+                "left",
+                "right"
+              ],
+              "description": "With scroll."
+            },
+            "pages": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "With scroll: how far, in screens."
+            },
+            "from_look": {
+              "type": "string",
+              "minLength": 1,
+              "description": "With drag: where the drag starts, in words, as it appears on screen: what it is, its visible text or picture, and where it sits."
+            },
+            "from_within": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^[A-Za-z][A-Za-z0-9:_-]*$",
+              "description": "With from_look, an element reference to search inside, such as a CAPTCHA widget."
+            },
+            "to_look": {
+              "type": "string",
+              "minLength": 1,
+              "description": "With drag: where the drag ends, in words, as it appears on screen: what it is, its visible text or picture, and where it sits."
+            },
+            "to_within": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^[A-Za-z][A-Za-z0-9:_-]*$",
+              "description": "With to_look, an element reference to search inside, such as a CAPTCHA widget."
+            },
+            "duration_ms": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 15000,
+              "description": "With hold: how long to press, in milliseconds."
+            },
+            "dx": {
+              "type": "number",
+              "description": "With mouse_move: how far right to move the held button from where it rests, in screenshot pixels. A negative number moves it left."
+            },
+            "dy": {
+              "type": "number",
+              "description": "With mouse_move: how far down to move the held button from where it rests, in screenshot pixels. A negative number moves it up."
+            },
+            "condition": {
+              "type": "string",
+              "enum": [
+                "visible",
+                "hidden"
+              ],
+              "description": "With wait: visible or hidden waits for the element in ref, or the text in text, to appear or disappear."
+            },
+            "timeout_ms": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 60000,
+              "description": "With wait: the longest to wait, in milliseconds."
+            },
+            "value": {
+              "type": "string",
+              "description": "With select: the value of the option to choose."
+            }
+          },
+          "required": [
+            "kind"
+          ]
+        },
+        "minItems": 1
+      },
+      "listen": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 600
+      }
+    },
+    "required": [
+      "tab",
+      "intent",
+      "actions"
+    ],
+    "additionalProperties": false
+  }
+}
