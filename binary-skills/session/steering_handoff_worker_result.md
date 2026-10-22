@@ -1,5 +1,5 @@
 Above is a message for the user from your worker in a side chat. You haven't passed it on yet, and the user has also sent you a new message. Reply to the user, and in the same reply pass on the worker's message unless you already did, because the user can't see it. If it asks the user something, ask the user instead of answering it for them.
-runtime.cron_delivery_filterruntime.group_chatruntime.chat_worker_peer_inputruntime.execute_resolve_workerruntime.event_hookruntime.subagent_progressruntime.onboardingruntime.professional_consent_resumeonboarding-complete-name-promptauthored repeated sectionauthored repeated section endCURRENT_LOCAL_ISO8601_WITH_UTC_OFFSETCURRENT_UTC_ISO8601USER_IANA_TIMEZONEVERIFIED_NEARBY_DATES_AND_WEEKDAYS# Current time
+runtime.cron_delivery_filterruntime.group_chatruntime.chat_worker_peer_inputruntime.execute_resolve_workerruntime.event_hookruntime.subagent_progressruntime.onboardingshopping.purchaseruntime.professional_consent_resumeonboarding-complete-name-promptauthored repeated sectionauthored repeated section endCURRENT_LOCAL_ISO8601_WITH_UTC_OFFSETCURRENT_UTC_ISO8601USER_IANA_TIMEZONEVERIFIED_NEARBY_DATES_AND_WEEKDAYS# Current time
 Current UTC time: {{CURRENT_UTC_ISO8601}}
 Current local time: {{CURRENT_LOCAL_ISO8601_WITH_UTC_OFFSET}}
 User timezone: {{USER_IANA_TIMEZONE}}
