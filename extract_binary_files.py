@@ -717,6 +717,9 @@ def main():
                 put(s, tfo, data[tfo:tfo + ln], "table")
     # general floating-arrangement reader for what is still heuristic
     starts_g = set(starts)
+    for _off, _raw, _cs, _il in marks:
+        starts_g.add(_off)
+        starts_g.add(_cs)
     for _cfo, _ln in d_struct.values():
         starts_g.add(_cfo)
         starts_g.add(_cfo + _ln)
