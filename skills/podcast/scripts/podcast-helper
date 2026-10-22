@@ -9,6 +9,7 @@ available for edge cases.
 """
 
 import argparse
+import contextlib
 import hashlib
 import fcntl
 import http.client
@@ -19,6 +20,7 @@ import shutil
 import socket
 import subprocess
 import sys
+import time
 import urllib.parse
 import uuid
 from datetime import datetime, timezone
@@ -136,6 +138,14 @@ def main():
         "reconnected later.",
     )
 
+    # ── migrate-feed ────────────────────────────────────────────────
+    sp_migrate = subparsers.add_parser(
+        "migrate-feed",
+        help="Move a show to a new feed, starting it with the latest episode; "
+        "the old feed becomes a read-only archive",
+    )
+    sp_migrate.add_argument("--feed-title", required=True)
+
     # ── save-to-spotify ─────────────────────────────────────────────
     sp_spotify = subparsers.add_parser(
         "save-to-spotify",
@@ -182,6 +192,8 @@ def main():
             cmd_manifest(args)
         elif args.command == "publish":
             cmd_publish(args)
+        elif args.command == "migrate-feed":
+            cmd_migrate_feed(args)
         elif args.command == "save-to-spotify":
             cmd_save_to_spotify(args)
         elif args.command == "update-cover":
@@ -780,15 +792,21 @@ def _generate(args, telemetry):
         output["cover"] = cover_path
 
     if args.publish:
-        pub_result = do_publish(
-            slug,
-            args.feed_title,
-            args.feed_description,
-            args.cover_image,
-            catalog=catalog,
-            audio_artifact_id=audio_artifact_id,
-            cover_artifact_id=cover_artifact_id,
-        )
+        retry_pending_legacy_deletes()
+        # The catalog is read again under the show's lock, so a migration that
+        # finished while this one waited sends the episode to the new feed.
+        with show_lock(args.feed_title):
+            pub_result = publish_finishing_moves(
+                slug,
+                args.feed_title,
+                args.feed_description,
+                args.cover_image,
+                audio_artifact_id=audio_artifact_id,
+                cover_artifact_id=cover_artifact_id,
+            )
+        if pub_result.get("feed_move_completed"):
+            output["feed_move_completed"] = True
+            output["moved_feed"] = pub_result.get("moved_feed")
         if pub_result.get("ok"):
             output["published"] = True
             output["feed_url"] = pub_result.get("feed_url")
@@ -1093,9 +1111,11 @@ def read_manifest():
 
 
 def cmd_publish(args):
-    result = do_publish(
-        args.slug, args.feed_title, args.feed_description, args.cover_image
-    )
+    retry_pending_legacy_deletes()
+    with show_lock(args.feed_title):
+        result = publish_finishing_moves(
+            args.slug, args.feed_title, args.feed_description, args.cover_image
+        )
     print(json.dumps(result, separators=(",", ":")))
 
 
@@ -1152,9 +1172,17 @@ def resolve_publish_feed_id(catalog, existing_feed, feed_title):
 
     # Every feed the catalog knows, most recent first, so a title that somehow
     # names two feeds resolves to the one in current use rather than at random.
+    # A random-id feed outranks a legacy one under the same title: migration
+    # moves a show off its legacy feed, which is read-only from then on.
     known_feeds = list(catalog.get("feeds") or [])
     if existing_feed:
         known_feeds.append(existing_feed)
+    known_feeds.sort(
+        key=lambda known: isinstance(known, dict)
+        and is_legacy_feed_id(
+            known.get("feed_id") or feed_id_from_feed_url(known.get("feed_url"))
+        )
+    )
 
     for known in known_feeds:
         if not isinstance(known, dict):
@@ -1196,6 +1224,39 @@ def resolve_publish_feed_id(catalog, existing_feed, feed_title):
         return candidates.pop()
 
     return ""
+
+
+def publish_finishing_moves(slug, feed_title, feed_description, cover_image, **kwargs):
+    """Publish, first finishing an interrupted move of this show to a new feed.
+
+    A move that died part-way may already have retired the old feed while the
+    catalog still names it, and publishing then would start yet another feed.
+    The user agreed to the move when it started, so complete it; if it cannot
+    be completed, refuse rather than fork the show. Call with the show's lock
+    held.
+    """
+    moved = None
+    if _pending_migrations_for(feed_title):
+        moved = do_migrate_feed(feed_title)
+        if not moved.get("ok"):
+            return {
+                "ok": False,
+                "error": (
+                    "Not published: an earlier move of this show to a new feed is "
+                    f"unfinished and could not be completed ({moved.get('error')}). "
+                    "Run migrate-feed again, then publish."
+                ),
+            }
+    result = do_publish(slug, feed_title, feed_description, cover_image, **kwargs)
+    if moved is not None:
+        # Reported whether or not the episode published: the move is done and
+        # its record gone, so this is the only time the user hears about it.
+        result["feed_move_completed"] = True
+        result["moved_feed"] = {
+            key: moved.get(key)
+            for key in ("feed_url", "subscription_links", "seed_episode_title")
+        }
+    return result
 
 
 def do_publish(
@@ -1427,6 +1488,348 @@ def do_publish(
         **{k: v for k, v in response.items() if k != "ok"},
         "subscription_links": subscription_links,
     }
+
+
+# ── migrate-feed ────────────────────────────────────────────────────
+
+
+def is_legacy_feed_id(feed_id):
+    """True for a feed id derived from the feed title, before ids were random.
+
+    Those are UUIDv5, whose version is the first character of the third group.
+    """
+    parts = str(feed_id or "").split("-")
+    return len(parts) == 5 and parts[2][:1] == "5"
+
+
+def cmd_migrate_feed(args):
+    retry_pending_legacy_deletes()
+    with show_lock(args.feed_title):
+        result = do_migrate_feed(args.feed_title)
+    print(json.dumps(result, separators=(",", ":")))
+
+
+def do_migrate_feed(feed_title):
+    catalog = read_manifest()
+    existing_feed = catalog.get("feed", {})
+    feed_id = resolve_publish_feed_id(catalog, existing_feed, feed_title)
+
+    # A move this VM started but did not finish takes precedence over the title
+    # lookup: its catalog may already be half-updated, so the title can resolve
+    # to nothing or to the new feed while the move still owes catalog writes.
+    pending = _pending_migrations_for(feed_title)
+    if len(pending) > 1:
+        return {
+            "ok": False,
+            "error": "more than one unfinished move matches this show; not guessing",
+        }
+    if pending:
+        legacy_id, record = pending[0]
+        if feed_id and not is_legacy_feed_id(feed_id) and feed_id != record.get("feed_id"):
+            return {
+                "ok": False,
+                "error": "an unfinished move for this show conflicts with its current feed",
+            }
+        feed_id = legacy_id
+    elif not feed_id:
+        return {"ok": False, "error": f"no published feed titled '{feed_title}'"}
+    elif not is_legacy_feed_id(feed_id):
+        return {
+            "ok": False,
+            "error": "this show already uses the current feed format; nothing to migrate",
+        }
+
+    # Phase one creates the new feed and touches nothing legacy. Its record is
+    # written durably before phase two retires the old feed, so a move can
+    # always be finished: a retry reuses the recorded feed rather than minting
+    # another copy of the episode.
+    moved = _read_json_dict(_migration_record_path(feed_id))
+    if not moved:
+        response, stderr = _remote_storage_json("migrate-feed", "--feed-id", feed_id, "--prepare")
+        if response.get("reason") == "already_retired":
+            return {"ok": False, "error": "this show's old feed was already retired"}
+        if not response.get("ok"):
+            return {"ok": False, "error": f"remote-storage failed: {response.get('error') or stderr}"}
+        moved = response["feed"]
+        _write_durably(_migration_record_path(feed_id), moved)
+
+    response, stderr = _remote_storage_json(
+        "migrate-feed", "--feed-id", feed_id, "--retire-into", moved["feed_id"]
+    )
+    reason = response.get("reason")
+    if response.get("ok"):
+        if response.get("legacy_audio_pending_delete"):
+            _add_pending_legacy_delete(response["legacy_audio_pending_delete"])
+        return finish_migration(catalog, existing_feed, feed_id, moved)
+    if reason == "already_retired":
+        # An earlier retire committed but its result was lost. Whether it also
+        # deleted the moved episode's legacy audio is unknown, and that URL was
+        # published in the legacy RSS; the delete is idempotent and the retired
+        # feed no longer lists the episode, so queue it.
+        _add_pending_legacy_delete({"feed_id": feed_id, "episode_id": _seed_episode_id(moved)})
+        return finish_migration(catalog, existing_feed, feed_id, moved)
+    if reason == "target_invalid":
+        # The recorded feed can no longer receive this move (the old feed
+        # gained an episode since, or the copy is gone). Its copy of the
+        # episode is tracked by nothing else, so remove it now, or queue the
+        # removal durably if that fails, before forgetting the record and
+        # starting over on the next run.
+        copy = {"feed_id": moved["feed_id"], "episode_id": _seed_episode_id(moved)}
+        cleanup, _ = _remote_storage_json(
+            "unpublish-episode", "--feed-id", copy["feed_id"], "--episode-id", copy["episode_id"]
+        )
+        if not cleanup.get("ok"):
+            _add_pending_legacy_delete(copy)
+        _migration_record_path(feed_id).unlink(missing_ok=True)
+        return {
+            "ok": False,
+            "error": "The show changed while it was being moved. Run migrate-feed again.",
+        }
+    return {
+        "ok": False,
+        "error": (
+            "The show's new feed is ready but switching over did not complete "
+            f"({response.get('error') or stderr}). Run migrate-feed again to finish."
+        ),
+    }
+
+
+def _remote_storage_json(*args):
+    """Run remote-storage and return (its last JSON line, stderr)."""
+    result = subprocess.run(
+        ["/opt/hatch/bin/remote-storage", *args], capture_output=True, text=True
+    )
+    lines = _json_lines(result.stdout)
+    stderr = result.stderr.strip() if result.stderr else "unknown error"
+    return (lines[-1] if lines else {}), stderr
+
+
+def _write_durably(path, record):
+    """Write a record and fsync its directory, so it survives a crash or
+    restart that follows immediately."""
+    _atomic_write_json(path, record)
+    _fsync_directory(path.parent)
+
+
+def finish_migration(catalog, existing_feed, feed_id, moved):
+    """Record a completed move in the catalog and clear its migration record."""
+    known = next(
+        (
+            row
+            for row in [*(catalog.get("feeds") or []), existing_feed]
+            if isinstance(row, dict)
+            and (row.get("feed_id") or feed_id_from_feed_url(row.get("feed_url")))
+            == feed_id
+        ),
+        {},
+    )
+    links = build_subscription_links(moved["feed_url"], known.get("spotify_show_url"))
+    # The legacy row keeps its id and URL but takes the archive title, so the
+    # show's own title names only the new feed. Written first because each
+    # feed write also updates the "most recently published" row, which must
+    # end on the new feed.
+    archived = {"feed_title": moved["archived_title"], "feed_id": feed_id}
+    if known.get("feed_url"):
+        archived["feed_url"] = known["feed_url"]
+    feed = {
+        "feed_title": moved["feed_title"],
+        "feed_id": moved["feed_id"],
+        "feed_url": moved["feed_url"],
+    }
+    for key in ("cover", "spotify_show_url", "spotify_show_id"):
+        if known.get(key):
+            feed[key] = known[key]
+    # The moved episode's catalog row follows it, so deleting the episode later
+    # removes the only public copy.
+    seed = next(
+        (
+            episode
+            for episode in catalog.get("episodes") or []
+            if isinstance(episode, dict)
+            and media_path(episode.get("episode_url"))
+            == media_path(moved["seed_legacy_episode_url"])
+        ),
+        None,
+    )
+    writes = [lambda: upsert_catalog_feed(archived), lambda: upsert_catalog_feed(feed)]
+    if seed is not None:
+        seed = {
+            **seed,
+            "episode_url": moved["seed_episode_url"],
+            "feed_url": moved["feed_url"],
+        }
+        writes.append(lambda: upsert_catalog_episode(seed))
+    try:
+        for write in writes:
+            with_retries(write)
+    except RuntimeError as error:
+        # The legacy feed is already retired while the catalog still names it.
+        # Hand back the new link so the user can still switch; the migration
+        # record stays, so migrate-feed or the show's next publish (which
+        # finishes pending moves first) completes the catalog update.
+        return {
+            "ok": False,
+            "catalog_update_failed": True,
+            "feed_url": moved["feed_url"],
+            "subscription_links": links,
+            "error": (
+                "The show moved to a new feed, but recording that failed "
+                f"({error}). Run migrate-feed again to finish. The show's next "
+                "publish also tries to finish it first, and is refused until it can."
+            ),
+        }
+    _migration_record_path(feed_id).unlink(missing_ok=True)
+
+    return {
+        "ok": True,
+        "feed_title": moved["feed_title"],
+        "feed_url": moved["feed_url"],
+        "archived_title": moved["archived_title"],
+        "seed_episode_title": moved["seed_episode_title"],
+        "subscription_links": links,
+    }
+
+
+def _feed_state_dir():
+    """Private, VM-local state for feed moves. Never published: the files name
+    new feed ids, which must stay unguessable."""
+    return podcasts_dir() / ".feed-migrations"
+
+
+def _migration_record_path(legacy_feed_id):
+    return _feed_state_dir() / f"{legacy_feed_id}.json"
+
+
+def _pending_migrations_for(feed_title):
+    """Unfinished moves of the show titled `feed_title`, as (legacy id, record)."""
+    wanted = str(feed_title or "").strip().casefold()
+    found = []
+    for path in sorted(_feed_state_dir().glob("*.json")):
+        if path == _pending_deletes_path() or not is_legacy_feed_id(path.stem):
+            continue
+        record = _read_json_dict(path)
+        if str(record.get("feed_title") or "").strip().casefold() == wanted:
+            found.append((path.stem, record))
+    return found
+
+
+def _seed_episode_id(record):
+    """The moved episode's id; records written before it was stored carry it
+    only in the legacy episode URL."""
+    if record.get("seed_episode_id"):
+        return record["seed_episode_id"]
+    filename = media_path(record.get("seed_legacy_episode_url")).rsplit("/", 1)[-1]
+    return filename[: -len(".mp3")] if filename.endswith(".mp3") else filename
+
+
+def _pending_deletes_path():
+    return _feed_state_dir() / "pending-legacy-deletes.json"
+
+
+@contextlib.contextmanager
+def _pending_deletes_lock():
+    """Guard the shared pending-delete list, which every show's moves use."""
+    path = _feed_state_dir() / "locks" / "pending-legacy-deletes.lock"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        yield
+
+
+def _add_pending_legacy_delete(entry):
+    with _pending_deletes_lock():
+        pending = _read_json_dict(_pending_deletes_path()).get("pending") or []
+        if entry not in pending:
+            pending.append(entry)
+            # Durable before returning: callers drop the only other reference
+            # to this copy (a migration record) right after.
+            _write_durably(_pending_deletes_path(), {"pending": pending})
+
+
+def retry_pending_legacy_deletes():
+    """Retry unpublishing episode copies a move left behind until each succeeds.
+
+    Mostly the moved episode's legacy audio, whose URL was published in the
+    legacy RSS; also the copy in a prepared feed a move had to abandon. Each is
+    retried before every later publish or move. Best-effort: a failure here
+    never blocks the caller.
+    """
+    path = _pending_deletes_path()
+    with _pending_deletes_lock():
+        pending = _read_json_dict(path).get("pending") or []
+    if not pending:
+        return
+    # The deletes run outside the lock; afterwards only the entries completed
+    # here are removed, so ones another move added meanwhile survive.
+    completed = []
+    for entry in pending:
+        result = subprocess.run(
+            [
+                "/opt/hatch/bin/remote-storage",
+                "unpublish-episode",
+                "--feed-id",
+                str(entry.get("feed_id", "")),
+                "--episode-id",
+                str(entry.get("episode_id", "")),
+            ],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode == 0:
+            completed.append(entry)
+    if not completed:
+        return
+    with _pending_deletes_lock():
+        current = _read_json_dict(path).get("pending") or []
+        _atomic_write_json(
+            path, {"pending": [entry for entry in current if entry not in completed]}
+        )
+
+
+@contextlib.contextmanager
+def show_lock(feed_title):
+    """Serialize publish and migrate-feed for one show on this VM.
+
+    A publish that read the feed before a concurrent move retired it would
+    otherwise write it back and undo the retirement.
+    """
+    key = hashlib.sha256(str(feed_title or "").strip().casefold().encode()).hexdigest()
+    path = _feed_state_dir() / "locks" / f"{key[:32]}.lock"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        yield
+
+
+def _json_lines(stdout):
+    """Every JSON object line remote-storage printed, in order."""
+    lines = []
+    for line in (stdout or "").strip().splitlines():
+        try:
+            value = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(value, dict):
+            lines.append(value)
+    return lines
+
+
+def media_path(url):
+    """The host-independent media path of a published episode URL, or ""."""
+    if not isinstance(url, str) or "/podcasts/media/" not in url:
+        return ""
+    return url.split("/podcasts/media/", 1)[1]
+
+
+def with_retries(write, attempts=3, delay_secs=2):
+    """Run a catalog write, retrying transient daemon failures."""
+    for attempt in range(attempts):
+        try:
+            return write()
+        except RuntimeError:
+            if attempt == attempts - 1:
+                raise
+            time.sleep(delay_secs)
 
 
 def resolve_cover_image(explicit_path):

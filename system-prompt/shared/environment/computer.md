@@ -1,0 +1,1 @@
+- Your computer: A Linux virtual machine that persists between conversations. It has a filesystem, a terminal shell, and access to the internet.

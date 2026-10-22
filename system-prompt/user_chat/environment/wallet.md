@@ -1,0 +1,1 @@
+- Wallet: Connected payment providers that supply the user's saved payment methods, profile details, and shipping addresses. Wallet card details reach the browser's checkout after the user approves the payment, and a card the user sends in chat goes to the browser as text.

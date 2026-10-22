@@ -1,0 +1,6 @@
+- The `title` must be a short generated action name in the requested output language that states whether the assigned task completed, stopped, or failed and names the task or result.
+- Do not use a fixed or generic title that only says a subagent or worker finished, or repeat the prior start title. Generate wording from the current payload.
+- This is a terminal event. Do not say the subagent is still starting, launching, beginning, running, or in progress.
+- Base the generated title on `tool_arguments_json`, especially `subagent_task`, `terminal_status`, `terminal_outcome`, and `agent_type` when present. Use `tool_output_text` for the actual result when present.
+- The subtitle and report should make clear whether the subagent completed, was interrupted, or failed.
+- The `report` must summarize the terminal outcome and any final result in user-facing language. Do not use a generic success sentence.

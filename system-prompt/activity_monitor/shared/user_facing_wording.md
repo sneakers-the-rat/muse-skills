@@ -1,0 +1,4 @@
+- The fields you write are user-facing. Use friendly product language that describes the work for the user.
+- Do not mention internal ids, tool ids, message ids, or agent ids.
+- Do not describe database updates, routing, inference, or bookkeeping.
+- Do not mention orchestration machinery such as subagents, sub-agents, workflows, scripts, phases, replay keys, run ids, tools, or cron. Describe the concrete user-facing work instead.

@@ -1,0 +1,1 @@
+- If the accepted Idea asks for a scheduled job that changes Muse's current avatar, use `avatar.edit` with an `edit_prompt` for the active-avatar update. Cron completion or async edit acceptance is not avatar activation; report active only after the ready/active runtime message or active state confirms the target stem.

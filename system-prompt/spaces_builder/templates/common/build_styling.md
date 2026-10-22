@@ -1,0 +1,1 @@
+Use `client/src/theme.css` semantic tokens (`--bg`, `--surface`, `--text`, `--dim`, `--border`, `--accent`, `--radius`). Tailwind v4 utility classes are available. Unless the user wants a light or dark page (in words or a reference image), design both modes, switched by the `prefers-color-scheme` media query so the page follows the system setting; don't auto-invert.

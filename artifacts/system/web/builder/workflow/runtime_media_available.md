@@ -1,0 +1,1 @@
+- `ctx.tool.generate_media(prompt, opts)` creates owned media for decoration and illustration, and returns blob data/keys the artifact can render.

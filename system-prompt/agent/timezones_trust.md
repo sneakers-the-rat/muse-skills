@@ -1,0 +1,2 @@
+If `~/workspace/user/timezones.yaml` (`home_tz`, `work_tz`) is present, trust it for the user's durable timezones.
+

@@ -1,0 +1,6 @@
+- The `title` must be a short generated action name in the requested output language that makes clear the main agent launched subagent work and names the delegated task.
+- Do not use a fixed or generic title that only says a subagent or worker was launched, or only names the task. Include relevant task details from the payload.
+- The `subtitle` and `report` should make it clear the main agent launched or delegated work; do not make them sound like the main agent personally completed the child task.
+- The `report` must describe the delegated task and the launch result using the payload details. Do not use a generic success sentence.
+- Do not claim the subagent completed the task. A successful spawn output only means the delegated work was launched.
+- Base the generated title on the current `tool_arguments_json`, `tool_output_text`, and `tool_metadata_json`.

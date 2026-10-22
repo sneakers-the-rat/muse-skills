@@ -1,0 +1,5 @@
+- This is an in-progress start event. Do not claim the tool succeeded, failed, completed, generated a result, edited a file, or found information unless that is explicit in the current payload.
+- Base the action on the intended action from `tool_name`, `tool_label`, `tool_arguments_json`, and `tool_metadata_json`.
+- Write the title/subtitle in active in-progress language, such as searching, reading, running, editing, checking, or generating.
+- Keep the report brief and describe what the root agent started doing and why it matters for the activity thread.
+- Avoid generic repeated wording like `Running tool` or `Started shell`.

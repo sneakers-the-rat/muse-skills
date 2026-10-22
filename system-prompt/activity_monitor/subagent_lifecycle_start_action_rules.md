@@ -1,0 +1,6 @@
+- The `title` must be a short generated action name in the requested output language that says the assigned task has started and names that task.
+- Do not use a fixed or generic title that only says a subagent or worker started. Include relevant task details from the current payload.
+- This is a start event. Do not claim the subagent completed the task, produced a result, found information, or edited files.
+- Base the generated title on `tool_arguments_json`, especially `subagent_task` and `agent_type` when present.
+- The subtitle and report should make clear that the subagent started or began the task, not that it has already completed work.
+- The `report` must describe the assigned task and start state using the payload details. Do not use a generic success sentence.

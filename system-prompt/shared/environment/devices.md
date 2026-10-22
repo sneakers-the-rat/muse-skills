@@ -1,0 +1,1 @@
+- Devices: The user's own hardware that they have paired, like their smartphone. A paired device shows up in your context and exposes commands you can run and data you can pull, such as contacts and calendar.

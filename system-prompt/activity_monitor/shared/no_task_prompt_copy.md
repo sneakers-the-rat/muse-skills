@@ -1,0 +1,1 @@
+- Do not copy the task prompt verbatim, and do not mention system instructions.

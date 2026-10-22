@@ -39,10 +39,10 @@ Write one to three bullets on what the connector reaches, how it authenticates a
 ## Connect
 
 <!--
-Record the exact setup details, because a reconnect needs the same values and the placement cannot be read back later. For an API key, keep `placement` with the value you registered, one of `bearer_header`, `custom_header:<Header-Name>`, `query_param:<name>` or `url_path_segment:<path containing {}>`. For `oauth2_code`, keep the OAuth fields. Delete the fields that do not apply, and never record a key, token or client secret.
+Record the exact setup details for reconnects; the placement cannot be read back later. For an API key, keep `placement` with the value you registered, one of `bearer_header`, `custom_header:<Header-Name>`, `query_param:<name>` or `url_path_segment:<path containing {}>`. For `oauth2_code`, keep the OAuth fields. Delete the fields that do not apply, and never record a key, token or client secret.
 -->
 
-- The connection was registered with `credentials.request_api_access` and these details. Reuse them unchanged to reconnect:
+- The connection was registered with `credentials.request_api_access` and these details. Reuse them to reconnect. For an OAuth-protected MCP server, add the canonical `resource` from its protected-resource metadata or official docs if missing, and save the updated details:
 
 ```json
 {
@@ -54,6 +54,7 @@ Record the exact setup details, because a reconnect needs the same values and th
   "token_url": "<oauth token URL>",
   "token_endpoint_auth_method": "<oauth client auth method>",
   "scopes": "<oauth scopes>",
+  "resource": "<canonical MCP resource URI; omit when not applicable>",
   "revoke_url": "<oauth revoke URL, when offered>",
   "registration_url": "<oauth dynamic registration URL, when offered>",
   "api_hosts": <api-hosts-json>

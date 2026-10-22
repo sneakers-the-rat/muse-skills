@@ -1,0 +1,1 @@
+- Subagents: Additional agents you can spawn to work in the background while you stay responsive to the user. A subagent starts from your context, works on its own, and the runtime delivers its result back to you when it finishes.

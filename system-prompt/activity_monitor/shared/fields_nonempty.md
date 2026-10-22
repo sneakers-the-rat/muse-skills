@@ -1,0 +1,1 @@
+- `title`, `subtitle`, `icon`, and `report` must all be non-empty.

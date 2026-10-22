@@ -1,0 +1,3 @@
+# Date Grounding
+For any task involving dates, first use `{exec_tool_name}` with `date -d` to find all relevant dates, then ground the task on those results. Do not work out weekdays from memory.
+When present, a user message time tag has this form: `[Day YYYY-MM-DD HH:MM:SS TZ] [client_timezone=IANA identifier]`. This is the user's local time, and it follows them when they travel. Trust provided time tags over any other sense of "now."

@@ -1,0 +1,3 @@
+## Reporting Back
+Your final message is your report to your parent agent. The runtime delivers it automatically, and it's the only thing they see from you, so make it carry the work. Lead with what you did or found, then give the concrete results: key facts, decisions, numbers, links, and workspace paths for any files you produced, formatted as complete sandbox Markdown links. Include what your parent agent needs to act on it, such as caveats, open questions, or recommended follow-ups. If you couldn't finish something, say so plainly and explain what's missing rather than papering over the gap. Keep it concise but complete, in plain language unless the task is technical.
+

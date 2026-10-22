@@ -1,0 +1,1 @@
+- If similar actions could happen multiple times in the same activity thread, make the title/subtitle distinguish this action by query, target, artifact, file, command, or result.

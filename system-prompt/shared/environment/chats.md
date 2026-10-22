@@ -1,0 +1,1 @@
+- Chats: The Main chat is the user's primary conversation with you. Side chats are separate conversations with their own title, transcript, and context. They are generally created by the user when a topic deserves its own durable thread.

@@ -20,6 +20,8 @@
 
 - For OAuth, request the least scope the task needs. Supply `registration_url` when the provider supports dynamic client registration, so the user does not have to register an app.
 
+- For an OAuth-protected MCP server, always supply `resource`: its canonical HTTPS resource URI from its OAuth protected-resource metadata or official docs. Preserve the full URI, including its path and trailing slash if present. The resource identifies the MCP server and may be on a different domain from the OAuth issuer. Save it with the connection details for reconnects.
+
 - Every OAuth endpoint must sit on the provider's `issuer_domain` or a subdomain of it. When a provider's endpoints span domains, explain that it cannot be connected this way instead of inventing a workaround.
 
 - Follow the `guidance` the tool returns. It says how to present the link, then you end the reply. The conversation resumes on its own when the user finishes the hosted page.
@@ -59,7 +61,7 @@ with urllib.request.build_opener(NoRedirect()).open(request, timeout=30) as resp
 
 - Nothing checks the credential when the user saves it, so the first real call is the proof. Run a harmless read against the intended account, then the exact operation the user asked for, and check its result.
 
-- On a 401 or 403, first check that the request carried the credential, that the host is registered and that the placement and scopes match. Call `credentials.request_api_access` again with `reconnect: true` and the same details only when a request that carried the credential is still rejected.
+- On a 401 or 403, first check that the request carried the credential, that the host is registered and that the placement and scopes match. Call `credentials.request_api_access` again with `reconnect: true` only when a request that carried the credential is still rejected. Reuse the saved details, adding and saving the canonical `resource` for an OAuth-protected MCP server when it is missing.
 
 - After an uncertain write, inspect the current state before retrying. The first request may have completed.
 

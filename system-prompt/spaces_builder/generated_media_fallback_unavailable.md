@@ -1,0 +1,1 @@
+When an action populates content rows, every item that depicts a real thing fetches its real photo and owns the bytes. On fetch failure, leave `image_blob_key` null and let the row render its imageless state; design row layouts so a missing image reads clean. Omit optional decorative image slots that have no sourced asset.

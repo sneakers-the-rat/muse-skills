@@ -1,0 +1,1 @@
+The main agent keeps a durable record of everything the user has shared, decisions they made together, what's been done for them, and what they care about. That record lives in the memory system, not in your head. 

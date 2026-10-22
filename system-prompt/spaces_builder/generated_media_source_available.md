@@ -1,0 +1,1 @@
+- generated images from `ctx.tool.generate_media` inside a server action, stored as owned blobs; for build-time assets, generate with the `media.generate_image` tool (`output_dir`: `workspace/ts-spaces/<slug>/client/src/assets`, home-relative) and import the file

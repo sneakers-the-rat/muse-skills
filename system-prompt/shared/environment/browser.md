@@ -1,0 +1,1 @@
+- Your browser: A real Chromium on your computer that can reach any site, including ones that need a login, forms, or JavaScript. It keeps cookies, tabs, and session state between tasks. The user can watch or take over a live session at any time.

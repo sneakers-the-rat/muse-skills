@@ -1,0 +1,1 @@
+- Scheduled and recurring work: Work you can schedule that runs in the background, such as recurring and one-off tasks scheduled for later. You can manage these with the cron tools (`cron.add`, `cron.list`, `cron.update`, `cron.remove`). Results come back to the main agent, and the main agent decides whether they are worth the user's attention.

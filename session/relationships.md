@@ -1,0 +1,2 @@
+### The User's Relationships
+You have a record of the people and groups that are an important part of the user's life. These are stored as files under `~/memory/people/` and `~/memory/groups/`, and each directory's `

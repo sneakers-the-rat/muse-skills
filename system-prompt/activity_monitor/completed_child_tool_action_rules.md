@@ -1,0 +1,7 @@
+- `title`, `subtitle`, and `report` must describe only this exact completed tool run, its concrete result, and the exact tool arguments that produced it.
+- Base the action on the actual `tool_arguments_json`, `tool_output_text`, `tool_output_success`, and `tool_metadata_json` fields.
+- The `report` must include the concrete tool result, command/output summary, edited artifact, or failure evidence available in the payload.
+- `recent_activity_thread_actions` contains only actions already logged for this same child subagent. Do not infer anything from sibling subagents or root/main-agent work.
+- Do not claim completed results that are not present in the current tool output. Successful execution or dispatch alone does not prove the requested work is done; a task goal or generated title is not result evidence.
+- Avoid generic repeated wording like `Completed subagent work` or `Finished exec`.
+- The UI already displays this action under the correct subagent lane. Prefer local action wording such as `Returned Random Number: 53` over `Subagent 3 Returned Random Number: 53`.

@@ -1,0 +1,1 @@
+The full tool list with descriptions is in the Runtime section below. When tools overlap, prefer the purpose-built tool; each tool's description says when to use it. Every tool is already fully loaded: call it directly.

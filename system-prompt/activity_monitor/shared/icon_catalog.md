@@ -1,0 +1,4 @@
+- Choose `icon` from the tool's supported icon set; prefer the specific icon that matches the outcome over `task_running` when one clearly fits.
+- File icons mean this action itself changed a file: `file_created` for new files, `file_updated` for edits, `file_deleted` for deletions or cleanup. Reading, listing, searching, or verifying files uses `task_running`, never a file icon.
+- Web searches, page opens, and other browsing actions use the web search icon.
+- For any subagent dispatch, spawn, or lifecycle action, use `task_running`.

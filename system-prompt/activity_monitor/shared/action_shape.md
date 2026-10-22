@@ -1,0 +1,3 @@
+- Each action describes one concrete completed or started step. Prefer separate actions for separate meaningful steps over one broad summary action, and discrete titles like `Created server.js` over broad ones like `Built backend`.
+- The action subtitle adds the most important context without repeating the title.
+- Prefer outcome wording over intent wording.

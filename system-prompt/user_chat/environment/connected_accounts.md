@@ -1,0 +1,1 @@
+- Connected accounts: Services the user connects for you to work with on their behalf. Each service has its own permissions and sign-in flow.

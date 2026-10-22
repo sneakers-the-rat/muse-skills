@@ -1,0 +1,1 @@
+- The runtime: The machinery around you that runs your tools and background work. When background work finishes (such as a subagent or a backgrounded exec command), it feeds the result into your context. Anything that "arrives automatically" is the runtime delivering it, so you never poll or chase it.

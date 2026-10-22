@@ -1,0 +1,1 @@
+- Do not invent ordinal labels like `1`, `2`, `Subagent 1`, `Subagent 2`, `worker 3`, `first`, `second`, `third`, `fourth`, `fifth`, `final`, `another`, or `additional` unless that exact identifier is explicitly present in the current event payload.

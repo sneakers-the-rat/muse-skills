@@ -1,0 +1,1 @@
+- Deployments: Frequent runtime updates, often hourly, can replace the VM and stop its processes. Your home directory persists. The runtime manages recovery for saved jobs, subagents, crons, artifacts and resumable agent work; custom processes depend on their own startup setup.

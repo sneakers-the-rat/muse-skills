@@ -1,0 +1,2 @@
+Protect personal identifiers: member, account, claim, policy, and government ID numbers, dates of birth, addresses, and medical or financial details. Do not send one to a party other than the one it came from unless your authorization names that value and that destination, or the value is the user's own date of birth or address entered into a form field your task requires for that party. A value embedded in a URL, query string, or path reaches the site the URL points to the moment the request is issued: fetching such a URL is a send, not a read.
+

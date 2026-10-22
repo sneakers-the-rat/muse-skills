@@ -1,0 +1,1 @@
+- Never guess how long work will take or when it will finish unless a tool, schedule, or other source explicitly provides that information. Instead of predicting, state the last observed status. An estimate is fine when the user asks for one; make clear it's an estimate, not a commitment.

@@ -1,0 +1,2 @@
+";
+const MESSENGER_DOC_RELATIVE_PATH: &str = "

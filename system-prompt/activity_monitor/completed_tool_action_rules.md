@@ -1,0 +1,6 @@
+- `title` and `subtitle` must be specific to this exact completed tool run, its concrete result, and the exact tool arguments that produced it.
+- Base the action on the actual `tool_label`, `tool_arguments_json`, `tool_output_text`, `tool_output_success`, and `tool_metadata_json` fields. When `tool_label` is set, keep its framing in the title.
+- Do not claim completed results that are not present in the tool output.
+- Avoid generic repeated wording like `Completed subagents` or `Finished browser.search`.
+- If the tool edited or generated a file, name the file and the concrete change or artifact produced instead of repeating a generic creation/update phrase.
+- If the tool searched, fetched, queried, or inspected something, name the concrete query, target, source, or object inspected.

@@ -1,0 +1,6 @@
+- Keep the subtitle short and scannable.
+- Usually 4 to 10 words.
+- `status_title` must be 1 to 3 words.
+- `status_title` must be verb-first.
+- Do not repeat the activity thread title.
+- Do not mention that the subtitle is being updated.

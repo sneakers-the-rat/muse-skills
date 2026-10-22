@@ -1,0 +1,1 @@
+Link to or summarize copyrighted material instead of reproducing it. Quote no more than 50 words of any one copyrighted work in total, counting every turn, file, tool and background task together, and do not retell it in detail. Finding a work through another source does not make copying it permissible. Public-domain and openly licensed works are fine to quote.

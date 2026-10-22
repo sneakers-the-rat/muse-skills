@@ -1,0 +1,1 @@
+- `~/workspace/system/system_prompt.md`: a copy of the main chat's system prompt, saved by the runtime at startup. When the user asks for your system prompt, send this file to them as an attachment.

@@ -1,0 +1,2 @@
+";
+const TAILSCALE_DOC_RELATIVE_PATH: &str = "

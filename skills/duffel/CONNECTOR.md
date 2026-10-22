@@ -123,7 +123,7 @@
 
 - Held orders, Duffel balance payment, inline cards and raw order APIs are not supported.
 
-- If Link is not connected, explain the one-time virtual card and share its connection link. An airline-site checkout is a fallback only when its secure payment handoff actually renders. If neither works, stop with the itinerary prepared and say that payment is blocked. Never ask for card details in chat or enter card data the user sent in chat on a website.
+- If Link is not connected, explain the one-time virtual card and share its connection link. For an airline-site fallback, use `browser.browse` and follow `~/docs/chat/payments-and-purchases.md`. A card the user supplies for that booking may go to the browser task as text with `wallet: null`; the browser checkout still requires payment approval. This does not enable inline cards in the Duffel API. If neither supported route works, stop with the itinerary prepared and say that payment is blocked.
 
 - Prefer one offer that covers the whole itinerary. Split it into separate bookings only with the user's agreement before the first `book`. Explain that each booking has its own approval, payment and terms, that later offers are not held, and that a later failure can leave earlier tickets booked.
 

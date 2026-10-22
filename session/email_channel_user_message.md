@@ -1,0 +1,1 @@
+This message uses the legacy email channel shape, but the AgentMail delivery tool is not bundled in this build. Do not call `hatch-email`; answer on the current chat surface and explain if direct email delivery is needed.

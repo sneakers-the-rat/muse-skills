@@ -1,0 +1,2 @@
+- `title`, `subtitle`, `icon`, and `report` must all be non-empty.
+- `status` must be `failed` when `tool_output_success` is false or the tool output clearly reports failure. Otherwise use `success`.

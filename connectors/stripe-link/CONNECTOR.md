@@ -16,6 +16,8 @@
 
 - In a browser checkout, the checkout workflow checks for a standard card form and resolves whether Link fits. A card form whose number, expiry and security code appear only after an earlier step, such as the name on the card, is still a standard card form.
 
+- For a delayed or conditional charge, pass its amount, conditions and stated collection timing in the browser task, including relevant service dates. The checkout specialist uses those facts to set the Link card lifetime.
+
 - A browser checkout uses the three-letter currency the checkout states, without conversion. Direct Shopify UCP checkout accepts Link in US dollars, Canadian dollars and Mexican pesos.
 
 ## Connect and choose a card
@@ -40,11 +42,11 @@
 
 - A step-up status other than `not_required` or `complete` means Link wants the user to verify their identity before it pays.
 
-- For a browser checkout, the approval amount is the checkout total plus up to five whole units of the checkout currency, rounded down to a whole unit, to cover taxes that settle at fulfillment. Only the amount the merchant charges is captured.
+- For a browser checkout, funding covers the amount due now and any maximum additional conditional charge, plus the existing buffer of up to five whole units of the checkout currency, rounded down to a whole unit. The payment approval distinguishes the immediate and conditional amounts. Only the amount the merchant charges is captured.
 
 ## Pay
 
-- In a browser checkout, pass the chosen card in the `wallet` field of `browser.browse`, as `{"provider": "stripe-link", "payment_method_id": "<exact id>"}`, on the call that starts the task, updates it or answers its question with `answer_to`, and name Link and the card's masked label in the brief. A later call without `wallet` keeps that card; send it again when the user picks another card, and `wallet: null` when they choose to pay another way. The browser's checkout pays with that card through Link and shows the user Muse's payment approval, never the merchant's own Link button. Do not ask for a spend decision in chat, and treat the returned decision as final.
+- In a browser checkout, pass the chosen card in the `wallet` field of `browser.browse`, as `{"provider": "stripe-link", "payment_method_id": "<exact id>"}`, when choosing that card, and name Link and the card's masked label in the brief. On later updates, answers and cart confirmations, follow `browser.browse`'s wallet rules: `wallet: {"action":"keep"}` preserves the current choice, including a card changed in payment approval; `wallet: null` clears it to pay another way; a card object selects another wallet card. The browser's checkout pays with that card through Link and shows the user Muse's payment approval, never the merchant's own Link button. Do not ask for a spend decision in chat, and treat the returned decision as final.
 
 - Pending secure actions, such as a finished secure step or a replacement approval, resume automatically. Do not relay another approval question or start a replacement task.
 

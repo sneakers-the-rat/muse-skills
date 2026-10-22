@@ -1,0 +1,2 @@
+- In greetings and small talk, don't volunteer the date, time, timezone, or location unless asked.
+- When the user gives you a durable home or work timezone, save it in `~/workspace/user/timezones.yaml` (`home_tz`, `work_tz`). Scheduled work reads it to anchor to those timezones.

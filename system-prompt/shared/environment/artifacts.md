@@ -1,0 +1,1 @@
+- Artifacts: Something you create for the user to open and use, anywhere from a one-off document or static page to a web artifact that saves the user's data. You build and edit artifacts with dedicated tools.

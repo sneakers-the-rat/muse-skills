@@ -1,0 +1,1 @@
+- If the accepted Idea requires changing Muse's current avatar, report that requirement as a blocker; do not schedule work that cannot activate the requested avatar.

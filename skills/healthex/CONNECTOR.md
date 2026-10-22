@@ -4,6 +4,8 @@
 
 - HealthEx works only in supported regions. Elsewhere every command except `disconnect` fails with "This connector is not available in your region", which is not a connection problem.
 
+- HealthEx is only for the user's own records. Another person's health, general health information and help logging in to a patient portal the user already uses are not HealthEx requests: answer without HealthEx, and do not run `authorize-url` or offer or suggest connecting.
+
 ## Connect
 
 ```text
@@ -11,13 +13,21 @@
 /opt/hatch/bin/healthex authorize-url
 ```
 
-- Run `status` before any data access. If it is not `connected`, run `authorize-url` and send one message with the `connect_url` as a Connect HealthEx link and these details:
-  - HealthEx gathers health records from the user's healthcare providers.
-  - Muse gets read-only access to conditions, medications, allergies, lab results, vitals, immunizations, procedures, visits and clinical notes.
-  - Access lasts until the user revokes it in their HealthEx account.
-  - The records let Muse explain results, prepare for visits and answer medication questions from the user's actual data.
+- Run `status` before any data access. When it is `connected`, go on to choose tools.
 
-- Check `status` after the user finishes and continue only when it is `connected`.
+- When `status` is `not_connected`:
+  - The user wants their own records, or wants to connect HealthEx, their records or a patient portal to Muse: run `authorize-url` and put its `connect_url` in this reply, even if an earlier reply already had one. Only a question about the connection steps may point back to an earlier link. Never tell the user to connect without the link.
+  - The user wants a plan or advice that does not ask for their records, such as a diet, workout, travel health or sleep plan, or visit preparation: answer without records. Do not run `authorize-url`, and do not offer or suggest connecting.
+
+- Send the link as one short message: the `connect_url` as a Connect HealthEx Markdown link, never pasted as a raw URL. Never send the `authorize_url`, which skips Muse's consent screen.
+
+- Muse shows its own consent screen when the user taps the link, so do not repeat what access is granted or how long it lasts.
+
+- If `authorize-url` fails, say the connect link could not be created and suggest trying again. Never make up a link.
+
+- When the user says they have finished, run `status` again and continue only when it is `connected`. If it is still `not_connected`, say the connection did not go through and send a fresh link from `authorize-url`.
+
+- Never run `refresh` while `status` is `not_connected`. It cannot complete a connection.
 
 - `mcp-call` refreshes the token once after a 401. If calls still fail with 401, access was revoked or expired, so run the connection steps again.
 
@@ -63,7 +73,8 @@
   - An empty result means nothing is documented for that request, or it lives in a system not linked to HealthEx.
   - A placeholder saying records are being retrieved means they are still syncing. Try the category tools now, and if they are empty too, tell the user to check back in a few minutes without promising to retry on your own.
   - A background process handle such as `{"sessionId": "...", "status": "running"}` holds no data. Its result arrives when it finishes, so do not poll, and use the category tools meanwhile.
-  - An error, non-zero exit or "not connected" means the read failed. Suggest retrying or reconnecting, and do not answer the clinical question from memory.
+  - An error or non-zero exit means the read failed. Suggest retrying, and do not answer the clinical question from memory.
+  - A "not connected" result means the connection ended. Follow the steps under Connect.
 
 ## Report what the records show
 

@@ -1,0 +1,1 @@
+- If identical events have no semantic difference in the current payload, repeat the same generated title instead of inventing a distinct variant.

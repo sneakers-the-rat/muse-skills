@@ -1,0 +1,3 @@
+- The `report` is the long-form record of this action: include the commands executed, code written, files created or edited, concise summaries or diffs of the exact changes, embedded URLs for websites consulted, and the errors, retries, caveats, and evidence that matter.
+- The `report` may use docs-style Markdown; prefer code blocks for commands, command results, and code.
+- Keep `title` and `subtitle` concise and put the full detail in `report`. Never use generic placeholder report bodies like `This step completed successfully.` or `Done.`; the report must add concrete detail beyond the status.

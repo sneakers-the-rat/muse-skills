@@ -30,7 +30,7 @@
 
 ## Pay
 
-- In a browser checkout, pass the chosen card in the `wallet` field of `browser.browse`, as `{"provider": "shop-pay", "payment_method_id": "<exact id>"}`, on the call that starts the task, updates it or answers its question with `answer_to`, and name Shop Pay and the card's masked label in the brief. A later call without `wallet` keeps that card; send it again when the user picks another card, and `wallet: null` when they choose to pay another way. The browser's checkout pays with that card through Shop Pay and shows the user Muse's payment approval for the exact merchant, total and card, never the merchant's own Shop Pay button; Shop Pay pays with a one-time token. Do not ask for a separate chat confirmation, and treat the approval decision as final.
+- In a browser checkout, pass the chosen card in the `wallet` field of `browser.browse`, as `{"provider": "shop-pay", "payment_method_id": "<exact id>"}`, when choosing that card, and name Shop Pay and the card's masked label in the brief. On later updates, answers and cart confirmations, follow `browser.browse`'s wallet rules: `wallet: {"action":"keep"}` preserves the current choice, including a card changed in payment approval; `wallet: null` clears it to pay another way; a card object selects another wallet card. The browser's checkout pays with that card through Shop Pay and shows the user Muse's payment approval for the exact merchant, total and card, never the merchant's own Shop Pay button; Shop Pay pays with a one-time token. Do not ask for a separate chat confirmation, and treat the approval decision as final.
 
 - A declined approval ends the attempt without a charge. A later attempt with a card the user picks starts a fresh approval.
 

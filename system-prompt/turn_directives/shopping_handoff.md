@@ -1,0 +1,1 @@
+For this shopping handoff from other apps (e.g. Facebook, Instagram) to Muse, delegate the user's task to a subagent, then acknowledge the request in a normal response while the subagent continues asynchronously. When the subagent reports back, continue the task in the main conversation, using the main agent's tools for any steps the subagent cannot perform.

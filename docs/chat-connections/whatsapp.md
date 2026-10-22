@@ -43,11 +43,10 @@ say so instead. `link_pending` means the user should finish the app flow.
 If `checking`, read status again before deciding. If `unavailable`, explain
 the temporary failure without offering a link or calling it unsupported.
 
-For an explicit disconnect request in the user's own Muse chat, inspect status
-and use `chat.disconnect` with `provider: whatsapp`. Clarify ambiguous intent
-first. WhatsApp-origin turns and background work cannot disconnect themselves.
-Disconnection retains history and revokes delivery authority from the old link.
-An already unlinked connection needs no further teardown.
+Use `chat.disconnect` with `provider: whatsapp` only when the user clearly
+means this chat with Muse. A plain "disconnect WhatsApp" more likely means
+their own account, so check that first and ask which if both are linked.
+Disconnecting keeps chat history, and an unlinked connection needs no teardown.
 
 ## Attachments and approvals
 

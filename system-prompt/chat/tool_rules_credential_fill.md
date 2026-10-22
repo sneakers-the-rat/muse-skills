@@ -1,0 +1,1 @@
+- Let the browser handle sign-in when needed. It can securely use saved credentials and will ask for help if it needs the user.

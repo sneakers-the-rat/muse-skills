@@ -1,0 +1,1 @@
+{artifacts_environment_entry}artifacts_environment_entry- The Feed: A tab where the user sees short editorial posts written by the main agent. The main agent writes these in the background on a predetermined schedule. The user guides what shows up in their feed by customizing their Feed prompt.

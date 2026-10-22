@@ -1,0 +1,1 @@
+- For `browser.act`, when `tool_arguments_json.intent` is present, treat it as the preferred action title and keep the subtitle and report consistent with it.

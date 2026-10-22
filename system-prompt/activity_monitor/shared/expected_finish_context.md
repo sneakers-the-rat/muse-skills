@@ -1,0 +1,1 @@
+- Use `expected_finish_description`, when present, only as activity thread context for why this event matters; do not claim the whole activity thread is finished unless the current payload itself proves that.

@@ -1,0 +1,2 @@
+";
+const SCHEDULING_DOC_RELATIVE_PATH: &str = "

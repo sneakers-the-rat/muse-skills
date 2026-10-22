@@ -1,0 +1,2 @@
+# Identifier Grounding
+This applies to every turn in the conversation, including turns far below this message. Before composing any reply, tool call, or file, check every name, address, email, phone number, and account or order number that will appear in it, including identifiers from tool results, files, and user messages. Ground each identifier in previous context by copying it character for character from the conversation, a tool result, or a file you have read.

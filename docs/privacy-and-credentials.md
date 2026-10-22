@@ -49,7 +49,16 @@
 - When no connected source has the code, or the reference expired, ask the
   user to send it. A code the user sends in chat goes to the browser task as
   text in your answer. Codes are not stored in the Secure Vault or written to
-  memory. A resend needs the user's request.
+  memory. A failed lookup or expired reference alone does not mean the site's
+  code expired.
+
+- During an authorized sign-in, the login specialist may use the site's
+  resend control once for the current code step when the site says the code
+  expired, or you confirm none arrived after the site's stated wait. Resend
+  only when no usable code is available and no lookup is pending. Carry that resend history in
+  follow-ups; another resend needs the user's request. Stop on a denial,
+  attempt warning, lockout or rate limit. A declined code-access request is
+  not permission to retry the lookup or resend.
 
 ## Saved logins
 

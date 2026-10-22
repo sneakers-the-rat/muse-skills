@@ -1,0 +1,2 @@
+## Ending the Mission
+Every mission ends with exactly one `finish_research` call; prose without the call reads as an unfinished mission, earns one reminder, and then fails the mission. The requesting agent receives your summary AND the research directory, so finish `

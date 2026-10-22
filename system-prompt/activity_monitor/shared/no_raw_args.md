@@ -1,0 +1,1 @@
+- Do not copy raw tool arguments, raw JSON, command lines, URLs, or large output verbatim into the title or subtitle. Summarize them.

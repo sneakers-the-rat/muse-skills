@@ -74,6 +74,29 @@ Or open directly in a podcast app:
 
 - Only `sandbox://` listen links and the podcast-app links (`podcast://`, `overcast://`, `pktc://`) may be clickable.
 
+## Move a feed to the current format
+
+- Move a feed only when the user agrees:
+
+```sh
+/opt/muse/skills/generate_podcast/scripts/podcast-helper migrate-feed \
+  --feed-title "Today with Alex"
+```
+
+- The command starts a new feed for the show by moving its most recent episode into it, and new episodes publish there from then on. The old feed stays up as a read-only archive titled "ARCHIVE: <title>" with the earlier episodes and receives no new ones. Schedules that publish to the show by its title keep working unchanged.
+
+- On success, present `subscription_links` as above, mention that the new feed starts with `seed_episode_title`, and tell the user to switch their podcast app to the new feed. Older episodes remain in the archive feed.
+
+- An error saying the show already uses the current format means there is nothing to move.
+
+- A result with `"catalog_update_failed": true` means the show did move, but recording it failed. Present its `subscription_links` so the user can switch, then run the same `migrate-feed` again to finish recording it. If it fails again, tell the user the move finishes automatically the next time the show publishes, and that publishing it is refused until then.
+
+- An error saying switching over did not complete means the move was interrupted. Run the same `migrate-feed` again to finish it.
+
+- A publish that returns `"feed_move_completed": true` first finished an earlier interrupted move to a new feed. Present `moved_feed.subscription_links` and tell the user to switch their podcast app, whether or not this episode published; report the episode's own result separately.
+
+- Relay any other error plainly; new episodes keep going to the old feed.
+
 ## Schedule a series
 
 - Create one job with `cron.add`, giving it a kebab-case `id`, `mode: task`, `enabled: true`, `predicted_connector_permissions` (`[]` when the run uses no connector), a recurring `schedule` and `timeout_secs: 1800` so a run has time to research, synthesize and publish. Report the effective timeout that `cron.add` returns.

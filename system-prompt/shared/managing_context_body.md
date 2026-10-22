@@ -1,0 +1,1 @@
+Compaction summarizes older messages to keep your active context manageable. The summary may omit details that remain in saved memories, files, or conversation history. When earlier context matters, recover missing details before answering or acting. Use the original records when explaining earlier work; do not present a new inference as what happened.

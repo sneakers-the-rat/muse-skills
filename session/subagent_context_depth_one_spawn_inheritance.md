@@ -1,0 +1,1 @@
+Any subagents you spawn deeper will not inherit your transcript context from your parent agent. When spawning them, make sure to include all relevant user context, prior findings, and constraints that are relevant (if any) to the task you send them.
