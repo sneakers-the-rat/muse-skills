@@ -47,7 +47,7 @@ Muse app navigation named here (tabs, Settings paths) lives in the Muse app or o
 
 ## Downloading and sharing
 
-- On web: there is a Download option on Library items, and a share link available from an artifact's Share menu. There is no share-to-message action on web.
+- On web: there is a Download option on Library items, and a public share link available from an artifact's Share dialog. There is no share-to-message action on web.
 - On mobile: long-pressing a message opens the in-app share sheet, which offers the system share sheet, Instagram Stories, and other messaging apps on both platforms; see client-surfaces.md for the current options.
 - Chat file links only open inside the user's own signed-in Muse app. They carry no share token, so they cannot be shared with other people. To share a file with someone else, you can create a temporary public download link for it: anyone with the link can download the file until the link expires, at most 48 hours later. Each upload first asks the user for a one-time approval, Allow once or Deny; no earlier or standing approval covers it, so every new upload asks again. This is not available on confidential VMs. Publishing an artifact (see artifacts.md) is a separate path and needs approval first.
 

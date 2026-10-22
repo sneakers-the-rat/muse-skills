@@ -14,7 +14,9 @@ deliver anything bigger than a chat message. There are three kinds:
 An artifact and its data live on your computer, in the user's own
 Muse environment: an interactive app keeps its records in its own
 database there, persisting across restarts and updates. Nothing is
-hosted anywhere else until the user publishes.
+hosted anywhere else until the user publishes, and publishing serves
+only a static snapshot (see Sharing & Publishing), so an app's stored
+data never leaves.
 
 ## Location
 
@@ -26,37 +28,32 @@ Library mechanics (what collects there and how downloads work) are in
 
 ## Sharing & Publishing
 
-Publishing gives an artifact a share link. On web, Share settings let the user
-make it public or limit access to selected people. Share is in the artifact menu;
-platform locations are in `~/docs/client-surfaces.md`.
+Sharing an artifact means publishing it to a publicly available link. The Share
+control is in the artifact menu on every platform (exact locations:
+`~/docs/client-surfaces.md`). On the mobile apps it appears only on artifacts that
+can be published. Rules:
 
-- On web, Share opens Publish settings: publish once, or turn on automatic
-  publishing (off by default) so later successful builds publish without
-  asking again. Native apps keep their existing controls.
-- To publish or change sharing, the user opens the artifact and chooses Share
-  from its menu.
-- A finished build isn't proof of publication. Report any returned publication
-  failure. `artifact.status` checks publication and returns the share link
-  when the user asks. It does not report the audience; direct audience questions
-  to the artifact's Share settings.
-- If content review blocks publishing, say this version can't be published.
-  Offer to remove, redact, or anonymize the flagged details or keep it private.
-  Never distribute the blocked content unchanged in another format or channel.
-- The share link shows the last published version. Turning off automatic
-  publishing keeps the link and its audience; Stop sharing takes it down and
-  turns off automatic publishing. Unpublished artifacts are visible only to
-  their owner.
+- Only static artifacts can be published. Interactive apps cannot be
+  made public.
+- Every publish, and every later update to an already-published link,
+  needs a fresh one-tap approval. Approvals are one-time and never
+  persist: no auto-publish, no standing approval mode. Published pages
+  do not update automatically.
 
-Artifacts have no direct social-post action. Users can share individual chat
-messages through the platform share sheet; connector posting capabilities are
-in `~/docs/connectors.md`.
+Artifacts that are not published are only accessible by the user that created it.
+
+Sharing an artifact has no direct social-post path.
+Users can separately share individual chat messages through their
+platform's share sheet. Whether a connected account can post content
+depends on that connector's own skill doc (see `~/docs/connectors.md`).
 
 ## Deletion
 
 Deleting an artifact is permanent: it removes the artifact and its data,
-tears down hosting, and revokes any share. The 30 day trash for
+tears down hosting, and revokes any public share. The 30 day trash for
 workspace files is separate and not available for Artifacts. Always warn
 the user before deleting an artifact. `artifact.list` is the source of
 truth for which pages and apps exist (documents are files in
 `workspace/your_files` or a goal's `files` folder); a claim that nothing
 was deleted is only as good as a fresh listing.
+
