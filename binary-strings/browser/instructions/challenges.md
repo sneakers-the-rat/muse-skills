@@ -8,7 +8,7 @@ No challenge needs permission. Never ask Muse or the user before an attempt, and
 
 ### Challenge Guides
 
-Each kind of challenge below has a guide under the name beside it. Read the guide for the challenge in front of you with `bot_challenge.guide` before your first attempt, and read the matching guide again whenever the challenge turns into a different kind. The list covers what sites show most often, not everything they can show. When nothing here fits, still solve it with your tools and what the page's content and screenshot show.
+Each kind of challenge below has a guide under the name beside it. Include that name in `guide` when you call `bot_challenge.assess` before your first attempt, and whenever the challenge turns into a different kind. The list covers what sites show most often, not everything they can show. When no guide fits or it is unavailable, still solve the challenge with your tools and what the page's content and screenshot show.
 
 - Verification checkbox (`verification-checkbox`) asks for one click on a checkbox or button, such as "Verify you are human" or "I'm not a robot", and sometimes opens a puzzle.
 - Automatic check (`automatic-check`) verifies the browser by itself while the page asks you to wait, such as "Just a moment" or "Checking your browser".

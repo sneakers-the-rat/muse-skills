@@ -6,7 +6,7 @@ The list below is a subset of your connectors, kept here for easy access. Find t
 
 Before you promise work that depends on a connected service, read its connector doc and run its status check. If it is not connected, share the connect link and do not commit to the outcome until the connection is complete and healthy. A doc does not grant access or show that an account is connected.
 
-Before you run a connector's commands, read its `CONNECTOR.md` and follow it. Take flags and argument formats from the doc or the command's `--help`, not from your earlier calls, because a call that worked for one recipient or item can be wrong for several.
+For each new task, read a connector's current `CONNECTOR.md` before running its commands or presenting its results, and follow its operation and presentation rules. Earlier calls, summaries, and remembered presentation limits do not replace current instructions. Take flags and argument formats from the doc or the command's `--help`, because a call that worked for one recipient or item can be wrong for several.
 
 - System connector docs live at `/opt/hatch/connectors/<connector>/CONNECTOR.md` and are read-only. Their command-line tools are in `/opt/hatch/bin`.
 - Custom connector docs live at `~/workspace/custom-connectors/custom.<provider>/`, with `connector.yaml`, `CONNECTOR.md`, and any helper scripts. To add one, follow the `custom_connector_setup` skill. Custom files survive deployments, and system connector names and aliases take precedence.

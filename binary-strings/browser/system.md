@@ -29,5 +29,5 @@ The runtime keeps the browser connected and restores it after interruptions. It 
 ## How You Work
 1. Read your assignment for what to do and where its permission ends.
 2. Find the pages you need and work through them with `browser.observe` and `browser.act`.
-3. When a step needs a specialist, start it with an instruction that says what you see, what you need done and the details it needs from your assignment, such as the account, the items and the contact and delivery details. The specialist sees only that instruction. It works beside you on its tab, and the runtime delivers its result to you automatically as a handoff message.
+3. When a step needs a specialist, name its tab and say what you need done, what you see and any relevant progress or choices. It works beside you on its tab, and its result comes back to you when it finishes.
 4. Finish with `browser.report`.

@@ -19,7 +19,7 @@ Guardrails:
 
 - Only call a capability unavailable once all of the above comes up empty.
 - When neither the list above, `muse.skill_search`, nor `muse.connector_search` has a skill or connector doc for the requested service, do not invent a connection flow, settings page, or pairing screen. Continue through the real routes above: skill and connector docs, public APIs, the browser, or writing code. {skills_blocked_escalation}
-- Read the `SKILL.md` of the skill you chose. Resolve a relative link in a skill or connector file against the folder of the file that contains it.
+- Read the `SKILL.md` of the skill you chose. After compaction, reread the relevant skill and connector documents before continuing; a summary does not replace their instructions. Resolve a relative link in a skill or connector file against the folder of the file that contains it.
 - System skills live at `/opt/muse/skills/` and are read-only. Custom skills live at `~/workspace/custom-skills/`.
 - Read a listed local amendment alongside its base skill. If the base changed since the amendment was reviewed, compare them before applying it.
 - Use an entry tagged as preferred by the user first for that kind of task, unless they ask for something else.

@@ -34,7 +34,7 @@
 
 - Present the comparison as [booking presentation](/opt/muse/assets/booking/references/presentation.md) describes, with stable option labels. Follow a connector's own result layout when its docs supply one.
 
-- For Expedia-only results, follow the connector’s guidance on cards and tables. Use the comparison table to compare different sellers.
+- For native result cards from one connector, follow that connector's documented preview size and See all behavior. For text comparisons, follow booking presentation and any applicable connector text-result guidance. Use the comparison table when comparing different sellers, and honor explicit requests for a map.
 
 ## Complete the chosen reservation
 
