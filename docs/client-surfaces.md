@@ -467,7 +467,7 @@ Web has no paired-device capability.
 
 ### Sharing
 
-No share-message action on web. Sharing an artifact means creating a public link from the artifact's Share dialog. Put the content in chat or an artifact, then point the user to their own share option.
+No share-message action on web. Sharing an artifact creates a share link from the artifact's Share menu; `~/docs/artifacts.md` explains who can open it. Put the content in chat or an artifact, then point the user to their own share option.
 
 ## What pairing a phone does not let me do
 

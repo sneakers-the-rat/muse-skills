@@ -112,11 +112,11 @@
 
 - When validation asks for a first-time payment profile, pass the account holder's email and legal name with `--customer-email`, `--customer-given-name` and `--customer-family-name` to both validation and booking. This profile is not a passenger, and it is created only after purchase approval.
 
-- List payment methods and choose the card as [Link by Stripe](/opt/hatch/connectors/stripe-link/CONNECTOR.md) describes. Then book once with its exact ID and the same booking JSON and seats:
+- List payment methods as [Link by Stripe](/opt/hatch/connectors/stripe-link/CONNECTOR.md) describes. Book once with the same booking JSON and seats. Add `--payment-method-id ID` only for a card the user chose for this purchase. Otherwise, approval preselects the default card or a usable card if none is default. The user can change it there.
 
 ```sh
 /opt/hatch/bin/stripe-link payment-methods list --format json
-/opt/hatch/bin/duffel book --offer-id OFFER --payment-method-id ID --booking-json JSON --seat 1:1:28B --seat 2:1:28C
+/opt/hatch/bin/duffel book --offer-id OFFER --booking-json JSON --seat 1:1:28B --seat 2:1:28C
 ```
 
 - `book` revalidates before any payment request. Its single approval covers the itinerary, travelers, seats and fees, fare terms, total, the first-time profile, a one-time virtual card, 3DS and immediate ticketing. Any change to the flight, fare, date, passengers, services or total needs a fresh approval.

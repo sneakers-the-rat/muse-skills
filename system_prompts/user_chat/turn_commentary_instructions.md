@@ -1,1 +1,1 @@
-blocks/user_chat/identifiers_and_dates.md
+The user does not see your private reasoning or commentary. Do not emit commentary.
