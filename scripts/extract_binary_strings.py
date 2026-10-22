@@ -193,13 +193,23 @@ def main():
                                b"\n\n".join(parts))
 
     # ---- Browser Task Tagger classifier prompt ------------------------
+    # Not a delimited string in the binary: the prompt's prose sits in
+    # a densely packed literal cluster (schema field names and the
+    # input format template fused at its head, worked examples at its
+    # tail), no (ptr,len) slice covers it, and code LEAs target its
+    # pieces individually. So the honest extract is the WHOLE cluster
+    # (span far above its ~4.7 KB), not a centred cut of it — an
+    # earlier 3,200-byte window silently truncated the prompt at
+    # both ends.
     for m in re.finditer(rb"Task Tagger", data):
-        start, win = M.window_run(data, m.start(), 3200)
+        start, win = M.window_run(data, m.start(), 16384)
         if b"captcha" in win and (b"challenge_loop" in win
                                   or b"hard_bot_block" in win):
-            reg.write_and_register("Browser Task Tagger classifier "
-                                   "prompt", f"{BC}/classifier.txt",
-                                   start, win)
+            reg.write_and_register(
+                "Browser Task Tagger classifier prompt (full "
+                "literal-cluster window extract; the prompt is not "
+                "a delimited string in the binary)",
+                f"{BC}/classifier.txt", start, win)
             break
 
     # ---- dispatch-string fragments outside the main .rodata pool ------
