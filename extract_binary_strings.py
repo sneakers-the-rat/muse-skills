@@ -258,13 +258,18 @@ def main():
     for m in PRINT_RUN.finditer(data, ro[0], ro[0] + ro[1]):
         if not in_regions(m.start()):
             continue
+        pos = m.start()
         for line in m.group().split(b"\n"):
+            line_off = pos
+            pos += len(line) + 1
             s = line.strip().decode("utf-8", "replace")
             if not (12 <= len(s) <= 400) or " " not in s:
                 continue
             if not ERROR_RE.search(s):
                 continue
-            off = m.start() + m.group().find(line)
+            # the recorded offset is where the STRIPPED string starts:
+            # the raw line's offset plus its leading-whitespace width
+            off = line_off + (len(line) - len(line.lstrip()))
             if s not in seen or off < seen[s]:
                 seen[s] = off
     buf = io.StringIO()
