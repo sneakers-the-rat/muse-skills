@@ -65,9 +65,6 @@ ROOT = REPO / "binary-strings"
 TOPIC = "browser_persona"
 BP = "binary-strings/browser/persona"
 
-IDENT_RE = re.compile(
-    rb"browser_document_(persona|fingerprint)_[a-z_]+"
-    rb"|browser_persona_seed|browser_profile_mode")
 STRUCTS = (b"DocumentPersonaSeedIdentity",
            b"DocumentFingerprintObservation",
            b"BrowserRequestDocument", b"BrowserRequestEgress",
@@ -184,22 +181,88 @@ def main():
             "\n".join(blocks))
 
     # ---- telemetry identifier families --------------------------------
-    # A census of the identifiers themselves, not the runs containing
-    # them: the identifiers live inside enormous fused schema runs,
-    # and the field vocabulary is the product.
-    tokens = {}
-    for m in IDENT_RE.finditer(data):
-        tok = m.group().decode()
-        if tok not in tokens:
-            tokens[tok] = m.start()
-    if tokens:
-        body = "\n".join(sorted(tokens))
+    # The identifiers live inside enormous fused schema runs with no
+    # delimiters, so the census segments the runs at family-stem
+    # boundaries: a token runs from a family stem (browser_document_
+    # persona_*, ..._fingerprint_*, ..._observed_*,
+    # document_fingerprint_observer_*, browser_persona*,
+    # browser_profile_mode) to the next browser_/document_ stem or
+    # the first byte outside [a-z0-9_]. Tokens that still fail the
+    # family shape afterwards are listed verbatim under
+    # "# fused remainders" rather than silently repaired.
+    stems = (b"browser_", b"document_")
+    fam_stems = (rb"browser_document_persona_",
+                 rb"browser_document_fingerprint_",
+                 rb"browser_document_observed_",
+                 rb"document_fingerprint_observer_",
+                 rb"browser_persona", rb"browser_profile_mode")
+    starts = set()
+    for fam in fam_stems:
+        for m in re.finditer(fam, data):
+            starts.add(m.start())
+    # A segmented token counts as clean only if what follows its
+    # family stem is a sequence of words from this closed telemetry
+    # vocabulary; anything else keeps a glued neighbour and is
+    # listed verbatim as a fused remainder instead.
+    vocab = {
+        "active", "architecture", "at", "attribution", "capacity",
+        "captures", "chrome", "collector", "concurrency", "config",
+        "dedupe", "delivery", "device", "discontinuities", "documents",
+        "dropped", "duration", "events", "evidence", "evictions",
+        "failed", "gb", "generation", "gpu", "hardware", "height",
+        "id", "instance", "json", "malformed", "measured", "memory",
+        "model", "ms", "not", "observations", "observed", "os",
+        "parameters", "partial", "pending", "pixel", "platform",
+        "probe", "ratio", "reason", "renderer", "scope", "screen",
+        "seed", "selection", "sha256", "site", "snapshot", "source",
+        "state", "status", "timezone", "total", "trigger", "version",
+        "width",
+    }
+
+    def remainder_clean(tok):
+        for fam in (b"browser_document_persona_",
+                    b"browser_document_fingerprint_",
+                    b"browser_document_observed_",
+                    b"document_fingerprint_observer_",
+                    b"browser_persona", b"browser_profile_mode"):
+            fs = fam.decode()
+            if tok.startswith(fs):
+                rest = tok[len(fs):].strip("_")
+                if not rest:
+                    return True
+                return all(w in vocab for w in rest.split("_"))
+        return False
+
+    clean, fused = {}, {}
+    word = re.compile(rb"[a-z0-9_]+")
+    for s in sorted(starts):
+        m = word.match(data, s)
+        if not m:
+            continue
+        end = m.end()
+        for stem in stems:
+            nxt = data.find(stem, s + len(stem))
+            if nxt != -1 and nxt < end:
+                end = nxt
+        tok = data[s:end].decode()
+        if remainder_clean(tok):
+            clean.setdefault(tok, s)
+        else:
+            fused.setdefault(tok, s)
+    if clean or fused:
+        body = "\n".join(sorted(clean))
+        if fused:
+            body += ("\n\n# fused remainders (verbatim; a neighbour "
+                     "from another family is glued on and no clean "
+                     "boundary exists in the binary):\n"
+                     + "\n".join(sorted(fused)))
+        first = min(list(clean.values()) + list(fused.values()))
         reg.write_and_register(
             "census of browser_document_persona_*/"
-            "browser_document_fingerprint_* telemetry identifiers "
-            "present in the binary",
-            f"{BP}/telemetry-fields.txt",
-            min(tokens.values()), body + "\n")
+            "browser_document_fingerprint_* telemetry identifiers, "
+            "segmented from the fused schema runs at family-stem "
+            "boundaries", f"{BP}/telemetry-fields.txt",
+            first, body + "\n")
 
     # ---- persona-adjacent struct field clusters -----------------------
     parts = []
@@ -223,21 +286,41 @@ def main():
             b"\n\n".join(parts))
 
     # ---- the observed-fingerprint path vocabulary ---------------------
-    # Same reason as above: census the path tokens, not their run.
-    path_re = re.compile(
-        rb"/(?:identity|webgl|display|locale)(?:/[a-zA-Z]+)*")
-    paths_found = {}
-    for m in path_re.finditer(data):
-        tok = m.group().decode()
-        if len(tok) > 9 and tok not in paths_found:
-            paths_found[tok] = m.start()
-    if paths_found:
-        body = "\n".join(sorted(paths_found))
-        reg.write_and_register(
-            "census of observed-fingerprint path tokens (the "
-            "surfaces the fingerprint probe reads back)",
-            f"{BP}/observed-fingerprint-paths.txt",
-            min(paths_found.values()), body + "\n")
+    # The paths live in ONE fused cluster (see structs.txt): each
+    # path runs from a root marker (/identity/, /webgl/, /display/,
+    # /locale/) to the next root marker. The cluster's tail glues
+    # the observation's own next field names (attempted, index,
+    # event) onto the final path; those are cut, and the cut is
+    # documented in the file rather than hidden.
+    for m in M.PRINT_RUN.finditer(data):
+        if b"/identity/platform" in m.group() and \
+                b"/webgl/" in m.group():
+            cluster = m.group()
+            marks = [mm.start() for mm in re.finditer(
+                rb"/(?:identity|webgl|display|locale)/", cluster)]
+            segments = []
+            for i, st in enumerate(marks):
+                en = marks[i + 1] if i + 1 < len(marks) \
+                    else len(cluster)
+                seg = cluster[st:en].decode("utf-8", "replace")
+                if i + 1 == len(marks):
+                    seg = seg.split("attempted")[0]
+                if seg.startswith("/") and " " not in seg:
+                    segments.append(seg)
+            body = ("# The observed-fingerprint paths, segmented "
+                    "from the fused schema cluster at their root "
+                    "markers. In the cluster the final path is "
+                    "followed by the observation's own field names "
+                    "(attempted, index, event) — not part of any "
+                    "path — and they are cut here.\n"
+                    + "\n".join(segments))
+            reg.write_and_register(
+                "observed-fingerprint path vocabulary, segmented "
+                "from the fused schema cluster at root markers "
+                "(the surfaces the fingerprint probe reads back)",
+                f"{BP}/observed-fingerprint-paths.txt", m.start(),
+                body + "\n")
+            break
 
     # ---- implementation source paths ----------------------------------
     paths = sorted({m.group().decode()
