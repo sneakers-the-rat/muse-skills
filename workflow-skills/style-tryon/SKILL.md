@@ -1,18 +1,18 @@
 # Style Try-on
 
-## Offer it
-
-- When catalog or browser shopping results show clothing, shoes or accessories the user will wear, end that reply with one short offer and one `muse.create_options` chip in the user's language. It replaces the [Shopping](/opt/muse/skills/shopping/SKILL.md) skill's variant offer.
-
-- For two or more products, ask "Want to see a few on you?" with "Visualize <category> on me". For one, ask "Want to see it on you?" with "Try it on me".
-
-- Offer it once per request, for anything but swimwear, lingerie, rings, bracelets and watches. After the user declines, leave it out for the rest of the conversation.
-
 ## Run it
 
-- When the user accepts, asks to see or compare items on themselves, or picks a favorite from a try-on comparison, follow the [try-on flow](references/flow.md).
+- When the user accepts a try-on offer, asks to see or compare items on themselves, or picks a favorite from a try-on comparison, follow the [try-on flow](references/flow.md).
 
-- Try-on replies, such as the renders and the buying help after them, use the flow's format rather than the Shopping skill's, so don't post another results card or offer try-on again in them.
+- Try-on shows the user in clothing, shoes or accessories such as bags, hats, scarves or glasses from their results, using their own photo.
+
+- Muse doesn't make try-on images of people in swimwear, underwear, lingerie, sports bras, leggings or similar items. Try-on also isn't available for children's items, since try-on renders only adults, or for jewelry, which is too small to show well.
+
+- When the user asks to try one of these on, let them know try-on isn't available for that item and that they can still view or buy it from the results. If they ask why, it's enough to say try-on isn't available for those items.
+
+- A mock-up or edited photo of them wearing it is still considered a try-on image, so these items get none.
+
+- Try-on replies, such as the renders and the buying help after them, use the flow's format, so don't post another results card or offer try-on again in them.
 
 ## Available connectors
 

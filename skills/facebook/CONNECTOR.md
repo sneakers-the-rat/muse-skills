@@ -40,7 +40,7 @@
 /opt/hatch/bin/facebook-cli marketplace listing details --url '<item link>' --out '<new file>'
 ```
 
-- Send a canonical post, photo, video or reel URL straight to `post read --url`. [Posts](references/posts.md) lists the supported URL patterns and routes group and event links to their own readers.
+- Send a canonical post, photo, video or reel URL straight to `post read --url`. [Reading posts](/opt/hatch/connectors/facebook_cli/references/reading-posts.md) explains post reads and routes other content to its own readers.
 
 ## Find people
 
@@ -50,13 +50,13 @@
 
 - When several friends match, list them with their city, workplace or profile link and ask the user to choose. Once the person is identified, continue the original request, such as showing their posts, instead of stopping at the friend list.
 
-- For interests and hobbies, use `--json-query` with the FindPeople filter `topic`, never `interests`. [Friends](references/friends.md) has the filter keys and how to read `match_context`.
+- For interests and hobbies, use `--json-query` with the FindPeople filter `topic`, never `interests`. [Friends](/opt/hatch/connectors/facebook_cli/references/friends.md) has the filter keys and how to read `match_context`.
 
 - Pass `--profile-id` only an ID returned by earlier Facebook output in this conversation, such as `me`, `me friends`, post and comment authors, reactors, saved items or a timeline's `author_id` and `owner_id`. Never look up a bare numeric ID the user typed or pasted, and never guess, increment or construct one. Identify the person with `me friends --name` first and use that result's ID.
 
 - If the person is not among the user's friends, explain that this connector searches friends only, and do not look them up another way.
 
-- Read [Profiles](references/profile.md) before presenting someone's profile details.
+- Read [Profiles](/opt/hatch/connectors/facebook_cli/references/profile.md) before presenting someone's profile details.
 
 ## Read posts and activity
 
@@ -64,10 +64,12 @@
 
 - Chain IDs from one command into the next. `me` and `me friends` give profile IDs for `profile info` and `timeline fetch`. Timelines, feeds and group posts give `post_id` for `post read`, `post comments read` and `post reactions read`.
 
-- `groups search` gives `group_id` for `groups details` and `groups posts`, and `events search` gives the event `id` for `events details`. `saved list` gives `savable_id` and `type`, and `marketplace search` gives `listing_id` for listing details and seller information.
+- `groups search` gives `id` for `groups details` and `groups posts`, and `events search` gives the event `id` for `events details`. `saved list` gives `savable_id` and `type`, and `marketplace search` gives `listing_id` for listing details and seller information.
 
 ```sh
-/opt/hatch/bin/facebook-cli me friends [--name '<name>'] [--city '<city>'] [--work '<employer>'] [--json-query '<FindPeople JSON>'] [--birthday-within-days [N]] [--limit N] [--after '<cursor>']
+/opt/hatch/bin/facebook-cli me friends [--name '<name>'] [--city '<city>'] [--work '<employer>'] [--limit N] [--after '<cursor>']
+/opt/hatch/bin/facebook-cli me friends --json-query '<FindPeople JSON>' [--limit N]
+/opt/hatch/bin/facebook-cli me friends --birthday-within-days [N] [--limit N] [--after '<cursor>']
 /opt/hatch/bin/facebook-cli profile info --profile-id '<profile_id>'
 /opt/hatch/bin/facebook-cli timeline fetch --profile-id '<profile_id>' [--limit N] [--after '<next_cursor>']
 /opt/hatch/bin/facebook-cli post read (--post-id '<post_id>' | --url '<url>')
@@ -77,8 +79,8 @@
 /opt/hatch/bin/facebook-cli feed friends [--limit N] [--after '<next_cursor>']
 /opt/hatch/bin/facebook-cli story feed [--limit N]
 /opt/hatch/bin/facebook-cli groups search [--keywords '<text>'] [--role connected|admin|admod|any] [--limit N] [--after '<cursor>']
-/opt/hatch/bin/facebook-cli groups details --group-id '<group_id or vanity name>'
-/opt/hatch/bin/facebook-cli groups posts --group-id '<group_id>' [--query '<text>'] [--limit N] [--after '<cursor>']
+/opt/hatch/bin/facebook-cli groups details --group-id '<group ID or vanity name>'
+/opt/hatch/bin/facebook-cli groups posts --group-id '<group ID or vanity name>' [--query '<text>'] [--limit N] [--after '<cursor>']
 /opt/hatch/bin/facebook-cli events search [--scope connected|discover] [--keywords '<text>'] [--location '<city>'] [--start-date YYYY-MM-DD] [--end-date YYYY-MM-DD] [--limit N] [--after '<cursor>']
 /opt/hatch/bin/facebook-cli events details --event-id '<event id>'
 /opt/hatch/bin/facebook-cli saved list [--type '<type>'] [--collection-id '<collection_id>'] [--limit N] [--after '<cursor>']
@@ -92,19 +94,17 @@
 
 - Read the command's guide under Feature guides for any other flag, result field or paging detail, and when a command fails.
 
-- For friends' activity in a group, run `me friends` and compare the friend list with the authors returned by `groups posts`. Never ask the user to provide their friend list.
-
-- A timeline contains the owner's posts and other people's wall posts. For posts from a person, report only those whose `author_id` equals `owner_id`, and mention others' wall posts separately, as [Timelines](references/timeline.md) explains.
+- A timeline contains the owner's posts and other people's wall posts. For posts from a person, report only those whose `author_id` equals `owner_id`, and mention others' wall posts separately, as [Timelines](/opt/hatch/connectors/facebook_cli/references/timeline.md) explains.
 
 - Run a multistep chain, such as friend lookup, timeline and comments, back to back without narrating each step. Present the result after the final command.
 
 ## Present results
 
-- Link every post, comment, person and listing with its returned URL, never a raw ID. Refer to a person by name with their `vanity_url` or `profile_url`, and never print `profile_id`, `fb_user_id`, `friend_id`, `owner_id`, `author_id` or a commenter's or reactor's ID.
+- Link posts, comments, people and listings with their returned URLs, never raw IDs. Refer to a person by name with their `vanity_url` or `profile_url`, and never print `profile_id`, `fb_user_id`, `friend_id`, `owner_id`, `author_id` or a commenter's or reactor's ID.
 
 - Make every link clickable with an `https://` scheme. Facebook sometimes returns `facebook.com/profile.php?id=123` or `//facebook.com/...`, so prepend `https://` before showing it.
 
-- Show post times from `post_created_at.user_local`. Show each quoted comment's time and `comment_url`, and show reactions by type, such as 3 Love, 2 Like and 1 Wow, with the post link.
+- Show post times from `post_created_at.user_local`, or from `source_record_created_at.user_local` for group posts. Show each quoted comment's time and `comment_url`, and show reactions by type, such as 3 Love, 2 Like and 1 Wow, with the post link.
 
 - When the user asks for recent, latest or lately, state the date range you used, such as posts from the past 7 days.
 
@@ -136,13 +136,13 @@
 
 - Each personal post, comment, Page write and Marketplace publish, edit or delete asks the user for fresh approval every time. Creating a listing that will stay a draft uses the normal approval flow, and saved-item changes are allowed by default.
 
-- Read [Posts](references/posts.md) before a personal post and [Comments](references/comments.md) before a comment or reply.
+- Read [Writing posts](/opt/hatch/connectors/facebook_cli/references/writing-posts.md) before a personal text post and [Comments](/opt/hatch/connectors/facebook_cli/references/comments.md) before a comment or reply.
 
-- Read [Facebook Pages](references/pages.md) before any `pages` command. `pages list` returns only Pages the user manages, and no command lists the Pages the user follows. Saved Pages and recent story authors are not that inventory, so explain the limitation instead of running Page commands for a followed-Page request.
+- Read [Facebook Pages](/opt/hatch/connectors/facebook_cli/references/pages.md) before any `pages` command, then [Page insights](/opt/hatch/connectors/facebook_cli/references/pages-insights.md) or [Page publishing](/opt/hatch/connectors/facebook_cli/references/pages-publishing.md) for the task. `pages list` returns only Pages the user manages, and no command lists the Pages the user follows. Saved Pages and recent story authors are not that inventory, so explain the limitation instead of running Page commands for a followed-Page request.
 
-- Read [Marketplace](references/marketplace.md) before creating, editing, publishing or deleting a listing.
+- Read [Marketplace](/opt/hatch/connectors/facebook_cli/references/marketplace.md) before creating, editing, publishing or deleting a listing.
 
-- Read [Saved items](references/saved.md) before saving, moving or removing a saved item.
+- Read [Saved items](/opt/hatch/connectors/facebook_cli/references/saved.md) before saving, moving or removing a saved item.
 
 ## Suggest Facebook tasks
 
@@ -152,15 +152,15 @@
 
 ## Feature guides
 
-- [Posts](references/posts.md), [comments](references/comments.md) and [reactions](references/reactions.md)
+- [Reading posts](/opt/hatch/connectors/facebook_cli/references/reading-posts.md), [writing posts](/opt/hatch/connectors/facebook_cli/references/writing-posts.md), [comments](/opt/hatch/connectors/facebook_cli/references/comments.md) and [reactions](/opt/hatch/connectors/facebook_cli/references/reactions.md)
 
-- [Friends](references/friends.md), [profiles](references/profile.md) and [timelines](references/timeline.md)
+- [Friends](/opt/hatch/connectors/facebook_cli/references/friends.md), [profiles](/opt/hatch/connectors/facebook_cli/references/profile.md) and [timelines](/opt/hatch/connectors/facebook_cli/references/timeline.md)
 
-- [Feeds](references/feed.md), [stories](references/story.md), [groups](references/groups.md) and [events](references/events.md)
+- [Feeds](/opt/hatch/connectors/facebook_cli/references/feed.md), [stories](/opt/hatch/connectors/facebook_cli/references/story.md), [groups](/opt/hatch/connectors/facebook_cli/references/groups.md) and [events](/opt/hatch/connectors/facebook_cli/references/events.md)
 
-- [Saved items](references/saved.md), [Marketplace](references/marketplace.md) and [Facebook Pages](references/pages.md)
+- [Saved items](/opt/hatch/connectors/facebook_cli/references/saved.md), [Marketplace](/opt/hatch/connectors/facebook_cli/references/marketplace.md), [Facebook Pages](/opt/hatch/connectors/facebook_cli/references/pages.md), [Page insights](/opt/hatch/connectors/facebook_cli/references/pages-insights.md) and [Page publishing](/opt/hatch/connectors/facebook_cli/references/pages-publishing.md)
 
-- [Shop a Facebook Reel](references/shopping-links.md) for products shown in a post or Reel
+- [Shop a Facebook Reel](/opt/hatch/connectors/facebook_cli/references/shopping-links.md) for products shown in a post or Reel
 
 ## Related skills
 

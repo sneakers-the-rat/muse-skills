@@ -1,72 +1,45 @@
 # Facebook friends
 
-- `me friends` searches the user's friends by name, profile details, interests or upcoming birthdays.
+- `me friends` searches the user's friends by name or profile details, such as location, work, school, interests or upcoming birthdays.
 
 ## Search by name or profile details
 
 ```sh
-/opt/hatch/bin/facebook-cli me friends
-/opt/hatch/bin/facebook-cli me friends --name 'Sarah'
-/opt/hatch/bin/facebook-cli me friends --city 'New York' --work 'Google'
-/opt/hatch/bin/facebook-cli me friends --city 'Seattle' --education 'Stanford' --filter-mode OR
+/opt/hatch/bin/facebook-cli me friends [--name '<name>'] [--city '<current city>'] [--hometown '<hometown>'] [--work '<employer or job title>'] [--education '<school>'] [--filter-mode <AND (default) or OR>] [--limit <up to 20>] [--after '<paging.cursors.after from the previous response, with the same filters>']
+/opt/hatch/bin/facebook-cli me friends --birthday-within-days [<1 to 365, default 7>] [--limit <up to 20>] [--after '<paging.cursors.after from the previous response>']
 ```
+
+- `me friends` allows the user to search their friends with different details and queries. Use this for questions such as 'whose birthday is coming up' or 'which friends have a specific interest'.
 
 - Filter with `--name` (or `-n`), `--city` for the current city, `--hometown`, `--work` for an employer or job title and `--education` for a school. Each is a case-insensitive substring match.
 
-- Several filters must all match by default. `--filter-mode OR` returns friends who match any of them.
+- Without filters, the command returns close friends first.
 
-- Without filters, the command returns close friends first. Each friend in `data` has `friend_id`, `name`, `profile_url` and, when available, `match_context`.
+- Friends who hide their birthday are excluded, so the result is not a complete birthday calendar.
 
-- Pages hold at most 20 friends, and larger `--limit` values are capped. Pass `paging.cursors.after` back as `--after` with the same filters. A cursor from one filter set is not valid for another, and a missing cursor means the list has ended.
-
-## Find upcoming birthdays
+- For a calendar period such as December, choose a day count that reaches the end of the period, then keep only friends whose returned `birthday_date` falls inside it. The search counts forward from today, so a longer window also returns earlier birthdays. Results are ordered by upcoming birthday. For a complete period, pass each `paging.cursors.after` back as `--after` with the same window until no cursor remains, then filter by `birthday_date`.
 
 ```sh
-/opt/hatch/bin/facebook-cli me friends --birthday-within-days
-/opt/hatch/bin/facebook-cli me friends --birthday-within-days 30
+/opt/hatch/bin/facebook-cli me friends --json-query '<FindPeople query>' [--limit <up to 20>]
+/opt/hatch/bin/facebook-cli me friends --json-query '{"filters": {"friend_by": ["<fb_user_id from me>"], "topic": ["hiking"]}}'
 ```
 
-- Use this for questions such as whose birthday is coming up. The flag without a number covers the next seven days, which fits a request with no timeframe. A number covers the next 1 to 365 days.
-
-- For a calendar period such as the rest of this month, choose a number of days that covers the period and keep only friends whose returned `birthday_date` falls inside it.
-
-- Each friend gains `birthday_date` in `YYYY-MM-DD` form, and results are ordered by the next birthday. Follow the page cursor as needed.
-
-- Friends who hide their birthday are excluded, so the result is not a complete birthday calendar. This mode ignores every other filter, including `--name` and `--json-query`.
-
-## Search by interest
-
-- Use `--json-query` with a FindPeople query for interests, sports, entertainment and similar topics. Put the user's `fb_user_id` from `me` in `friend_by`:
-
-```sh
-/opt/hatch/bin/facebook-cli me friends --json-query '{
-  "intent": "FindPeople",
-  "target": "users",
-  "filters": {
-    "friend_by": ["<fb_user_id from me>"],
-    "topic": ["hiking"]
-  }
-}'
-```
-
-- Choose the filter key from the user's intent:
-  - `topic` for interests and hobbies, such as friends who like hiking or cooking
-  - `sports` for teams and sports, such as friends who play soccer
+- Use `--json-query` with a FindPeople query for interests, sports, entertainment and similar topics. Put the user's `fb_user_id` from `me` in `friend_by`. In the query, choose the filter key that matches what the user is asking about. Each value is a list, such as `["hiking"]`:
+  - `topic` for interests and hobbies
+  - `sports` for teams and sports
   - `company` for an employer and `job` for a job title
   - `college` for a college or university and `school` for any school
   - `location` for the current city and `hometown` for a hometown
-  - `movies`, `music`, `tv_shows`, `books`, `games` or `podcasts` for entertainment, such as friends who watch a particular show
+  - `movies`, `music`, `tv_shows`, `books`, `games` or `podcasts` for entertainment
 
-- The interest key is `topic`, never `interests`. Values are lists, such as `["seattle seahawks"]`.
+- An interest search returns one result set of at most 20 friends and has no paging. To find more, refine the query instead.
 
-- This search returns one result set of at most 20 friends. It has no paging, so `--after` has no effect, and you refine the query instead of paging.
-
-- Do not scan friends' posts, timelines, groups or Page likes to infer interests this lookup does not establish.
+- When an interest search returns few or no friends, refine the query or report what it found. Do not scan friends' profiles, posts, timelines, groups or Page likes to infer interests this lookup does not establish.
 
 ## Explain a match
 
-- `match_context` can contain `groups`, `pages` and `profile_details`. Topic matches usually come from groups and Pages, sports and entertainment from Pages, and work, school and location from profile details.
+- Interest searches with `--json-query` return `match_context`, the evidence for why each friend matched. Use it to tell the user the reason.
 
-- Group context carries tagged text with `GROUP_NAME` and `GROUP_DESCRIPTION`. Page context uses `PAGE_NAME`, `PAGE_CATEGORY` and `PAGE_DESCRIPTION`, and profile details are plain text such as "Works at Acme Corp".
+- `match_context` can list `groups`, `pages` and `profile_details`. Show the readable names, such as "member of the Hiking Enthusiasts group" or "follows the Home Cooking Tips Page". Describe only that evidence.
 
-- Extract the readable names instead of showing tags, such as "member of the Hiking Enthusiasts group" or "follows the Home Cooking Tips Page". Describe the actual evidence, because membership in a hiking group does not show that someone hikes regularly.
+- If a friend matched without `match_context`, say the search matched them but gave no reason.

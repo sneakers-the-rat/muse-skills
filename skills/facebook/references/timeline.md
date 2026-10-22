@@ -5,7 +5,7 @@
 /opt/hatch/bin/facebook-cli timeline fetch --profile-id '<profile ID from earlier output>' --limit 10 --after '<next_cursor>'
 ```
 
-- `timeline fetch` reads the posts on an identified person's timeline. Pass only a profile ID returned earlier in this conversation, as [the connector doc](../CONNECTOR.md) explains. For the user's own timeline, use `fb_user_id` from `me`.
+- `timeline fetch` reads the posts on an identified person's timeline. Pass only a profile ID returned earlier in this conversation, as [the connector doc](/opt/hatch/connectors/facebook_cli/CONNECTOR.md) explains. For the user's own timeline, use `fb_user_id` from `me`.
 
 - A page holds 20 posts by default, and larger `--limit` values are capped at 20. When `has_next_page` is true, pass `next_cursor` unchanged as `--after` for the same profile. `--cursor` is an alias.
 
@@ -49,6 +49,6 @@
 
 ## Present the posts
 
-- Present captions, media fields and activity summaries as [Posts](posts.md) describes, linking the specific posts behind each claim.
+- Present captions, media fields and activity summaries as [Reading posts](/opt/hatch/connectors/facebook_cli/references/reading-posts.md) describes, linking the specific posts behind each claim.
 
 - If a page shows no posts by the person, say so for the period you inspected. A partial page does not establish that the person has stopped posting.

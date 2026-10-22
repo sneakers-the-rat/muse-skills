@@ -1,6 +1,6 @@
 # Shop a Facebook Reel
 
-- Read the Reel with `post read --url '<link>'`, decoding a share link first as [Posts](posts.md) describes. Use this connector for the Reel's context instead of opening it in the browser.
+- Read the Reel with `post read --url '<link>'`, decoding a share link first as [Reading posts](/opt/hatch/connectors/facebook_cli/references/reading-posts.md) describes. Use this connector for the Reel's context instead of opening it in the browser.
 
 - Before the read, collect only the requirements already known to apply. Resolve category-specific requirements from the returned context afterward. Apply relevant saved hard requirements even when the user did not repeat them, and let explicit current instructions override conflicting ones. A soft preference alone never starts a fresh search or changes the default recommendations or their order.
 

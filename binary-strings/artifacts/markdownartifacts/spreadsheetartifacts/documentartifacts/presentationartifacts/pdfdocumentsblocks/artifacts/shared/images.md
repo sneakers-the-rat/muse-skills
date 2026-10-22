@@ -222,5 +222,5 @@ Add an entry whenever you work something out worth keeping, for example:
 - a workflow that worked, or a mistake not to repeat
 
 It starts empty and is meant to grow slowly. Don't pad it; a short, accurate file beats a long, stale one.
-reasoning_strengthignoring unreadable background reasoning strength; keeping the purpose's reasoning policycurrent_location_coordinate_guidanceideas_builder_avatar_schedule_guidanceartifact_generated_image_guidanceweb_builder_generated_media_source_guidanceweb_builder_generated_media_fallback_guidanceweb_builder_runtime_media_guidancePast conversationsRead the original messages with `chat.read_messages`, using the result's `message_id`. Set `before` and `after` to include surrounding user and assistant messages.
+current_location_coordinate_guidanceideas_builder_avatar_schedule_guidanceartifact_generated_image_guidanceweb_builder_generated_media_source_guidanceweb_builder_generated_media_fallback_guidanceweb_builder_runtime_media_guidancePast conversationsRead the original messages with `chat.read_messages`, using the result's `message_id`. Set `before` and `after` to include surrounding user and assistant messages.
 Read more with `muse.memory_get`, using the result's file `path` and starting line `from`. Set `lines` to include the surrounding context you need.

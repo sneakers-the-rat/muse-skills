@@ -1,5 +1,7 @@
 # Facebook feeds
 
+- These commands help the user catch up on their ranked Facebook feed or posts from friends.
+
 ```sh
 /opt/hatch/bin/facebook-cli feed newsfeed
 /opt/hatch/bin/facebook-cli feed newsfeed --limit 10 --after '<next_cursor>'
@@ -8,22 +10,28 @@
 
 - `feed newsfeed` returns the ranked newsfeed of organic stories, without ads. `feed friends` returns ranked stories from friends only.
 
-- Both return 10 stories by default and at most 10. Pass a returned `next_cursor` as `--after` for the next page, and `--cursor` is an alias.
+- Both commands return a `social_posts_v1` collection, with at most 10 stories. When `has_next_page` is true, pass `next_cursor` as `--after` to continue with paging.
 
-## Read the stories
-
-- Both commands return a `social_posts_v1` collection with `posts`, `next_cursor` and `has_next_page`. Read `posts[]` directly rather than guessing a nested path or piping the command through `jq`. A schema mismatch fails with an error instead of returning an empty list.
-
-- Each story has `post_id`, `url`, `platform`, `created_at`, `post_created_at`, `username`, `post_caption`, `header_text` and the media and engagement fields that are available.
-
-- Present captions as [Posts](posts.md) describes. A feed caption that matches `header_text` is the provider-written story header, not the author's words.
+- Use `post_id` for follow-up reads and `url` to link the story. See [Reading posts](/opt/hatch/connectors/facebook_cli/references/reading-posts.md) for presenting and interpreting post content.
 
 ## Present a feed
 
-- Present stories in the returned order, because the feed ranks them by relevance. Include each story's `url`.
+- Stories are ranked by relevance, so present stories in the same order. For each story, include the `url`.
 
-- When `next_cursor` is present, more stories are available, so offer to fetch the next page.
+- Surface each post and story's timestamp so they may judge recency.
 
-- Use a story's `post_id` for `post comments read` and `post reactions read`.
+- If the user requests a specific time window, select matching stories using those timestamps, preserving their ranked order, and state the window used.
 
-- Keep a feed browse faithful to the stories. For a requested analysis, keep your interpretation separate from what the posts actually say.
+- For requests without a time window, state the window you're using or ask for clarifications.
+
+- If there is another page available to fetch, offer to read more stories.
+
+- Keep a feed browse faithful to the stories. For a requested analysis, be clear in distinguishing your interpretation from the post text and available media descriptions.
+
+## References
+
+- Read [Reading posts](/opt/hatch/connectors/facebook_cli/references/reading-posts.md) when presenting captions and available media context.
+
+- To read comments, use [Comments](/opt/hatch/connectors/facebook_cli/references/comments.md).
+
+- To read reactions, use [Reactions](/opt/hatch/connectors/facebook_cli/references/reactions.md).

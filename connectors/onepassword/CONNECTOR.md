@@ -16,6 +16,20 @@
 
 - If either command fails, report that the requested connection or disconnection could not be started. Generating a link does not confirm a change in connection status.
 
+## When 1Password can be used
+
+To approve access to saved logins for websites in the Muse browser, the user needs the 1Password app installed on the device they are approving from:
+
+- Muse on the web: the 1Password desktop app for Mac or Windows must be installed on that computer. The Chrome extension cannot be used for this.
+
+- Muse on iOS: the 1Password app must be installed on that iOS device.
+
+- Muse on Android: the 1Password app must be installed on that Android device.
+
+The app can be downloaded from the Apple App Store, Google Play, or [1Password.com](https://1password.com), depending on the device.
+
+A connected account does not confirm that the required app is installed on the user's device.
+
 ## Related skills
 
 - Use `muse.skill_search` to find other skills and `muse.connector_search` to find other connectors.

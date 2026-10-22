@@ -4,10 +4,6 @@
 
 - Use catalog or browser search products only, not Marketplace listings.
 
-- Try on wearable items only, such as clothing, outerwear, shoes, bags, hats, glasses, earrings and necklaces.
-
-- Swimwear and lingerie aren't supported because the renders would be too revealing, and rings, bracelets and watches are too small to look right. If asked, say try-on isn't available for that item and point to it in the results.
-
 - Renders use a photo of the user, not an inspiration or product photo showing someone else. If they look under 18, skip the render and say try-on is for adults.
 
 - Take size and gender only from the Shopping skill's steps. Don't guess them from the photo or comment on the user's body or looks, since those remarks can be hurtful.
@@ -18,7 +14,7 @@
 
 ## 1. Find the user's photo
 
-- Use the photo the user attaches now for try-on, or the one they just approved with "Use this photo". Otherwise read `~/workspace/style-tryon/photo.txt`. Its saved likeness photo counts only if the image it names still exists.
+- Use the photo the user attaches now for try-on, or the one they just chose to use after the photo check below. Otherwise read `~/workspace/style-tryon/photo.txt`. Its saved likeness photo counts only if the image it names still exists.
 
 - Use no other photos, even if earlier chats, memory notes, the media library or their profile photos (including `~/workspace/profile-images/`) show one, because these are the only photos the user approved for try-ons.
 
@@ -28,7 +24,7 @@
 
 - If it isn't a real photo, shows more than one main person or doesn't show their face at all, such as when their face is fully covered or turned away, ask for another with no option to use it, since the render can't show them without it.
 
-- If a newly sent photo has their face partly obscured, such as by sunglasses, or is blurry or dark, describe the issue in the photo to the user before rendering so they are aware the try-on may look less like them. End the reply with a `muse.create_options` row of "Use this photo" and "Send another", and wait for their choice.
+- If a newly sent photo has their face partly obscured, such as by sunglasses, or is blurry or dark, describe the issue in the photo to the user before rendering so they are aware the try-on may look less like them. End the reply with a `muse.create_options` row in the user's language, with one option to use this photo and one to send another, and wait for their choice.
 
 - A saved photo with these issues was already approved, so render without pausing and mention the issue after the images, once per photo in a chat, saying they can send a clearer photo anytime.
 
@@ -48,9 +44,9 @@ workspace/user/media_library/image/<xx>/<hash>.jpg
 
 - Choose only from shopping results already shown in a results card, so each product is verified and its card is ready. If the search is still running, say you'll show them on the user once the results are ready, then finish the search and show the results before rendering.
 
-- A single try-on uses the product the user named, else the first catalog product in the results, or the first product. Say which ("Here's the <marker> on you").
+- A single try-on uses the product the user named, else the first catalog product in the results, or the first product. Say which product it is, by marker.
 
-- Accepting the "a few on you" offer, or asking to compare items on themselves, means a comparison.
+- Accepting an offer to see several items, or asking to compare items on themselves, means a comparison.
 
 - For a comparison, use the products the user named. If they named none, pick up to 3 of the requested kind in results order, catalog first, skipping repeats of the same product.
 
@@ -80,9 +76,9 @@ workspace/user/media_library/image/<xx>/<hash>.jpg
 
 - Call `shopping.resolve_results` once with the rendered products in render order, only for their markers. If a catalog results file is gone, rebuild it with the helper first.
 
-- Reply with the images, with nothing between them. Then write one line naming the products by marker ("In order: <marker A> and <marker B>"). Keep it short.
+- Reply with the images, with nothing between them. Then write one short line naming the products by marker, in gallery order.
 
-- If the photo wasn't sent this turn, add "Using your photo from earlier. Send a new one to change it."
+- If the photo wasn't sent this turn, mention that it's their photo from earlier and that they can send a new one.
 
 - If you showed one image, go straight to step 6 in the same reply.
 
@@ -90,17 +86,17 @@ workspace/user/media_library/image/<xx>/<hash>.jpg
 
 ## 6. Help them buy
 
-- Find their pick from a tapped option, a reply to an image, a position along your latest "In order" line or a description. If unclear, ask.
+- Find their pick from a tapped option, a reply to an image, a position in your latest gallery order or a description. If unclear, ask.
 
 - Cover the pick in one short reply:
   - Size, skipped for one-size items. Use their given or saved size and check it is in stock, through the Shopping skill's variant steps or, for a browser product, the merchant's page via `browser.open`. If you don't know it, ask with a `muse.create_options` row of in-stock sizes and end the reply there, continuing after they pick.
   - Fit, from the listing's fit notes or size chart for their size. The render is a preview and can't show fit.
   - Price and stock in their size, and the return policy if stated.
-  - A `muse.create_options` row of only these options: "Buy in size <size>" (or "Buy it" for one-size items), "Add to cart" only when the Shopping skill allows a cart for that product, and "Not yet". Buying follows the Shopping skill.
+  - A `muse.create_options` row in the user's language with only these options: buy in their size (or just buy, for one-size items), add to cart only when the Shopping skill allows a cart for that product, and hold off for now. Buying follows the Shopping skill.
 
-- If the user taps "Not yet", briefly ask what would help them decide, and say they can also just tell you.
+- If the user holds off, briefly ask what would help them decide, and say they can also just tell you.
 
-- In that follow-up, add a `muse.create_options` row of "Find it cheaper" and "Help me decide".
+- In that follow-up, add a `muse.create_options` row in the user's language, with one option to find it cheaper and one to get help deciding.
 
 ## Helper commands
 
