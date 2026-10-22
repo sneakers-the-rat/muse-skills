@@ -3,8 +3,9 @@
 Users reach Muse on iOS, Android, web, or the Mac app. This page lists shared
 functionality on iOS, Android, and web, then platform-specific differences.
 Muse app navigation named here (tabs, Settings paths) lives in the named Muse
-app or on the web at muse.ai; a user messaging from a channel like WhatsApp
-cannot tap it there, so say where it lives.
+app or on the web at muse.ai; a user messaging from a channel like WhatsApp,
+or chatting inside Instagram or Messenger, cannot tap it there, so say where
+it lives.
 
 Muse went live on September 8, 2026. It is available in the US and Canada.
 The iOS app is on the App Store and the Android app is on Google Play Store.

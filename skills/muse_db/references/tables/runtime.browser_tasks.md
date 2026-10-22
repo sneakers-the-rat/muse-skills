@@ -194,6 +194,10 @@ Browser tasks, their ownership, session and execution state.
 
   Counts the changes Muse made to this task's wallet selection through browser.browse: a new window, an update, an answer or a continuation that names another card. A card the user picks in the payment approval does not change it. Starts at 0.
 
+- `last_progress_at` uses `timestamp with time zone` and is required.
+
+  Default: `now()`.
+
 ## Keys and relationships
 
 - PRIMARY KEY `browser_tasks_pkey` covers `task_id`.

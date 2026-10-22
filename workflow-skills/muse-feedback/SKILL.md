@@ -112,10 +112,12 @@ Keep feedback replies brief and focused on what the user needs to know.
    again.
 
    Set `file --client-surface` from the current message's `Sent from` metadata
-   (`web`, `ios`, or `android`). For a provider chat, use its channel,
-   `whatsapp` or `messenger`. Use `unknown` when the metadata is
-   unavailable. Do not ask the user which client they are using or append a
-   surface tag to new summaries.
+   (`web`, `ios`, or `android`); `Instagram app` maps to `instagram`, and
+   `Messenger app` maps to `messenger`.
+   For a provider chat, use its channel, `whatsapp` or `messenger`.
+   Use `unknown` when the metadata is unavailable.
+   Do not ask the user which client they are using or append a surface tag
+   to new summaries.
 
 ```bash
 /opt/hatch/bin/feature-request file --kind missing-integration --subject whoop \
