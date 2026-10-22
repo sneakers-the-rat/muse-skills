@@ -325,8 +325,35 @@ def build_slices(data, secs, v2o):
 
 LEA_RE = re.compile(
     rb"[\x48\x4c]\x8d[\x05\x0d\x15\x1d\x25\x2d\x35\x3d]....", re.S)
-IMM8_RE = re.compile(rb"\x48\xc7[\x40-\x47].(.{4})", re.S)
-IMM32_RE = re.compile(rb"\x48\xc7[\x80-\x87]....(.{4})", re.S)
+
+
+def imm_stores(win):
+    """All `movq $imm32, mem` (48 c7 /0) stores in a byte window, with
+    the ModRM/SIB/displacement decoded properly — the naive regex
+    misreads rsp-based stores (48 c7 44 24 ..), which are exactly the
+    stack-built descriptors. Returns [(offset, value)]."""
+    out = []
+    for m in re.finditer(rb"\x48\xc7", win):
+        i = m.start()
+        if i + 2 >= len(win):
+            break
+        modrm = win[i + 2]
+        if (modrm >> 3) & 7 != 0:
+            continue  # only /0 is mov
+        mod, rm = modrm >> 6, modrm & 7
+        j = i + 3
+        if mod == 0 and rm == 5:
+            j += 4                      # RIP + disp32
+        else:
+            if rm == 4:
+                j += 1                  # SIB byte
+            if mod == 1:
+                j += 1                  # disp8
+            elif mod == 2:
+                j += 4                  # disp32
+        if j + 4 <= len(win):
+            out.append((i, struct.unpack_from("<I", win, j)[0]))
+    return sorted(out)
 IMMREG_RE = re.compile(rb"(?:\x41)?[\xb8-\xbf](.{4})", re.S)
 EXT_END_RE = re.compile(rb"\.(md|yaml|yml|json|toml|txt)(?![a-z0-9_/])")
 PATH_AT_RE = re.compile(
@@ -380,14 +407,6 @@ def struct_descriptors(data, secs, v2o, lea_sites):
     ro = secs[".rodata"]
     text = secs[".text"]
     t_addr, t_off = text[3], text[4]
-
-    def imm_stores(win):
-        out = []
-        for m in IMM8_RE.finditer(win):
-            out.append((m.start(), struct.unpack("<I", m.group(1))[0]))
-        for m in IMM32_RE.finditer(win):
-            out.append((m.start(), struct.unpack("<I", m.group(1))[0]))
-        return sorted(out)
 
     def lea_at(fo):
         m = LEA_RE.match(data, fo)
@@ -486,6 +505,60 @@ def register_descriptors(data, secs, v2o, lea_sites, covered, starts):
                 tier, _pos, val = picks[0]
                 if tier <= 1:
                     found[path] = (cfo, val)
+                break
+    return found
+
+
+def general_descriptors(data, secs, v2o, o2v, lea_sites, targets, starts):
+    """Floating-arrangement descriptor reader: for each target path
+    (path -> heuristic content file offset), examine its path-LEA
+    sites' windows without assuming an instruction arrangement.
+    Collect LEA targets and immediate constants (register loads and
+    properly decoded stores); accept a constant as the content
+    length only if the content at the known offset is valid text and
+    its end lands exactly on a known file start. This covers the
+    stack-built and cmov-pair registrations the rigid shapes miss.
+    Returns {path: (content file offset, length)}."""
+    text = secs[".text"]
+    t_addr, t_off = text[3], text[4]
+
+    def leas_in(win_start, win):
+        out = set()
+        for m in LEA_RE.finditer(win):
+            fo = win_start + m.start()
+            iv = t_addr + (fo - t_off)
+            disp = struct.unpack_from("<i", win, m.start() + 3)[0]
+            out.add(iv + 7 + disp)
+        return out
+
+    def imms_in(win):
+        vals = [v for _p, v in imm_stores(win) if 0 < v <= 4_000_000]
+        for m in IMMREG_RE.finditer(win):
+            v = struct.unpack("<I", m.group(1))[0]
+            if 0 < v <= 4_000_000:
+                vals.append(v)
+        return vals
+
+    by_target = {}
+    for fo, tg in lea_sites:
+        by_target.setdefault(tg, []).append(fo)
+    found = {}
+    for src, cfo in targets.items():
+        po = data.find(src.encode())
+        if po == -1:
+            continue
+        pv = o2v(po)
+        cv = o2v(cfo)
+        for site in by_target.get(pv, []):
+            ws = max(t_off, site - 256)
+            win = data[ws:site + 1024]
+            if cv not in leas_in(ws, win):
+                continue
+            cands = {v for v in imms_in(win)
+                     if v != len(src) and cfo + v in starts
+                     and _text_ok(data[cfo:cfo + v])}
+            if len(cands) == 1:
+                found[src] = (cfo, cands.pop())
                 break
     return found
 
@@ -605,8 +678,9 @@ def main():
         return 1
 
     # ---- merge by authority: table > slice > struct > register > heur.
-    RANK = {"table": 5, "slice": 4, "descriptor-struct": 3,
-            "descriptor-register": 2, "heuristic": 1}
+    RANK = {"table": 6, "slice": 5, "descriptor-struct": 4,
+            "descriptor-register": 3, "descriptor-general": 2,
+            "heuristic": 1}
     found = {}   # source -> (offset, body, via)
     rank = {}
 
@@ -641,6 +715,20 @@ def main():
             tfo = v2o(tv)
             if tfo is not None:
                 put(s, tfo, data[tfo:tfo + ln], "table")
+    # general floating-arrangement reader for what is still heuristic
+    starts_g = set(starts)
+    for _cfo, _ln in d_struct.values():
+        starts_g.add(_cfo)
+        starts_g.add(_cfo + _ln)
+    for _cfo, _ln in d_reg.values():
+        starts_g.add(_cfo)
+    todo_h = {s: cs for s, (cs, _b) in found_h.items()
+              if rank.get(s, 0) < RANK["descriptor-general"]}
+    d_gen = general_descriptors(data, secs, v2o, o2v, lea_sites,
+                                todo_h, starts_g)
+    for s, (cfo, ln) in d_gen.items():
+        if target_for(s) is not None:
+            put(s, cfo, data[cfo:cfo + ln], "descriptor-general")
     problems = [p for p in problems if p not in found]
 
     # ---- write ---------------------------------------------------------
