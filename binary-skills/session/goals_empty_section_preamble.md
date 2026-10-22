@@ -1,2 +1,1 @@
 
-[TRUNCATED] Goals exceeded prompt 

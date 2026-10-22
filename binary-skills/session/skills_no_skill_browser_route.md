@@ -1,2 +1,1 @@
 - If `muse.skill_search` finds nothing and the task is work you would do on a website, use `browser.browse` with a related task ID or `task_id: "new"`.
-{skills_blocked_escalation}{skills_no_skill_browser_route}

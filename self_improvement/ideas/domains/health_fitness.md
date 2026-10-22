@@ -51,4 +51,3 @@ user's real evidence, never to copy:
 - A health dashboard: a living view of the trends, the correlations that
   matter, and the day's readiness: a first report to start, then refreshed
   each morning once it earns its place.
-,TimeDelta::hours out of boundsmemoryalignmentskill_improvementwindow_sincewindow_untilidle_gatedgoals bookkeeping has a composite cursor without a last-run timestampgoals bookkeeping has a last-run timestamp without a composite 

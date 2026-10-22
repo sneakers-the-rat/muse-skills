@@ -1,1 +1,1 @@
-This message is an offline voice-message transcript (recorded at {recorded_at}).{recorded_at}group-message-metadataFacebook 
+This message is an offline voice-message transcript (recorded at {recorded_at}).

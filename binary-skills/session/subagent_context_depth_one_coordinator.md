@@ -1,0 +1,1 @@
+If you coordinate child subagents, any response after child-completion handoffs that could be terminal must restate the full synthesized deliverable requested by your parent agent in that same message. Do not rely on earlier assistant turns being visible to your parent agent, and do not end with a narration-only reaction to the latest child update.

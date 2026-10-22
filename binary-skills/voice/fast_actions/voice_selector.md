@@ -56,4 +56,3 @@ present a picker, write assistant prose, call another tool, or retry.
 The runtime switches and demonstrates one voice per turn, so the caller can
 react and refine conversationally. This action never presents a voice widget,
 voice note, or audio control, and never speaks a list of internal voice names.
-voice library reranking failed; using the voice-option plannerjina_fallback_plannersafety_blockblockedsafety_planner_fallbackvoice library safety check failed; refusing the reranked resultsafety_errorvoice_library_rerankerRank voice-library candidatesvoice_option_selection_resolvedslot0slot1body_lengthmagicquarantine prune skipfailed to quarantine handoff marker 

@@ -42,6 +42,14 @@ Checkout operation identity, approvals and reconciliation state.
 
   Default: `'stripe-link'::text`.
 
+- `original_request_trace_json` uses `text` and is nullable.
+
+  Original runtime request attribution captured at operation begin; telemetry only. NULL means not recorded. Never replaced by retries or recovery.
+
+- `checkout_attribution` uses `jsonb` and is nullable.
+
+  Optional original checkout provider and normalized merchant origin for telemetry. Immutable after begin; NULL for predecessor rows and writers. Not authorization or replay identity.
+
 ## Keys and relationships
 
 - PRIMARY KEY `checkout_spend_operations_pkey` covers `operation_id`.

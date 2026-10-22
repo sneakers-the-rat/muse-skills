@@ -1,6 +1,8 @@
 # Shopify UCP checkout protocol
 
-- Use this protocol after the user selects eligible catalog products from one Shopify merchant. Every command runs as `/opt/hatch/bin/shopify-ucp-cli`, and every command except `order get` takes a JSON input file.
+- Use this protocol after the user selects eligible catalog products from one Shopify merchant, or when the user asks about a native order confirmed in this conversation by a successful `checkout complete` or a successful `order get` after an unclear completion.
+
+- Every command runs as `/opt/hatch/bin/shopify-ucp-cli`, and every command except `order get` takes a JSON input file.
 
 ## Check eligibility
 
@@ -229,6 +231,24 @@
 
 - Summarize the order status, products, merchant, final amount, delivery estimate and the returned confirmation link, without raw JSON, internal IDs, buyer contact details or the shipping address.
 
-- For a later status question, use `order get --checkout-id`, or `checkout get` with an input file holding `{"checkout_id": "<checkout_id>"}`. Reads add UTC and user-local forms of provider times, such as `checkout_expires_at`, `order_placed_at` and `order_event_occurred_at`. An order-status message time is not a delivery time.
+- After a successful native completion, follow **Check order status** below to read the placed order and include its merchant order link in the completion summary. If that read fails, the successful completion still confirms the purchase: summarize its available fields, keep any returned confirmation link, and explain that current order details could not be read. Never repeat checkout to recover order details or a missing link.
+
+- For a later status question about a native order confirmed in this conversation by successful `checkout complete` or `order get`, follow **Check order status** below. Keep a browser-completed Shop Pay or Link order on the browser-owned path.
 
 - Cancel a placed order with `checkout cancel` and `{"checkout_id": "<checkout_id>"}` only when the user explicitly asks, then confirm the new state with `order get`.
+
+## Check order status
+
+- Use the saved `agent_state.checkout_id` from native `checkout create`, `checkout complete`, or the confirming `order get` result for that same checkout. Creation supplies an ID without confirming a purchase. Keep this ID internal.
+
+```text
+/opt/hatch/bin/shopify-ucp-cli order get --checkout-id '<checkout_id>'
+```
+
+- Read the top-level `ok` before describing the order. On success, summarize `.order.status`, the merchant's order number in `label`, `line_items`, `totals` and available fulfillment or tracking details.
+
+- Include one clickable `[View order](<order_url>)` link by default when a merchant order, confirmation, or status URL is available from a successful native checkout result or order read for that same confirmed purchase, even when the user asked only for status. Prefer the merchant's permanent order page when available; otherwise use its confirmation URL, then its status URL. Copy the complete URL verbatim. Never invent or shorten a link or expose a checkout or order ID.
+
+- Prefer `fulfillment.events[].tracking_url` for a shipped package's tracking link. Relay important `messages` and relevant `adjustments`, such as refunds, returns, credits, disputes or cancellations. Reads add UTC and user-local forms of provider times; an order-status message time is not a delivery time.
+
+- If the read fails, explain the failure and keep any order link already returned for that same confirmed purchase. Never run checkout again or place another order to recover details or a link.

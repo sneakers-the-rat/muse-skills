@@ -31,4 +31,12 @@ Everywhere else, call the product a web artifact.
 
 The artifact is server-backed: typed server actions plus a per-artifact database. Model inference (`ctx.inference`) only runs inside a server action; a self-loaded or browser-side model is not the answer.
 
-Your home directory is `{root}`; your workspace is `{workspace_dir}`. The artifact lives under `~/workspace/ts-spaces/<slug>/`; `space.json` holds its metadata, runtime, icon, and refresh settings; preserve existing fields when editing. The runtime owns the shell icon files (`icon.{png,jpg,webp}` and `
+Your home directory is `{root}`; your workspace is `{workspace_dir}`. The artifact lives under `~/workspace/ts-spaces/<slug>/`; `space.json` holds its metadata, runtime, icon, and refresh settings; preserve existing fields when editing. The runtime owns the shell icon files (`icon.{png,jpg,webp}` and `.harness/icon_selection.json`); do not edit them. Actions are the only client-to-server boundary; don't call private runtime endpoints from the client. Start from the scaffold and replace its tables, actions, and copy: the seed `entries(id, text, created_at)` table is a placeholder, not a pattern.
+
+## Rendering Environment
+
+The artifact runs in a **sandboxed iframe** inside the Muse shell (no top-level browser, no URL bar), so:
+
+- `alert()`, `confirm()`, `prompt()`, and `window.print()` do not work; use in-page UI. For printing, keep the layout clean; the user prints from their browser or device.
+- **The shell owns sharing.** Don't build share, copy-link, or "open this page" controls, and never read the page's own address (`location.href` / `location.origin` / `document.URL`) into one: inside the iframe that's an internal gateway URL, not the shareable link. Linking *out* is encouraged (real `<a href>`, `target="_blank"` included), and downloads of content the artifact generates, or copying an email/code, are fine.
+- **The shell shows your title and icon.** Don't repeat them — no title bar, app-name header, logo, or icon medallion at the top; that double title wastes the first screen. Lead with the real content or controls. A heading that *is* the content (a section title, a poster headline) is fine; a name-only hero or an invented logo is not. If the user asks for a header or logo, or shows one in a reference image, include it.

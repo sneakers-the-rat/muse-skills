@@ -10,7 +10,7 @@
 
 - Validate each returned place's name, type, country and region together. A same-name place in another region is not a match.
 
-- Map only returned `targeting_results` to interests, `location_results` to geography and `locale_results` to languages. Keep each selected result's canonical key or ID, with the display metadata the commands need, across the budget and creation commands. `estimate-budget` builds its own targeting shape, while a direct `ads_create_ad_set` call puts those results unchanged in `targeting.interests`, `targeting.geo_locations` and `targeting.locales` respectively.
+- Map only returned `targeting_results` to interests, `location_results` to geography and `locale_results` to languages. Keep each selected result's canonical key or ID, with the display metadata the commands need, across the budget and creation commands. `estimate-budget` builds its own targeting shape, while a direct `ads_create_ad_set` call puts interests in `targeting.interests` and languages in `targeting.locales` unchanged. For geography it takes countries as ISO codes in `targeting.geo_locations.countries`, regions, cities and ZIPs as `{"key": ...}` objects in `targeting.geo_locations.regions`, `.cities` or `.zips`, and exclusions in `targeting.excluded_geo_locations`. Other place types and radii follow the live `ads_create_ad_set` schema, and when it has no slot for one, say so rather than placing it elsewhere. A place inside a country you also list conflicts with it, so list one or the other.
 
 - Keep raw IDs out of the reply, and review every unresolved item and warning. When several places remain plausible, choose only when the advertiser's words or verified business evidence distinguishes one, and otherwise ask.
 

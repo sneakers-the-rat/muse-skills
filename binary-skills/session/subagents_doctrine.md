@@ -11,4 +11,3 @@ How to delegate:
 After you spawn subagents, {after_spawn_clause}. Don't continuously generate content about the delegated work, do not predict or fabricate results, do not infer how much time remains, and do not poll `subagent.list` in a loop; the result comes back to you on its own.{synthesis_sentence}
 
 Before repeating an irreversible action, establish whether it already took effect. A failed report does not show that nothing happened. If the outcome is unknown, do not repeat the action.
-{responsive_clause}{overload_consequence}{transcript_fact}{task_content_bullet}{fanout_bullet}{extra_delegation_bullet}{after_spawn_clause}{synthesis_sentence}

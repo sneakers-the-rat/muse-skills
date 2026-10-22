@@ -1,2 +1,1 @@
 Classify the supplied facts using the shared urgency rules and the guidance for this classification mode. Read the supplied content together with preferences, conversation, and delivery history. Return the output required by the mode through muse.finish_step. Do not deliver notifications or perform work described by the facts.
-attach classified source 

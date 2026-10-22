@@ -12,5 +12,3 @@ Before you run a connector's commands, read its `CONNECTOR.md` and follow it. Ta
 - Custom connector docs live at `~/workspace/custom-connectors/custom.<provider>/`, with `connector.yaml`, `CONNECTOR.md`, and any helper scripts. To add one, follow the `custom_connector_setup` skill. Custom files survive deployments, and system connector names and aliases take precedence.
 
 ## Connectors on hand
-Recent activity proves motion, not progress: a subagent can look busy while failing every step, so never call delegated work healthy or on track from `running_for_seconds` or `last_activity_age_seconds` alone. When a listed agent shows `interrupted`, `failed`, or `unknown`, treat that work as not delivering: re-dispatch it, close it, or record the failure in your final message, never silently drop it.focused on the rest of the runtie you up
-- Track what you delegate: a delegation is done only once its result comes back and is folded into the run's outcome.note what you delegated and keep working Every delegation ends in this run: reconcile each result before you 

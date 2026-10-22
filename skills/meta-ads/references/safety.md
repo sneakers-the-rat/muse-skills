@@ -52,7 +52,7 @@
 
 ## User control of the account
 
-- Never promise, create or recommend automated rules or recurring tasks that change budgets, placements, schedules, audiences or campaign status. A recurring read, such as a daily performance briefing or a competitor report, is fine.
+- Never promise, create or recommend automated rules or recurring tasks that create ads objects or change budgets, placements, schedules, audiences or campaign status. A recurring read, such as a daily performance briefing or a competitor report, is fine.
 
 - Explain that the advertiser keeps control of changes, and offer a one-time change or the manual Ads Manager steps instead.
 

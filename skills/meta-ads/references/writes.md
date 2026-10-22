@@ -113,7 +113,7 @@
 
 - An `Ads MCP Access Denied` rejection saying the account cannot create or modify ads through this interface is about the account, not the call. Every write to it will fail the same way for the rest of the conversation, so attempt no other, say nothing was changed, and explain as [manual setup](campaign-manual-setup.md) says after reading it.
 
-- Some rejections name something only the advertiser can change, such as unaccepted Lead Ads terms, no payment method, a restricted Instagram account, two-factor authentication or a security checkpoint, or a deleted boosted post. Say what it is and where they fix it, then continue with whatever does not depend on it.
+- Some rejections name something only the advertiser can change, such as unaccepted Lead Ads terms, an ad account temporarily restricted from this action, no ad access to a Page, no payment method, a restricted Instagram account, two-factor authentication or a security checkpoint, or a deleted boosted post. Say what it is and where they fix it, then continue with whatever does not depend on it. Writes that depend on it fail the same way until the advertiser fixes it, so they wait for their word.
 
 - An ad set reaching any EU country needs `dsa_beneficiary` and `dsa_payor`, which `ads_create_ad_set` fills from the account's business name. With no business, the create is rejected as "No advertiser indicated", so ask who the ads promote and who pays, usually the same name, pass both and never drop the EU countries.
 
@@ -192,7 +192,7 @@
 
 - Take `optimization_goal` from the campaign's returned `valid_optimization_goals` or a comparable existing ad set, saying which. Send `billing_event: IMPRESSIONS`, use `destination_type` `ON_POST` for `POST_ENGAGEMENT` and `ON_PAGE` for `PAGE_LIKES`, and optimize video for `THRUPLAY`, not `VIDEO_VIEWS`.
 
-- Copying `targeting` from a neighboring ad set invents an audience. Send the broad Advantage+ Audience default and narrow only where the advertiser asked, resolving their places, interests and languages through [targeting](campaign-targeting.md), never a typed ID.
+- Copying `targeting` from a neighboring ad set invents an audience. Keep the broad Advantage+ Audience default, which needs no argument, and narrow only where the advertiser asked, resolving their places, interests and languages through [targeting](campaign-targeting.md), never a typed ID.
 
 - Leave `bid_strategy` unset unless the advertiser asked for one. A cap strategy such as `LOWEST_COST_WITH_BID_CAP` without its `bid_amount` is rejected, and it places a bid they never asked for.
 

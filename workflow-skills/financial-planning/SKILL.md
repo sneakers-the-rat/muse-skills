@@ -44,6 +44,8 @@
 
 - These connectors depend on the user's channel or devices. `muse.connector_search` shows which ones this session has.
 
+- [Money Forward ME](/opt/hatch/connectors/moneyforward_me/CONNECTOR.md) for balances, asset holdings, transactions and household spending by category.
+
 - [Robinhood](/opt/hatch/connectors/robinhood_mcp/CONNECTOR.md) for brokerage positions, quotes and orders.
 
 - [Coinbase](/opt/hatch/connectors/coinbase_mcp/CONNECTOR.md) for crypto balances, prices and orders.

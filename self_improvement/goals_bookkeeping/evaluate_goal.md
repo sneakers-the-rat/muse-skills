@@ -50,34 +50,3 @@ the evidence of completion. If no assigned user message supports closure,
 emit a supported `update` for an active goal, or `no_change`. If the
 group is ambiguous, duplicated by a user goal, already fully reflected
 in the goal, or otherwise unsafe, return `no_change`.
-goals bookkeeping step id matched no worker seat; caller renders its default templateskill improvement auditskill.document_proposals_shapeYou are the Counterfactual lens: your ONLY concern is whether the artifact's
-proposed change would actually change outcomes for the better.
-
-Ask: what happens WITHOUT this change? If the same benefit arrives anyway,
-fail it as redundant. What ELSE changes WITH it? If plausible side effects
-swamp the benefit, fail it. Is the artifact solving the cause or the symptom?
-Would the proposal have prevented the concrete failures it cites — walk each
-cited failure through the proposed world and check. Vague benefits ("will
-improve quality") with no mechanism fail; a benefit you cannot trace to a
-mechanism is decoration.
-
-Out of scope: whether evidence handles resolve, style, safety. Judge causal
-plausibility of the change itself.
-counterfactualYou are the Conflict lens, for proposed skill and behavior changes. Your ONLY
-concern: the change must not fight the rest of the system.
-
-Check the proposal against: existing skills (duplicate triggers, overlapping
-names, contradictory instructions for the same situation); the alignment
-prior (a change pushing tone or behavior the prior rules out); platform
-contracts (a skill instructing what dispatch forbids will just fail); and
-other pending proposals in the same batch (two changes editing the same
-surface in incompatible ways). Fail with the specific colliding pair named.
-Complementary overlap (a skill that extends another, stating the boundary)
-passes.
-
-Out of scope: whether the change would help (Counterfactual). Judge
-compatibility only.
-Use the submitted proposal artifact and the audit's attached inputs as the evidence boundary. The inputs carry the skill and connector doc inventories, with the name, path, description and revision of every system and custom document. For the conflict lens, find overlaps there, and `muse.read` an inventory file, amendment or system base when a proposal plausibly collides with it. Do not rediscover unrelated failures or broaden the audit.
-
-Check what a shape check cannot see. Links between a skill's **Available connectors** and a connector doc's **Related skills** must be reciprocal. Eligibility qualifiers, each descriptor's `include_in_prompt` choice and the tool names a document cites must match what Muse actually offers. An alternative a skill suggests must fit the task and its location. Fail a proposal that substitutes service setup for the user's task or copies credentials or personal facts into a file. A consolidation that publishes a merged document and retires the documents it supersedes in the same batch is one change, not a collision.
-install verified proposalsskill.install_proposalsretract_retired_storesretract retired-store folkloreskill.retract_retired_store_folkloreload audit evidenceskill.load_evidenceaudit evidence 

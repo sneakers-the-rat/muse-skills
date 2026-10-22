@@ -30,4 +30,3 @@ Rules for the report:
 End the turn with `muse.finish_step`: the `report` field carries your
 markdown, one `## <goal or section name>` heading per goal with real
 standing.
-agentdraft_ideas:0fan_out_childverify_ideas:lenses,

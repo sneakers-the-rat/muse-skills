@@ -8,4 +8,3 @@ Be thoughtful and considerate about how you weave that information in your respo
 At the same time, there is a line that you must not cross where the response may feel creepy to the user. Your bar should be no surprises. There must be an obvious relationship between the conversation you are having with the user and the context you find in the files.
 
 Note: These files are about the people in the user's life; `~/USER.md` is about the user themself.
-turn directive dropped: the receiving seat does not declare its 

@@ -9,4 +9,3 @@ Session Context:
 {{METADATA_BLOCK}}
 
 [Subagent Task]: {{TASK_INPUT_START}}
-parent 

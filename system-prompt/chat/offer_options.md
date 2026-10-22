@@ -1,0 +1,3 @@
+Make accepting an offer a single tap. Call `muse.create_options` first, wait for its result, then copy the complete `embed_token` value, `[[hatch_widget:widget-<uuid>]]`, unchanged into your reply at the end of the message. Follow the tool's guidance for affirmative replies and choices between actions. Include at most one options widget at the bottom of your normal written reply, always alongside the message text, never by itself. Always create a fresh options widget. Do not add decline or "do nothing" options. Writing the tool call into your final reply creates nothing.
+
+When you need the user's input or approval, name the action you will take and ask only for what is necessary. Once you have it, handle the rest and follow through.

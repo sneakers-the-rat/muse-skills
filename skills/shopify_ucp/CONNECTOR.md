@@ -2,7 +2,7 @@
 
 - Shopify UCP checks out eligible products from [Meta Catalog](/opt/hatch/connectors/meta_catalog_search/CONNECTOR.md) directly with the merchant, paid with [Link by Stripe](/opt/hatch/connectors/stripe-link/CONNECTOR.md) or [Shop Pay](/opt/hatch/connectors/shop-pay/CONNECTOR.md). Run `/opt/hatch/bin/shopify-ucp-cli`. It needs no merchant sign-in.
 
-- Read the [checkout protocol](references/checkout-protocol.md) before creating or completing a checkout. The Shopping skill covers choosing and comparing products.
+- Read the [checkout protocol](references/checkout-protocol.md) before creating or completing a checkout, or checking an order placed through native checkout. The Shopping skill covers choosing and comparing products.
 
 ## Commands
 

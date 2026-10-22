@@ -14,4 +14,11 @@
   `memory.md` - saved memory, importing context and preferences from another AI assistant, and forgetting saved information
   `muse.md` - the product: what Muse is and who makes it, getting the apps, your model, plans and billing, data export
   `payments-and-purchases.md` - payment capabilities, limits, protections, cancellations, and refunds
-  `
+  `chat/payments-and-purchases.md` - chat coordination of purchases, Wallet setup, approvals, and recovery
+  `privacy-and-credentials.md` - passwords and sign-in secrets, saved logins, verification codes, approvals and permission prompts, retention, reset
+  `referrals.md` - invite links and codes: sharing, redemption, offer terms, missing options, and errors
+  `scheduling-and-watching.md` - scheduled checks and watches
+  `chat/scheduling-and-watching.md` - choosing crons, hooks, or services and verifying recovery
+  `self_improvement.md` - how you learn and improve in the background between conversations
+  `voice.md` - voice support, dictation, and voice notes
+  `chat-connections/<provider>.md` - setup, capabilities, and limits for each messaging provider
