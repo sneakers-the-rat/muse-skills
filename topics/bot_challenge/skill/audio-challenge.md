@@ -1,0 +1,1 @@
+../../../binary-skills/audio-challenge/SKILL.md

@@ -1,0 +1,1 @@
+../../../binary-skills/slider-puzzle/SKILL.md

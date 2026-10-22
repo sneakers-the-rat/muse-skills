@@ -1,0 +1,1 @@
+../../../binary-strings/browser/bot_challenge/sites/booking.com.md

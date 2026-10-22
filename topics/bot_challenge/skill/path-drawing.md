@@ -1,0 +1,1 @@
+../../../binary-skills/path-drawing/SKILL.md

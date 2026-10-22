@@ -1,0 +1,1 @@
+../../../binary-skills/block-page/SKILL.md

@@ -1,0 +1,1 @@
+../../../binary-skills/text-captcha/SKILL.md

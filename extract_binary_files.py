@@ -36,15 +36,18 @@ offsets are provenance, never a lookup table.
 If the bundles cannot be found at all, the script fails loudly
 instead of writing an empty manifest.
 
-Mapping (user, 2026-10-21):
-  browser/          -> browser/            (kept)
-  self_improvement/ -> self_improvement/   (kept)
-  blocks/           -> system-prompt/
-  templates/        -> artifacts/templates/
-  artifacts/        -> artifacts/
-  tools/            -> binary-tools/
+Mapping (user, 2026-10-21; top-level layout revised by the user
+later that evening — everything string-like now lives under
+binary-strings/, and system-prompt/ became system_prompts/):
+  browser/          -> binary-strings/browser/
+  self_improvement/ -> binary-strings/self_improvement/
+  blocks/           -> system_prompts/
+  templates/        -> binary-strings/artifacts/templates/
+  artifacts/        -> binary-strings/artifacts/
+  tools/            -> binary-strings/tools/
   <challenge slug>/ -> binary-skills/<slug>/        (SKILL.md guides)
-  <domain>/         -> browser/site-config/<domain>/ (config.yaml + SKILL.md)
+  <domain>/         -> binary-strings/browser/site-config/<domain>/
+                       (config.yaml + SKILL.md)
   session/, chat/, devices/, voice/, activity_monitor/, channels/,
   chat-connections/, shopping/
                     -> binary-skills/<root>/  (the real multi-file roots)
@@ -124,22 +127,22 @@ def clean_path(raw):
 def target_for(source):
     top, _, rest = source.partition("/")
     if top == "browser":
-        return source
+        return f"binary-strings/{source}"
     if top == "self_improvement":
-        return source
+        return f"binary-strings/{source}"
     if top == "blocks":
-        return f"system-prompt/{rest}"
+        return f"system_prompts/{rest}"
     if top == "templates":
-        return f"artifacts/templates/{rest}"
+        return f"binary-strings/artifacts/templates/{rest}"
     if top == "artifacts":
-        return source
+        return f"binary-strings/{source}"
     if top == "tools":
-        return f"binary-tools/{rest}"
+        return f"binary-strings/tools/{rest}"
     if top in SLUGS:
         return f"binary-skills/{source}"
     if DOMAIN.match(top) and source.count("/") == 1 and \
             rest in ("SKILL.md", "config.yaml"):
-        return f"browser/site-config/{source}"
+        return f"binary-strings/browser/site-config/{source}"
     if top in SKILL_ROOTS:
         return f"binary-skills/{source}"
     if top in SKIP_ROOTS:
@@ -819,9 +822,16 @@ def main():
     # not produce is a file the binary no longer embeds (or an artefact
     # of an older extractor layout) — remove it so the archive records
     # the deletion instead of keeping a stale copy forever.
-    MANAGED_ROOTS = ["system-prompt", "binary-skills", "binary-tools",
-                     "binary-etc", "browser", "self_improvement",
-                     "artifacts"]
+    # Pruning is scoped to subtrees ONLY this extractor writes.
+    # binary-strings/ is shared: binary-strings/tools/*.json and
+    # binary-strings/browser/{bot_challenge,errors.csv} belong to the
+    # topical string extractions and are never pruned from here.
+    MANAGED_ROOTS = ["system_prompts", "binary-skills", "binary-etc",
+                     "binary-strings/artifacts",
+                     "binary-strings/browser/instructions",
+                     "binary-strings/browser/site-config",
+                     "binary-strings/browser/workflows",
+                     "binary-strings/self_improvement"]
     keep = {c["target"] for c in contents}
     pruned = 0
     for root in MANAGED_ROOTS:

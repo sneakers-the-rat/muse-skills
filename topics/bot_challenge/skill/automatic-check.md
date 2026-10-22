@@ -1,0 +1,1 @@
+../../../binary-skills/automatic-check/SKILL.md

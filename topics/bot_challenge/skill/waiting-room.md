@@ -1,0 +1,1 @@
+../../../binary-skills/waiting-room/SKILL.md

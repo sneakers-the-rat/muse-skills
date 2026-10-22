@@ -1,0 +1,1 @@
+../../../binary-skills/start-gate/SKILL.md

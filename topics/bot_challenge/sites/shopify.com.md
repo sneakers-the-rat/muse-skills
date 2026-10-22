@@ -1,0 +1,1 @@
+../../../binary-strings/browser/bot_challenge/sites/shopify.com.md

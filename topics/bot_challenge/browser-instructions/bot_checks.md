@@ -1,0 +1,1 @@
+../../../binary-strings/browser/instructions/bot_checks.md

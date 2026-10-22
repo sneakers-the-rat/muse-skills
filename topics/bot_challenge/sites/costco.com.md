@@ -1,0 +1,1 @@
+../../../binary-strings/browser/bot_challenge/sites/costco.com.md
