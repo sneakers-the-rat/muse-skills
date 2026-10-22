@@ -563,6 +563,61 @@ def general_descriptors(data, secs, v2o, o2v, lea_sites, targets, starts):
     return found
 
 
+def matcher_descriptors(data, secs, v2o, wanted):
+    """Jump-table matcher arms: each arm loads (path -> rdi,
+    path length -> esi, content -> rdx, content length -> ecx) and
+    jumps to a common store. For every lea-rdi site whose target is a
+    wanted path, walk backwards a short window collecting the arm's
+    other values; accept only on exact validation: esi == path
+    length and content == path + path length (bundle adjacency) and
+    the content is valid text. Returns {path: (content offset, len)}.
+    """
+    text = secs[".text"]
+    t_addr, t_off = text[3], text[4]
+    lea_rdi = re.compile(rb"\x48\x8d\x3d....", re.S)
+    lea_rdx = re.compile(rb"\x48\x8d\x15....", re.S)
+    mov_esi = re.compile(rb"\xbe(.{4})", re.S)
+    mov_ecx = re.compile(rb"\xb9(.{4})", re.S)
+
+    def lea_tgt(fo):
+        iv = t_addr + (fo - t_off)
+        disp = struct.unpack_from("<i", data, fo + 3)[0]
+        return iv + 7 + disp
+
+    found = {}
+    for m in lea_rdi.finditer(data, t_off, t_off + text[5]):
+        site = m.start()
+        tgt = lea_tgt(site)
+        fo = v2o(tgt)
+        if fo is None:
+            continue
+        cands = path_candidates(data, v2o, tgt)
+        if not cands:
+            continue
+        path, plen = cands[0]
+        if path not in wanted or path in found:
+            continue
+        win_start = max(t_off, site - 56)
+        win = data[win_start:site]
+        esi = mov_esi.findall(win)
+        ecx = mov_ecx.findall(win)
+        rdxs = [lea_tgt(win_start + mm.start())
+                for mm in lea_rdx.finditer(win)]
+        if not esi or not ecx or not rdxs:
+            continue
+        if struct.unpack("<I", esi[-1])[0] != plen:
+            continue
+        clen = struct.unpack("<I", ecx[-1])[0]
+        cfo = v2o(rdxs[-1])
+        if cfo is None or cfo != fo + plen:
+            continue
+        if not (0 < clen <= 4_000_000):
+            continue
+        if _text_ok(data[cfo:cfo + clen]):
+            found[path] = (cfo, clen)
+    return found
+
+
 def main():
     data = BIN.read_bytes()
     sha = hashlib.sha256(data).hexdigest()
@@ -678,9 +733,9 @@ def main():
         return 1
 
     # ---- merge by authority: table > slice > struct > register > heur.
-    RANK = {"table": 6, "slice": 5, "descriptor-struct": 4,
-            "descriptor-register": 3, "descriptor-general": 2,
-            "heuristic": 1}
+    RANK = {"table": 7, "slice": 6, "descriptor-struct": 5,
+            "descriptor-register": 4, "matcher": 3,
+            "descriptor-general": 2, "heuristic": 1}
     found = {}   # source -> (offset, body, via)
     rank = {}
 
@@ -732,6 +787,14 @@ def main():
     for s, (cfo, ln) in d_gen.items():
         if target_for(s) is not None:
             put(s, cfo, data[cfo:cfo + ln], "descriptor-general")
+    # jump-table matcher arms, for anything still below that rank
+    # (heuristic files and previously skipped candidates alike)
+    wanted_m = {s for s in set(cands) | set(found_h)
+                if rank.get(s, 0) < RANK["matcher"]}
+    d_match = matcher_descriptors(data, secs, v2o, wanted_m)
+    for s, (cfo, ln) in d_match.items():
+        if target_for(s) is not None:
+            put(s, cfo, data[cfo:cfo + ln], "matcher")
     problems = [p for p in problems if p not in found]
 
     # ---- write ---------------------------------------------------------
@@ -789,8 +852,21 @@ def main():
     print(f"by mechanism: {dict(vias)}")
     print(f"new on disk: {n_new}; changed on disk: {n_changed}")
     print(f"heuristic-only residue: {vias.get('heuristic', 0)}")
+    spans = sorted((off, off + len(body)) for off, body, _v
+                   in found.values())
     for p in problems:
-        print(f"  SKIP {p}", file=sys.stderr)
+        # a candidate whose every occurrence lies inside an
+        # extracted file's content is a mention in that file, not a
+        # missed file — tag it so the skip list reads honestly
+        occ = []
+        i = data.find(p.encode())
+        while i != -1:
+            occ.append(i)
+            i = data.find(p.encode(), i + 1)
+        mention = bool(occ) and all(
+            any(a <= o < b for a, b in spans) for o in occ)
+        print(f"  SKIP {'(mention) ' if mention else ''}{p}",
+              file=sys.stderr)
     return 0
 
 
