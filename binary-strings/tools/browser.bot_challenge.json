@@ -1,22 +1,28 @@
 {
   "name": "browser.bot_challenge",
-  "description": "Prepare a cart for Muse to check, or complete a purchase, through the checkout agent.\n\nUse `purpose: purchase` when your assignment asks you to buy, and `purpose: review` when it asks for the cart without buying. A purchase shows the user the payment approval before anything is paid, whatever card pays. Pass the `checkout` reference from an earlier result to continue that checkout on any tab, with its cart confirmation and payment approval.\n\nSay what the checkout agent should do now. Include relevant progress, previous attempts and any item, contact, delivery or payment details it needs.\n\nThe checkout agent fills in checkout and has Muse check the cart, making any change Muse asks for. It obtains the user's payment approval, places the order and reads the confirmation. The runtime reuses an existing purchase approval when it still covers the checkout. The call starts the checkout agent as a specialist and returns at once with its ID. It finishes when the order is placed, the cart is ready or the work stops. The runtime delivers its result to you automatically as a handoff message when it finishes. Do not poll or sleep to wait for it. A window runs one checkout at a time. Do not relay a second approval or start another checkout while one is running. When the result carries a cart change the checkout agent could not make in the checkout, make it on the site, then call again with the same `checkout` reference. When the result says the order was submitted and its outcome is unknown, the order may have gone through. Do not start another checkout for it; report it as submitted and awaiting the merchant's confirmation.\n\nPass a wallet card as the wallet and masked card label your assignment names, and a card the user gave with every detail your assignment has for it: number, expiry, security code and name. Link supplies a card for the merchant's card form; it needs no Link button on the page. Never pass a payment-method ID or a password. An error or blocked result is not permission to check out yourself.",
+  "description": "Clear a CAPTCHA, browser check or bot block on a tab through the bot-challenge agent.\n\nName the tab, describe the block and say which page you need to reach. Include relevant progress, choices, verified entry URLs and uncertain submissions. It takes over the existing tab without navigating or reloading it.\n\nThis agent is the expert for bot checks. Call it as soon as a CAPTCHA, human-verification check, browser-check interstitial, access-denied or block page, rate-limit page or soft block stands between you and the page you need, whether you are browsing, signing in or checking out. The browser's own error page for a site that can't be reached is not evidence of a bot check. Check the address first. A guessed address, DNS failure or policy block is not a reason to change browser environments; find the correct address or report the restriction. A form error that names a field or rule, such as an address line that is too long, is the site's answer, not a bot check; handle it under your own instructions for rejected entries. Always call it again for each new challenge, including after an earlier call did not clear the check, unless an environment replacement requires a recovery handoff first. It works from protected page views, the site's guide and the task's configured browsers and network routes, including another network route for an explicit network block, and it attempts challenges without asking Muse or the user.\n\nCalled by the browser agent, it starts the bot-challenge agent as a specialist and returns at once with its ID. The runtime delivers its result to you automatically as a handoff message when it finishes. Do not poll or sleep to wait for it. Called by a specialist, the call waits and resumes on its own. The result says whether the obstacle cleared, with its evidence and the approaches tried. Cleared means the page is reachable, not that a sign-in or purchase succeeded. When the environment is unchanged, observe the page with `browser.observe` before continuing. After a confirmed or uncertain replacement, specialists return their progress with `browser.report` through the call chain; the browser agent inspects the page and plans reconstruction using the existing task history and purchase records.\n\nWhen the agent reports a site as blocked, first work through the other approaches in your instructions for bot checks. If the site is still blocked, follow those instructions for what comes next and name the blocked site in `browser.report`. Never ask Muse or the user to solve a challenge. An account or eligibility denial, a stated rate limit or an uncertain outcome is not a reason to try another route on the same site.\n{\"type\":\"object\",\"properties\":{},\"additionalProperties\":false}\nbrowser.specialistsList the specialists working in this window and the ones that finished.\n\nEach entry gives the specialist's ID, its kind, its tab, what it is doing now and when it started. The runtime derives what it is doing from its own records. A finished entry gives its outcome, and its full result is in the message that reported it. Check this list before you steer a specialist with `browser.steer_specialist` or kill one with `browser.kill_specialist`. Check it to find which tabs are free. A working specialist's result comes back to you automatically as a handoff message from the runtime when it finishes. Do not call this tool repeatedly, or sleep, to wait for it.",
   "input_schema": {
     "type": "object",
     "properties": {
-      "tab": {
+      "id": {
+        "type": "string",
+        "pattern": "^s[1-9][0-9]*$",
+        "description": "The specialist's ID, such as s3."
+      },
+      "message": {
         "type": "string",
         "minLength": 1,
-        "pattern": "^[A-Za-z][A-Za-z0-9:_-]*$"
+        "description": "The follow-up instruction, with only what changed."
       },
-      "instruction": {
+      "account_hint": {
         "type": "string",
-        "minLength": 1
+        "minLength": 1,
+        "description": "Only when the account to sign in with changed: that account, as the user identified it."
       }
     },
     "required": [
-      "tab",
-      "instruction"
+      "id",
+      "message"
     ],
     "additionalProperties": false
   }

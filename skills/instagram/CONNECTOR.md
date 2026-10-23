@@ -133,11 +133,15 @@
 
 - Change saved posts, interests or the profile only when the user explicitly asks for that change. Saving and interest updates run without an approval prompt by default. Profile changes ask for approval each time unless the user allowed them for the current task.
 
-- `current-interests` returns topics the user is interested in or not interested in. Show each topic with its type, without separating inferred from explicit interests. `update-interests` marks a topic so the user sees more of it with `--interested true` or less with `--interested false`.
+- `current-interests` returns topics the user is interested in or not interested in. Show each topic with its type, without separating inferred from explicit interests. For `update-interests`, always pass `--target`: use `interested` to see more of a topic, `not_interested` to see less of it or `neutral` to remove the topic's explicit interested or not-interested preference.
+
+- Before using `--target neutral`, run `current-interests` and pass the topic text exactly as returned. `neutral` does not remove inferred topics; use `not_interested` when the user wants to suppress one. If the result says the topic is already neutral, no preference was removed, so do not report a completed change.
 
 ```sh
 /opt/hatch/bin/instagram-cli current-interests --account-id <user_own_fbid>
-/opt/hatch/bin/instagram-cli update-interests --account-id <user_own_fbid> --text "<topic>" --interested true
+/opt/hatch/bin/instagram-cli update-interests --account-id <user_own_fbid> --text "<topic>" --target interested
+/opt/hatch/bin/instagram-cli update-interests --account-id <user_own_fbid> --text "<topic>" --target not_interested
+/opt/hatch/bin/instagram-cli update-interests --account-id <user_own_fbid> --text "<topic>" --target neutral
 ```
 
 - Create, rename and fill saved collections with these commands:

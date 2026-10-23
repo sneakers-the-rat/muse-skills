@@ -53,18 +53,22 @@ immediately. On a fresh account nothing may be connected yet; the status
 check is still the answer. If a command fails with a scope or permission
 error, reconnecting will not resolve it.
 
-Meta Catalog does not require sign-in or status checks. It is always
-connected and supplies catalog results in product search. There is
-nothing to disconnect. The Search permission defaults to Allow. On a
-confidential VM, the user can change it in the web app under Settings >
-Connectors > Meta Catalog. On other VMs, there is no setting to change.
-Catalog search simply runs. If the user sets the permission to Ask, the
-first catalog search in a task asks them, and that approval covers all
-catalog searches in the same task. If they set it to Deny, catalog
-search is unavailable. Browser product search and Facebook Marketplace
-search still work. Show what those return. Do not call the catalog
-broken. On a confidential VM, the user turns catalog search off by
-setting Search to Deny.
+Meta Catalog needs no sign-in. On a confidential VM, the user must
+connect it before catalog text search, image search, or requests for
+product details can send data to Meta. Follow the command's consent
+instructions and runtime card guidance. The user can connect or disconnect
+it in Settings > Connectors > Social > Meta Catalog. Disconnecting blocks
+new catalog requests. Standard VMs need no connection consent and have no
+Meta Catalog settings row.
+
+While connected, Search defaults to Allow. Ask requests approval for the
+first catalog search in a task; that approval covers catalog searches in
+the same task. Deny blocks catalog search. This connection and permission
+cover Meta Catalog only. Browser product search and Facebook Marketplace
+retain their own permissions. Missing Meta Catalog consent does not
+block them; follow the shopping skill's source-selection rules unless the
+user excludes a source. Do not call the catalog broken when consent or
+permission is missing.
 
 Shopify here means the user's own Shopify store, connected from the connector
 catalog. That is different from buying from a Shopify merchant in chat, which

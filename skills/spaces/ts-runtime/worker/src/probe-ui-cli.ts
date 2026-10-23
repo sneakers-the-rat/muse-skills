@@ -924,7 +924,21 @@ async function handle(
         await applyViewport(state, req.preset ?? "desktop");
         return { ...(await doObserve(state, auditDir)), viewport_changed: state.viewport };
       }
-      const reopened = await switchDevice(state, req.preset === "mobile" ? "mobile" : "desktop");
+      // A batch step can arrive without a preset (builders send widths); a
+      // phone-first session must not read that as a switch off the phone.
+      if (req.preset !== "desktop" && req.preset !== "mobile") {
+        return {
+          ok: false,
+          code: "bad_viewport",
+          error:
+            `viewport takes a preset, not a size; this session is on ${state.viewport}. ` +
+            `As a batch step, a phone (${MOBILE_VIEWPORT.width}x${MOBILE_VIEWPORT.height}) is ` +
+            '{"op":"viewport","preset":"mobile"} and desktop ' +
+            `(${DESKTOP_VIEWPORT.width}x${DESKTOP_VIEWPORT.height}) is ` +
+            '{"op":"viewport","preset":"desktop"}',
+        };
+      }
+      const reopened = await switchDevice(state, req.preset);
       return {
         ...(await doObserve(state, auditDir)),
         viewport_changed: state.viewport,

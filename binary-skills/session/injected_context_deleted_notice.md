@@ -6,4 +6,4 @@ The system file watcher flagged that `{file_location}`, one of your injected con
 {diff}
 ````
 
-Treat the file as gone unless something recreates it. It will drop out of your injected context on its own.
+This deletion came from outside this conversation, such as the user deleting it in the app, another chat, a scheduled task, or a background worker of yours. Treat the file as gone; your injected copy may still show it.
