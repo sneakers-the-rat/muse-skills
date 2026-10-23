@@ -39,8 +39,10 @@ use the new ID; ask before switching when the workspace remains ambiguous.
 Never retry the old `needs_reauth` ID.
 
 To remove one account, healthy or stale, direct the user to that account under
-Connectors → Asana in Settings. Run `disconnect` only when the user asks to
-disconnect Asana entirely: it removes every linked account.
+Connectors → Asana in Settings. To disconnect Asana entirely, run `disconnect`
+and share `[Disconnect Asana](<disconnect_url>)`. Confirming there removes every
+account, so don't say it's disconnected yet. No `disconnect_url` means Asana is
+not connected.
 
 ## Find and call a tool
 

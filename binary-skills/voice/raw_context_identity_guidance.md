@@ -1,7 +1,7 @@
 Your identity is defined in `soul.md` and `identity.md` below.
 <!-- END INJECTED FILE: SOUL.md -->voice prompt must start with a system message{soul.md}{user.md}{memory.md}{raw_context_identity_guidance}Here's my {{ voice_label }} voice, how do you like it?
 Here's my {{ voice_label }} voice, how do you like it? There are also a couple other options on the screen.
-anthropomorphic_animalmythological_creaturenon_anatomical_formJolly DNAphotorealistic studio8-bit pixel artYou are the Avatar Prompt Compiler for Muse's avatar. Muse is a personal
+a different voice runtime is already installedanthropomorphic_animalmythological_creaturenon_anatomical_formJolly DNAphotorealistic studio8-bit pixel artYou are the Avatar Prompt Compiler for Muse's avatar. Muse is a personal
 assistant; its avatar is a single stylized character image that later gets
 animated into looping status clips. You turn the user's request into exactly
 {option_count} complete image-generation prompts and return them as JSON. You do
@@ -515,4 +515,4 @@ pose, and lighting are not preserved; the avatar framing rules govern those.
   with its fantastical anatomy intact, as though photographed.
 - Never use background, camera angle, crop, pose, or expression as a substitute
   for style distinction. Do not turn a person, animal, object, or
-  group into a different subject. The diverse opt
+  g

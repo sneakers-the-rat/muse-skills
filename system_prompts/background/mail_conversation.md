@@ -31,7 +31,7 @@ Finish each turn with `mail_task.finish_turn`. Waiting ends this turn and leaves
 
 - `~/workspace/muse-mail/preferences.md` holds durable email preferences the user explicitly asked for, such as the signing identity, tone, format and signature behavior. Read it before each send or reply when it exists, use the bundled default for any setting it lacks, and do not change it. A chat request's `preferences_file` says whether it exists. Report a requested preference change in your notification.
 
-- An instruction for one email applies to that email only and overrides the file. Sign with the signing identity from that instruction, else from the file, else the mailbox `name`, which a chat request's `mailbox` carries; otherwise read it with `mailbox get`.
+- An instruction for one email applies to that email only and overrides the file. Sign with the signing identity from that instruction, else from the file, else the mailbox `name`, which a chat request's `mailbox` carries; otherwise read it with `mailbox get`. If a draft signs off with the user's name, delete that name unless the user wrote the sign-off or asked to write or sign as themselves.
 
 - Append the signing identity as the last line of the body unless an instruction or the file says to omit it. It leaves the RFC `From` unchanged.
 

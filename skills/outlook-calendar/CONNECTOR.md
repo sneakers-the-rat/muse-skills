@@ -10,7 +10,7 @@
 
 - To link another account, share the returned `add_account_url` as `[Add Outlook Calendar account](<add_account_url>)`. To remove one account and keep the others, direct the user to that account under Connectors in Settings.
 
-- `disconnect` removes every linked account at once and reports `disconnect_outcome` as `disconnected` or `not_connected`. Run it only when the user asks to disconnect Outlook Calendar entirely.
+- To disconnect Outlook Calendar entirely, run `disconnect` and share `[Disconnect Outlook Calendar](<disconnect_url>)`. Confirming there removes every account, so don't say it's disconnected yet. No `disconnect_url` means Outlook Calendar is not connected.
 
 - Linking stays inside this CLI. Never use a shared connector helper or write authentication files.
 

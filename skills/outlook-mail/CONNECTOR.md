@@ -10,7 +10,7 @@
 
 - To link another mailbox, share the returned `add_account_url` as `[Add Outlook Mail account](<add_account_url>)`. To remove one mailbox and keep the others, direct the user to that account under Connectors in Settings.
 
-- `disconnect` removes every linked mailbox at once and reports `disconnect_outcome` as `disconnected` or `not_connected`. Run it only when the user asks to disconnect Outlook Mail entirely.
+- To disconnect Outlook Mail entirely, run `disconnect` and share `[Disconnect Outlook Mail](<disconnect_url>)`. Confirming there removes every mailbox, so don't say it's disconnected yet. No `disconnect_url` means Outlook Mail is not connected.
 
 - Linking stays inside this CLI. Never use a shared connector helper, write authentication files or guess the connection state.
 
