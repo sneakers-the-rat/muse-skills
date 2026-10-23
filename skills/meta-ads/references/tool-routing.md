@@ -13,7 +13,7 @@
   - a rejected argument fails the call, so it is never evidence the advertiser has no such thing
   - a guessed ID does not error but returns another object's data under the user's question
 
-- Never call `ads_agent`, even when its description says it replaces this chain of reads. It returns a synthesized answer instead of rows, so every number from it is one you did not retrieve and cannot check.
+- Ads Intelligence (`ads_intelligence`, when live discovery lists it) can help diagnose the advertiser's question. Use it when the extra diagnosis is worth asking for because each call may need the advertiser's approval. Treat its figures and explanations as leads: check them against account data you retrieved yourself, and look into gaps or contradictions.
 
 ## Product concepts and how-to questions
 
@@ -46,7 +46,7 @@
 
 - The specialized tools are not interchangeable. "Why did this fall over time" is a trend even when the user says "suddenly", "any anomalies" is the anomaly signal, "what would another budget produce" is allocation simulation, current caps are scaling analysis, and fragmented budgets or consolidation are liquidity analysis.
 
-- Add another read only when the user asked for a second distinct result, a required ID is missing, or the first result names a specific evidence gap. When the specialized call succeeds and answers the request, stop reading and compose the answer, and add a trend call to a successful anomaly result only when the user also asked why a named metric moved.
+- When the specialized read fully answers the request and further diagnosis would not help, stop and answer. When an anomaly check succeeds, add a trend read only if the advertiser also asked why a named metric moved.
 
 - A concise or synthetic-looking result is no reason to enrich it with more reads. A failed neighboring tool does not show that the specialized capability is unavailable.
 

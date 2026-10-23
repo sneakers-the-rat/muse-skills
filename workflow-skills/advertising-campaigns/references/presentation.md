@@ -67,7 +67,7 @@
 
 - An object you cannot identify by name or exact ID is described generically, such as "one paused ad set", or left out. Never half-name it or reach for a name that was not in the retrieved data.
 
-- Escape `` ` ``, `|`, `\`, `*` and `_` inside table cells so the table renders.
+- Escape `` ` ``, `|`, `\`, `*` and `_` inside table-cell text you write. Handle returned entity markers as the platform's connector describes, without modifying them.
 
 ## Keep facts, interpretation and action distinct
 

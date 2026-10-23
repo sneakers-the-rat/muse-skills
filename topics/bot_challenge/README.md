@@ -75,12 +75,11 @@ The browser agent's own embedded instructions about bot checks and challenges: w
 - [bot_checks.md](../../binary-strings/browser/instructions/bot_checks.md) — `binary-strings/browser/instructions/bot_checks.md`
 - [challenges.md](../../binary-strings/browser/instructions/challenges.md) — `binary-strings/browser/instructions/challenges.md`
 
-## tools (4)
+## tools (3)
 
 The tool definitions: the specialist's three tools, and the browser tool through which it acts inside a challenge.
 
 - [bot_challenge.assess.json](../../binary-strings/tools/bot_challenge.assess.json) — `binary-strings/tools/bot_challenge.assess.json`
-- [bot_challenge.guide.json](../../binary-strings/tools/bot_challenge.guide.json) — `binary-strings/tools/bot_challenge.guide.json`
 - [bot_challenge.recover.json](../../binary-strings/tools/bot_challenge.recover.json) — `binary-strings/tools/bot_challenge.recover.json`
 - [browser.bot_challenge.json](../../binary-strings/tools/browser.bot_challenge.json) — `binary-strings/tools/browser.bot_challenge.json`
 

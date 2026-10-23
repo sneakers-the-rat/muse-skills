@@ -1,43 +1,58 @@
 # Prepare Meta campaign creative
 
-- Read this for every planned creative format, once the delivery strategy and budget are accepted. Read policy only when the category or content needs it, and expect final execution to recheck every create and upload shape against its live schema.
+- Creative work moves through four stages: exploring ideas, planning the ad, preparing the creative and reviewing it with the advertiser.
 
-## Research and present the creative plan once
+- Start where the advertiser is, build on what they've already decided, and don't take them further than they asked. Someone exploring ideas may not want an ad yet.
 
-- Read `ads_create_creative` with `describe-tool --input-only` before proposing a format, and the upload schema too when source compatibility affects the choice. These reads authorize neither upload nor creation.
+- Approved creative then goes to campaign execution, but approving it doesn't create the campaign or publish anything. Those are separate decisions.
 
-- Inspect only relevant account images, videos and creatives, plus Page or Instagram media when applicable, looking at the media itself rather than filenames, labels or metadata. Follow pagination before saying no suitable asset exists, and preview an existing asset before recommending it or offering it as a source.
+## Explore ideas
 
-- Recommend one buildable format from the goal and evidence, never claiming an unproven performance advantage. If it needs a material change to structure or budget, return to planning and reprice first.
+- Ideas help the advertiser find new ways to talk about their offer and see what their audience responds to. Base them on what the account already runs, how it performed and verified product details, so they fit the business and add something new.
 
-- Keep the plan source-neutral until the advertiser chooses a source. Describe the intended visual outcome rather than saying it will be generated, uploaded, photographed or reused, and take product appearance, materials, price, offer, availability, claims and destination only from the advertiser or verified evidence.
+- An idea can also build on an existing ad: say what's different and why it's worth trying.
 
-- Creative-market research belongs here. Use `ads_library_search` only when public examples could change the concept, format, message, offer treatment or call to action, with one focused query, one simplification if it finds nothing and at most three results or snapshots inspected.
+- Ideas are options to consider. Move on to planning an ad only when the advertiser picks one and wants it made.
 
-- Public ads prove use, never performance. Skip the lane when it cannot change the recommendation, treat a failure as missing evidence, and keep research and tool names backstage.
+## Plan the creative
 
-- Ground a new visual in the account's best ads before writing the plan, as a required step. Read ad-level results with `ads_get_ad_entities` at `level=ad`, sorted by the goal's results over a recent window, preview the one to three best ads with enough delivery to judge and say what they share, such as palette, typography, composition, hook or format, without promising the new ad will match them.
+- The plan describes the ad you intend to make, in enough detail for the advertiser to picture it and decide whether to go ahead. For a new campaign, it builds on the strategy and budget they've already accepted.
 
-- Listing what is running or recent is not this step, because only results rank ads, and when no ad has enough delivery, say so in the plan. Unless you already have them, ask once, alongside the source choice, for reference images, the logo and brand colors or fonts, and say what each reference contributes without repeating its concept.
+### What the plan covers
 
-- Present one executable plan in natural prose covering:
-  - what people will see, the composition or sequence, style, format and each buildable placement shape
-  - the exact primary text, headline, description, button, destination and in-image text, or the advertiser's own wording where their category leaves the words to them
-  - material constraints and only the evidence that changed the recommendation
+- What people will see: the main idea, composition or sequence, and style.
 
-- Write the words in the language the ads will run in, which is the advertiser's unless they name another, and keep each ad in one language. Reread non-English copy for spelling, accents and agreement, because a typo ships to everyone who sees the ad.
+- Format and copy: image, video or carousel, with the primary text, headline, description, call to action and any text in the media.
 
-- Do not recap the approved strategy. Create one source-action `muse.create_options` widget first, then write the complete plan with its token after it, never sending part of the plan as commentary or the picker alone.
+- Where it runs: the destination, and how it will look in Feed, Stories or Reels.
 
-- Offer every viable action, such as `Upload my own creative`, `Generate this creative`, a specific suitable account asset and `Revise the creative plan`. If the advertiser already chose a source, show only its matching action and the revision, and a generic ad request with no supplied media leaves the source open.
+- Source: what the advertiser chose or, if they haven't chosen, the options that fit: their own media, an existing account asset or generated media. Describe the visual the same way whichever they pick.
 
-- Choosing generation or an account asset accepts this exact plan and authorizes only that preparation. An upload waits for the advertiser's asset, then completes or revises the plan before preparation.
+- Any choices still open.
 
-- If one consequential creative question remains open, ask only that, then present the complete plan with its source actions. Skip the plan gate only for an equally complete same-context brief with an explicit request to prepare it.
+The plan isn't the finished creative, and accepting it isn't approving the creative.
 
-- Privately check the creative against the goal, optimization, destination and tracking, compliance, audience, structure, placements and budget, and make sure everything the visual shows fits what is sold. A material conflict returns to the earliest affected decision, adding a concept or format needs a revised plan, and accepting the plan never approves the finished media.
+### How to build it
 
-## Message ads
+- Start from what's already decided: the accepted strategy and any creative choices the advertiser has made. If they gave a complete brief and asked you to prepare it, the brief is the plan and needs no extra planning round.
+
+- Base the direction on the business. Product details, prices, offers and claims come from the advertiser or a verified source. Existing ads and their results can shape the direction, and public ads can inspire it but don't prove anything works. Explain which evidence led to the plan, and say when there isn't much to go on.
+
+- If it's unclear what the creative should build on, ask whether they want to work from their existing ads and results or start fresh from the brief. Checking the account can be part of the work they agreed to; a substantial review is a separate request.
+
+- Before recommending existing account media, look at the media itself to see what it shows and whether it suits the ad.
+
+- Pick the format that best carries the message, given the goal, the material available and the placements, and say why it fits. An existing post can be reused where that's supported.
+
+- Make sure the plan can be built: check formats and sources against the current tool schemas, and check the identity, destination, tracking, placement fit and whether the visual suits the product.
+
+- Keep the advertiser's decisions. Build on their strategy, source and constraints, and bring any material change back to them, including campaign settings or budget the creative would need.
+
+- Present the plan with the choices they still need to make, without repeating the strategy they already accepted. Write the copy in their language unless they ask for another, keep each ad in one language and proofread it. When generated creative isn't available, use their own wording.
+
+- Accepting the plan approves only the preparation they chose. If they're supplying media, get it and check it before going on. Uploading to Ads happens later, in execution.
+
+### Message ads
 
 - An ad set whose `destination_type` is `MESSENGER`, `WHATSAPP` or `INSTAGRAM_DIRECT` makes a message ad, whatever the objective. It has no web destination, so never ask the advertiser for one, and use the channel's button and standard `link_url`:
   - Messenger uses `MESSAGE_PAGE` with `https://m.me/<page_id>` and needs the returned Page ID
@@ -50,7 +65,7 @@
 
 - Never say an Instagram account must be connected before an ad can publish because of that rejection. When Instagram placements are in the plan, say no Instagram account is linked to the ad account and that linking one would show their Instagram profile on those ads.
 
-## Categories where generated creative is unavailable
+### When generated creative isn't available
 
 - Generating images, video and ad copy is switched off for ads about social issues, elections or politics, housing, employment, financial products and services, healthcare, pharmaceuticals, education, alcohol and gambling. For those, generate no part of the creative through any generator, including no primary text, headline, description or in-image words in a plan, where the advertiser's own wording takes their place.
 
@@ -68,7 +83,9 @@
 
 - This is product availability, not a quotation. Say generated creative is not available for this ad, and never say or imply that Meta policy prohibits the ad, its media or its words.
 
-## Generate media
+## Prepare the creative
+
+### Generate media
 
 - Images come only from `creative generate-image`, never `media.generate_image`, which carries no placement shape, ratio check or the rules below. Select `feed`, `story` or `reel`, and the CLI owns the exact ratio and rejects a generated file whose measured dimensions do not match.
 
@@ -106,7 +123,7 @@
 
 - Resolve new assets as uploadable sources, but upload nothing in this stage. Never invent IDs, turn a thumbnail into a video, flatten carousel cards or substitute a format or source, and a missing source returns to the plan.
 
-## Placement fit
+### Fit each placement
 
 - Before approval, check that the Page or Instagram identity supports the proposed placements and that every source meets their format and ratio requirements. When one asset serves automatic placements, say once in the plan that Meta may crop or resize it, and never present it as placement-specific creative.
 
@@ -119,7 +136,7 @@
   - a catalog carousel from a resolved, healthy product set
   - a boosted or partnership format from the exact supported post and identity
 
-## Approve the prepared media
+## Review the creative
 
 - Preparation never changes plan values. Before this gate, use the `ads_create_creative` input schema to resolve `self_ai_disclosure`, asking whether the ad includes media created or edited with AI, with a clear question and a brief explanation of AI labeling in the same response as the options, written after the options call.
 
@@ -129,13 +146,13 @@
 
 - The final response holds one short sentence that the media is ready for review, with the chosen AI declaration and labeling caveat in plain words, then the media, then exactly these options directly beneath it:
   - `Approve this creative`, or `Approve these creatives` for several ads
-  - `Revise the creative`
+  - `Tell me what to change`
 
 - Then stop, with no direction, evidence, copy, call to action, destination, placement note, adaptation caveat or recap. A failure may explain its blocker.
 
-- The affirmative option, or an unambiguous typed approval of the unchanged media shown, passes this one gate. It accepts the media with the unchanged plan, not the campaign or any write, a revision repeats the gate, and there is no separate copy approval and no promised ad preview.
+- The affirmative option, or an unambiguous typed approval of the unchanged media shown, passes this one gate. It accepts the media with the unchanged plan, not the campaign or any write, and there is no separate copy approval and no promised ad preview.
 
-## Carry approved media into execution
+## Hand approved creative to execution
 
 - Never upload during this stage, or tell the advertiser an upload is starting. Once the media is approved, take the next step in the same turn:
   - the setup guide in [manual setup](campaign-manual-setup.md) when the advertiser builds the campaign themselves or the account is write-disabled or rejected writes

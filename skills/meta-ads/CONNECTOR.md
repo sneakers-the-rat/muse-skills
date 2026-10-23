@@ -81,6 +81,8 @@
 
 - Reuse an ID the user supplied or a successful call established in this conversation. A read-only tool can take an explicit `ad_account_id` directly, a missing ID comes from the relevant listing, and a guessed ID usually returns another object's data instead of an error.
 
+- When several accounts are reachable and the user makes no reference to a specific one, ask which one they mean before reading any figures. A request to compare accounts or cover all of them is different: answer for each account, as [account scope](references/account-scope.md) describes.
+
 - Add `--agent-output` to every call except the exact account listing above, and build `--arguments-json` strictly from the tool's input schema. Omit `--arguments-json` when no field is required, since the CLI supplies `{}`.
 
 - When a schema exposes `advertiser_request`, pass the advertiser's complete wording across turns, including later refinements and selections, not only the latest reply. Never supply `client_conversation_id`, which the CLI fills itself.
@@ -119,6 +121,8 @@
 
 - Write an object as plain text only when no result gives its name and ID, or the resolver itself fails. Never invent a name or ID, and never build a marker yourself.
 
+- When the user asks for a single figure, still say what it is: the metric, the object and the period, such as "[campaign] had a $12.75 cost per purchase over the last 7 days". Name the object with its marker as usual; a short answer still names what it describes.
+
 ## Spend and billing
 
 - `amount_spent` is delivery spend for the object and period queried, and the default period is `last_28d` when neither `date_preset` nor `time_range` is given. `maximum` means all time, never "since your last bill", so name the object and period whenever you quote spend.
@@ -141,7 +145,21 @@
 
 - [Metrics](references/metrics.md) holds Meta's metric names, units and definition rules, and [charts](references/charts.md) covers `render-chart`.
 
-- A new campaign follows [campaign creation](references/campaign-creation.md), and a standalone change follows [write operations](references/writes.md). An account with `is_ads_mcp_write_disabled: true`, a write rejected as not available for the ad account, even one the advertiser quotes from an earlier attempt, or a campaign the advertiser builds themselves follows [manual setup](references/campaign-manual-setup.md), so read it before explaining that rejection.
+- A performance overview helps the advertiser understand what they spent, what outcomes it produced, and how efficiently the ads reached and engaged their audience. Choose carefully the metrics that explain performance against the campaign's goal and the advertiser's question.
+  - CPM provides context about the cost of delivery
+  - For purchase campaigns, available Purchase ROAS connects advertising spend to returned purchase value.
+
+- Metrics the advertiser asks for take priority, and unavailable figures remain explicit.
+
+- Each task has its own guide. Read it before you start:
+  - ideas for ads: [creative preparation](references/campaign-creative.md)
+  - a new campaign: [campaign creation](references/campaign-creation.md)
+  - any other change, such as editing a campaign, ad set or ad, or creating or changing an audience, catalog or pixel rule: [write operations](references/writes.md)
+
+- Some campaigns have to be built by the advertiser in Ads Manager. Read [manual setup](references/campaign-manual-setup.md) first when:
+  - the account has `is_ads_mcp_write_disabled: true`
+  - a write was rejected as not available for this ad account, including one the advertiser mentions from an earlier attempt
+  - the advertiser wants to build the campaign themselves
 
 - When a change is fully specified, explain it in one sentence and call the write in the same response. The runtime shows its own approval card when the operation needs one, so never replace it with a yes or no question in chat, and keep the change within what was asked.
 
@@ -165,6 +183,8 @@
 - Generate campaign images only with `creative generate-image`, never `media.generate_image`. The wrapper sets the ratio for the placement, 4:5 for `feed` and 9:16 for `story` or `reel`, and rejects an image whose measured shape does not match.
 
 - Repeat `--prompt` for separate constraints, and add `--source-image <path>` only to adapt an accepted workspace image. The result gives a `local_path` for review, the measured size and ratio, and a `media_handle` when one exists.
+
+- Generated creative is working material the advertiser may want to inspect, download or reuse. Provide a direct link to the saved file so they can access it, using its returned file location rather than only naming the folder.
 
 - No image is pre-cleared. Inspect each generated or selected image itself, not its prompt or filename, for recognizable third-party likenesses, logos, wordmarks, trade dress, characters and artwork, even ones the generator added, and ask when you cannot tell whether the advertiser owns or licensed them.
 

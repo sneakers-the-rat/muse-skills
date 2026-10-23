@@ -78,14 +78,17 @@
 
 - Use an experiment when uncertainty warrants one, with a hypothesis, an outcome and enough budget to learn.
 
-## Close an account review with a plan
+## Include a plan in an account review
 
-- When the advertiser asks what to do next across the account, or asks for a full review, end with a short plan:
-  - where more or less budget should go and roughly how much, from the platform's budget analysis or from the delivering objects' results
-  - one or two platform features that fit what the account lacks, each with its reason, only when a returned result supports it
-  - what to do first over the next two to four weeks and what to check before the next change
+- A full account review helps the advertiser understand what is contributing to their business goal, what is holding it back, and where to focus and what actions to take next.
 
-- Leave out any part no retrieved data supports. A question about only what worked, or only what did not, stays in that scope and gets no plan.
+- A useful plan connects the account's evidence with the advertiser's priorities, strategy and constraints.
+
+- The plan should clearly identify which recommendations are supported by evidence and where uncertainty remains (and what actions lead to further learning).
+
+- A good plan starts with the conclusion and then the supporting findings explain the reasoning and uncertainty.
+
+- Match the depth and scope of the review and plan to what the advertiser asked.
 
 ## Keep verdicts consistent
 

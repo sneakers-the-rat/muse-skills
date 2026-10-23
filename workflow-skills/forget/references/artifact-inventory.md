@@ -54,6 +54,13 @@
     user-editable, excluded from memory ingest, and read directly by shopping
     turns
 
+  - the Style Try-on photo pointer `~/workspace/style-tryon/photo.txt`, the
+    image it names under `~/workspace/user/media_library/image/`, and images
+    named by older "User provided photo for try-on" memory lines, when the
+    information is the user's try-on photo or likeness. Plan exact-path removal
+    of the images and the pointer, then verify that no pointer names an image
+    that still exists
+
   - `~/HEARTBEAT.md`, `~/AGENTS.md`, and `~/TOOLS.md` when the information
     became an instruction, standing check, or environment note
 
