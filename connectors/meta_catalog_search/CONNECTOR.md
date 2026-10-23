@@ -31,7 +31,9 @@ catalog_results=$(mktemp "${TMPDIR:-/tmp}/meta-catalog-search.XXXXXX")
 - Keep required attributes and price limits on every refinement. Relax only preferences that do not express a user requirement, and keep those results separate.
 <!-- catalog-search-v1-only:end -->
 <!-- catalog-search-v2-only:start -->
-- Run `/opt/hatch/bin/shopping catalog-search` with up to eight semantic `--query` values, using only as many as help, and put every required attribute in each query. Write the results to a new file with `--out` and pass `--retries 2`. The default is 20 products per query, and `--num-results` or `-n` changes it.
+- Run `/opt/hatch/bin/shopping catalog-search` with up to eight semantic `--query` values, using only as many as help. Write the results to a new file with `--out` and pass `--retries 2`. The default is 20 products per query, and `--num-results` or `-n` changes it.
+
+- Pass every user requirement as a flag on every search, the first one included. A requirement without its own flag, such as a size, model, variant or compatibility, goes in `--require`, which the CLI adds to every query. A search with `--require` therefore needs at least one `--query`, an image search included, and items with different requirements, such as different sizes, need separate searches.
 
 Example usage:
 - Base search showing the shared flags. `--intent` is optional:
@@ -40,7 +42,8 @@ catalog_results=$(mktemp "${TMPDIR:-/tmp}/shopping-catalog-search.XXXXXX")
 /opt/hatch/bin/shopping catalog-search \
   --query "Nike men's cushioned daily training shoes from Nordstrom" \
   --category footwear --gender male --restrict-brand Nike \
-  --domain nordstrom.com --currency USD \
+  --require "US men's size 10" \
+  --domain nordstrom.com --currency USD --max-price 12000 \
   --retries 2 --out "$catalog_results"
 ```
 
@@ -107,9 +110,17 @@ catalog_results=$(mktemp "${TMPDIR:-/tmp}/shopping-catalog-search.XXXXXX")
 
 - `--intent` says what the user is shopping for. It changes how results are ordered, not which products are retrieved:
   - `targeted`: the user named what they want, e.g., one specific product (model, SKU, product line or variant), an item with binding requirements that any matching item satisfies (size, fit, compatibility, exact dimensions, capacity or color), or a brand's or store's range ("Polar H10 chest strap", "women's white leather sneakers size 7", "Lululemon leggings", "what's new at Uniqlo"). Pass the brand with `--restrict-brand` when one is named. Several phrasings of that one item as multiple `--query` are fine, and a brand's or store's range stays `targeted` when you split it into product types. A product type with required specs is `targeted` even when no brand is named; a budget, recipient or occasion alone is not a requirement. Add `--compare-sellers` only when the user's words ask where to buy one targeted product, what it costs or where the best deal is ("where can I get", "cheapest", "best price"). Naming an exact model, size or color is not enough, and it never applies to a comparison of different products. Results then contain that product from several good stores. When the user names retailers, pass `--domain` for each and leave out `--compare-sellers`; otherwise do not pass `--domain`.
-  - `explore`: the user wants help choosing a need or use case, "best X", a comparison of two or more named products (even though each one is named), similar product but cheaper or different, or several different items in one request. Give each option or item its own `--query` and do not add paraphrases; results interleave the queries so each one appears near the top. A gift or occasion request that names only a product type and a budget is `explore`. For queries that look for similar products to a named one, do not name that product in a query. Leave its brand out of `--restrict-brand` and the queries unless the user requires that brand.
+  - `explore`: the user wants help choosing a need or use case, "best X", a comparison of two or more named products (even though each one is named), similar product but cheaper or different, or several different items in one request. Give each option or item its own `--query` when they share the same requirement flags, and a separate search otherwise, and do not add paraphrases; results interleave the queries so each one appears near the top. A gift or occasion request that names only a product type and a budget is `explore`. For queries that look for similar products to a named one, do not name that product in a query. Leave its brand out of `--restrict-brand` and the queries unless the user requires that brand.
 
-- When the current message attaches an image with a clear target, start with `--image-path` and the uploaded file's path, adding `--query` only to clarify. Never replace an available image with a text description.
+- When the current message attaches an image with a clear target, start with `--image-path` and the uploaded file's path, adding `--query` only to clarify or to carry `--require`. Never replace an available image with a text description.
+
+### Refine a search
+
+- The summary's `requirements` lists the hard-constraint flags the search applied. Pass the same flags with the same values on every refinement and retry for that item, plus `--domain` when the user named the retailer. Change only the queries, `--intent` and flags that express no user requirement, such as `--prefer-brand`, `--seller-type` or a `--domain` you chose yourself.
+
+- Never drop a flag that expresses a user requirement to find more results, even when the exact product seems missing. Rephrase the queries instead, and if that still fails, follow the Shopping skill's fallback.
+
+- Put several phrasings of one item in one search, up to eight `--query` values, rather than in successive searches.
 <!-- catalog-search-v2-only:end -->
 
 - If the CLI rejects an argument, correct it and retry once with the same constraints. Any other failure or an unreadable results file ends the catalog attempt, so continue with the other sources instead of running diagnostic calls or dropping requirements.

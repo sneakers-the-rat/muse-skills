@@ -176,7 +176,6 @@ For each new or changed entry, determine what supports it:
   signal's strength. Stripe's aggregate is the sole frequency-strength input.
   Never add an email occurrence to its count or treat provider overlap as an
   additional repeated interaction.
-- Never use data from or about Instacart to update the shopping profile.
 - An unchanged entry in the current profile may be carried without re-proving
   its source. Its presence does not prove a purchase or support stronger
   wording. Current storage does not distinguish a direct Library edit from

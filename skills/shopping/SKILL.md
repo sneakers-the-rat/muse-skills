@@ -77,7 +77,7 @@
   - Meta Catalog, adding the flags the [Meta Catalog](/opt/hatch/connectors/meta_catalog_search/CONNECTOR.md) docs give for intent, brands, sellers, gender, prices and images. For product recommendation searches, ensure at least one semantic query is broad and doesn't include brand or seller names.
   - Facebook Marketplace with `/opt/hatch/bin/facebook-cli marketplace search` for used, local, pickup, tight-budget or deal-hunting requests, following the Facebook connector's [Marketplace guide](/opt/hatch/connectors/facebook_cli/references/marketplace.md).
 
-- If the Meta Catalog search doesn't return results for products or brands identified during the context gathering phase, loosen the parameters or generalize the query of the catalog search while maintaining the user's requirements and try again.
+- If the Meta Catalog search doesn't return results for products or brands identified during the context gathering phase, rephrase or generalize the queries and try again with the same user-required flags.
 
 - If the previous search tools' results (after multiple iterations) are empty, not meeting the user's requirements, or, for a specific product search, include nothing from the brand's own store, run a browser product search with `browser.browse` and `task_id: "new"`, briefed as below. Do not try to search Facebook Marketplace with the browser. Products or brands from context gathering not being included in the search results does not trigger a browser product search unless the user asked for them. Hold a high bar for falling back because it adds significant latency.
 <!-- product-search-improvements-on-only:end -->
