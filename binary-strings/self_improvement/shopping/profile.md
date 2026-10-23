@@ -42,12 +42,11 @@ Update the shopping profile for this run.
    signals fit together, prefer one compact entry over repetitive brand-by-brand
    bullets.
 5. Apply the Ground Rules and writer obligations.
-6. If a change is supported, stage the complete candidate at
-   `shopping/PROFILE.md` inside your staging directory; its full path ends in
-   `shopping/<run id>/shopping/PROFILE.md`, with `shopping` twice. Submit
-   every entry in file order. Before you finish, re-read the staged file and
-   check that every submitted `statement` appears there as its own line, and
-   that each quoted phrase in `evidence` appears in the message you cite.
+6. If a change is supported, stage the complete candidate as
+   `shopping/PROFILE.md`. Submit every entry in file order. Before you finish,
+   re-read the staged file and check that every submitted `statement` appears
+   there as its own line, and that each quoted phrase in `evidence` appears in
+   the message you cite.
 7. On a `context_ingestion` run, update the profile using the provider evidence,
    then stage and submit the full resulting profile, including unchanged
    entries. Submit it even when no text changes so the evidence reaches
