@@ -1,16 +1,26 @@
 #!/bin/bash
 # Hourly snapshot of Muse's skill trees into this git repo:
-#   skills/          <- /opt/hatch/skills          (symlinks resolved)
-#   workflow-skills/ <- /opt/hatch/workflow-skills (symlinks resolved)
+#   connectors/      <- /opt/hatch/connectors — ALL of them, as real
+#                       content. In the live image the skills were moved
+#                       INTO the connectors: most of /opt/hatch/skills is
+#                       symlinks pointing at connector directories. The
+#                       connectors are the substance; they are archived
+#                       whole, whether or not a skill links to them.
+#   skills/          <- /opt/hatch/skills          (symlinks resolved,
+#                       EXCEPT connector links: a source symlink whose
+#                       target is a connector directory — or a path
+#                       inside one — is archived AS a symlink, rewritten
+#                       relative so it points at this repo's own
+#                       connectors/ tree: skills/<x> -> ../connectors/<name>.
+#                       The checkout is self-contained: every such link
+#                       resolves inside the repo. An absolute
+#                       /opt/hatch/connectors/... link in the archive
+#                       would point at the live image, not the backup,
+#                       and is never stored.)
+#   workflow-skills/ <- /opt/hatch/workflow-skills (same rule)
 #   docs/            <- ~/docs                     (symlinks resolved;
 #                       added 2026-10-20 at the user's request, so the
 #                       product docs are versioned alongside the skills)
-#   connectors/      <- the /opt/hatch/connectors directories that NO
-#                       symlink in /opt/hatch/skills resolves into — the
-#                       connectors with no skill surface. Computed fresh
-#                       every run, never a hard-coded list: the moment a
-#                       connector gains a skill symlink it is archived
-#                       through skills/ instead and drops out of here.
 #   binary trees     <- extracted from the hatch binary itself by
 #                       extract_binary_files.py (system_prompts/,
 #                       binary-skills/, binary-etc/, and the
@@ -116,45 +126,85 @@ mirror() {
   fi
   archive_links "$src" "$dest"
 }
-mirror /opt/hatch/skills "$REPO/skills"
-mirror /opt/hatch/workflow-skills "$REPO/workflow-skills"
-mirror "$HOME/docs" "$REPO/docs"
 
-# Connectors with no skill surface. A connector directory is covered when
-# at least one symlink in /opt/hatch/skills resolves to the directory
-# itself or to a path inside it; every other connector is mirrored into
-# connectors/<name>/ under the same rules as the skill trees. Archive
-# directories whose connector has since gained a skill symlink (or has
-# vanished upstream) are pruned, so connectors/ always holds exactly the
-# currently-unlinked set — computed here, never listed by hand.
-SKILL_TARGETS=()
-while IFS= read -r l; do
-  t="$(readlink -f "$l" 2>/dev/null)" && [ -n "$t" ] && SKILL_TARGETS+=("$t")
-done < <(find /opt/hatch/skills -type l -print)
-mkdir -p "$REPO/connectors"
-UNLINKED=()
-for c in /opt/hatch/connectors/*/; do
-  name="$(basename "$c")"
-  covered=0
-  for t in ${SKILL_TARGETS[@]+"${SKILL_TARGETS[@]}"}; do
+# The connectors themselves: every live connector directory, mirrored
+# whole as real content. Plain mirror semantics — a connector that has
+# vanished upstream entirely is deleted here by rsync --delete; nothing
+# else is pruned, and skill linkage plays no part in the decision.
+mirror /opt/hatch/connectors "$REPO/connectors"
+
+# List (one per line, paths relative to $1) the symlinks under $1 whose
+# fully resolved target is a connector directory or a path inside one.
+connector_links() {
+  local src="$1" p t
+  while IFS= read -r -d '' p; do
+    t="$(readlink -f "$p" 2>/dev/null)" || continue
     case "$t" in
-      "${c%/}"|"${c%/}/"*) covered=1; break ;;
+      /opt/hatch/connectors/*) printf '%s\n' "${p#$src/}" ;;
     esac
-  done
-  if [ "$covered" -eq 0 ]; then
-    UNLINKED+=("$name")
-    mirror "${c%/}" "$REPO/connectors/$name"
+  done < <(find "$src" -type l -print0)
+}
+
+# Mirror a skill tree. Same content mirror as mirror(), except the
+# connector links: they are excluded from the rsync (so no connector
+# content is materialized inside the skill tree and the archived link is
+# protected from --delete), and afterwards each one is (re)written as a
+# RELATIVE symlink into this repo's connectors/ tree. The rewrite is
+# idempotent — an already-correct link is left untouched. Replacing a
+# materialized copy left by an older sync is safe by construction: the
+# identical content was mirrored into connectors/ above, and this runs
+# only after that mirror has succeeded.
+mirror_skill_tree() {
+  local src="$1" dest="$2" rc=0 rel t newt cur clinks
+  mkdir -p "$dest"
+  clinks="$(connector_links "$src")"
+  local excludes=()
+  while IFS= read -r rel; do
+    [ -n "$rel" ] && excludes+=(--exclude="/$rel")
+  done <<< "$clinks"
+  rsync -aL --delete --ignore-errors --no-owner --no-group --exclude='.git' \
+    ${excludes[@]+"${excludes[@]}"} "$src/" "$dest/" || rc=$?
+  if [ "$rc" -ne 0 ] && [ "$rc" -ne 23 ] && [ "$rc" -ne 24 ]; then
+    echo "rsync $src -> $dest failed with exit $rc" >&2
+    exit "$rc"
   fi
-done
-for d in "$REPO/connectors"/*/; do
-  [ -d "$d" ] || continue
-  name="$(basename "$d")"
-  keep=0
-  for u in ${UNLINKED[@]+"${UNLINKED[@]}"}; do
-    if [ "$u" = "$name" ]; then keep=1; break; fi
-  done
-  if [ "$keep" -eq 0 ]; then rm -rf "$d"; fi
-done
+  archive_links "$src" "$dest"
+  # (Re)write the connector links as relative links into connectors/.
+  while IFS= read -r rel; do
+    [ -n "$rel" ] || continue
+    t="$(readlink -f "$src/$rel")"
+    newt="$(realpath -m --relative-to="$(dirname "$dest/$rel")" \
+      "$REPO/connectors/${t#/opt/hatch/connectors/}")"
+    cur="$dest/$rel"
+    if [ -L "$cur" ]; then
+      [ "$(readlink "$cur")" = "$newt" ] || ln -sfn "$newt" "$cur"
+    elif [ -d "$cur" ]; then
+      # Legacy materialized copy; its content already lives in
+      # connectors/ (mirrored above). Replace it with the link.
+      find "$cur" -depth -delete
+      ln -s "$newt" "$cur"
+    elif [ -e "$cur" ]; then
+      rm -f "$cur"
+      ln -s "$newt" "$cur"
+    else
+      mkdir -p "$(dirname "$cur")"
+      ln -s "$newt" "$cur"
+    fi
+  done <<< "$clinks"
+  # Drop rewritten links the source no longer backs (the source link was
+  # deleted upstream, or no longer points into a connector).
+  while IFS= read -r -d '' p; do
+    rel="${p#$dest/}"
+    case "$(readlink "$p")" in
+      ../connectors/*|../../connectors/*|../../../connectors/*) ;;
+      *) continue ;;
+    esac
+    if ! grep -Fxq "$rel" <<< "$clinks"; then rm -f "$p"; fi
+  done < <(find "$dest" -type l -print0)
+}
+mirror_skill_tree /opt/hatch/skills "$REPO/skills"
+mirror_skill_tree /opt/hatch/workflow-skills "$REPO/workflow-skills"
+mirror "$HOME/docs" "$REPO/docs"
 
 # Binary extraction: pull the embedded prompt/skill/tool files out of
 # the hatch binary into their repo trees and refresh binary-map.json.
