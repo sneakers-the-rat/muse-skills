@@ -134,13 +134,18 @@ mirror() {
 mirror /opt/hatch/connectors "$REPO/connectors"
 
 # List (one per line, paths relative to $1) the symlinks under $1 whose
-# fully resolved target is a connector directory or a path inside one.
+# target is a connector directory or a path inside one AND ACTUALLY
+# SHIPS in this image. readlink -f resolves lexically, so it happily
+# resolves links to connectors this image does not ship; those links
+# dangle, and dangling links are data for archive_links (stored
+# verbatim) — they are NOT connector links and must not be rewritten.
 connector_links() {
   local src="$1" p t
   while IFS= read -r -d '' p; do
     t="$(readlink -f "$p" 2>/dev/null)" || continue
     case "$t" in
-      /opt/hatch/connectors/*) printf '%s\n' "${p#$src/}" ;;
+      /opt/hatch/connectors/*)
+        if [ -e "$t" ]; then printf '%s\n' "${p#$src/}"; fi ;;
     esac
   done < <(find "$src" -type l -print0)
 }
