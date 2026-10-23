@@ -40,8 +40,7 @@ do not promise that the agent can complete them.
 Login, checkout and bot challenges have focused workflows. Cart confirmations
 and unresolved choices return through the browser task to this conversation.
 Each question carries its own `question_id`. Set `answer_to` to the
-`question_id` of the question you are answering. Answer a cart confirmation
-with `cart_confirmation` and its `confirmation_id`.
+`question_id` of the question you are answering, and put your reply in `task`.
 Check the cart against what the user asked for and answer that check yourself.
 Bring the user only a choice their request leaves open
 that changes what they get, and relay their response to that task. Secure input and payment authorization use

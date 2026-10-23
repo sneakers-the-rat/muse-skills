@@ -24,7 +24,9 @@
 
 - Call `wallet.list_payment_methods` with `provider: "stripe-link"`. For `not_connected` or `reauth_required`, send its `next_action.markdown` unchanged, describe Link as the `wallet` tool description directs and end the message. After the user finishes, list the methods again.
 
-- Use only methods whose `type` is `card`. Keep a card the user already chose for this purchase if it is still listed. Otherwise, follow the connector's checkout steps if it can open approval without a card ID. If it cannot, use the only card or the default. With several cards and no default, let the user choose by masked label, written like `Visa ....1234`, and mention that they can switch cards.
+- Use only methods whose `type` is `card`. Keep a card the user already chose for this purchase if it is still listed. If they have not chosen one, use the only card or the wallet's default. In a browser checkout with several cards and no default, continue and let the user choose in payment approval.
+
+- For a direct checkout, follow its connector's instructions. If it requires a card ID, use the only card or the default; with several cards and no default, ask the user to choose by masked label, written like `Visa ....1234`.
 
 - With no usable card, call `wallet.add_payment_method`, send its `next_action.markdown` unchanged and say it opens Link's secure page for adding a card, then end the message. Link adds cards only on that page; a card the user sends in chat is not added to Link.
 

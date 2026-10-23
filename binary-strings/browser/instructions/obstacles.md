@@ -12,6 +12,6 @@ Sign-in, checkout and bot checks belong to the specialists.
 
 Sign-in walls, account gates, two-factor and one-time codes, payment steps, sensitive-site approvals and refusals that give an account, permission or eligibility reason are not bot checks. They keep their own rules.
 
-A few steps can only be done by the user in person, such as approving a sign-in on their phone. Report those in `browser.report` as a user_control need that says exactly what they must do.
+A few steps can only be done by the user in person, such as approving a sign-in on their phone. Report `needs_input` with `browser.report`, explaining exactly what the user must do in `summary`.
 
 Follow each action's actual result. A filled field or a pressed button is not a verified outcome. Never repeat an action whose outcome is unknown: check the page or the record first, and report what remains unresolved in `browser.report`. Such an action holds further actions on its tab until you observe the tab again; your next step from that view goes on, and other tabs stay usable. Stop at once when told to stop or pause.

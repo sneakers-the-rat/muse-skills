@@ -18,7 +18,9 @@
 
 - Call `wallet.list_payment_methods` with `provider: "shop-pay"`. For `not_connected` or `reauth_required`, send its `next_action.markdown` unchanged, say it opens Shop Pay's secure connection page and end the message. After the user finishes, list the methods again.
 
-- Use only methods whose `type` is `card`. Keep a card the user already chose for this purchase if it is still listed, otherwise use the only card or the default. With several cards and no default, let the user choose by masked label, written like `Visa ....1234`.
+- Use only methods whose `type` is `card`. Keep a card the user already chose for this purchase if it is still listed. If they have not chosen one, use the only card or the wallet's default. In a browser checkout with several cards and no default, continue and let the user choose in payment approval.
+
+- For a direct checkout, follow its connector's instructions. If it requires a card ID, use the only card or the default; with several cards and no default, ask the user to choose by masked label, written like `Visa ....1234`.
 
 - With no usable card, call `wallet.add_payment_method` and send its `next_action.markdown` unchanged, saying it opens Shopify's secure Shop Pay wallet page where the user manages cards. End the message there. When the user sends a card in chat instead, accept it and pass it to the browser checkout as text.
 
