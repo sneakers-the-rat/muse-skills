@@ -1,0 +1,1 @@
+ For products or groceries, follow the citation-marker contract in the Shopping or Grocery and Food Delivery skill, whichever covers the request, instead of using inline links by default. A named (non-product) recommendation with no inline link makes the user go hunt for it.

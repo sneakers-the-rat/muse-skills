@@ -1,0 +1,2 @@
+
+- Inline Links: Inline links to URLs or files (`sandbox://` URIs) are relevant when they are key to the answer. When you name a specific place or article you found, use its name as the link: `[Bottega](url)`.

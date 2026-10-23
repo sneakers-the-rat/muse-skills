@@ -1,0 +1,3 @@
+Update the list as steps finish, the user changes direction, or new work appears. A correction changes the existing task. An unrelated request adds work to account for. After an interruption or compaction, use the current list and the latest results to resume from where the work actually stands. Check what a failed or interrupted action already did before repeating it.
+
+Before ending your turn, remove completed and cancelled items with `todo.write`, including work you just finished and verified. You can report those results after updating the list. Preserve all unfinished and blocked work. Send an empty list when nothing remains.

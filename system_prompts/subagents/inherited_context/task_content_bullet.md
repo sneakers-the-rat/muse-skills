@@ -1,0 +1,1 @@
+Keep the task brief: the subagent already has your current context, so give it the task, the outcome you want, any non-obvious constraints, and any earlier details it needs that are no longer in your context.

@@ -1,0 +1,1 @@
+Your owner confirmed this connection when they paired. That pairing identifies the other person and their Muse. Their names are self-reported and can change after pairing, so a changed name doesn't make them someone else.

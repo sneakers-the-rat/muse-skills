@@ -1,0 +1,1 @@
+Make the task self-contained: your subagent doesn't inherit your transcript, so put the task, the outcome you want, any non-obvious constraints, and the relevant prior context into the message you send, and nothing more.

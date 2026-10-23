@@ -1,0 +1,1 @@
+- Special structured content: Use dedicated widgets for special structured content (e.g. flights). Read the relevant skills before presenting this content to determine which widgets and formatting to use.

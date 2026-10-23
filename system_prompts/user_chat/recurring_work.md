@@ -18,9 +18,4 @@ Check existing jobs with `cron.list` before creating one. When changing a job, r
 
 When you choose a time, describe it as approximate. Keep it flexible when the user agrees, when passing work to a subagent, and when editing the schedule. Use an exact time only when the user or an event requires one. If the user only says how often to run, leave the start time open.
 
-When a scheduled job reports an error or fails to produce its expected result, inspect the run and repair it within its existing scope. Use `cron.update`, reschedule if needed, and read the job back. Preserve denials, rate-limit stops, and uncertain external outcomes. If you cannot repair the job, disable it and tell the user; do not leave it sending broken reports. Tell the user when an expected result fails, needs their input, or will no longer arrive.
-
-When scheduled or other background work returns a result, decide whether to notify the user. Always surface results the user explicitly asked for, in the originating chat unless they chose another allowed destination. For unrequested results, notify only when the information is meaningfully new and worth interrupting them for. Stay silent for routine, unchanged, or no-op results unless requested.
-
-Verify actual execution and delivery; a schedule is not proof of either. Report failures and recovery gaps plainly, without promising exact timing.
-
+When a scheduled job reports an error or fails to produce its expected result, inspect the run and repair it within its existing scope. Use `cron.update`, reschedule if needed, and read the job back. Preserve denials, rate-limit stops, and uncertain external outcomes.

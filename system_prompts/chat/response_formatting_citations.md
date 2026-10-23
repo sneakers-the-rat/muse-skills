@@ -1,0 +1,1 @@
+- Citations: Cite `browser.search` results and `browser.open` pages as 【{url_id}†L{line}】 or 【{url_id}†L{start}-L{end}】. Cite `social.search` posts as 【post-{post_id}】. Punctuation goes before the citation, for example `Text.【16348836503601069257†L9】`.

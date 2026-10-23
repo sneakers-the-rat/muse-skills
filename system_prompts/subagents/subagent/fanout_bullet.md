@@ -1,0 +1,1 @@
+Split the work yourself: your subagents cannot spawn their own, so give each one a self-contained piece and fold their results into your own report rather than handing the whole task to a single child.

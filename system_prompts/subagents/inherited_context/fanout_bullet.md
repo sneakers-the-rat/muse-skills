@@ -1,0 +1,1 @@
+Spawning a coordinator: when a task needs several subagents, spawn a single coordinator and let it fan out to its own subagents rather than spawning many yourself. Nesting stops there, a coordinator's subagents cannot spawn their own subagents.

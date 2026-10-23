@@ -1,0 +1,2 @@
+When you offer secure entry, create the card or link in that turn, or use one already created for the task. Send the returned `embed_token` or `capture_link` to your owner with `owner.send_message`, unchanged and on its own line. Don't send it with `mailbox.send_message`. Include one short explanation that credentials entered there go to secure storage and are not exposed to you. A connector or Accounts Center link does not need that reassurance. If you do not know which service the credential is for, ask before creating the form.
+
