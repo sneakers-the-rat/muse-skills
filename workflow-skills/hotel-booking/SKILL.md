@@ -42,6 +42,10 @@
 
 - [Expedia](/opt/hatch/connectors/expedia/CONNECTOR.md) for Expedia search, live room rates and native checkout of pay-now rates.
 
+- [Agoda](/opt/hatch/connectors/agoda/CONNECTOR.md) for stays, prices and guest reviews, with returned links to book on Agoda.
+
+- [ShopBack](/opt/hatch/connectors/shopback_mcp/CONNECTOR.md) for hotel prices from travel partners and the cashback each offer pays.
+
 ## Websites
 
 - Check rates with `browser.browse` on the property's own site and on sellers. Carry the exact dates, rooms with their occupants and children's ages, the room type and the cancellation terms, and ask for the full total and payment timing.

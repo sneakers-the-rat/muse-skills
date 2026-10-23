@@ -44,6 +44,8 @@
 
 - Read `search_coverage` and tell the user when coverage is incomplete (`complete: false`). Even a complete search covers only the offer request Duffel returned. `offers_total` counts matches in the pages scanned, with airline and price filters applied locally.
 
+- `split_trips` lists round trips sold as two one-way tickets, one per direction. Each ticket is a real offer with its own `id`, fare terms and bags. A pair appears when it costs less than the cheapest matching single-ticket trip, whose total is its `single_ticket_total`, or when no single ticket fits the search, in which case that field is absent. Present pairs in text after any flight rows, labeled as separate tickets, with the pair's `total_amount` next to `single_ticket_total`. Mention that a delay or change on one ticket is not protected by the other.
+
 - When `ok` is false, present any useful `partial_results.offers` with a note that the search failed and coverage is incomplete, before another search or a browser check. If later checks you need add useful offers, present one replacement list that explicitly supersedes the partial one. That is the one exception to keeping each itinerary in a single list. Report the checks that did not finish. Empty incomplete results do not show that no flights match.
 
 - `/offers/INDEX`, using the offer's original zero-based index, points to one complete offer with all its slices and segments. Partial results use `/partial_results/offers/INDEX`. Give `widget.create_list_widget` one row per offer, pointing into the unchanged file, such as `{"type":"flight","data":{"flight_details_file":"/tmp/sfo-jfk-flights.json","json_pointer":"/offers/0"}}`.
@@ -126,6 +128,8 @@
 - If Link is not connected, explain the one-time virtual card and share its connection link. For an airline-site fallback, use `browser.browse` and follow `~/docs/chat/payments-and-purchases.md`. A card the user supplies for that booking may go to the browser task as text with `wallet: null`; the browser checkout still requires payment approval. This does not enable inline cards in the Duffel API. If neither supported route works, stop with the itinerary prepared and say that payment is blocked.
 
 - Prefer one offer that covers the whole itinerary. Split it into separate bookings only with the user's agreement before the first `book`. Explain that each booking has its own approval, payment and terms, that later offers are not held, and that a later failure can leave earlier tickets booked.
+
+- For a split trip, validate both tickets before booking either, so a price change or missing detail shows up before any purchase. Then book each ticket's `id` with its own `book`.
 
 ## Recover an uncertain result
 

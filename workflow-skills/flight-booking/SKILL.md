@@ -44,6 +44,14 @@
 
 - If nothing here fits, look on the web for a maintained API or MCP server and set it up with [Custom Connectors and MCPs](/opt/muse/skills/custom-connector-setup/SKILL.md), or build a custom connector.
 
+### When available
+
+- These connectors depend on the user's channel or devices. `muse.connector_search` shows which ones this session has.
+
+- [Agoda](/opt/hatch/connectors/agoda/CONNECTOR.md) for flight searches and returned links to book on Agoda.
+
+- [ShopBack](/opt/hatch/connectors/shopback_mcp/CONNECTOR.md) for flight prices from travel partners and the cashback each offer pays.
+
 ## Websites
 
 - Check these sites with `browser.browse`, using the brief in [flight comparison](references/flights.md) so each task returns complete itineraries with the payable total.
