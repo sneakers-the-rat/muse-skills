@@ -115,7 +115,8 @@ Output lands in chat, not in a notification inbox. New feed posts appear
 quietly in the Feed tab, with no push and no chat message. On the web, there
 is no push once the browser tab is closed. Messages after the browser closes
 depend on available routes, such as the mobile app with notifications
-enabled. Every purchase needs the user's approval each time. An email send from
+enabled. Every purchase needs the user's approval each time, except a scheduled
+task's later purchases that an earlier Allow covers. An email send from
 chat is approved each time too, except a Gmail send, or a Mail send from the
 Mac app, to a recipient the user has already allowed from that account (see
 `~/docs/privacy-and-credentials.md`); a scheduled task or artifact can be

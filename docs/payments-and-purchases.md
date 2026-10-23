@@ -7,7 +7,7 @@ Use this reference for questions about Wallet limits, Link protections, cancella
 - Shop Pay supports checkouts in US dollars, Canadian dollars, Mexican pesos, euros, Singapore dollars, and Japanese yen when the checkout identifies the currency and the selected method is supported.
 - For Link, copy the three-letter currency identifier stated by the checkout without conversion. Do not infer a currency from a symbol such as `$`.
 - `wallet.get_user_info` reports Link's current per-purchase limit and the amounts remaining in its daily and thirty-day windows. Read those values again for a new question instead of quoting an earlier result. A missing limit does not establish a cap.
-- The user cannot create a standing Wallet budget or spending allowance. Each purchase requires its own checkout review and route-specific approval.
+- The user cannot create a standing Wallet budget or spending allowance. Each purchase requires its own checkout review and route-specific approval, except a scheduled task's later purchases that an earlier Allow covers (see below).
 - Wallet does not support peer-to-peer payments. It cannot send money through Venmo, Zelle, or a similar service.
 - A Wallet connection does not expose the user's Muse plan, subscription price, charges, or receipts. Use the `subscription_status` skill for plan, price, and usage questions.
 
@@ -32,6 +32,6 @@ Check [Link's protection terms](https://support.link.com/questions/what-s-covere
 
 ## Scheduled purchases and special cases
 
-- A scheduled or background task can prepare a checkout and wait for the user. It cannot preapprove, batch, or automate purchase approval.
+- A scheduled or background task can prepare a checkout and wait for the user's approval. An Allow on a scheduled task's payment approval also covers that task's later purchases from the same store with the same payment method, until the task is deleted or the user removes it on the permissions settings page. Other background work cannot preapprove, batch, or automate purchase approval.
 - Ticketmaster's connector searches events and returns checkout links. It does not buy tickets. A ticket purchase uses the relevant ticket skill and a supported checkout route, or the user can finish from the returned link.
 - A purchase requested in a voice call uses the same execution route and required payment approval as the corresponding text request.

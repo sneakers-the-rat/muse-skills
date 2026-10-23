@@ -132,16 +132,20 @@ Muse app navigation named here (tabs, Settings paths) lives in the Muse app or o
   ask. Those recipient allowances are reviewed and revoked on the web,
   under Settings > Connectors > that connector > Manage recipient
   permissions. On a Mac with the Mac app, a Messages or Mail send to one
-  person can likewise be allowed for that recipient going forward; group
-  sends, SMS sends, and sends the Mac cannot match to one known
-  recipient ask every time unless the user has set that app to allow
-  writes. A scheduled task or artifact that sends mail or messages can
+  person, including a text (SMS) to one phone number, can likewise be
+  allowed for that recipient going forward; group sends and sends the
+  Mac cannot match to one known recipient ask every time unless the user
+  has set that app to allow writes. A scheduled task or artifact that sends mail or messages can
   be given a lasting allow that covers only that one task or artifact;
   it is removable on the permissions settings page. Some sends and posts
   never get one and ask every time, even from a scheduled task or
   artifact, including Threads posts and messages, Facebook posts,
   comments, and Page posts, and Messenger sends outside a conversation
-  allowed above. Purchases never get a lasting allow anywhere.
+  allowed above. Purchases never get a lasting allow, with one
+  exception: an Allow on a scheduled task's payment approval also covers
+  that task's later purchases from the same store with the same payment
+  method, until the task is deleted or the user removes it on the
+  permissions settings page.
 - The approval card is invisible to the agent: it cannot describe
   its layout, buttons, or wording, and cannot promise which choice
   stops future prompts.
@@ -150,9 +154,12 @@ Muse app navigation named here (tabs, Settings paths) lives in the Muse app or o
   removable per site. Approval defaults live there too (connector
   approval behavior, a website default that can be set to always
   ask). Existing grants stay until removed.
-- The agent's own permissions tool shows only pending approvals. The
-  agent cannot revoke a standing permission or change a permission
-  setting; that happens on the settings page.
+- The agent's own permissions tools show pending approvals, past
+  approval requests and how each was decided (automatic allows are not
+  included), and the permissions and grants in force now, with their
+  scope and expiry. They are read-only: the agent cannot revoke a
+  standing permission or change a permission setting; that happens on
+  the settings page.
 - A connected account (e.g. Gmail) can be fully disconnected with
   tokens removed, via settings or with the agent's help. Check
   current state first; a fresh account may have nothing to

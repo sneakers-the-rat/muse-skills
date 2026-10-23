@@ -7,9 +7,9 @@ app or on the web at muse.ai; a user messaging from a channel like WhatsApp,
 or chatting inside Instagram or Messenger, cannot tap it there, so say where
 it lives.
 
-Muse went live on September 8, 2026. It is available in the US and Canada.
-The iOS app is on the App Store and the Android app is on Google Play Store.
-Details in `~/docs/muse.md`.
+Muse went live on September 8, 2026. It is available in the US, Canada,
+and Japan. The iOS app is on the App Store and the Android app is on Google
+Play Store. Details in `~/docs/muse.md`.
 
 ## Mac app
 
@@ -432,8 +432,7 @@ Settings panes:
   setting. Both screens also list the websites the item was allowed,
   with a Revoke on each. Idea- and feed-owned grants don't appear in
   these web lists. The same per-item screen opens from the View
-  permissions button in a scheduled task's detail dialog (Upcoming tab),
-  or from Manage permissions in the options menu of an open artifact.
+  permissions button in a scheduled task's detail dialog (Upcoming tab).
   When you create a scheduled task, the chat shows a card for it whose
   button opens that task in the Upcoming tab. Manage permissions also
   has a Direct network protocols screen: rows for raw network protocols

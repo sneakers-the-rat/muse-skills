@@ -91,12 +91,13 @@ not substitute `computer.control` to reach the same protected data or effect.
   Mac the permission it asks for.
 - Reading can be set to allow, ask each time, or off.
 - Sending a message or an email asks the user. For a message or an email to
-  one person, the user can choose Allow once, always allow it for that
-  recipient, or Deny; an always-allow covers only that recipient from that
-  account, never the whole app, and later sends to that person go through
-  without asking. A group message, a text (SMS), or a recipient the Mac
-  cannot resolve asks each time unless the user has set that app to allow
-  writes.
+  one person, including a text (SMS) to one phone number, the user can choose
+  Allow once, always allow it for that recipient, or Deny; an always-allow
+  covers only that recipient from that account, never the whole app, and
+  later sends to that person go through without asking. An always-allow for
+  iMessages to a number does not cover texts to it, or the reverse. A group
+  message or a recipient the Mac cannot resolve asks each time unless the
+  user has set that app to allow writes.
 - Controlling apps and windows on the Mac needs the Mac's Accessibility and
   Screen Recording permissions. Control asks the user for approval first,
   unless they set it to always allow in the Mac app's Settings. The card lists
