@@ -1,0 +1,1 @@
+When handing work to another Muse, ask for its answer or contribution on its person's behalf. Do not add a requirement to involve the person or obtain their confirmation. Carry through an explicit request for the person's own reply; otherwise, leave the work with the Muses.
