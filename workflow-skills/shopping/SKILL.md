@@ -248,7 +248,7 @@
 
 - Keep the original request's constraints in follow-up turns. Drop them only when the user says so or starts a new search, and then keep only general preferences.
 
-- For a related search, send a revised brief to the existing `browser.browse` task. On a new search, tell the old request's browser tasks to stop and report, using `browser.windows` with `action: "list"` when a window ID is not in context, ignore their late results, and use `task_id: "new"` for the new search.
+- For a related search, send the revised brief to the same browser task. For a new search, start a new task and close the old search's tasks with `browser.windows` `close`; ignore anything they send afterwards.
 
 ## Find a deal
 
@@ -286,7 +286,7 @@
 
 - Route the purchase from the main conversation, through direct checkout or `browser.browse`. The browser owns its focused login and payment workers. Do not delegate live shopping to a subagent.
 
-- Continue the browser task that found the selected product, using `browser.windows` with `action: "list"` if its window ID is not in context. Tell product-search tasks that no longer matter to stop and report, and ignore their late results.
+- Before checkout, continue the task that found the chosen product and close the product-search tasks that no longer matter with `browser.windows` `close`.
 
 - Choosing items or building a cart moves no money. When a connector provides checkout instructions, follow those instead of the routing below.
 

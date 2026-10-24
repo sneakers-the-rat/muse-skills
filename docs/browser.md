@@ -1,10 +1,10 @@
 # Browser
 
-Use `browser.browse` for work on a live website. Supply an existing window ID
-as `task_id` to continue that window, or `task_id: "new"` for separate work.
+Use `browser.browse` for work on a live website. Supply an existing window's
+`task_id` to continue that window, or `task_id: "new"` for separate work.
 Use `browser.windows` to list, open and close windows and tabs when the user
 refers to work already underway or to a specific window or profile, or when
-you need an ID. Each task is a window with tabs. Every window shares the
+you need a `task_id`. Each task is a window with tabs. Every window shares the
 default browser profile, so one sign-in serves every chat and scheduled job,
 unless it was opened in a named profile for another account. The runtime opens
 and retains the browser, schedules the worker, and resumes it after user input
