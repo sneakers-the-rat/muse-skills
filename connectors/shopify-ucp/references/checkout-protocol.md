@@ -44,7 +44,7 @@
 
 - After applying known, sole or default values, ask one grouped question for every required detail still missing or ambiguous. Never guess or fill in a buyer email, recipient name or address field. Do not tell the user details are needed before these lookups finish.
 
-- Direct completion needs the buyer email, the recipient's first and last name and a complete shipping address with street, city, state or region, postal code and two-letter country code. Direct checkout ships only to the United States and Canada, so use the browser route for another destination. Include a phone number when known, and ask for one only when the user or merchant requires it.
+- Direct completion needs the buyer email, the recipient's first and last name and a complete shipping address with street, city, state or region, postal code and two-letter country code. Direct checkout ships only to the United States, Canada, Japan and Singapore, so use the browser route for another destination. Include a phone number when known, and ask for one only when the user or merchant requires it.
 
 - Wait for those details before creating the checkout. If the user does not want to give them, use the browser route with the selected wallet from the original product URLs.
 
