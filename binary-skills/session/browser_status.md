@@ -16,5 +16,6 @@ More are open; browser.windows list shows every window.
 New work: browser.browse with task_id "new".
 Update: browser.browse with the task's task_id.
 Answer: browser.browse with the task's task_id, answer_to set to the question ID, and your answer in task.
-Stop: browser.windows close with the task's task_id.
+Stop a scheduled job's run: cron.stop with its schedule id (cron.list finds it); that cancels the whole run, not just its browser window.
+Stop only a browser window: browser.windows close with the task's task_id.
 </browser_status>
