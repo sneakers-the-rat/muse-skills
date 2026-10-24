@@ -6,7 +6,7 @@
 
 - `muse.db` accepts one bounded, read-only `SELECT` for diagnosis. Use the purpose-built chat, goal, artifact and connector tools for ordinary tasks.
 
-Generated from migration set `67c0f25cd1edcd8dc52ca06fd19f829c16f58c50109950345c45011087ac0fa6`.
+Generated from migration set `ea57eb152feee1656375efacb595db61ddbfd5125d9fab6fe2b71107998706d7`.
 
 ## Tables
 
@@ -353,6 +353,14 @@ Generated from migration set `67c0f25cd1edcd8dc52ca06fd19f829c16f58c50109950345c
 - [runtime.workflow_runs](/opt/muse/skills/muse_db/references/tables/runtime.workflow_runs.md). Workflow run identity, launch attribution and execution state.
 
 - [runtime.writer_epoch](/opt/muse/skills/muse_db/references/tables/runtime.writer_epoch.md). The active reliable-volume writer epoch.
+
+### saved
+
+- [saved.item_links](/opt/muse/skills/muse_db/references/tables/saved.item_links.md). Relations from a saved item to other records, such as the widget or citation it was saved from.
+
+- [saved.items](/opt/muse/skills/muse_db/references/tables/saved.items.md). Entities saved into a list, with stable display data, note, purchase state and the agent, chat and turn that saved them.
+
+- [saved.lists](/opt/muse/skills/muse_db/references/tables/saved.lists.md). Named lists of saved items, with kind, notes, due date and budget. The default list is the built-in Wishlist.
 
 ### scheduler
 

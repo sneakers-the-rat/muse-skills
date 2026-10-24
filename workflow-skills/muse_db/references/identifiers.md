@@ -180,6 +180,8 @@
 
 - `invocation_id` resolves in [spaces.action_invocations.invocation_id](/opt/muse/skills/muse_db/references/tables/spaces.action_invocations.md), [spaces.action_results.invocation_id](/opt/muse/skills/muse_db/references/tables/spaces.action_results.md).
 
+- `item_id` resolves in [saved.items.item_id](/opt/muse/skills/muse_db/references/tables/saved.items.md).
+
 - `item_key` resolves in [shell.user_state.item_key](/opt/muse/skills/muse_db/references/tables/shell.user_state.md).
 
 - `jarvis_message_id` resolves in [runtime.messages.message_id](/opt/muse/skills/muse_db/references/tables/runtime.messages.md).
@@ -207,6 +209,8 @@
 - `lease_key` resolves in [self_improvement.leases.lease_key](/opt/muse/skills/muse_db/references/tables/self_improvement.leases.md).
 
 - `link_seq` resolves in [activity.activity_monitor_carrier_user_messages.link_seq](/opt/muse/skills/muse_db/references/tables/activity.activity_monitor_carrier_user_messages.md).
+
+- `list_id` resolves in [saved.lists.list_id](/opt/muse/skills/muse_db/references/tables/saved.lists.md).
 
 - `marker` resolves in [self_improvement.objective_markers.marker](/opt/muse/skills/muse_db/references/tables/self_improvement.objective_markers.md), [spaces.backfill_markers.marker](/opt/muse/skills/muse_db/references/tables/spaces.backfill_markers.md).
 

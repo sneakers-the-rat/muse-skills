@@ -34,7 +34,7 @@
 
 - The status job, `flight-status-<goal-slug>`, reads the next active leg from FlightAware on the cadence in the [FlightAware](/opt/hatch/connectors/flightaware/CONNECTOR.md) connector docs.
 
-- The fare job, `flight-price-<goal-slug>`, runs the daily fare check in the [Duffel](/opt/hatch/connectors/duffel/CONNECTOR.md) connector docs. Create it only when the paid total, currency and fare terms are known. Otherwise record the trip, run the status job, and ask a present user for the missing facts.
+- The fare job, `flight-price-<goal-slug>`, runs the daily [fare check](/opt/hatch/connectors/duffel/references/fare-check.md) in the Duffel connector docs. Create it only when the paid total, currency and fare terms are known. Otherwise record the trip, run the status job, and ask a present user for the missing facts.
 
 - Write each job's body so it stands alone, because the cron worker sees neither this skill nor the conversation. Include the owner, the state file path, the exact legs and booked baseline, the exact commands each run needs, the comparison and alert rules from the connector docs, the deduplication rule, failure handling, cadence changes and stop conditions.
 

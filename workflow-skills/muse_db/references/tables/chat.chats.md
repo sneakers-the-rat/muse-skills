@@ -8,7 +8,7 @@ Canonical chat metadata. chat_id is the existing root session UUID.
 
 - `chat_id` uses `text` and is required.
 
-  Local row identifier (primary key).
+  Canonical chat identity; the same UUID as its root agent's session_id.
 
 - `origin` uses `text` and is required.
 
