@@ -1,6 +1,6 @@
 # Map presentation
 
-- Before creating a map, look up details for the chosen numeric place IDs as the [Places Search](/opt/hatch/connectors/places/CONNECTOR.md) connector docs describe.
+- Before creating a map, use details for the chosen numeric place IDs as the [Places Search](/opt/hatch/connectors/places/CONNECTOR.md) connector docs describe. Reuse records already returned for this task; fetch only missing records, using `places details --summary` for a compact batch.
 
 - Use `widget.create_map_widget` with one `rich_place` element per place. Take `place_id`, the canonical `name` and `coordinate` from the same details record:
 

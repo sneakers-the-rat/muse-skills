@@ -25,10 +25,14 @@
 - `places details` takes only the numeric `place_id` values that `browser.search` or `places detect` returned, batched in one call. A name or URL cannot replace the ID.
 
 ```sh
-/opt/hatch/bin/places details 755728335673330 1124993194757094 --motivation "quiet brunch with outdoor seating"
+/opt/hatch/bin/places details 755728335673330 1124993194757094 --summary
 ```
 
 - Use the search result directly when it already answers the question. Call `places details` for fresher hours, prices, photos, reviews and offerings, and pass `--motivation` with the user's intent so quotes and photos are ranked for it.
+
+- For a shortlist or map, use `--summary`. It keeps each record's name, location, address, categories, hours and closure status, rating, price level, phone numbers, links and offerings when present, without gallery or review payloads. It preserves the usual ID-to-record JSON shape. Use full details only when the task needs the omitted content.
+
+- Reuse details already returned for the same branch and task. Fetch only new candidates or facts that need refreshing. Do not pipe details through `head`: it can hide later places or cut the JSON. If you need to process a full response, save it once and parse that file rather than rerunning the lookup. Missing records and nested fields such as `rating` can be null; treat them as unknown, not a reason to fetch the same response again.
 
 - The response maps each place ID to its record, with the place's fields under `details`, including `details.rating.avg_rating` and `details.rating.num_rating`. Read `places --help` for options such as `--num-gallery-media`, `--num-quotes` and `--product-source`.
 
