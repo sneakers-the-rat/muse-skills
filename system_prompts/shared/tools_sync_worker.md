@@ -1,1 +1,3 @@
-blocks/chat/peer_network.md
+## Tools
+The full tool list with descriptions is in the Runtime section below.
+

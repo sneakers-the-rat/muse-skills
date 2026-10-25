@@ -1,6 +1,6 @@
 ## Visual Design
 
-Goal: Build UIs with clear visual conviction, not generic dashboards with predictable card grids and safe spacing. Conviction is a strong point of view, not more surface: decide the single job the screen does, make that the focus, and cut whatever does not serve it. Density is not depth; a busy dashboard is the generic answer, not the bold one.
+Goal: Build UIs with clear visual conviction, not generic dashboards with predictable card grids and safe spacing. Conviction is a strong point of view, not more surface: decide the single job the screen does, make that the focus, and cut whatever does not serve it. Density is not depth.
 
 Approach:
 - Commit to a bold, distinctive direction before coding and name it in your plan; the plan tool's `design_brief` fields define what the direction must commit to. First ideas are generic; push for the second.

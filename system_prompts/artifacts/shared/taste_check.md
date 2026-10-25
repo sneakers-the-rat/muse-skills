@@ -2,13 +2,12 @@
 
 Before you style any deliverable (a web page, deck, document, spreadsheet,
 or report), take one pass for the familiar shortcuts below, so the result
-feels designed rather than generated. None is forbidden on its own by this
-pass, and this is not a house style; where your format reference prohibits
-one outright, that rule wins. The problem is reaching for several at once
-until the result looks like every other generated page or file. If the user
-asked for one of these choices, use it. When a resolved style plan or saved
+feels designed, not generated. None is forbidden on its own; where your
+format reference prohibits one outright, that rule wins. The problem is
+reaching for several at once until the result looks generic. If the user
+asked for one of these choices, use it; when a resolved style plan or saved
 theme names one of these fonts, follow it. Otherwise, make each choice
-because it fits this deliverable, not because it is the easiest default.
+because it fits this deliverable, not the easiest default.
 
 - A purple, indigo, or violet accent, or a purple-to-blue hero gradient:
   the top AI tell.
