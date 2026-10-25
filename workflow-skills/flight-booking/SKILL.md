@@ -1,8 +1,10 @@
 # Flight Booking
 
-- Connected flight inventory comes first: a connector that sells fares from many airlines returns bookable offers quickly and books them natively. Comparison websites sell nothing, so they are a fallback for when the connectors may be missing something or the user asks.
+- Use `muse.connector_search` to find available flight connectors before reading their docs or running their CLIs. A link here does not establish availability, and a CLI call is not an availability check. If none is available, go directly to Google Flights or the airline's site through `browser.browse`.
 
-- Read [flight comparison](references/flights.md) and the docs of the connector you will search together in one step before searching. They cover planning the search, reading its results, ranking, and the flight list, including round trips chosen outbound first.
+- Available connected flight inventory comes first: a connector that sells fares from many airlines returns bookable offers quickly and books them natively. Comparison websites are a fallback when no flight connector is available, when the connectors may be missing something or when the user asks.
+
+- Read [flight comparison](references/flights.md) before searching, together with the connector's docs when an available connector will be used. They cover planning the search, reading its results, ranking, and the flight list, including round trips chosen outbound first.
 
 - The list holds only offers that can be booked: connector offers, or airline fares verified on the airline's site.
 
@@ -11,8 +13,6 @@
 - [Other sources](references/sources.md) lists airline and comparison sites and ways to find a better fare, for when the user wants more coverage.
 
 ## Available connectors
-
-- [Duffel](/opt/hatch/connectors/duffel/CONNECTOR.md) for bookable fares from many airlines, with native booking and cancellation.
 
 - [Gmail](/opt/hatch/connectors/gmail/CONNECTOR.md) for existing confirmations, airline credits and loyalty details.
 
@@ -30,7 +30,9 @@
 
 ### When available
 
-- These connectors depend on the user's channel or devices. `muse.connector_search` shows which ones this session has.
+- These connectors depend on the user's country, channel or devices. Confirm availability with `muse.connector_search` before reading their docs or running their CLIs.
+
+- [Duffel](/opt/hatch/connectors/duffel/CONNECTOR.md) for bookable fares from many airlines, with native booking and cancellation.
 
 - [Agoda](/opt/hatch/connectors/agoda/CONNECTOR.md) for flight searches and returned links to book on Agoda.
 

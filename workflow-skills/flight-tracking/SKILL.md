@@ -24,21 +24,23 @@
 
 - Store the minimum machine-readable state in `~/workspace/goals/<goal-slug>/hidden_files/travel/flight.json`. Use it only as the owner's job state.
 
-- Record the booking and source fingerprints, the traveler relationship and count, the as-booked itinerary, the paid total and currency, the fare terms, the current facts, the last comparison and any pending fare candidate, the last notified facts and fingerprints, failure counts and both cron ids.
+- Record the booking and source fingerprints, the traveler relationship and count, the as-booked itinerary, the paid total and currency, the fare terms, the current facts, the last comparison and any pending fare candidate, the last notified facts and fingerprints, failure counts and the ids of the jobs that exist.
 
 - Never store full messages, raw provider output, names, ticket numbers, identity documents, contact or payment details, loyalty numbers, Known Traveler Numbers or CLEAR identifiers.
 
-## Run two monitoring jobs
+## Schedule monitoring
 
 - List the owner's jobs with `cron.list` and reuse an equivalent goal-owned job instead of adding another. Each job has the owner `goal:<goal-slug>`.
 
 - The status job, `flight-status-<goal-slug>`, reads the next active leg from FlightAware on the cadence in the [FlightAware](/opt/hatch/connectors/flightaware/CONNECTOR.md) connector docs.
 
-- The fare job, `flight-price-<goal-slug>`, runs the daily [fare check](/opt/hatch/connectors/duffel/references/fare-check.md) in the Duffel connector docs. Create it only when the paid total, currency and fare terms are known. Otherwise record the trip, run the status job, and ask a present user for the missing facts.
+- The optional fare job, `flight-price-<goal-slug>`, requires Duffel to be returned by `muse.connector_search` before reading its docs or scheduling any calls. If it is unavailable or the lookup fails, continue with status monitoring and record the fare-coverage limitation in the trip's monitoring activity. Explain the limitation in a live conversation; background reconciliation records it without messaging the user. Do not call the CLI to test availability.
+
+- When Duffel is available, create the fare job only when the paid total, currency and fare terms are known, using its fare-check guide under **When available**. Otherwise record the trip, run the status job, and ask a present user for the missing facts.
 
 - Write each job's body so it stands alone, because the cron worker sees neither this skill nor the conversation. Include the owner, the state file path, the exact legs and booked baseline, the exact commands each run needs, the comparison and alert rules from the connector docs, the deduplication rule, failure handling, cadence changes and stop conditions.
 
-- Record both cron ids in the state file and read each job back with `cron.view` after `cron.add` or `cron.update`.
+- Record the ids of the jobs that exist in the state file and read each job back with `cron.view` after `cron.add` or `cron.update`.
 
 ## Decide what to tell the user
 
@@ -56,17 +58,15 @@
 
 - Apply a validated amendment or rebooking to the same owner. Update the current facts, keep the as-booked baseline, clear a pending fare candidate the change invalidates and add one activity. Compare provider timestamps so an older confirmation never undoes a newer amendment.
 
-- When a cancellation is confirmed and no replacement exists, stop both jobs.
+- When a cancellation is confirmed and no replacement exists, stop all of the trip's monitoring jobs.
 
-- After the final leg lands, complete a Tracking owner with `tracking.set_status`, which retires its goal-owned jobs. For a user goal, remove both jobs with `cron.remove` and leave the goal itself to the user.
+- After the final leg lands, complete a Tracking owner with `tracking.set_status`, which retires its goal-owned jobs. For a user goal, remove the trip's monitoring jobs with `cron.remove` and leave the goal itself to the user.
 
 - Stop the fare job earlier when the useful change or cancellation window closes. Remove either job when the user asks to stop, and check `cron.runs` when a promised update is missing.
 
 ## Available connectors
 
 - [FlightAware](/opt/hatch/connectors/flightaware/CONNECTOR.md) for live status, delays, gates and positions, and the status job.
-
-- [Duffel](/opt/hatch/connectors/duffel/CONNECTOR.md) for the daily fare check on a booked trip. It does not report flight status.
 
 - [Gmail](/opt/hatch/connectors/gmail/CONNECTOR.md) for the booking confirmation and airline notices.
 
@@ -75,6 +75,12 @@
 - Use `muse.connector_search` to find other connectors and `muse.skill_search` to find related skills.
 
 - If nothing here fits, look on the web for a maintained API or MCP server and set it up with [Custom Connectors and MCPs](/opt/muse/skills/custom-connector-setup/SKILL.md), or build a custom connector.
+
+### When available
+
+- Confirm availability with `muse.connector_search` before reading these connector docs or scheduling their commands. Availability can depend on the user's country.
+
+- [Duffel](/opt/hatch/connectors/duffel/CONNECTOR.md) for the daily [fare check](/opt/hatch/connectors/duffel/references/fare-check.md) on a booked trip. It does not report flight status. Copy the guide's availability check and refusal handling into the fare job so each run checks before calling Duffel.
 
 ## Websites
 

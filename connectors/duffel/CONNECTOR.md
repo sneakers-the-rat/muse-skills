@@ -1,5 +1,7 @@
 # Duffel
 
+- Confirm Duffel is returned by `muse.connector_search` for this task before running any Duffel command, including `--help`. If it is absent, use Flight Booking's browser fallback for flight shopping and do not create a Duffel fare job in Flight Tracking.
+
 - `/opt/hatch/bin/duffel` searches, books and manages flights from many airlines. Its commands are `places`, `search`, `seat-options`, `validate-booking`, `book`, `booking-status`, `cancellation-quote` and `cancel-booking`. It needs no user login, and payment uses the user's Link by Stripe card. `duffel COMMAND --help` lists each command's flags.
 
 - Before a user-facing search, read [Flight Booking](/opt/muse/skills/flight-booking/SKILL.md), which compares flight sources and builds the flight list. Read [checkout](/opt/muse/assets/booking/references/checkout.md) once the user picks a flight to book, not before searching. [Flight Tracking](/opt/muse/skills/flight-tracking/SKILL.md) uses Duffel only for the fare check on a booked trip. Duffel does not report live flight status.
@@ -74,13 +76,15 @@
 
 - Reuse a complete response while its offers are still valid. Corrected arguments, another relevant itinerary, expired offers or lost output justify another search. Repeating an identical search in a shell loop or launching duplicates in the background does not; list airports, cabins and dates in one command instead.
 
-- An unchanged failed search fails the same way again, even when its response says `retriable: true`, so a changed query or another source is the next step.
+- `error.kind: connector_country_not_allowed` means Duffel is unavailable for this account's country. Stop all Duffel commands for the task, including retries of other reads; changing the itinerary or reconnecting will not resolve it. Use Flight Booking's browser fallback for flight shopping. Scheduled fare checks skip Duffel for this run under the [fare check](references/fare-check.md) rules.
 
-- Other failed reads, such as `booking-status`, `seat-options` and `validate-booking`, may be retried.
+- `ok: false` with `code: duffel_unavailable` means Duffel's separate rollout gate is off, even if connector search returned Duffel. Stop `search`, `places`, `seat-options`, `validate-booking` and `book` for the rest of the turn; changing the query will not help. Use Flight Booking's browser fallback for flight shopping. Scheduled fare searches wait for the next run.
+
+- For other errors, an unchanged failed search fails the same way again, even when its response says `retriable: true`, so a changed query or another source is the next step.
+
+- Other failed reads, such as `booking-status`, `seat-options` and `validate-booking`, may be retried unless an availability or rate-limit rule stops that command.
 
 - A 429 rate-limit response ends Duffel calls for the current task. When it carries `rate_limit_resets_at`, say when Duffel can be searched again. Report the limit without changing the query to get around it.
-
-- `ok: false` with `code: duffel_unavailable` means new Duffel searches and bookings are unavailable for now, and it stays that way for the rest of the turn. The airline's site through `browser.browse` is the way forward.
 
 ## After the user picks a flight
 

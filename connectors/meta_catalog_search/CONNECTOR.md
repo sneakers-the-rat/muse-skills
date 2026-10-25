@@ -150,7 +150,7 @@ jq -r '
 
 - Each product has `product_id`, `url`, `name`, `brand`, `price`, `currency`, `description` and `image_url`, plus `sale_price` only when the source shows a real sale. When known, it adds `color`, `material`, `size`, `gender`, `category` and `rating`.
 
-- Some results also carry `seller_type` (`brand_direct`, `authorized_retailer`, `new_item_marketplace`, `secondhand_marketplace` or `gray_market`), `seller_quality` (`elite`, `good`, `acceptable`, `poor`, `not_a_seller` or `unrated`) and `shopify_product_id`. Products carry the checkout flags `is_agentic_checkout_creation_enabled` and `is_agentic_checkout_completion_enabled` when the catalog knows them.
+- Some results also carry `seller_type` (`brand_direct`, `authorized_retailer`, `new_item_marketplace`, `secondhand_marketplace` or `gray_market`), `seller_quality` (`elite`, `good`, `acceptable`, `poor`, `not_a_seller` or `unrated`) and `shopify_product_id`.
 
 - Compare prices and budgets with `sale_price` when present, otherwise `price`, keeping the currency and exact variant together. Missing fields stay unknown, and a result is one snapshot, so check the variant, stock, delivery and total before purchase.
 
@@ -160,11 +160,11 @@ jq -r '
 
 - For a requested size, find it in the size variant group and fetch its candidate `product_ids` while holding color and the other chosen attributes constant. Choose only a response whose `product.selected_variant_info` confirms the whole combination and whose availability allows purchase, and treat `is_available: false` as unavailable.
 
-- Use the confirmed response's `product.id` for checkout, not an ID read from `variant_groups`, and confirm its checkout eligibility in that same response before routing it to direct checkout. Never pick an arbitrary candidate when the attributes cannot be confirmed, and keep the IDs and this lookup out of your reply.
+- Use the confirmed response's `product.id` for checkout, not an ID read from `variant_groups`, and route it on that same response. Never pick an arbitrary candidate when the attributes cannot be confirmed, and keep the IDs and this lookup out of your reply.
 
 ## Check the purchase route
 
-- Route on the checkout flags the search already returned, without fetching product details just to decide. Direct Shopify UCP checkout needs `is_agentic_checkout_creation_enabled` to be exactly `true` on every selected product, and missing or null counts as false.
+- Route on product details, not on checkout flags. A product whose product details carry a `checkout_token` uses Shopify UCP checkout, whatever its flags say.
 
 - Read the [Shopify UCP](/opt/hatch/connectors/shopify-ucp/CONNECTOR.md) docs before using that route. Other products use the Shopping skill's browser checkout.
 

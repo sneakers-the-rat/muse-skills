@@ -1,30 +1,34 @@
 # Shopify UCP checkout protocol
 
-- Use this protocol after the user selects eligible catalog products from one Shopify merchant, or when the user asks about a native order confirmed in this conversation by a successful `checkout complete` or a successful `order get` after an unclear completion.
+- Use this protocol after the user selects catalog products from one Shopify merchant whose product details carry a `checkout_token`, or when the user asks about a native order confirmed in this conversation by a successful `checkout complete` or a successful `order get` after an unclear completion.
 
 - Every command runs as `/opt/hatch/bin/shopify-ucp-cli`, and every command except `order get` takes a JSON input file.
 
-## Check eligibility
+## Check the products
 
-- Every selected product needs `is_agentic_checkout_creation_enabled` exactly `true` in its catalog result, and missing or null counts as false. Keep each product's exact `product_id`, capability flags and storefront `url`.
+- Keep each selected product's exact `product_id` and storefront `url`. A product with a `checkout_token` gets a UCP checkout, and the checkout itself decides how it completes. Ignore the catalog and product-details checkout flags.
 
 - Put products in one checkout only when their URLs clearly identify the same storefront. Matching brand names are not enough, and a checkout never mixes merchants.
 
-- The checkout endpoint makes the final eligibility decision.
+- The checkout endpoint makes the final decision.
+
+- For each selected catalog product, keep the `checkout_token` string from the product-details response that confirmed its variant. Run `/opt/hatch/bin/shopping product-details --product-id <product_id>` only for a product you have no response for. It is signed and tells the checkout which merchant and variant to use, so copy it exactly and never write or edit one yourself.
+
+- A product whose details have no `checkout_token` cannot be checked out directly, so offer browser checkout from its product URL.
 
 ## Keep an optional cart
 
 - Use a cart only when the basket must outlast the turn, because the user is still adding or removing items or wants to return later. `checkout create` takes items directly. Keep the opaque cart ID, which `cart create` returns as `result.id` and later cart commands echo as `agent_state.cart_id`.
 
 ```json
-{"items": [{"item_id": "<catalog product_id>", "quantity": 1}]}
+{"items": [{"checkout_token": "<checkout_token from product-details>", "quantity": 1}]}
 ```
 
 - `cart get` and `cart cancel` take `{"cart_id": "<cart_id>"}`, and `cart update` takes the `cart_id` with the complete `items` list. An update replaces the whole basket, which is how an item is removed, so read `cart get` first when unsure and rebuild from `result.line_items`, using each line's `item.id` and `quantity`.
 
 - A cart holds one merchant. A cart spanning two is refused with an error naming both merchants, so start a separate cart instead of retrying.
 
-- Cart commands and `checkout create` accept catalog product IDs or the variant GIDs a cart returns. Search again for a resumed cart's products when you no longer have their catalog eligibility flags.
+- Cart commands and `checkout create` take each catalog product as its product-details `checkout_token`, or a saved cart's product as `item_id` set to the variant ID from that cart line's `item.id`, with no `checkout_token`.
 
 - A cart is not linked to its checkout. Cancel it once `checkout complete` returns `ok: true` or the browser confirms the order, because nothing else closes it and there is no way to list forgotten carts.
 
@@ -52,7 +56,7 @@
 
 - Confirm every product, exact variant and quantity, and put the complete item set into this first call, because `checkout update` cannot add or remove products.
 
-- Use each catalog `product_id` as an `items[].item_id`, with one entry per distinct variant and repeats folded into its `quantity`, which must be at least 1. Do not add a merchant field, because the endpoint resolves the merchant from the IDs.
+- Put each catalog product's product-details `checkout_token` in `items[].checkout_token`, and pass a variant ID from a cart line's `item.id` as `item_id` with no `checkout_token`. Use one entry per distinct variant and fold repeats into its `quantity`, which must be at least 1. Leave `item_id` out of an item that has `checkout_token`, and do not add a merchant field, because the CLI takes both from the token.
 
 - Set `currency` from the products' latest catalog details, such as `CAD` for a product priced in Canadian dollars, and use `USD` only when the currency is absent. Never infer it from the shipping country. If the products' currencies differ, offer browser checkout for all of them instead.
 
@@ -76,7 +80,10 @@
     }
   },
   "items": [
-    {"item_id": "<catalog product_id>", "quantity": 1}
+    {
+      "checkout_token": "<checkout_token from product-details>",
+      "quantity": 1
+    }
   ],
   "currency": "<catalog currency, or USD>"
 }
@@ -110,7 +117,9 @@
 
 - Take the checkout URL from `result.continue_url` or `result.checkout.continue_url`, or else use a selected product's original storefront URL. Never construct one. A continuation URL alone does not require browser completion.
 
-- If creation fails or rejects an item, explain the result and offer browser checkout from the original product URL without retrying. If the user accepts, follow `/opt/muse/skills/shopping/references/browser-checkout.md`.
+- An error containing `no_ucp_descriptor` means an item's `checkout_token` was missing, expired or did not match it. Run product-details for that product once more and retry with the new `checkout_token`. If it fails again, offer browser checkout from the product URL.
+
+- If creation fails or rejects an item for any other reason, explain the result and offer browser checkout from the original product URL without retrying. If the user accepts, follow `/opt/muse/skills/shopping/references/browser-checkout.md`.
 
 ## Choose direct or browser completion
 
@@ -122,11 +131,11 @@
 
 - Take the first branch that matches the selected wallet:
 
-  - Shop Pay completes directly only when every product's `is_agentic_checkout_completion_enabled` is exactly `true`, creation did not report `requires_escalation` and the checkout has the recipient's name and address. Otherwise continue in the browser with Shop Pay.
+  - Shop Pay completes directly when creation did not report `requires_escalation` and the checkout has the recipient's name and address. Otherwise continue in the browser with Shop Pay.
 
-  - Link continues in the browser when creation reported `requires_escalation` or a message requiring buyer input or review, whatever the completion flags say.
+  - Link continues in the browser when creation reported `requires_escalation` or a message requiring buyer input or review.
 
-  - Link continues in the browser when any product's completion flag is not exactly `true`, or when the checkout lacks the recipient's name and address.
+  - Link continues in the browser when the checkout lacks the recipient's name and address.
 
   - Otherwise Link completes directly.
 
@@ -223,7 +232,11 @@
 
 ## After completion
 
-- `ok: true` from `checkout complete` confirms the order. A failure after the wallet approval, or an unknown outcome, does not prove that no order was placed, so check `order get` before saying so, and never retry or switch to the browser automatically.
+- `ok: true` from `checkout complete` confirms the order.
+
+- An `escalation.continue_url` from `checkout complete` means the merchant placed no order and needs the buyer to finish the checkout in the browser. Tell the user the store needs them to finish there, then start a browser task right away as **Continue in the browser** describes, opening that URL with the same wallet and card, and name the merchant's message from `result.checkout.messages` in the brief as the step to resolve. The direct payment may not carry over to that page, so when the page asks for payment the browser task pays with that wallet and card through its own payment approval; never tell it a payment was already submitted or to avoid entering payment. Do not run `order get` or retry `checkout complete`.
+
+- Any other failure after the wallet approval, or an unknown outcome, does not prove that no order was placed, so check `order get` before saying so, and never retry or switch to the browser automatically.
 
 ```text
 /opt/hatch/bin/shopify-ucp-cli order get --checkout-id '<checkout_id>'

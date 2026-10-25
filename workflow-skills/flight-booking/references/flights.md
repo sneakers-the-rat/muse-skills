@@ -14,9 +14,11 @@
 
 - Check loyalty status, credits and card benefits when they could change the choice, and confirm that a credit applies to the operating or marketing carrier and has not expired. A linked card shows which card the user holds, not its reward rules or a points balance. Mention a useful program and tier name once, without the membership number.
 
-## Search connectors first
+## Search available connectors first
 
-- Search a connector that sells bookable fares before any website. Cover every airport, cabin and date the request allows in as few searches as its docs allow, and choose from the options it returns, as its docs describe.
+- Confirm a flight connector is available with `muse.connector_search` before reading its docs or calling its CLI. If none is available, continue directly to the browser fallback below without a trial CLI call.
+
+- Search an available connector that sells bookable fares before any website. Cover every airport, cabin and date the request allows in as few searches as its docs allow, and choose from the options it returns, as its docs describe.
 
 - For a request for an exact flight, the bookable offer is one that carries that flight number. Schedule data shows a flight operates, not that it can be booked, and a different flight is a different request.
 
@@ -28,11 +30,11 @@
 
 ## Fall back to Google Flights
 
-- Check Google Flights only after showing the connector's options, and only when the connector search fails, is unavailable, is refused for this user's country or finds nothing useful; when a carrier the user named, or one that dominates the route such as Southwest, is absent from the results after the targeted search; or when the user asks for a wider comparison. Low-cost carriers already in the results are covered.
+- Use Google Flights or the airline's site directly when no flight connector is available. Otherwise check Google Flights when the connector search fails or finds nothing useful; when a carrier the user named, or one that dominates the route such as Southwest, is absent from the results after the targeted search; or when the user asks for a wider comparison. Low-cost carriers already in the results are covered.
 
 - Present any useful connector offers first and say in one sentence that you are checking Google Flights and why. Then run one `browser.browse` research task with a complete brief, since it cannot see this conversation: the airports and allowed alternatives, dates, travelers with ages, cabin, bags, connection limits, and the goal of finding both the shortest practical trip and the lowest worthwhile price. Ask it to research without purchasing and to return complete itineraries with the payable total, fare terms, seller URL and time checked.
 
-- A Google Flights price is a lead until a connector or the airline reproduces it. When a lead looks meaningfully better and no connector sells it, mention its airline, flights and price in one sentence and offer to check it on the airline's site. When Google Flights is blocked or fails, say so once and keep the connector results.
+- A Google Flights price is a lead until an available connector or the airline reproduces it. When a lead looks meaningfully better and no available connector sells it, mention its airline, flights and price in one sentence and offer to check it on the airline's site. When Google Flights is blocked or fails, say so once and keep any useful connector results; if there are none, check the airline's site.
 
 - When a targeted connector search after the check adds a better or materially different bookable trip and the user has not chosen a flight, present one replacement list that says it supersedes the earlier one. Once the user has chosen, keep that choice, mention the better option in one sentence, and change the selection only if they ask.
 

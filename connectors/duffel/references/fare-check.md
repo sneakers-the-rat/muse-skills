@@ -2,7 +2,11 @@
 
 - Flight Tracking's fare job runs this check daily. Write these rules into the job's body.
 
-- Run exactly one `search` per run for the complete booked itinerary and passenger mix, with `--limit 30`, saved to a new file. Duffel is the pricing source here, since a browser or web price isn't comparable with the booked fare; a failed scheduled search waits for the next run.
+- Before every run's Duffel command, check `muse.connector_search` for Duffel. If the lookup fails or does not return Duffel, skip the search for this run.
+
+- If a Duffel command returns `error.kind: connector_country_not_allowed` or `code: duffel_unavailable`, make no further Duffel calls in this run. Treat a skipped or refused search as a failed read under Flight Tracking's coverage rules. Keep the job and any pending candidate with a failure note; a skipped or refused confirmation run returns to the daily schedule like other failed confirmations.
+
+- While Duffel is available, run exactly one `search` per run for the complete booked itinerary and passenger mix, with `--limit 30`, saved to a new file. Duffel is the pricing source here, since a browser or web price isn't comparable with the booked fare; other failed scheduled searches wait for the next run.
 
 - Compare an offer only when its priced scope matches the booked baseline exactly. That means every leg's dated flight numbers and airports, the passenger mix, the cabin or fare family, included bags, stop pattern, refund and change restrictions, currency and the basis for taxes and fees.
 
