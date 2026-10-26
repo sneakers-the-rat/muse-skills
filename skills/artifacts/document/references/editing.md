@@ -9,20 +9,33 @@
 
 ## Unpack and repack safely
 
-- Use this round trip for raw XML edits:
+- Unpack the archive into `$WORK`. An uploaded document is not in `project_dir` yet, so copy it to `$DIR/$FILE` first:
 
 ```bash
-unzip -q doc.docx -d unpacked/
-find unpacked -type l -delete   # an outside archive can contain symlinks
-# edit unpacked/word/document.xml in place
-(cd unpacked && rm -f ../out.docx && zip -Xr ../out.docx .)
+FILE="<the deliverable's file name, as the output contract names it>"
+DIR="$JARVIS_HOME/<project_dir from the build task, without its leading ~/>"
+WORK="$DIR/.src/unpacked"
+rm -rf "$WORK" && mkdir -p "$WORK" || exit 1
+unzip -q "$DIR/$FILE" -d "$WORK" || exit 1
+find "$WORK" -type l -delete   # an outside archive can contain symlinks
 ```
 
+- Edit `$WORK/word/document.xml`, then run this block to repack `$WORK` into the deliverable. Re-running it keeps your edit.
+
+```bash
+FILE="<the deliverable's file name, as the output contract names it>"
+DIR="$JARVIS_HOME/<project_dir from the build task, without its leading ~/>"
+WORK="$DIR/.src/unpacked"
+OUT="$DIR/.src/repacked-$FILE"
+rm -f "$OUT" || exit 1
+(cd "$WORK" && zip -qXr "$OUT" .) || exit 1
+python3 -c 'import sys, zipfile, xml.dom.minidom; xml.dom.minidom.parseString(zipfile.ZipFile(sys.argv[1]).read("word/document.xml"))' "$OUT" || exit 1
+mv "$OUT" "$DIR/$FILE"
+```
+
+- Word refuses parts under an extra folder, and `zip` appends to an existing archive, so a part you deleted would survive. `-X` drops extra file metadata.
+
 - Never pretty-print or reindent the XML. Added whitespace nodes change `xml:space`-sensitive content and its rendering.
-
-- Repack from inside the unpacked directory so part paths start at the archive root (`word/document.xml`). Word refuses an archive whose parts sit under an extra folder.
-
-- Remove the old output before zipping, because `zip` appends to an existing archive and a part you deleted would survive. `-X` drops extra file metadata.
 
 - When extracting with Python instead, reject symlink entries (`stat.S_ISLNK(info.external_attr >> 16)`) and any entry that resolves outside the destination.
 

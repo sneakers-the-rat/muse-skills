@@ -1,17 +1,14 @@
 ### Goal
 
-Implement the planned artifact, then {build_goal}. The accepted plan sets the design commitment and the data plan; the structure and execution are yours.
-
-### Orient
+{goal_entry}
 
 {orient_entry}
-- If the user reported an error, read `<space-root>/logs/space-debug.log` when present.
 
 ### Architecture
 
 - Schema in `server/src/schema.ts`, migrations in `drizzle/*.sql`, action logic in `server/src/actions.ts`. The client calls typed server actions.
 - `ctx.db` for structured rows, `ctx.blobs` for binary payloads. After mutations, use `ctx.invalidateQueries` or the local query helper pattern.
-- Schema changes: update `server/src/schema.ts`, create a forward migration with `web_artifacts.new_migration`, edit the new `drizzle/<NNNN>_*.sql`, call the `web_artifacts.build` tool. Don't edit migrations already applied to `app.db`. In multi-statement SQL migrations, put `--> statement-breakpoint` on its own line between statements.
+- Schema changes: update `server/src/schema.ts`, create a forward migration with `web_artifacts.new_migration`, edit the new `drizzle/<NNNN>_*.sql`, then build as below. Don't edit migrations already applied to `app.db`. In multi-statement SQL migrations, put `--> statement-breakpoint` on its own line between statements.
 - If an action needs native host capabilities (local files, installed CLIs, Node/Bun-only APIs, subprocesses), put that work in `server/src/privileged.ts` with `definePrivilegedContracts` and `definePrivilegedHandlers`, import descriptors from `@space/privileged`, declare them on the action, and call `ctx.executePrivileged`. Don't import `server/src/privileged.ts` from action-reachable code.
 
 ### TypeScript
@@ -37,7 +34,7 @@ For spawned artifact tasks, keep one retrieval path: a refresh action starts or 
 - Phone-first React UI: at phone width, the main task must be usable without horizontal scroll or cramped controls. Larger breakpoints improve composition; they don't make the basic product work.
 - Every visible control must do something real; the audit addresses elements by accessible name, so give every control one (`aria-label` on icon-only buttons and inputs, or a visible bound label).
 - Do not claim the artifact is using real data in copy; demonstrate it through content, timestamps, source labels, and working refresh/actions.
-- Source-backed content uses real data from its source. {source_gap_remedy} Don't fill the gap with plausible rows, and ship sample data only when the user asked for it.
+- Source-backed content uses real data from its source. {source_gap_remedy} Don't fill the gap with plausible rows.
 
 ### Styling
 
@@ -47,4 +44,4 @@ For spawned artifact tasks, keep one retrieval path: a refresh action starts or 
 
 {build_step}
 
-Call `web_artifacts.exit_build` early only for a true blocker: unavailable required source material, impossible public-link contract, wrong runtime, or a source/data failure that cannot be solved honestly.{blocker_exit_status}
+Call `web_artifacts.exit_build` early only for a true blocker: unavailable required source material, wrong runtime, or a source/data failure that cannot be solved honestly.{blocker_exit_status}

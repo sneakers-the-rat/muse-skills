@@ -94,6 +94,8 @@ bun run "/opt/muse/assets/artifacts/scripts/assemble_deck.mjs" \
 
 - Make each fix in the slide source or `deck.css`, then assemble again before re-rendering.
 
-- Export only the formats the deck already has, from the `outputs` in `meta.json`, through step 10 of the workflow. Then recompute `meta.json` through step 11.
+- Export the formats your brief's `output_format` names, through step 10 of the [build workflow](workflow.md), then recompute `meta.json` through step 11.
+
+- Move any project-root deliverable whose format is not in `output_format` into `project_dir/.src/`, so the root matches `meta.json`.
 
 - After a structural edit such as shortening or adding, sync the slide list in `deck_plan.md` and the `layout_plan` entries in `style_plan.json` to the final deck, without touching the palette or fonts. The deck keeps its slug and its links.

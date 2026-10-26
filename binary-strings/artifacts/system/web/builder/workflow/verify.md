@@ -1,6 +1,6 @@
 ### Goal
 
-Use existing state or minimal, clearly identified test fixtures when needed, open the audit session with `web_artifacts.audit`, drive what you changed through the probe CLI, fix what `assessment.fix_before_attesting` names, and re-build/re-audit once until the current build is honestly verified.
+Use existing state or minimal, clearly identified test fixtures when needed, open the audit session with `web_artifacts.audit`, drive what you changed through the probe CLI, fix what `assessment.fix_before_attesting` names, and rebuild and re-audit once after the fix pass.
 
 ### Pre-Audit Seeding
 
@@ -13,6 +13,4 @@ Use existing state or minimal, clearly identified test fixtures when needed, ope
 
 Call `web_artifacts.audit` after the latest successful build and read its `assessment`: `scope`, `fix_before_attesting`, `advisory`, `next`. The response's `guidance` has the probe mechanics. For a creation, drive each kind of control or flow once and read the two fold screenshots once. For an edit, drive what the edit changed and look at every view, state, or output the request names; one you have not seen is not verified, and an unrelated click verifies nothing. Prove effects, not presence: `--fill` a unique marker, or read a count before and after, and read the frame after an act that should have changed something. Sandbox rows may mix copied user records with fixtures; judge test outcomes against test inputs, and never claim production values or persistence from sandbox evidence. A successful sandbox action does not verify a pending `post_submit_action`. The content and security reviews in the response judge content, provenance, and data movement; do not repeat them.
 
-Fix in-scope items in one pass, then rebuild and re-audit once. Rebuilding invalidates the attestation and leaves the probe session on the old build; re-audit (or run `reload`) before you trust another probe frame. After that re-audit, drive only what the fix changed; if it changed no control, you do not need to probe again.
-
-Set `verification_status` as the `web_artifacts.exit_build` parameter description defines: attest `SUCCEEDED` from inspected evidence of the current build when `assessment.fix_before_attesting` is empty, or with the remaining items and their reasons in the submit notes; attest `FAILED` when the page did not deliver or the capture failed.
+Report `status` and `verification_status` as the Completion section of your system prompt says.

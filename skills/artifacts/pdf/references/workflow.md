@@ -10,7 +10,7 @@ description: HTML-first PDF generation. Build the HTML source, render it with re
 
 ## Prepare sources and assets
 
-- Write build sources under `project_dir/.src/` and the final PDF at `project_dir/<artifact-slug>.pdf`.
+- Write build sources under `project_dir/.src/`, and the final PDF at the `project_dir` root, named as the output contract requires.
 
 - Embed every image asset as a `data:` URI, including CSS `background-image` URLs. Do not reference images over `http://`, `https://` or `file://`.
 
@@ -42,7 +42,7 @@ description: HTML-first PDF generation. Build the HTML source, render it with re
 
 - Never write a replacement document from scratch and never write a second PDF beside the original.
 
-- If `.src/` is missing for that slug, say so and ask for direction. Rebuilding from the rendered PDF silently drops whatever the source held.
+- If `ls -a` shows no `.src/` for that slug, say so and ask for direction. Rebuilding from the rendered PDF silently drops whatever the source held.
 
 ## Set up the HTML
 
@@ -73,7 +73,7 @@ img { display: block; width: 100%; max-width: 100%; height: auto; max-height: 8c
 ## Render and audit
 
 ```sh
-SLUG="<artifact-slug>"
+FILE="<the PDF's file name, as the output contract names it>"
 # Your build task names `project_dir`. Use it. A goal's document is built under
 # that goal's `files/` directory, so a hardcoded `your_files` path writes the
 # PDF where nothing reads it.
@@ -83,13 +83,14 @@ SLUG="<artifact-slug>"
 DIR="$JARVIS_HOME/<project_dir from the build task, without its leading ~/>"
 bun run "/opt/muse/assets/artifacts/scripts/render_audit.mjs" \
   --html "$DIR/.src/index.html" \
-  --pdf "$DIR/$SLUG.pdf" \
+  --pdf "$DIR/$FILE" \
   --page-selector ".page" \
   --fonts "Liberation Sans:400,Liberation Sans:700" \
-  --require-geometry --require-text-floor --require-image-resolution --hermetic --gate
+  --require-geometry --require-text-floor --require-image-resolution --hermetic --gate \
+  --report-out "$DIR/.src/render_report.json"
 ```
 
-- `render_audit.mjs` loads the HTML in Chromium and honors the CSS `@page { size: ... }` rule (`preferCSSPageSize`) instead of Chromium's default page size. It writes the PDF and prints one JSON report to stdout.
+- `render_audit.mjs` loads the HTML in Chromium and honors the CSS `@page { size: ... }` rule (`preferCSSPageSize`) instead of Chromium's default page size. It writes the PDF and prints one JSON report to stdout. `--report-out` writes the same report to `.src/render_report.json`, so the verdict survives a backgrounded command.
 
 - Pass `--fonts "Family:weight,..."` for every face the design relies on. Pass a `--page-selector` that matches your page wrapper for the overflow checks. The default is `.slide-container, .page, section.slide`.
 
@@ -108,15 +109,15 @@ bun run "/opt/muse/assets/artifacts/scripts/render_audit.mjs" \
 - Treat the render as failed and re-edit `.src/index.html` when any of these holds:
   - `ok` is false.
   - `fonts.missing` is non-empty. That face did not resolve, and `fonts.used` names what Chromium actually rasterized. Fix the family spelling or choose an installed local face.
-  - `overflow` is non-empty. Content spills past a page box, so reduce content or fix the layout of the element at that `index`. This per-element check is more reliable than reading the page images.
+  - `overflow` is non-empty. Content spills past a page box, so fix the layout of the element at that `index`. This per-element check is more reliable than reading the page images.
 
-- Fix overflow by cutting content or letting it flow onto another page, never by crushing the design.
+- Fix overflow by letting content flow onto another page, never by crushing the design or cutting content the brief didn't ask to cut.
 
 - Keep body text at 10pt or larger and nothing anywhere below 8pt. Keep at least 12mm between content and the paper edge through the page wrapper's padding, as in the baseline CSS, rather than `@page` margins. Leave visible gaps of 3mm or more between blocks.
 
 - `--require-text-floor` enforces the type sizes, so text below 8pt fails the gate.
 
-- A body that sits mostly below 10pt raises only an advisory, so a passing gate does not clear you. Treat that advisory as your signal to restore the size and cut content, and keep the small size only when the brief asked for a compact document.
+- A body that sits mostly below 10pt raises only an advisory, so a passing gate does not clear you. Treat that advisory as your signal to restore the size, and keep the small size only when the brief asked for a compact document.
 
 - When the brief fixes the page count, the content budget gives way. Drop the weakest items or tighten wording until the pages fit at full size.
 
@@ -133,7 +134,7 @@ bun run "/opt/muse/assets/artifacts/scripts/render_audit.mjs" \
 - Stop after three iterations, then report the specific failure and ask for direction. Never return the artifact link until validation passes.
 
 ```sh
-PDF="$DIR/$SLUG.pdf"
+PDF="$DIR/$FILE"
 HTML="$DIR/.src/index.html"
 OUT="$DIR/.src/validate"
 "/opt/muse/assets/artifacts/scripts/validate_pdf.sh" "$PDF" "$HTML" "$OUT"

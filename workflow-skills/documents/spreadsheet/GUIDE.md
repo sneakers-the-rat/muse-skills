@@ -14,9 +14,11 @@
 
 - Read the [workbook design guide](/opt/muse/skills/documents/spreadsheet/references/visual.md) for structure, number formats and model conventions, and the [formula guide](/opt/muse/skills/documents/spreadsheet/references/formulas.md) for formulas, recalculation and editing an existing workbook.
 
+- Read the shared [chart guide](/opt/muse/assets/artifacts/references/charts.md) when the workbook plots data.
+
 ## Meet these requirements
 
-- Set a non-empty `workbook.properties.title` and give the file a human-readable filename.
+- Set a non-empty `workbook.properties.title`.
 
 - Fill the workbook only from the build's gathered content. A value you do not have stays a blank cell or becomes a question, never an invented number.
 

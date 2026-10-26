@@ -12,6 +12,8 @@
 
 - Read [working with existing PDFs](/opt/muse/skills/documents/pdf/references/existing-pdfs.md) to read, merge, split or extract from a PDF the user supplied, or to fill a PDF form.
 
+- For a form fill, overlay stamp, crop, or decrypt, install `pypdf`: `pip install --break-system-packages pypdf`.
+
 ## Use the bundled scripts
 
 - `/opt/muse/assets/artifacts/scripts/render_audit.mjs` renders the HTML source to a PDF and page images and runs the render gates. The workflow names its flags.

@@ -2,7 +2,7 @@
 
 - No filler. Every element earns its place: no placeholder text, no dummy sections, no data slop.
 
-- Static means static. Nothing reaches a server, so do not ship a `Send`/`Save`/`Submit` that only fakes success; use download, copy, or `mailto:` instead. A planner or tracker is filled read-only content, not blank cells or checkboxes that reset on refresh (a form that computes a downloadable result is fine).
+- Static means static. Nothing reaches a server, so do not ship a `Send`/`Save`/`Submit` that only fakes success. Use download, copy, or `mailto:` instead for a one-time output; entries the user must keep follow the storage rule under Static page limits.
 
 - No sideways scroll on mobile, page-level or inside a component: reflow instead (wrap or stack rows; a wide table becomes stacked cards). After the audit, let its advice decide whether a part that still scrolls sideways is worth a rebuild.
 

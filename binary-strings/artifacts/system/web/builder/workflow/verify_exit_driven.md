@@ -8,4 +8,4 @@ Read `assessment`: `scope`, `fix_before_attesting`, `advisory`, `next`. Fix ever
 
 When a user-entry artifact needs rows to exercise interactions, create unique test-only rows with `artifact.invoke_action`; the builder's copy of `app.db` is isolated, and seeded test data is discarded after submit. Do not seed fake core content. {population_gap_exit} If users should see fetched data on first open, declare `post_submit_action` on the submit; it must fetch real data in production with the same logic as refresh.
 
-Set `verification_status` as the `web_artifacts.exit_build` parameter description defines: attest `SUCCEEDED` from inspected evidence of the current build when `assessment.fix_before_attesting` is empty, or with the remaining items and their reasons in the submit notes; attest `FAILED` when the page did not deliver or the capture failed.
+Report `status` and `verification_status` as the Completion section of your system prompt says.

@@ -42,8 +42,6 @@ description: Resolving user-provided visual direction into the style plan for sl
 
 - Keep text readable at presentation distance with a clear hierarchy of title, body, stat number and stat label. There is no section-label tier, so a section's point goes in its heading.
 
-- Ground every fact, date, metric, citation and source name in the verbatim request and the facts the user stated. Never invent one.
-
 - Read [authoring](authoring.md), [the design system](design-system.md) and [image direction](image-directive.md) for the detailed slide rules. The workflow and editing guides own planning, validation and export.
 
 - When a delivered deck has a reported visual problem, re-render the affected slides to PNG and read them before changing the source. Do not guess at a layout or styling defect without visual evidence.

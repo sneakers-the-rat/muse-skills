@@ -16,7 +16,7 @@
 
 - For a new deck, read the [build workflow](/opt/muse/skills/documents/presentation/references/workflow.md) and the references it names. For a change to an existing deck, read the [editing guide](/opt/muse/skills/documents/presentation/references/editing.md) and the references it names.
 
-- Read [visual planning](/opt/muse/skills/documents/presentation/references/visual.md) to resolve the StylePlan, and the [theme guide](/opt/muse/skills/documents/presentation/references/theme.md) to generate or apply a saved theme.
+- Read [visual planning](/opt/muse/skills/documents/presentation/references/visual.md) to resolve the StylePlan.
 
 - Read the shared [chart guide](/opt/muse/assets/artifacts/references/charts.md) for slides that plot data, and the shared [map guide](/opt/muse/assets/artifacts/references/maps.md) for slides that show a place or a map.
 
@@ -31,6 +31,8 @@
 - `/opt/muse/assets/artifacts/scripts/render_audit.mjs` renders the slides and runs the deck gates. The workflow names its flags.
 
 - `/opt/muse/assets/artifacts/scripts/build_pptx.py` exports the validated slide images as the PPTX and carries each slide's title into its speaker notes as accessibility text. The rebuild path after edits in the app keeps those notes.
+
+- For `/opt/muse/assets/artifacts/scripts/build_pptx.py`, install `python-pptx`: `python3 -m pip install --break-system-packages python-pptx`. The system requires that flag, and `-m pip` targets the interpreter the script runs under.
 
 ## Verify before delivery
 

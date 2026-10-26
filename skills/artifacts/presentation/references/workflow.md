@@ -26,11 +26,11 @@ description: Build, render, inspect and export a presentation from per-slide sou
 
 ## 2. Resolve the slide count
 
-- Resolve it once. Use an exact `slide_count_target` directly, and for a range use the midpoint rounded down. Use that resolved count for the rest of the build.
+- Resolve it once. Use an exact `slide_count_target` directly, and for a range use the midpoint rounded down. On a create with no `slide_count_target`, choose 6 to 10 slides to fit the content. A rebuild keeps the deck's slide count unless the request changes it. Use that resolved count for the rest of the build.
 
 ## 3. Plan the story
 
-- Write `.src/deck_plan.md` grounded in the verbatim request and the content supplied in the requesting conversation: the title, the audience, the narrative and one entry per slide derived from the source facts.
+- Write `.src/deck_plan.md` grounded in the verbatim request, the content supplied in the requesting conversation, and sources you fetched and verified: the title, the audience, the narrative and one entry per slide derived from the source facts.
 
 - Repeat the user's stated constraints at the top so they shape the build.
 
@@ -261,9 +261,7 @@ bun run "/opt/muse/assets/artifacts/scripts/render_audit.mjs" \
 
 - Promote each requested format to the project root. Files not in `output_format` stay under `.src/`.
 
-- For `pptx`, build the deck from the validated slide images with the bundled `build_pptx.py`, which needs `python-pptx`.
-
-- If the import is missing, install it once with `python3 -m pip install --break-system-packages python-pptx`. The system requires that flag, and `-m pip` targets the interpreter the script runs under. Then run it with the real slug and title:
+- For `pptx`, build the deck from the validated slide images with the bundled `build_pptx.py`. Run it with the real slug and title:
 
 ```sh
 SLUG="<artifact-slug>"
@@ -324,5 +322,5 @@ unzip -p "$DIR/$SLUG.pptx" docProps/core.xml | grep -qi "<dc:title>[^<]" || { ec
   - every image that was requested, attempted or created is embedded in its slide and visible in the validation images, and unused generated files in `.src/media/` are deleted or explained in `deck_plan.md`
   - dense text was rewritten, split or removed rather than shrunk until unreadable
   - the PPTX, when produced, came from the validated rendered slides
-  - every claim is grounded in the provided source
+  - every claim is grounded in the verbatim request, the requesting conversation, or a source you fetched and verified
   - the per-slide source under `.src/slides/` and the combined `.src/index.html` agree, because assembly ran after the last edit

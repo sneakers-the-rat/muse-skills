@@ -14,9 +14,7 @@ description: Resolving user-provided visual direction into the style plan for PD
 
 - If the request supplies a complete theme, use it. If it carries visual direction, match a saved theme or derive a fitting system from that direction. With no direction, use the saved default when one exists, otherwise choose a distinctive system that fits the document.
 
-- Do not save a newly derived system as a reusable theme unless the user asked.
-
-- The resolved theme's `ui` block controls typography, color, spacing, shape and hierarchy. Its `visual` block controls generated or hero imagery. The [theme guide](../../presentation/references/theme.md) describes both blocks.
+- The resolved theme's `ui` block controls typography, color, spacing, shape and hierarchy. Its `visual` block controls generated or hero imagery. The [theme guide](/opt/muse/skills/documents/pdf/references/theme.md) describes both blocks.
 
 - Map every requested font to an installed local family verified with `fc-list`. PDF rendering must not depend on Google Fonts or Microsoft fonts.
 
@@ -26,7 +24,7 @@ description: Resolving user-provided visual direction into the style plan for PD
 
 - Use the same fonts, the same spacing scale and the same treatment for the same kind of element on every page. A reader flicking through should not be able to tell where you stopped and started.
 
-- Use readable contrast, deliberate whitespace and a restrained hierarchy instead of generic cards or decorative filler. Whitespace is part of the system, so under fit pressure cut content, never the gaps.
+- Use readable contrast, deliberate whitespace and a restrained hierarchy instead of generic cards or decorative filler. Whitespace is part of the system, so under fit pressure keep the gaps and fix overflow as the workflow says.
 
 ## Design for the document type
 

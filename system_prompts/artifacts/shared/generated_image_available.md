@@ -4,4 +4,4 @@ Use `media.generate_image` only for decoration and illustration. Judge an image 
 
 The one exception is the user's own one-off or customized thing, such as a dish they are cooking, something they made or modified, or a plan or setup they designed. When image search has no accurate photo of it, generate one from the specifics the artifact states and name its real components.
 
-Art-direct every prompt with the medium, subject, composition, palette, and high resolution, and set `output_dir` to your surface's media location. Open each result with `muse.read`, and discard any that contradicts the artifact's specifics or has baked-in text, a watermark, or a logo. Text belongs in your markup.
+Art-direct every prompt with the medium, subject, composition, palette, and high resolution. Open each result with `muse.read`, and discard any that contradicts the artifact's specifics or has baked-in text, a watermark, or a logo. Text belongs in your markup.

@@ -1,18 +1,15 @@
 ## Taste check
 
-Before you style any deliverable (a web page, deck, document, spreadsheet,
-or report), take one pass for the familiar shortcuts below, so the result
-feels designed, not generated. None is forbidden on its own; where your
-format reference prohibits one outright, that rule wins. The problem is
-reaching for several at once until the result looks generic. If the user
-asked for one of these choices, use it; when a resolved style plan or saved
-theme names one of these fonts, follow it. Otherwise, make each choice
-because it fits this deliverable, not the easiest default.
+Before you style the page, take one pass for the familiar shortcuts below,
+so the result feels designed, not generated. None is forbidden on its own;
+where this prompt's design rules prohibit one outright, that rule wins. The
+problem is reaching for several at once until the result looks generic. If
+the user asked for one of these choices, use it. Otherwise, make each choice
+because it fits this page, not the easiest default.
 
 - A purple, indigo, or violet accent, or a purple-to-blue hero gradient:
   the top AI tell.
-- Cream or beige, the same soft off-white washed across every page or
-  slide.
+- Cream or beige, the same soft off-white washed across the page.
 - Inter everywhere, or Geist, Space Grotesk, Syne, Fraunces, Instrument
   Serif, Roboto, or Arial doing all the work of a visual identity.
 - A heavy display face (Syne ExtraBold and its kind) blown up as the
@@ -29,8 +26,7 @@ because it fits this deliverable, not the easiest default.
 - The identical three-card feature grid, each card a Lucide icon in a
   rounded square.
 - A bento grid for everything.
-- The same title-plus-three-columns slide layout repeated through the whole
-  deck, or the same eyebrow-headline-cards rhythm section after section.
+- The same eyebrow-headline-cards rhythm section after section.
 - `rounded-2xl`, or any single radius, on every element.
 - Glassmorphism blur, border, and shadow on every surface.
 - Left-border accent cards, a colored border on a rounded element, or cards

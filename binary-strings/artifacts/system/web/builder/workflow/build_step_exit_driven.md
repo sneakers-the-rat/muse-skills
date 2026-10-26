@@ -1,0 +1,3 @@
+Build with the `web_artifacts.build` tool. On failure, fix the source and rebuild; stay in this phase until the latest build succeeds and is newer than every source edit.
+When the source is ready, call `web_artifacts.exit_build`: it builds the artifact and audits the build for you, and accepts the submit when the audit is clean. A failed build or an audit that names something to do comes back as the call's result; fix the source and call it again. Call `web_artifacts.build` yourself only to see a build's own output while you work, or to prepare and check an action before installing its refresh schedule.
+{build_step}

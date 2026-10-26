@@ -59,9 +59,9 @@ description: The theme JSON design system stored under ~/workspace/themes/, its 
 
 - Infer the `visual` block: art style, mood, references and a CSS filter.
 
-- Save it to `~/workspace/themes/<kebab-case-name>.json`.
+- Write the generated theme to `project_dir/.src/theme.json`.
 
-- Confirm it with the user in a sentence such as: "I created 'Wes Anderson': pastel pinks, Futura, cinematic film stills. Want me to use this?"
+- When the user asked to keep the theme, also save it to `~/workspace/themes/<kebab-case-name>.json`, where later documents find it.
 
 - Capture the feel, meaning color temperature, density and typographic personality, not an exact copy of a layout.
 

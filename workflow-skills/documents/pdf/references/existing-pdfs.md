@@ -2,11 +2,7 @@
 
 - This guide covers PDFs the user already has, such as uploads under `~/workspace/your_files/` or attachments. A new PDF is still authored as HTML and rendered through the [PDF workflow](workflow.md).
 
-- Poppler is installed. `pypdf` is not, so install it when a task below needs it:
-
-```sh
-pip install --break-system-packages pypdf
-```
+- Poppler is installed.
 
 ## Pick the tool for the task
 
