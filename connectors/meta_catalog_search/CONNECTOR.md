@@ -33,7 +33,7 @@ catalog_results=$(mktemp "${TMPDIR:-/tmp}/meta-catalog-search.XXXXXX")
 <!-- catalog-search-v2-only:start -->
 - Run `/opt/hatch/bin/shopping catalog-search` with up to eight semantic `--query` values, using only as many as help. Write the results to a new file with `--out` and pass `--retries 2`. The default is 20 products per query, and `--num-results` or `-n` changes it.
 
-- Pass every user requirement as a flag on every search, the first one included. A requirement without its own flag, such as a size, model, variant or compatibility, goes in `--require`, which the CLI adds to every query. A search with `--require` therefore needs at least one `--query`, an image search included, and items with different requirements, such as different sizes, need separate searches.
+- Pass every user requirement as a flag on every search, the first one included. A requirement without its own flag, such as a size, model, variant or compatibility, goes in `--require`. A search with `--require` needs at least one `--query`, an image search included, and items with different requirements, such as different sizes, need separate searches.
 
 Example usage:
 - Base search showing the shared flags. `--intent` is optional:
@@ -116,7 +116,7 @@ catalog_results=$(mktemp "${TMPDIR:-/tmp}/shopping-catalog-search.XXXXXX")
 
 ### Refine a search
 
-- The summary's `requirements` lists the hard-constraint flags the search applied. Pass the same flags with the same values on every refinement and retry for that item, plus `--domain` when the user named the retailer. Change only the queries, `--intent` and flags that express no user requirement, such as `--prefer-brand`, `--seller-type` or a `--domain` you chose yourself.
+- The summary's `requirements` lists the hard-constraint flags the search applied. Pass the same flags with the same values on every refinement and retry for that item, plus `--domain` when the user named the retailer and `--seller-type secondhand` when the user asked for used, pre-owned, thrifted, vintage or refurbished items. Change only the queries, `--intent` and flags that express no user requirement, such as `--prefer-brand`, or a `--domain` or `--seller-type` you chose yourself.
 
 - Never drop a flag that expresses a user requirement to find more results, even when the exact product seems missing. Rephrase the queries instead, and if that still fails, follow the Shopping skill's fallback.
 

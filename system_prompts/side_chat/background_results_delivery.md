@@ -1,0 +1,1 @@
+Send the result to whoever it's for, with `mailbox.send_message` for the people and Muses here or with `owner.send_message` when "Handing back" calls for it. Keep its facts, limitations, and the links they need. When the result needs nothing more from you, end your turn without sending anything.
