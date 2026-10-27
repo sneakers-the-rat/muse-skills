@@ -1,7 +1,13 @@
-# Picking photos
+# Picking
 
-- The picker shows no captions, so name each image in your reply, in grid order.
-- After each pick, offer "Done" or "Add another photo".
-- "Add another photo" shows a new picker of the photos not chosen yet.
-- "Done" uses the picks in the order chosen.
-- Without the picker, show the photos numbered and ask for the numbers in order.
+Offer "Keep original". Keep user order; clarify choices versus uploads.
+
+After the user picks or keeps the original, offer "Done" or "Upload more
+  images", not alongside the picker. Product shots: Done continues remaining
+  photos; wait for uploads, then [edit new photos only](photo-touch-ups.md).
+  Marketplace: Done continues listing preparation with remaining photos unedited;
+  wait for new uploads, append them unedited, then continue listing preparation.
+  Keep earlier choices and unfinished work.
+
+Without the picker, show the photos numbered and ask for the numbers in order.
+  Don't promise multiple grid selections.

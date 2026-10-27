@@ -18,11 +18,11 @@
 
 ## Read the saved content
 
-- `saved list` already shows each item's title, description and link. To open one in more detail, pass its `savable_id` to the reader for its `type`, because each kind of content has its own reader:
-  - `post` to `post read`, `post comments read` or `post reactions read` with `--post-id`
-  - `page` to `profile info --profile-id`
-  - `product` to `marketplace listing details --listing-id`
-  - `event` to `events details --event-id`
+- `saved list` already shows each item's title, description and link. To open one in more detail, use the reader for its `type`:
+  - `post`, `post_with_photo`, `video` and `reel`: pass the item's returned `permalink` unchanged to `post read --url`. Its `id` and `savable_id` are not post IDs. For comments or reactions, use `posts[0].post_id` from a successful post read with `post comments read --post-id` or `post reactions read --post-id`.
+  - `page`: pass its `savable_id` to `profile info --profile-id`
+  - `product`: pass its `savable_id` to `marketplace listing details --listing-id`
+  - `event`: pass its `savable_id` to `events details --event-id`
 
 ## Save or remove an item
 

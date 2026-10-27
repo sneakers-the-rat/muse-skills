@@ -33,13 +33,16 @@ The result carries `chat_id`, `provider`, `status`, and `connect: null`.
 When linked, it can include `chat_url`, an existing chat link that may be
 offered as **Open WhatsApp Chat**. Status never returns a pairing bearer.
 
-For a requested connection when `unlinked` or `link_pending`, offer:
+If the result carries `attention_reason`, WhatsApp is not working with this Muse right now, whatever `status` says. Disconnecting and then connecting again fixes it; if WhatsApp is connected somewhere else, this moves it here.
+
+For a requested connection when `unlinked` or `link_pending` and the result carries no `attention_reason`, offer:
 
 [Connect WhatsApp](https://agent.meta.ai/connect/channel?service=whatsapp)
 
 The app owns the QR code or Connect button and secure linking flow. Do not
-invent a phone number, wa.me link, QR code, pairing URL, or link code. If linked,
-say so instead. `link_pending` means the user should finish the app flow.
+invent a phone number, wa.me link, QR code, pairing URL, or link code. When the
+result carries no `attention_reason`, if linked, say so instead; `link_pending`
+means the user should finish the app flow.
 If `checking`, read status again before deciding. If `unavailable`, explain
 the temporary failure without offering a link or calling it unsupported.
 

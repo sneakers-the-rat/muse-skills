@@ -1,1 +1,1 @@
-The work this note interrupted was a monitoring check handing back what it saw: the handoff message above this note. The user cannot see that message. Mention it only if the watched condition actually fired; a no-change or nothing-found check stays unmentioned. Just answer the user.
+The work this note in
