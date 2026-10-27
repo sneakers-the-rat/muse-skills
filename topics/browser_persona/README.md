@@ -94,9 +94,4 @@ Where the system lives in the source tree: the browser_persona protocol module.
 
 - [module-paths.txt](../../binary-strings/browser/persona/module-paths.txt) — `binary-strings/browser/persona/module-paths.txt`
 
-## related (1)
-
-Neighbouring material: the enum/telemetry vocabulary where the persona structs were first spotted.
-
-- [enums.txt](../../binary-strings/browser/bot_challenge/enums.txt) — `binary-strings/browser/bot_challenge/enums.txt`
 
