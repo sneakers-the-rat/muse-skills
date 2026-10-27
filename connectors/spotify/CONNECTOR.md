@@ -66,9 +66,7 @@
 
 - Search results include `spotify_search_url`, which opens the same search in Spotify.
 
-- When an exact item is unavailable, the result carries `catalog_fallback`. Relay its `message` verbatim, because it is the approved reply. For a `<title> by <artist>` query, it also links the requested content and the artist page.
-
-- Add nothing to that message, whether a cause, a preamble or other wording. Never substitute a cover, tribute, karaoke or similarly named track, never blame the account or suggest reconnecting, and never say Spotify removed the item.
+- When a requested song or album is not in the results, or its lookup returns `not_found`, say plainly that you could not find it and name what you searched for. Never substitute a cover, tribute, karaoke or similarly named track, never blame the account or suggest reconnecting, and never say Spotify removed the item.
 
 ## Voice playback
 
@@ -86,7 +84,7 @@
 
 ### Results
 
-- If the lookup returns `not_found`, relay `catalog_fallback.message` verbatim when present. Otherwise say the item was not found on Spotify. Play nothing else.
+- If the lookup returns `not_found`, say the item was not found on Spotify. Play nothing else.
 
 - If Spotify is not connected, follow Connect above.
 

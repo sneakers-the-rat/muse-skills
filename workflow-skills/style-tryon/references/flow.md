@@ -16,9 +16,9 @@
 
 - Use the photo the user attaches now for try-on, or the one they just chose to use after the photo check below. Otherwise read `~/workspace/style-tryon/photo.txt`. Its saved likeness photo counts only if the image it names still exists.
 
-- Use no other photos, even if earlier chats, memory notes, the media library or their profile photos (including `~/workspace/profile-images/`) show one, because these are the only photos the user approved for try-ons.
+- Use no other photos, even if earlier chats, memory notes, the media library or their profile photos (including `~/workspace/profile-images/`) show one, because you should only use photos the user uploaded specifically for try-on.
 
-- If there's no usable photo, ask the user for a photo of themselves in good lighting, mentioning that a full-body photo works best, and wait. If they decline, show only the product.
+- If there's no usable photo, ask the user for a photo of themselves in good lighting, mentioning that a full-body photo works best, and wait for the user's response. If they decline, show only the product.
 
 - Check each newly sent likeness photo with `muse.read` before using or saving it, and a saved photo before its first render in a chat. If the image won't open or shows nothing, ask for another.
 
@@ -44,11 +44,9 @@ workspace/user/media_library/image/<xx>/<hash>.jpg
 
 - Choose only from shopping results already shown in a results card, so each product is verified and its card is ready. If the search is still running, say you'll show them on the user once the results are ready, then finish the search and show the results before rendering.
 
-- A single try-on uses the product the user named, else the first catalog product in the results, or the first product. Say which product it is, by marker.
+- If the user names products, try on just those, in their order.
 
-- Accepting an offer to see several items, or asking to compare items on themselves, means a comparison.
-
-- For a comparison, use the products the user named. If they named none, pick up to 3 of the requested kind in results order, catalog first, skipping repeats of the same product.
+- Otherwise, try on the 2 products named in your reply with the results. If either can't be tried on, or the reply named fewer than 2, use the next ones of the requested product kind from the results, catalog first, skipping repeats of the same product. If fewer than 2 different products can be tried on, try on only those.
 
 ## 3. Get each product photo
 
@@ -64,7 +62,7 @@ workspace/user/media_library/image/<xx>/<hash>.jpg
 
 ## 4. Render
 
-- Call `media.generate_image` once per product, all at once, at most 3. Each call takes a `style_preset`, a short `product` label and two images, the user's photo then the product photo, with no text entry.
+- Call `media.generate_image` once per selected product, all at once. If any weren't rendered, name them so the user can ask for them next. Each call takes a `style_preset`, a short `product` label and two images, the user's photo then the product photo, with no text entry.
 
 - Use `product_try_on_head_and_shoulders` for items worn on the head, face, ears or neck, and `product_try_on` for everything else.
 
@@ -82,7 +80,7 @@ workspace/user/media_library/image/<xx>/<hash>.jpg
 
 - If you showed one image, go straight to step 6 in the same reply.
 
-- If you showed two or three, ask which they like best with a `muse.create_options` row, one option per product in gallery order. Use its exact name if 40 characters or fewer, else a 1 to 3 word name that tells it apart, in the user's language.
+- If you showed two or more, ask which they like best with a `muse.create_options` row, one option per product in gallery order. Use its exact name if 40 characters or fewer, else a 1 to 3 word name that tells it apart, in the user's language.
 
 ## 6. Help them buy
 
