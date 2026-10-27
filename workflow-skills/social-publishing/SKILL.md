@@ -42,7 +42,7 @@
 
 - [Facebook](/opt/hatch/connectors/facebook_cli/CONNECTOR.md) for personal text posts, comments and replies, and Page drafts, posts and scheduling.
 
-- [Instagram](/opt/hatch/connectors/instagram/CONNECTOR.md) for feed posts, reels, carousels and stories.
+- [Instagram](/opt/hatch/connectors/instagram/CONNECTOR.md) for feed posts, reels, carousels and stories, published now or scheduled, and replies to comments on the user's posts.
 
 - [Threads](/opt/hatch/connectors/threads/CONNECTOR.md) for text and media posts, carousels and replies.
 
@@ -90,7 +90,7 @@
 
 - Use the [Facebook](https://www.facebook.com/) site, once the user signs in there, only for a personal photo or video post when Facebook Internal is not available, since the Facebook connector publishes personal posts as text only.
 
-- Use the [Instagram](https://www.instagram.com/) site, once the user signs in there, only to edit a caption or to delete or archive a post, which the Instagram connector cannot do. Delete a post only after the user confirms that exact post.
+- Use the [Instagram](https://www.instagram.com/) site, once the user signs in there, only to edit a caption or to delete a post, which the Instagram connector cannot do. Delete a post only after the user confirms that exact post.
 
 ## Alternatives for better results
 

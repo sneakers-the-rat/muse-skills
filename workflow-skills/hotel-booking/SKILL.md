@@ -2,6 +2,8 @@
 
 ## Find a stay that fits
 
+- Saved travel preferences, when the user has any, live in `~/memory/travel/PROFILE.md`, including each guest's hotel brands, room and bed preferences and loyalty programs. Reading it early lets you search from what they have already told Muse instead of asking again. What they say in this conversation takes precedence, and naming the saved preferences you used lets them correct one. Muse updates the profile in the background from the conversation.
+
 - Establish the destination, dates, number of rooms and who sleeps in each, with every child's exact age. Use the known budget, location and accessibility needs. Guest identity and payment can wait until the user chooses a rate.
 
 - Read [hotel comparison](references/hotels.md) before searching. It covers sources, ranking the full stay and how to show results.

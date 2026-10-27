@@ -1,6 +1,14 @@
 # Account insight metrics
 
-- Use these names, units and definitions when reporting `account-insights` results or explaining an Instagram metric. The definitions come from Meta's external metric catalog. Explain them in plain language while keeping their meaning and unit.
+- The field list describes `account-insights`; [Account analytics results](account-analytics-results.md) covers `analytics-account-insights`. **Interpret the values** applies to both commands and user-supplied figures. Use each returned definition for counting scope.
+
+- Explain the external Metric Catalog definitions in plain language, preserving their meaning and units.
+
+- Apply the unit and caption rules to account and post figures; returned media definitions take precedence for `individual-post-insights`. Use supplied values unless the request needs missing or newer data.
+
+- For `account-insights`, Unix-second time bounds override a period and date bounds; a period overrides date bounds. Date-only bounds start at UTC midnight. The response omits the window, so state the window you used beside the values.
+
+- A returned metric can be absent or `null`; otherwise it is a list of entries with a `value` and optional `dimension_values` codes. Absence and `null` do not mean zero. `account-insights` is refused when Access analytics is set to deny or ask; explain the setting rather than retrying.
 
 ## Interpret the values
 

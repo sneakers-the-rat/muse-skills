@@ -4,6 +4,36 @@
 
 - Keep IDs and cursors inside tool calls. Show the user usernames, content and links.
 
+## Account search
+
+- Find account candidates by name or username with `account-search --query TEXT`.
+  The query must be 1–256 bytes after trimming. `--count` defaults to 10, must
+  be positive, and values above 20 are capped at 20.
+
+- Deduplicate results across pages by `id`. These are possible matches, not
+  verified identities; an empty result does not mean the username is free.
+- Present candidates from `account-search` results directly. Do not call
+  `user-profile` for each candidate unless the user asks for details the
+  search results lack.
+
+- Reuse an identity already established by the task when it clearly matches
+  a result. Otherwise, compare returned names and links. If the intended
+  account is still unclear, have the user choose by username and full name
+  before using any candidate ID. Never guess a username.
+
+```sh
+/opt/hatch/bin/instagram-cli account-search --account-id <user_own_fbid> \
+  --query "<name>" --count 10
+/opt/hatch/bin/instagram-cli account-search --account-id <user_own_fbid> \
+  --query "<name>" --count 10 --after <cursor>
+```
+
+- For another page, keep the query and count unchanged and pass
+  `page_info.end_cursor` as `--after` when `page_info.has_next_page` is true.
+  A page can hold fewer results than `--count`, so rely on `has_next_page` to
+  tell whether more remain. Search only as far as the task needs. This
+  command searches accounts, not posts, Reels, hashtags, or messages.
+
 ## Profiles and people
 
 - `profile` reads the user's own profile when you omit `--username` and `--profile-url`, or another account's profile with one `--username` (with or without `@`) or `--profile-url` per call. Read `profiles[]`, including `bio`, `website` and the follower and following counts. Use it instead of the follower lists when only counts are needed.
@@ -21,7 +51,19 @@
 
 - `followers` reads the user's own followers in `users[]`. `--count` defaults to 200. When `has_more` is true, pass `next_max_id` as `--after`.
 
-- `following` reads the user's own following list in `users[]`. Another account's following list is unsupported. `--count` defaults to 200, and when `page_info.has_next_page` is true, pass `page_info.end_cursor` as `--after`.
+- `following` reads the user's own following list in `users[]`. Another
+  account's following list is unsupported. `--count` defaults to 200.
+  When `page_info.has_next_page` is true, pass
+  `page_info.end_cursor` as `--after`. Read only the requested scope and report
+  partial coverage. If a page returns the cursor you just sent, stop and say
+  the list may be incomplete; it has not been confirmed as the whole list.
+
+- When the user asks what kind of accounts they follow (for example, which
+  are pottery accounts), answer from the bio and category already in the
+  `following` results before fetching individual profiles. If those don't
+  settle it, say that account's kind is unknown rather than guessing.
+  Separate what the profile says from your own inference, and include the
+  profile link with the username when one is returned.
 
 - Follower and following rows include `id`, `username`, `full_name` and `profile_pic_url`. Compare membership by `id` without looking up each profile.
 

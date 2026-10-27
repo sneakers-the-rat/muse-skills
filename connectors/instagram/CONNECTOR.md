@@ -1,6 +1,6 @@
 # Instagram
 
-- `/opt/hatch/bin/instagram-cli` works with the Instagram accounts the user links through Meta Accounts Center. It reads profiles, posts, comments, likers, stories, feeds, saved items and insights, manages saved collections, interests and profile details, and publishes stories and feed media.
+- `/opt/hatch/bin/instagram-cli` works with the Instagram accounts the user links through Meta Accounts Center. It searches accounts and reads profiles, posts, comments, likers, stories, feeds, saved items and insights, manages saved collections, interests and profile details, publishes or schedules stories and feed media, and replies to comments on the user's posts.
 
 - Direct messages use the separate [Instagram Messages](/opt/hatch/connectors/instagram_messages/CONNECTOR.md) connector and its own connection. Content access does not grant messaging access.
 
@@ -47,15 +47,19 @@
 
 ## Run commands
 
-- Run commands with `muse.exec` and copy flag names exactly from these docs. The Instagram service validates most flags and can ignore an unknown one without an error. `<command> --help` lists no flags, except `post-story --help`.
+- Run commands with `muse.exec` and copy flag names exactly from these docs. Unknown flags may be ignored, so use only documented options and supply explicit values for writes. `<command> --help` lists no flags, except `post-story --help`.
 
-- Use `--post-ids` for `fetch-post-comments` and `fetch-post-likers`, and `--media-ids` for `save-post`, `unsave-post` and `media-understanding`, even for one item. The singular `--post-id` and `--media-id` are unsupported.
+- Use `--post-ids` for `fetch-post-comments` and `fetch-post-likers`, and `--media-ids` for `save-post`, `unsave-post`, `archive-post` and `media-understanding`, even for one item. These commands do not support singular `--post-id` or `--media-id`.
 
-- Reuse results already in context and never rerun a successful command with the same arguments in the same task. When a script will process a result, save the first call's output under `~/workspace/` and read that file.
+- Reuse results already in context and never rerun a successful command with the same arguments in the same task, except to read fresh state after an uncertain write. Rate-limit stops still apply. When a script will process a result, save the first call's output under `~/workspace/` and read that file.
 
-- In scripts, check the exit status of every call. A failed call is not an empty result.
+- Use separate `muse.exec` calls for analytics reads and metric-definition lookups. In scripts, check every Instagram call's exit status before processing its output. A failed call is not an empty result.
 
-- `--retries N` retries transient failures and defaults to 0. Leave it at 0 for writes. `post-feed`, `post-story`, `set-profile-picture` and `profile-banner` reject any other value because a retry could repeat the change.
+- Before reporting, explaining or rewriting any Instagram metric, including user-supplied figures, read [Account insight metrics](references/account-insights-metrics.md). Re-read it when its definitions leave context.
+
+- Change Instagram state only when the user requests it. Keep the selected account, target and supplied values unchanged through approval; report completion only from a successful result.
+
+- `--retries N` retries transient failures and defaults to 0. Keep `--retries 0` for writes unless they only edit existing text or state. `post-feed`, `post-story`, `comment-reply`, `set-profile-picture`, `profile-banner` and `update-bio --action add-link` reject any other value because a retry could repeat the change.
 
 - On `429 Too Many Requests`, stop every `instagram-cli` call for the task, including calls from scripts. For a post or reel link, continue with the fallbacks in [content questions](references/content-questions.md). Otherwise report what you completed and what remains.
 
@@ -99,35 +103,85 @@
 
 - Post rows count `likes` and `comments` only. They never include per-post views, reach, saves or shares, and account totals must never be assigned to individual posts.
 
+- For detailed metrics on the selected account's own post, use `individual-post-insights` as described below.
+
 - Attribute each post to its returned `username`, which can differ from the requested account. Returned order does not establish profile-grid order or a pinned post.
 
 - Before working with what a post or reel shows, read [content questions](references/content-questions.md). To shop from a post or reel, follow [shopping links](references/shopping-links.md).
 
-## Read account insights
+## Comment visibility
 
-- Read [account insight metrics](references/account-insights-metrics.md) before reporting, explaining or rewriting Instagram metrics, including captions built from values the user supplied. Read it again on a follow-up when its definitions are no longer in context, because an earlier summary does not replace them. Use supplied values unless the request needs missing or newer data.
+- Hide or unhide a comment only when the user asks, on the selected account's own post. Take `--media-id` and `--comment-id` from the `fetch-post-comments` result for the selected comment. Resolve ambiguous targets first.
 
-- `account-insights` returns account-level totals for the selected linked account and defaults to the last 30 days. Choose one form of window:
-  - `--period` with `last_7_days`, `last_30_days`, `last_90_days`, `this_month` or `this_year`
-  - `--start-date` with `--end-date`
-  - Unix-second `--start-time` with `--end-time`
+- Hiding and unhiding ask for approval each time unless the user allowed it for the current task.
 
-- Time bounds override a period and dates, and a period overrides dates. Date-only bounds start at UTC midnight. The response omits the window, so state the window you used beside the values.
+- `--hidden true` hides the comment; `--hidden false` unhides it.
 
 ```sh
-/opt/hatch/bin/instagram-cli account-insights --account-id <user_own_fbid> --period last_7_days
-/opt/hatch/bin/instagram-cli account-insights --account-id <user_own_fbid> --start-date 2026-01-01 --end-date 2026-01-31
+/opt/hatch/bin/instagram-cli hide-comment --account-id <user_own_fbid> \
+  --media-id <media_id> --comment-id <comment_id> --hidden true
 ```
 
-- A metric can be absent or `null`. Otherwise it is a list of entries with a `value`, and breakdowns add `dimension_values` codes that the metrics guide decodes.
+- Confirm the returned `hidden` matches the requested state, including `false`; report an uncertain outcome without repeating the write.
 
-- `account-insights` is refused while the user's Access analytics permission is set to deny or ask. Tell the user that setting blocks it rather than retrying.
+## Reply to comments
 
-- For performance analysis and competitor comparisons, the analytics commands return metric definitions, metric cards, top posts and follower changes. [Analytics](references/analytics.md) explains them.
+- Reply to a comment only when the user asks, on the selected account's own post, with the exact reply text the user gave or approved. Never invent or reword a reply on your own. Take `--media-id` and `--comment-id` from the `fetch-post-comments` result for the selected comment; resolve an ambiguous comment first.
 
-- Follow [Social Content Performance](/opt/muse/skills/social-content-performance/SKILL.md) for trends, comparisons and recommendations across the user's own accounts. When any compared account belongs to someone else, use Social Competitor Analysis, which `muse.skill_search` finds when this session has it.
+- A reply is public and posts as the selected account. It asks for approval each time unless the user allowed it for the current task.
 
-- When this session lacks Social Competitor Analysis, compare other accounts only on their public `profile`, `posts` and analytics data. Never substitute the user's account totals for theirs or invent a missing value, and name each requested metric or comparison that remains unavailable.
+```sh
+/opt/hatch/bin/instagram-cli comment-reply --account-id <user_own_fbid> \
+  --media-id <media_id> --comment-id <comment_id> --text '<reply>'
+```
+
+- Report the reply posted only when the result has `reply_comment_id`. Report an uncertain outcome without repeating the reply.
+
+## Read post insights
+
+- `individual-post-insights` reads lifetime metrics for one owned post, reel or story. Use the selected item's `post_id` from `posts` or `post`, or its story media ID from `own-stories`, as `--post`. No reporting window is supported.
+
+```sh
+/opt/hatch/bin/instagram-cli individual-post-insights --account-id <user_own_fbid> --post <media_id>
+```
+
+- Follow [Analytics](references/analytics.md#owned-media-results) for media definitions and availability. Report access errors without substituting another account or reconnecting.
+
+## Read account insights
+
+- For account totals, follower growth or daily trends over a supported rolling window, use `analytics-account-insights`: `--time-range last-7d`, `last-14d`, `last-28d` or `last-90d`. Keep relative requests for these windows as rolling windows even when you calculate their dates.
+
+- For another relative window, a calendar month or explicit date bounds, use `account-insights` for the metrics it returns. It defaults to 30 days and supports `--period last_7_days`, `last_30_days`, `last_90_days`, `this_month` or `this_year`, paired `--start-date`/`--end-date`, or paired Unix-second `--start-time`/`--end-time`. Never replace requested dates with a rolling window. If the metric requires `analytics-account-insights`, explain its supported windows and ask whether one is acceptable.
+
+- For result fields, follow [Account analytics results](references/account-analytics-results.md) for `analytics-account-insights` and [Account insight metrics](references/account-insights-metrics.md) for `account-insights`. [Analytics](references/analytics.md) covers optional series, comparisons and top content.
+
+- Follow [Social Content Performance](/opt/muse/skills/social-content-performance/SKILL.md) for analysis across the user's own accounts. For other accounts, find Social Competitor Analysis with `muse.skill_search`; if unavailable, use only their public profile, posts and analytics data, and name unavailable comparisons.
+
+## Change post settings
+
+- Change one setting on a post originally authored by the selected account only
+  when the user asks for that change. It asks for approval each time unless the
+  user allowed it for the current task.
+
+- For `update-post-setting`, the singular `--media-id` flag is supported. Use it
+  with the exact post selected by the user, reusing `posts[].post_id` from
+  context. Resolve an unclear target before writing.
+
+- Pass exactly one of `--enable-comments true|false` or
+  `--hide-share-count true|false` per call.
+
+```sh
+/opt/hatch/bin/instagram-cli update-post-setting --account-id <user_own_fbid> \
+  --media-id <media_id> --enable-comments false
+/opt/hatch/bin/instagram-cli update-post-setting --account-id <user_own_fbid> \
+  --media-id <media_id> --hide-share-count true
+```
+
+- Hiding the share count does not prevent people from sharing the post.
+
+- Report success only when the returned `commenting_enabled` or
+  `share_count_hidden`, as applicable, matches the requested value, including
+  `false`. If the result is uncertain, report it without repeating the write.
 
 ## Manage saved posts, interests and the profile
 
@@ -158,7 +212,7 @@
 
 - To organize saved posts into collections at the user's request, inspect each post with `media-understanding` first. Put each post in the most specific matching collection and create a collection only when none fits. Afterwards, name any low-confidence assignments so the user can correct them.
 
-- `update-bio --bio TEXT` accepts at most 150 characters and no other option. An empty string clears the bio.
+- `update-bio --action update-text --bio TEXT` changes biography text, at most 150 characters; an empty string clears it. Draft within the limit rather than truncating user text. Omitting `--action` retains this behavior. For profile links, use the actions below.
 
 - `set-profile-picture --file PATH` takes exactly one square JPEG or PNG under `~/workspace/`, preferably between 320 x 320 and 1080 x 1080 pixels and at most 100 MB.
 
@@ -171,6 +225,58 @@
 /opt/hatch/bin/instagram-cli set-profile-picture --account-id <user_own_fbid> --file ~/workspace/<profile>.jpg
 /opt/hatch/bin/instagram-cli profile-banner --account-id <user_own_fbid> --action add
 ```
+
+## Archive content
+
+- Archive posts, Reels or active stories owned by the selected account only when the user explicitly asks. Archiving asks for approval each time unless the user allowed it for the current task.
+
+- Pass the selected items' IDs from `posts` or `own-stories` to `--media-ids`, comma-separated, to archive one or several in one call.
+
+```sh
+/opt/hatch/bin/instagram-cli archive-post --account-id <user_own_fbid> --media-ids <media_id>,<media_id>
+```
+
+- Archiving hides the content from everyone but the owner and keeps its likes and comments. An active story expires immediately; highlights that include it stay visible. The CLI cannot unarchive; the user can restore posts from Archive in the Instagram app.
+
+- Report each item: IDs in `archived_media_ids` are archived, including ones that already were; IDs in `failed_media_ids` are not confirmed archived. Do not guess why an item failed or retry it unless the user asks again.
+
+- If the user declines the approval, or an error shows the request never ran (such as a consent link, a not-connected account or a 403), nothing was archived; follow the error rules above. If the call fails otherwise or its outcome is unclear, report every item as unconfirmed and do not repeat the call.
+
+## Read and edit profile links
+
+- Read links with `profile` and use the selected link's positive `link_id` for an edit. A `null` link list is unavailable and legacy ID `-1` cannot be edited. Ask which link when ambiguous.
+
+```sh
+/opt/hatch/bin/instagram-cli profile --account-id <user_own_fbid>
+/opt/hatch/bin/instagram-cli update-bio --account-id <user_own_fbid> --action add-link --url 'https://example.com/shop' --title 'Shop'
+/opt/hatch/bin/instagram-cli update-bio --account-id <user_own_fbid> --action update-link --link-id <link_id> --title ''
+```
+
+- `add-link` needs an HTTP(S) URL; its title is optional. `update-link` needs a link ID and a URL, title, or both. Omitted fields, biography and other links stay unchanged; an empty title clears it. Delete, reorder and pin operations are unsupported.
+
+- Report the returned `bio_links[]` on success. After an uncertain write, run `profile` again even if an earlier result is in context; never automatically repeat the write.
+
+## Mute posts or stories
+
+- Use the target's Instagram FBID from a profile or following result. `true` mutes and `false` unmutes one surface; use separate calls for both. Ask which surface when unspecified.
+
+```sh
+/opt/hatch/bin/instagram-cli mute-user --account-id <user_own_fbid> --user-id <target_user_id> --surface posts --muted true
+/opt/hatch/bin/instagram-cli mute-user --account-id <user_own_fbid> --user-id <target_user_id> --surface stories --muted false
+```
+
+- Report the returned `muted` state, including a no-op. After an error or timeout, report the outcome as unknown and do not replay the change. The CLI cannot read mute state; ask the user to check in Instagram, never use `mute-user` as a check.
+
+## Rename a story highlight
+
+- Use the collection ID from the account's `https://www.instagram.com/stories/highlights/<collection_id>/` URL, never a member story ID. Ask for the URL when missing. Supply the full title, at most 16 Unicode characters; an empty or whitespace-only title clears it.
+
+```sh
+/opt/hatch/bin/instagram-cli rename-highlight --account-id <user_own_fbid> --highlight-id <collection_id> --title 'Trips'
+/opt/hatch/bin/instagram-cli rename-highlight --account-id <user_own_fbid> --highlight-id <collection_id> --title ''
+```
+
+- Only the title changes. Report the stored title on success; check it in Instagram after an uncertain result before another write. Shell-quote supplied text so it passes literally.
 
 ## Publish a story
 
@@ -246,15 +352,25 @@ EDITOR_JSON='[
   --cover ~/workspace/<second-cover>.jpg --caption '<caption>'
 ```
 
-- The approval shows the action, the ordered media, the caption, any link sticker URL, the tagged accounts and the account. Keep the files, their order, the caption and the tags unchanged through approval.
+- The approval shows the action, the ordered media, the caption, any link sticker URL, the tagged accounts, any scheduled time and the account. Keep the files, their order, the caption, the tags and the scheduled time unchanged through approval.
 
 - Never start the same publish again while its command or a scheduled job for it is still running. Wait for that result. A failed or uncertain attempt may already have published, and Instagram enforces a daily publishing limit for each account.
 
+## Schedule a post or story
+
+- `post-feed` and `post-story` take `--publish-at` to schedule instead of publishing immediately. Schedule only when the user asks for a later time; omit the flag to publish now.
+
+- Pass one future RFC 3339 time with an explicit offset, such as `2026-10-17T15:30:00-07:00`. Convert the user's wording in their timezone, including daylight saving time, and ask when the date, time or timezone is unclear.
+
+- Report the content as scheduled for that time, not published. When the account cannot schedule, report that; do not publish immediately instead.
+
+- `instagram-cli` cannot list, edit or cancel scheduled content, and `posts` does not show it until it publishes. When asked, say so and point the user to scheduled content in the Instagram app. Do not schedule a replacement while the original is still scheduled.
+
 ## What the connector cannot do
 
-- `instagram-cli` cannot follow, unfollow, remove followers, block, like, comment, reply to comments, delete, archive or pin posts, or edit captions. It cannot read the ranked home timeline or another person's following list. Say so plainly when asked.
+- `instagram-cli` cannot follow, unfollow, remove followers, block, like, create top-level comments, delete, unarchive or pin posts, or edit captions. It cannot read the ranked home timeline or another person's following list. Say so plainly when asked.
 
-- A browser task on instagram.com through `browser.browse` can edit a caption or delete or archive a post once the user signs in there, with the change in `task` and the existing `task_id` or `"new"` for separate work. Delete a post only after the user confirms that exact post.
+- A browser task on instagram.com through `browser.browse` can edit a caption or delete a post once the user signs in there, with the change in `task` and the existing `task_id` or `"new"` for separate work. Delete a post only after the user confirms that exact post.
 
 ## Present results
 

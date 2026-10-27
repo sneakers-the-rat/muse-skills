@@ -70,7 +70,7 @@
 
 - These connectors depend on the user's channel or devices. `muse.connector_search` shows which ones this session has.
 
-- [Muse Mail](/opt/hatch/connectors/muse_mail/CONNECTOR.md) for Muse's own mailbox, mail forwarded to it and receiving addresses the user can hand out.
+- [Muse Mail](/opt/hatch/connectors/muse_mail/CONNECTOR.md) for Muse's own mailbox, its email address and mail forwarded to it.
 
 - [Superhuman Mail](/opt/hatch/connectors/superhuman_mcp/CONNECTOR.md) for mail the user handles in Superhuman.
 

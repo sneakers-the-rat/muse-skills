@@ -61,6 +61,10 @@
     of the images and the pointer, then verify that no pointer names an image
     that still exists
 
+  - the travel profile at `~/memory/travel/PROFILE.md`, which is
+    user-editable, excluded from memory ingest, and read directly by travel
+    turns
+
   - `~/HEARTBEAT.md`, `~/AGENTS.md`, and `~/TOOLS.md` when the information
     became an instruction, standing check, or environment note
 
@@ -159,6 +163,10 @@
     or running profile writers, and the durable profile at
     `~/memory/shopping/PROFILE.md`
 
+  - Travel-profile runs, staged `travel/PROFILE.md` files, receipts, queued or
+    running profile writers, and the durable profile at
+    `~/memory/travel/PROFILE.md`
+
   - Studying plans, goal briefs, suggestions, momentum, and
     `~/workspace/objectives/goals/STUDYING.md`
 
@@ -206,10 +214,10 @@
   staging artifact can reapply it.
 
 - Claim retraction plus reindex is not enough for
-  `~/memory/shopping/PROFILE.md`. Edit or remove matching profile entries
-  directly, verify the file from fresh state, and prove no queued, running,
-  staged, or scheduled shopping-profile run can restore them. Quiesce an
-  in-flight writer first.
+  `~/memory/shopping/PROFILE.md` or `~/memory/travel/PROFILE.md`. Edit or
+  remove matching profile entries directly, verify the file from fresh state,
+  and prove no queued, running, staged, or scheduled shopping-profile or
+  travel-profile run can restore them. Quiesce an in-flight writer first.
 
 - A retained run receipt may keep content-free provenance, but any model-readable
   evidence or generated proposal containing the subject needs an explicit
@@ -314,10 +322,11 @@
   - exact and semantic retrieval no longer returns a usable copy
 
   - standing prompt context, new compaction summaries, memory flushes, restart
-    checkpoints, and the shopping profile do not preserve or restate it
+    checkpoints, and the shopping and travel profiles do not preserve or
+    restate it
 
   - no active, staged, queued, or scheduled producer, including a
-    shopping-profile run, can recreate it
+    shopping-profile or travel-profile run, can recreate it
 
   - approved artifacts and shares have the requested disposition
 

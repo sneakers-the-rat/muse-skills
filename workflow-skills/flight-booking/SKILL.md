@@ -1,5 +1,7 @@
 # Flight Booking
 
+- Saved travel preferences, when the user has any, live in `~/memory/travel/PROFILE.md`: home airports, airlines, cabin, seat, stops and loyalty programs for the user and the people they travel with. Reading it early lets you search from what they have already told Muse instead of asking again. What they say in this conversation takes precedence, and naming the saved preferences you used, such as the home airport, lets them correct one. Muse updates the profile in the background from the conversation.
+
 - Use `muse.connector_search` to find available flight connectors before reading their docs or running their CLIs. A link here does not establish availability, and a CLI call is not an availability check. If none is available, go directly to Google Flights or the airline's site through `browser.browse`.
 
 - Available connected flight inventory comes first: a connector that sells fares from many airlines returns bookable offers quickly and books them natively. Comparison websites are a fallback when no flight connector is available, when the connectors may be missing something or when the user asks.

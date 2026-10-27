@@ -28,6 +28,8 @@
 
 - For shopping preferences, check `~/memory/shopping/PROFILE.md` directly and edit or remove the matching entries. Verify that no staged, queued, running or scheduled shopping-profile run can restore them.
 
+- For travel preferences, do the same with `~/memory/travel/PROFILE.md` and travel-profile runs.
+
 - Do not send approved cleanup targets to recoverable trash. Remove an exact standalone file with `rm -- <exact-path>` through `muse.exec`, revalidating the path immediately before removal.
 
 - Never use `rm -r`, another recursive deletion, a glob or a broad target. Edit a mixed-content file instead of deleting it, and clean a directory through the product action that owns it or make a revised plan.

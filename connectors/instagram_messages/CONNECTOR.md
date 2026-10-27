@@ -1,6 +1,8 @@
 # Instagram Messages
 
-- This connector reads and sends direct messages in the user's own Instagram accounts. Run `/opt/hatch/bin/instagram-messages-cli`.
+- This connector reads and sends direct messages and manages pending message
+  requests in the user's own Instagram accounts. Run
+  `/opt/hatch/bin/instagram-messages-cli`.
 
 - Its connection is separate from the Instagram connector for profiles and posts, so a user can have Instagram connected while messages are not.
 
@@ -44,6 +46,32 @@
 - Match calls to the task. Do not fetch thread after thread across a large inbox unless the user wants that scope, and never set up frequent or persistent polling.
 
 - Read results keep raw provider timestamps and add `message_sent_at` and `last_message_sent_at` in UTC and the user's local time. These are transport times, never the time of an event a message describes.
+
+## Manage message requests
+
+- Accept or decline a pending request only at the user's explicit request. Use
+  its `thread_fbid` from `inbox --folder pending` for the selected connected account.
+
+- Acceptance moves the thread into the inbox and lets the sender message freely
+  and see read status. Creator and business accounts split their inbox into
+  Primary and General tabs. The CLI cannot choose or read the tab, so do not
+  tell the user which tab the thread went to; they can move it in the
+  Instagram app.
+
+```sh
+/opt/hatch/bin/instagram-messages-cli accept-message-request \
+  --account-id ACCOUNT_ID --thread-fbid THREAD_ID
+/opt/hatch/bin/instagram-messages-cli decline-message-request \
+  --account-id ACCOUNT_ID --thread-fbid THREAD_ID
+```
+
+- Report acceptance only when the response has `accepted: true`, and decline only
+  when it has `declined: true`.
+
+- Keep acceptance's `--retries` at 0. Automatic retries require one
+  `--offline-threading-id` on the original call, reused unchanged.
+
+- Report an uncertain dispatched outcome without repeating the operation.
 
 ## Send or react
 

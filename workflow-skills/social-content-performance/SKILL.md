@@ -12,6 +12,8 @@
 
 - Retrieve the posts in scope with their publication times and permalinks, then the metrics the question needs. Use the connector's metric definitions and display names rather than labels from memory.
 
+- For Instagram post metrics, use the connector's owned-post insights and media definitions. These figures cover each post's lifetime rather than the selected reporting period; compare posts of similar age and state that scope.
+
 - Keep each metric at the level it was returned. Account totals do not describe one post, daily reach does not add up to unique people across a period, and a missing value is unknown rather than zero.
 
 - Keep reach, impressions, views, engagement and conversions distinct, each with its own denominator. Separate organic from paid results and keep follower and non-follower breakdowns when they are returned.
@@ -40,7 +42,7 @@
 
 ## Available connectors
 
-- [Instagram](/opt/hatch/connectors/instagram/CONNECTOR.md) for the user's posts with likes and comments, account insights and metric definitions.
+- [Instagram](/opt/hatch/connectors/instagram/CONNECTOR.md) for the user's posts, owned-post lifetime insights, account insights and metric definitions.
 
 - [Facebook](/opt/hatch/connectors/facebook_cli/CONNECTOR.md) for managed Page insights, Page post metrics and the reactions and comments on personal posts.
 

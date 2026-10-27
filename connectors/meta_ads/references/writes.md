@@ -113,7 +113,7 @@
 
 - An `Ads MCP Access Denied` rejection saying the account cannot create or modify ads through this interface is about the account, not the call. Every write to it will fail the same way for the rest of the conversation, so attempt no other, say nothing was changed, and explain as [manual setup](campaign-manual-setup.md) says after reading it.
 
-- Some rejections name something only the advertiser can change, such as unaccepted Lead Ads terms, an ad account temporarily restricted from this action, no ad access to a Page, no payment method, a restricted Instagram account, two-factor authentication or a security checkpoint, or a deleted boosted post. Say what it is and where they fix it, then continue with whatever does not depend on it. Writes that depend on it fail the same way until the advertiser fixes it, so they wait for their word.
+- Sometimes rejections are caused by reasons only the advertiser can fix, such as unaccepted Lead Ads terms, an ad account temporarily restricted from this action, no ad access to a Page, no payment method, a restricted Instagram account, two-factor authentication or a security checkpoint, or a deleted boosted post. Tell the user what the issue is and where to fix it, then continue with whatever does not depend on it. Writes that depend on it will continue failing until the advertiser takes action. When the advertiser says they've fixed it, read the account or Page again before retrying.
 
 - An ad set reaching any EU country needs `dsa_beneficiary` and `dsa_payor`, which `ads_create_ad_set` fills from the account's business name. With no business, the create is rejected as "No advertiser indicated", so ask who the ads promote and who pays, usually the same name, pass both and never drop the EU countries.
 
@@ -170,7 +170,9 @@
 
 - Creation follows dependencies, from campaign to ad sets and from media to creatives to ads. A creative needs its uploaded `image_hash`, or a `video_id` with a thumbnail, and image and carousel creatives need a destination `link_url`, or for a message ad its channel's standard link in [creative preparation](campaign-creative.md), while an existing post's `object_story_id` replaces the media and is never combined with it.
 
-- An ad's `creative` names exactly one source. The creative format must suit the campaign objective, so a rejection for an incompatible objective reopens the plan with the advertiser rather than adjusting arguments.
+- Give an ad exactly one creative source: an existing creative, an existing post, or a new creative spec.
+
+- Before adding or copying an ad into an existing ad set, check that the ad fits it: read the ad set's optimization goal, destination and promoted object, and its campaign's objective. When it doesn't fit, for example a lead-form ad going into a website-traffic ad set, ask whether to adapt the ad to this ad set or put it in a new ad set that fits, under a new campaign when the campaign's objective doesn't support it, before creating anything. A rejection for an incompatible objective also reopens the plan with the advertiser rather than adjusting arguments.
 
 - A complete campaign follows [execution](campaign-execution.md), with current schemas, final approval of the exact paused hierarchy, then the create tools in dependency order using only returned parent and media references.
 
@@ -195,6 +197,8 @@
 - Copying `targeting` from a neighboring ad set invents an audience. Keep the broad Advantage+ Audience default, which needs no argument, and narrow only where the advertiser asked, resolving their places, interests and languages through [targeting](campaign-targeting.md), never a typed ID.
 
 - Leave `bid_strategy` unset unless the advertiser asked for one. A cap strategy such as `LOWEST_COST_WITH_BID_CAP` without its `bid_amount` is rejected, and it places a bid they never asked for.
+
+- When the advertiser wants to keep ads off some placements, for example for brand safety, recommend the placement exclusions in their ad account settings in Ads Manager when they cover those placements. Those settings can exclude Audience Network, Facebook right column and Facebook Marketplace, apply to every campaign, and keep Advantage+ placements everywhere else. You can't change them, so explain where to find them. Recommend the account setting first, and restrict the ad set only if the advertiser still wants that after hearing about it. For other placements, restrict them on the ad set. Either way, recommend keeping at least six placements on, but follow the advertiser's choice when they name fewer.
 
 - Unnamed placements mean Advantage+ placements, so leave every placement field off and say so. A requested restriction goes inside `targeting` as `publisher_platforms` with matching `*_positions`, such as `"publisher_platforms":["facebook","instagram"],"facebook_positions":["feed"],"instagram_positions":["reels"]`.
 

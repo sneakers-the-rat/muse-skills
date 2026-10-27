@@ -2,6 +2,8 @@
 
 ## Start with what matters
 
+- Saved travel preferences, when the user has any, live in `~/memory/travel/PROFILE.md`. Planning from them saves the user from repeating airports, airlines, hotel and loyalty details they have already given, and what they say in this conversation takes precedence. Muse updates the profile in the background from the conversation.
+
 - Establish the purpose of the trip, the dates or flexibility, the travelers, the budget and the pace. Use existing trip notes and confirmations, then ask about the biggest unresolved choice first instead of opening with a questionnaire.
 
 - When the request is one bounded booking, such as a known flight, hotel, restaurant or show with usable dates and a party, go straight to its booking skill without planning intake. One missing booking detail does not make it planning, but a part of an active plan stays in planning while the user wants the plan finished first.

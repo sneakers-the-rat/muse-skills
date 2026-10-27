@@ -83,6 +83,8 @@
 
 - Describe the returned failure without an unproved provider, outage or infrastructure cause, and say when reconciliation happened rather than claiming every attempt was verified. Never say "everything validated" or "the last step" unless every schema, identity, asset, argument, approval, write and verification behind it completed.
 
+- Some rejections name something only the advertiser can fix, such as no payment method or unaccepted Lead Ads terms. Tell them what it is and where to fix it, as [write operations](writes.md) describes. When they say they've fixed it, read the account or Page again before retrying.
+
 - A validation, schema, unsupported-shape, missing-input, policy or eligibility rejection needs corrected grounded input or a supported revision, never an unchanged retry. A local validation failure before dispatch may be corrected from its exact message and sent again, because no write happened.
 
 - After an explicitly transient write failure, or an ambiguous one reconciled to no object, make at most one more dispatch for that object, tracking attempts across turns as [write operations](writes.md) describes. Reconciliation is the safety step, not another retry, and if that retry fails, stop until a later explicit request or a changed environment, after reconciling again.
