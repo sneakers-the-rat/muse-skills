@@ -833,7 +833,16 @@ def main():
                      "binary-strings/browser/workflows",
                      "binary-strings/self_improvement"]
     keep = {c["target"] for c in contents}
+    # Untracked files are unclassified material (user rule, 2026-10-27):
+    # a file the user has not yet classified — e.g. a new binary-etc
+    # hold-out — is NEVER pruned, even when this run does not produce
+    # it. Only tracked files are pruned: their deletion is recorded by
+    # git, so nothing is lost silently.
+    tracked = set(subprocess.run(
+        ["git", "-C", str(REPO), "ls-files"], capture_output=True,
+        text=True).stdout.split())
     pruned = 0
+    preserved = 0
     for root in MANAGED_ROOTS:
         base = REPO / root
         if not base.is_dir():
@@ -841,12 +850,17 @@ def main():
         for f in sorted(base.rglob("*"), reverse=True):
             rel = f.relative_to(REPO).as_posix()
             if f.is_file() and rel not in keep:
-                f.unlink()
-                pruned += 1
+                if rel in tracked:
+                    f.unlink()
+                    pruned += 1
+                else:
+                    preserved += 1
             elif f.is_dir() and not any(f.iterdir()):
                 f.rmdir()
     if pruned:
         print(f"pruned {pruned} stale extracted files")
+    if preserved:
+        print(f"preserved {preserved} untracked (unclassified) files")
 
     manifest = {"bins": [{
         "path": str(BIN),
