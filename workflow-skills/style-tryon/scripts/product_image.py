@@ -3,7 +3,9 @@
 
 Download mode finds the product's image URL in the shopping result files (or
 its product details), downloads it, checks it is a JPG, PNG, or WebP, and saves
-it under ~/workspace/shopping/tryon/. --alternates instead saves up to three
+it under ~/workspace/shopping/tryon/. A browser product uses the copy of its
+image that its shopping results card hosts on Meta's CDN when there is one, since
+some merchants stall direct downloads. --alternates instead saves up to three
 other views of a catalog product, one path per line. Crop mode (--from-file
 with --crop-top-percent) keeps everything below the given share of the image
 height, removing a model's face above the product. --rebuild-results writes a
@@ -16,6 +18,8 @@ stderr.
 from __future__ import annotations
 
 import argparse
+import collections
+import glob
 import http.client
 import json
 import os
@@ -31,7 +35,11 @@ HOME = Path(os.path.expanduser("~"))
 TRYON_DIR = HOME / "workspace" / "shopping" / "tryon"
 MAX_IMAGE_BYTES = 25 * 1024 * 1024
 MAX_ALTERNATES = 3
+# Product images arrive in a second or two, so give up early on a stalled merchant.
+IMAGE_TIMEOUT_SECONDS = 10
 SHOPPING_CLI = "/opt/hatch/bin/shopping"
+# The files shopping.resolve_results writes for results cards, newest first.
+CARD_RESULT_GLOBS = ("/var/tmp/hatch-shopping-results-*.json", "/tmp/hatch-shopping-results-*.json")
 # Optional product-details fields that shopping.resolve_results reads.
 OPTIONAL_RESULT_FIELDS = ("brand", "sale_price", "currency")
 CHECKOUT_FLAGS = ("is_agentic_checkout_creation_enabled", "is_agentic_checkout_completion_enabled")
@@ -77,29 +85,57 @@ def safe_stem(value: str) -> str:
     return stem[:80] or "product"
 
 
-def find_image_url(product_id: str, result_files: list[str]) -> str | None:
-    def walk(node: object) -> str | None:
-        if isinstance(node, dict):
-            if product_id in (node.get("product_id"), node.get("result_id"), node.get("id")):
-                url = node.get("image_url")
-                if isinstance(url, str) and url.startswith(("https://", "http://")):
-                    return url
-            for value in node.values():
-                if (found := walk(value)) is not None:
-                    return found
-        elif isinstance(node, list):
-            for value in node:
-                if (found := walk(value)) is not None:
-                    return found
-        return None
+def is_web_url(value: object) -> bool:
+    return isinstance(value, str) and value.startswith(("https://", "http://"))
 
+
+def result_records(path: str) -> list[dict]:
+    """Every object in a result file, or none if it can't be read."""
+    try:
+        data = json.loads(Path(os.path.expanduser(path)).read_text())
+    except (OSError, ValueError):
+        return []
+    records = []
+    nodes = collections.deque([data])
+    while nodes:
+        node = nodes.popleft()
+        if isinstance(node, dict):
+            records.append(node)
+            nodes.extend(node.values())
+        elif isinstance(node, list):
+            nodes.extend(node)
+    return records
+
+
+def find_product(product_id: str, result_files: list[str]) -> dict | None:
     for path in result_files:
-        try:
-            data = json.loads(Path(os.path.expanduser(path)).read_text())
-        except (OSError, ValueError):
-            continue
-        if (url := walk(data)) is not None:
-            return url
+        for record in result_records(path):
+            if product_id in (record.get("product_id"), record.get("result_id"), record.get("id")):
+                if is_web_url(record.get("image_url")):
+                    return record
+    return None
+
+
+def card_image_url(product: dict, result_files: list[str]) -> str | None:
+    """The card's image for a browser product when it differs from the merchant's,
+    which is the copy hosted on Meta's CDN. Cards match by product page URL."""
+    page = product.get("url")
+    if not is_web_url(page):
+        return None
+    cards = sorted(
+        {path for pattern in CARD_RESULT_GLOBS for path in glob.glob(pattern)},
+        key=lambda path: os.path.getmtime(path) if os.path.exists(path) else 0,
+        reverse=True,
+    )
+    for path in [*result_files, *cards]:
+        for record in result_records(path):
+            if (
+                record.get("url") == page
+                and record.get("is_image_available") is True
+                and is_web_url(record.get("image_url"))
+                and record["image_url"] != product["image_url"]
+            ):
+                return record["image_url"]
     return None
 
 
@@ -132,7 +168,7 @@ def fetch_image(url: str, stem: str) -> Path:
         headers={"User-Agent": "Mozilla/5.0", "Accept": "image/png,image/jpeg,image/webp"},
     )
     try:
-        with urllib.request.urlopen(request, timeout=60) as response:
+        with urllib.request.urlopen(request, timeout=IMAGE_TIMEOUT_SECONDS) as response:
             data = response.read(MAX_IMAGE_BYTES + 1)
     except (OSError, ValueError, http.client.HTTPException) as error:
         # ValueError and HTTPException cover malformed URLs, such as a raw space
@@ -152,9 +188,19 @@ def fetch_image(url: str, stem: str) -> Path:
     return target
 
 
-def download(url: str, stem: str) -> int:
+def fetch_first(urls: list[str], stem: str) -> Path:
+    """Saves the first of these URLs that downloads, reporting the last failure."""
+    for url in urls[:-1]:
+        try:
+            return fetch_image(url, stem)
+        except ImageError as error:
+            print(f"product_image: {stem}: trying the merchant's image: {error}", file=sys.stderr)
+    return fetch_image(urls[-1], stem)
+
+
+def download(urls: list[str], stem: str) -> int:
     try:
-        target = fetch_image(url, stem)
+        target = fetch_first(urls, stem)
     except ImageError as error:
         return fail(str(error))
     print(display_path(target))
@@ -166,7 +212,8 @@ def alternates(product_id: str, result_files: list[str]) -> int:
     if not urls:
         return fail("no product details or images for this product")
     # Download mode used the result file's image, or the first product image.
-    primary = find_image_url(product_id, result_files) or urls[0]
+    product = find_product(product_id, result_files)
+    primary = product["image_url"] if product else urls[0]
     stem = safe_stem(product_id)
     saved = 0
     for url in (url for url in urls if url != primary):
@@ -272,13 +319,15 @@ def main() -> int:
         return fail("give --product-id")
     if args.alternates:
         return alternates(product_id, args.results)
-    url = find_image_url(product_id, args.results)
+    product = find_product(product_id, args.results)
+    url = product["image_url"] if product else None
     if url is None:
         urls = catalog_image_urls(catalog_product(product_id))
         url = urls[0] if urls else None
     if url is None:
         return fail("no image URL found for this product")
-    return download(url, safe_stem(product_id))
+    card_url = card_image_url(product, args.results) if product and product_id.startswith("browser:") else None
+    return download([card_url, url] if card_url else [url], safe_stem(product_id))
 
 
 if __name__ == "__main__":

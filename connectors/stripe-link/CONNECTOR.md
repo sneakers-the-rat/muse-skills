@@ -18,7 +18,7 @@
 
 - For a delayed or conditional charge, pass its amount, conditions and stated collection timing in the browser task, including relevant service dates. The checkout specialist uses those facts to set the Link card lifetime.
 
-- A browser checkout uses the three-letter currency the checkout states, without conversion. Direct Shopify UCP checkout accepts Link in US dollars, Canadian dollars and Mexican pesos.
+- A browser checkout uses the three-letter currency the checkout states, without conversion. Direct Shopify UCP checkout accepts Link in US dollars, Canadian dollars, Mexican pesos, Singapore dollars and Japanese yen.
 
 ## Connect and choose a card
 

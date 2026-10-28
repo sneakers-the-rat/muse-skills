@@ -7,10 +7,10 @@
 ## Resolve the item
 
 ```sh
-/opt/hatch/bin/spotify-api wearable-play --query "<name>" --content-type <kind>
+/opt/hatch/bin/spotify-api wearable-play --query "<name>" [--artist "<artist>"] --content-type <kind>
 ```
 
-- Put only the requested name in `--query`. That is the title alone, the artist alone for an artist-only request, or `<title> by <artist>` when the caller gives both. Leave out words such as "album", "playlist", "podcast", "episode" and "audiobook".
+- `--query` takes only the requested name: the title alone, or just the artist for an artist-only request. When the caller gives both a title and an artist, put the artist in `--artist`. Strip content-type words like "album", "playlist", "podcast", "episode" and "audiobook".
 
 - Set `--content-type` to the kind the caller asked for, one of `song`, `artist`, `album`, `playlist`, `podcast`, `episode` or `audiobook`. It defaults to `song`, so set it for every other kind. An artist-only request uses `artist`.
 

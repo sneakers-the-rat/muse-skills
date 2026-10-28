@@ -21,14 +21,14 @@
 ## Search and browse
 
 ```text
-/opt/hatch/bin/spotify-api search --query "<title> by <artist>" --search-type TRACKS
+/opt/hatch/bin/spotify-api search --query "<title>" --artist "<artist>" --search-type TRACKS
 /opt/hatch/bin/spotify-api experience --id <spotify_uri_or_name>
 /opt/hatch/bin/spotify-api next-page --url <next_url>
 ```
 
 - `--search-type` takes a comma-separated list of `TRACKS`, `ALBUMS`, `ARTISTS`, `PLAYLISTS`, `EPISODES`, `PODCASTS` and `AUDIOBOOKS`. Search shows with `PODCASTS`, because `SHOWS` is invalid in search.
 
-- For an exact song or album, format the query as `<song or album> by <artist>`. That keeps a missing original apart from a cover or a similar title.
+- For an exact song or album, pass `--query "<title>" --artist "<artist>"`. That keeps a missing original apart from a cover or a similar title.
 
 - Make the first search for an audiobook with `--search-type AUDIOBOOKS`. An untyped search can omit audiobooks even when the account has access to them.
 

@@ -5,6 +5,8 @@ Only for photos of items, including items a person wears or holds to sell. If
   for one, stop and help without this skill.
 
 Label AI-edited photos in previews. Use `muse.create_options` in the user's language.
+  In touch-up and photo-picking steps, a message with options or a picker
+  asks nothing else.
 
 Follow [Touch-ups](references/photo-touch-ups.md), or [Marketplace](references/marketplace-photos.md)
   for listings.
