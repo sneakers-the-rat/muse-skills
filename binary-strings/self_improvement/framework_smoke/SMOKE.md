@@ -1,0 +1,2 @@
+---
+objective_id: framework_smokesmoke_run_successself_improvement.runsobjective_runcalled `Result::unwrap()` on an `Err` valueproactive_notifierArc counter overflowframework path remains runnablemissing smoke row is failuresucceeds only when the state file is written and DB state 

@@ -18,7 +18,13 @@
 
 ## Use the device the request came from
 
-- Use the current turn's `[device_id=...]`, the exact paired-device ID, for both the contact search and the action. Invoke the commands below directly, without `device.list` or `device.describe`, because `device.invoke` checks them against the device's current commands.
+- Use the current turn's `[device_id=...]`, the exact paired-device ID, for both the contact search and the action. On the first attempt, invoke the commands below directly, without `device.list` or `device.describe`, because `device.invoke` checks them against the device's current commands.
+
+- When the user asks to try again after setup or missing commands blocked a call or text, run `device.describe` on the same device before deciding it is still unavailable. Also refresh when the user reports a connector or setup change, or asks which commands are advertised. Use the current advertised command and schema for an authorized action; an earlier description or failure does not establish current capabilities.
+
+- After directing the user to settings in the Meta AI app, run `device.describe` before reassessing availability. Connecting Phone under Communicate hands-free can sync another copy of the contacts to Muse. After that setup change, repeat the stored contact search and its recovery lookups instead of relying on an earlier empty result.
+
+- A setup update or a request to check capabilities authorizes the check only. Do not retry a failed call or text unless the user asks to retry it.
 
 - Without a device ID, use `device.list` only to find the one device marked `is_request_origin: true`, and say so if none is clear.
 
@@ -82,7 +88,9 @@
 
 - After a timeout, interruption or transport error the action may already have happened, so do not retry or switch devices.
 
-- When contacts have never synced or a text fails with `map_not_connected`, follow [recovery](references/recovery.md) before replying.
+- For a timed-out text, keep the uncertainty and duplicate warning in the spoken reply, in the user's language: "I can't confirm whether the message was sent. Check Messages on your phone before trying again, because another attempt could send a duplicate." Do not automatically resend or treat the timeout as a setup failure.
+
+- When contacts have never synced, a text fails with `map_not_connected`, or a fresh description advertises no calling or texting commands, follow [recovery](references/recovery.md) before replying.
 
 ## Available connectors
 

@@ -26,7 +26,7 @@
 
 - Call `device.invoke` exactly once. If it fails or times out, report that. Do not retry, invoke another device or switch to `spotify-api play`, because playback may already have started on the device carrying the call.
 
-- When the resolved `body.liked_songs` is `collection`, the glasses only wake Spotify for it. After `device.invoke` succeeds, run `spotify-api wearable-start --context-uri <partner_uri>` once to start the list on the caller's phone. Say nothing when it reports `started` or `already_playing`. When it reports `timeout` or `unconfirmed`, say playback could not be confirmed and may already have started, and do not run it again. Report any other result as a play failure.
+- When the resolved `body.liked_songs` is `collection`, the glasses only wake Spotify for it, and after the play `device.invoke` starts the list on the caller's phone itself. Never run `spotify-api wearable-start`. When `liked_songs_start.status` in the `device.invoke` result reports a failure, report it as a play failure.
 
 - If the caller names a device other than the one carrying the call, such as a phone, speaker, TV, computer, car or console, even without a brand or name, run `spotify-api devices`. The same applies to "there" when it refers to a device mentioned earlier. Then play the resolved item on it:
 
