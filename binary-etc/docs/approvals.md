@@ -1,5 +1,5 @@
 ).
-        approval_policy: fresh_consent_only
+        approval_policy: fresh_consent_or_site_allow
         label: Upload files
         approval_phrase: upload this file using Browser
       page.credential_fill:

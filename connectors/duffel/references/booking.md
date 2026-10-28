@@ -8,7 +8,13 @@
 
 - Choose at most one seat per passenger and segment. Repeat `--seat PASSENGER:SEGMENT:SEAT`, with one-based numbers, once per seat, such as `--seat 1:1:28B --seat 2:1:28C`; the CLI reads each flag as one seat. Mention seat choice once without letting it block the booking.
 
-- After the user picks an offer, ask only for what validation requires. That is each traveler's legal given and family name, birth date, title (`mr`, `ms`, `mrs`, `miss` or `dr`) and gender (`m` or `f`), one reachable trip email and phone, which each passenger entry carries and can share, the adult with each lap infant, and passport details only when validation asks. Ask for a loyalty account number only when the user wants credit. These values are for this booking's `validate-booking` and `book` only; keeping them out of memory and out of replies protects the traveler's identity.
+- When the user picks an offer, call `wallet.list_payment_methods` with `provider: "stripe-link"` and `wallet.get_user_info` in the same turn. Fill the trip email and phone from the conversation, `~/USER.md` and `wallet.get_user_info`. Use the user's own name for a passenger only when the conversation shows the user is flying; each other passenger needs their own legal name. Show the prefilled name, email and phone in your question so the user can correct a name that differs from their ID.
+
+- Then ask in one message for what is still missing: usually each traveler's birth date and gender (`m` or `f`), and each traveler's legal given and family name when not already known. If Link is `not_connected`, ask for what is still missing first, then end that message with Link's connection link (`next_action.markdown`, unchanged), so the user connects while answering.
+
+- Validation also needs the adult with each lap infant, and passport details only when it asks. The CLI sets `title` from gender and gives every passenger the first passenger's email and phone, so ask for a title or a second contact only when the traveler wants one. Ask for a loyalty account number only when the user wants credit.
+
+- All traveler details for this booking are for its `validate-booking` and `book` only. Keeping them out of memory, and out of replies apart from the prefilled name, email and phone shown for confirmation, protects the traveler's identity.
 
 - Put passengers in `data.passengers` in search order:
 
@@ -19,7 +25,6 @@
       "given_name": "Legal given name",
       "family_name": "Legal family name",
       "born_on": "1990-01-01",
-      "title": "ms",
       "gender": "f",
       "email": "trip-contact@example.com",
       "phone_number": "+14155550123"
@@ -44,12 +49,13 @@
 
 - Treat `selected_offer` as the current itinerary, price, bags and fare terms. Check each slice's `from` and `to` against the chosen airports, and stop if they differ.
 
-- When validation asks for a first-time payment profile, pass the account holder's email and legal name with `--customer-email`, `--customer-given-name` and `--customer-family-name` to both validation and booking. This profile is not a passenger, and it is created only after purchase approval.
+- When validation asks for a first-time payment profile, pass the account holder's email and legal name, from `wallet.get_user_info` when the user hasn't given them, with `--customer-email`, `--customer-given-name` and `--customer-family-name` to both validation and booking. This profile is not a passenger, and it is created only after purchase approval.
 
-- List payment methods as [Link by Stripe](/opt/hatch/connectors/stripe-link/CONNECTOR.md) describes. Book once with the same booking JSON and seats. Add `--payment-method-id ID` only for a card the user chose for this purchase. Otherwise, approval preselects the default card or a usable card if none is default. The user can change it there.
+- If Link connects before the traveler details arrive, confirm it in one line and wait for them. Once the details are in, validate and `book`; the approval card handles the card choice.
+
+- Book once with the same booking JSON and seats, after Link is connected as [Link by Stripe](/opt/hatch/connectors/stripe-link/CONNECTOR.md) describes. Add `--payment-method-id ID` only for a card the user chose for this purchase. Otherwise, approval preselects the default card or a usable card if none is default. The user can change it there.
 
 ```sh
-/opt/hatch/bin/stripe-link payment-methods list --format json
 /opt/hatch/bin/duffel book --offer-id OFFER --booking-json JSON --seat 1:1:28B --seat 2:1:28C
 ```
 

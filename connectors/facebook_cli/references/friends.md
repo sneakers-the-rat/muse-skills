@@ -6,7 +6,7 @@
 
 ```sh
 /opt/hatch/bin/facebook-cli me friends [--name '<name>'] [--city '<current city>'] [--hometown '<hometown>'] [--work '<employer or job title>'] [--education '<school>'] [--filter-mode <AND (default) or OR>] [--limit <up to 20>] [--after '<paging.cursors.after from the previous response, with the same filters>']
-/opt/hatch/bin/facebook-cli me friends --birthday-within-days [<1 to 365, default 7>] [--limit <up to 20>] [--after '<paging.cursors.after from the previous response>']
+/opt/hatch/bin/facebook-cli me friends --birthday-within-days [<0 for today, up to 365; default 7>] [--limit <up to 20>] [--after '<paging.cursors.after from the previous response>']
 ```
 
 - `me friends` allows the user to search their friends with different details and queries. Use this for questions such as 'whose birthday is coming up' or 'which friends have a specific interest'.
@@ -16,6 +16,8 @@
 - Without filters, the command returns close friends first.
 
 - Friends who hide their birthday are excluded, so the result is not a complete birthday calendar.
+
+- For today's birthdays, pass `--birthday-within-days 0`. The results can also include tomorrow's, so keep only friends whose `birthday_date` is today.
 
 - For a calendar period such as December, choose a day count that reaches the end of the period, then keep only friends whose returned `birthday_date` falls inside it. The search counts forward from today, so a longer window also returns earlier birthdays. Results are ordered by upcoming birthday. For a complete period, pass each `paging.cursors.after` back as `--after` with the same window until no cursor remains, then filter by `birthday_date`.
 

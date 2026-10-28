@@ -38,6 +38,8 @@
 
 - [HasData](/opt/hatch/connectors/hasdata_mcp/CONNECTOR.md) for Google Maps, Yelp and Yellow Pages listings and reviews as data.
 
+- [Agoda](/opt/hatch/connectors/agoda/CONNECTOR.md) for finding things to do at the destination, including tours, attraction tickets and experiences.
+
 ## Websites
 
 - Use `browser.browse` to check a place's own site for current hours, menus, services or booking options when the decision depends on them.

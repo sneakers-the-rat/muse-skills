@@ -8,13 +8,20 @@
 /opt/hatch/bin/facebook-cli saved list [--type <post, post_with_photo, video, reel, link, page, product, event, or another returned type>] [--collection-id '<id from saved collections list>'] [--limit <up to 20>] [--after '<paging.cursors.after from the previous response>']
 ```
 
-- `saved list` returns the user's saved items, with most recently saved first. A page holds at most 20 items. A response with `paging.cursors.after` is a partial list, so more items exist. Fetch the next page only when the user asks for more, and say that more items exist.
+- `saved list` returns the user's saved items, with most recently saved first. A page holds at most 20 items.
+
+- Each item's `collection_ids` lists the collections that hold it, by the IDs `saved collections list` returns. An empty list means the item is in no collection. It lists every collection that holds the item, even when `--collection-id` narrows the read.
+
+- Fetch the next page of saved items only when the user asks for more.
 
 ```sh
-/opt/hatch/bin/facebook-cli saved collections list
+/opt/hatch/bin/facebook-cli saved collections list [--limit <up to 20>] [--after '<paging.cursors.after from the previous response>']
 ```
 
-- `saved collections list` returns each saved collection.
+- `saved collections list` returns each saved collection. A page holds at most 20 collections.
+- Read every page of collections before creating a collection or choosing among them. To file into a named collection, stop once it appears.
+
+- For both `saved collections list` and `saved list`, to see more results, pass the previous response's `paging.cursors.after` as `--after` with the same query and filters. A missing `paging` means there are no more results.
 
 ## Read the saved content
 

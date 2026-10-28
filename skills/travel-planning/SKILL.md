@@ -72,6 +72,8 @@
 
 - [MobiMatter](/opt/hatch/connectors/mobimatter_mcp/CONNECTOR.md) for travel eSIM plans and data usage abroad.
 
+- [Agoda](/opt/hatch/connectors/agoda/CONNECTOR.md) for finding things to do at the destination, including tours, attraction tickets and experiences.
+
 ## Websites
 
 - Use `browser.browse` for attraction tickets and local operators at the destination. Give the task local dates and times and the names a local operator uses.

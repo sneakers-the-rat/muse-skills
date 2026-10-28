@@ -6,7 +6,7 @@ Use existing state or minimal, clearly identified test fixtures when needed, ope
 
 - Use `artifact.list_actions` with the artifact slug to list actions; add an action name to inspect its request schema. Invoke the refresh/import/populate action a real user would rely on with `artifact.invoke_action`, using concrete inputs from the plan or sampled user data.
 - Do not seed fake core content. {population_gap_exit}
-- The test environment is isolated after the first `web_artifacts.build`: `artifact.invoke_action` and `web_artifacts.audit` use the builder's copy of `app.db`, not production data. Seed through actions, not by editing `app.db`; seeded test data is discarded after submit.
+- `artifact.invoke_action` uses your sandbox copy of `app.db`, not the user's real data. Each audit copies that sandbox for its probe. Seed through actions, not by editing `app.db`.
 - If users should see fetched/generated data on first open, declare `post_submit_action` on the audit call and the submit call, make sure it is callable, and document it in the submit result. The action must fetch real data in production using the same logic as refresh. Don't use migrations or builder-side test writes as production seed data.
 
 ### Audit And Drive

@@ -38,4 +38,8 @@
 
 - [Hotel Booking](/opt/muse/skills/hotel-booking/SKILL.md)
 
+- [Place Discovery](/opt/muse/skills/place-discovery/SKILL.md)
+
+- [Trip Planning](/opt/muse/skills/trip-planning/SKILL.md)
+
 - Use `muse.skill_search` to find other skills and `muse.connector_search` to find other connectors.
