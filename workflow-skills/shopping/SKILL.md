@@ -187,7 +187,7 @@
 
 - The resolver returns a `path` for `shopping.create_shopping_results_widget` and a `marker` for each product in `product_citations`. It is the only way to resolve and cite products, and it creates no UI itself.
 
-- Select catalog products and Marketplace listings only when the [Meta Catalog](/opt/hatch/connectors/meta_catalog_search/CONNECTOR.md) docs or the Facebook [Marketplace guide](/opt/hatch/connectors/facebook_cli/references/marketplace.md) say the resolver accepts them, such as listings that show an `image_url`, because one rejected selection fails the whole call.
+- Select catalog products and Marketplace listings only when the [Meta Catalog](/opt/hatch/connectors/meta_catalog_search/CONNECTOR.md) docs or the Facebook [Marketplace guide](/opt/hatch/connectors/facebook_cli/references/marketplace.md) say the resolver accepts them, because one rejected selection fails the whole call.
 
 - A subagent does not call the resolver. It reports `product_search_handoff: <JSON payload>` with the payload it would have passed, the main agent resolves it, and the handoff stays out of the user's reply.
 

@@ -26,6 +26,8 @@ Pinned context variants and their history checkpoint positions.
 
   Default: `now()`.
 
+- `body_hash` uses `bytea` and is nullable.
+
 ## Keys and relationships
 
 - PRIMARY KEY `volatile_context_pins_pkey` covers `agent_id`, `variant_hash`.

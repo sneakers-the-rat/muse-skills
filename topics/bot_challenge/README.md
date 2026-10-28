@@ -156,10 +156,11 @@ Per-site bot-detection notes, split out of the site guides — what each site's 
 - [youtube.com.md](../../binary-strings/browser/bot_challenge/sites/youtube.com.md) — `binary-strings/browser/bot_challenge/sites/youtube.com.md`
 - [zillow.com.md](../../binary-strings/browser/bot_challenge/sites/zillow.com.md) — `binary-strings/browser/bot_challenge/sites/zillow.com.md`
 
-## reference (2)
+## reference (3)
 
 Supporting vocabulary: enum/telemetry names, dispatch fragments, and the browser error lexicon.
 
+- [enums.txt](../../binary-strings/browser/bot_challenge/enums.txt) — `binary-strings/browser/bot_challenge/enums.txt`
 - [dispatch-fragments.txt](../../binary-strings/browser/bot_challenge/dispatch-fragments.txt) — `binary-strings/browser/bot_challenge/dispatch-fragments.txt`
 - [errors.csv](../../binary-strings/browser/errors.csv) — `binary-strings/browser/errors.csv`
 

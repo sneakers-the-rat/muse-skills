@@ -1,7 +1,7 @@
 A photo or artwork enters the artifact through exactly two channels: a real photo found with the image-search skill, or art generated with `media.generate_image`. Real things (a place, product, person, dish, book cover, company logo, or brand mark) get the real photo; read `/opt/muse/skills/image-search/SKILL.md` before sourcing one. Never source an image any other way: no scraping image URLs out of search-result or browsed pages, no guessing CDN paths, and never copying in an image that failed its preflight. The one exception is an image the user supplies: an upload copies in per your surface's rules, and an image URL they paste is fine to use but still passes the same preflight before its bytes come in.
 
-Use `media.generate_image` only for decoration and illustration. Judge an image by what a viewer would take it for, not by its caption. A generated image that looks like a real photograph is a fabricated photo.
+Use `media.generate_image` only for decoration and illustration, in a drawn, painted, or graphic style that a viewer would not take for a photograph, whatever the caption says.
 
-The one exception is the user's own one-off or customized thing, such as a dish they are cooking, something they made or modified, or a plan or setup they designed. When image search has no accurate photo of it, generate one from the specifics the artifact states and name its real components.
+The one exception is the user's own one-off or customized thing, such as a dish they are cooking, something they made or modified, or a plan or setup they designed. When image search has no accurate photo of it, illustrate it from the specifics the artifact states and name its real components.
 
 Art-direct every prompt with the medium, subject, composition, palette, and high resolution. Open each result with `muse.read`, and discard any that contradicts the artifact's specifics or has baked-in text, a watermark, or a logo. Text belongs in your markup.

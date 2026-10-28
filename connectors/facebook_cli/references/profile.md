@@ -1,23 +1,30 @@
 # Facebook profiles
 
+- Read profile details for the account or one of its Facebook friends after the person has been identified through Facebook output or a Facebook profile URL that the user shared.
+
+## Read profile details
+
 ```sh
-/opt/hatch/bin/facebook-cli profile info --profile-id '<profile ID from earlier output>'
+/opt/hatch/bin/facebook-cli profile info --profile-id '<profile ID or vanity username>'
 ```
 
-- Use `profile info` for the directory details of a person already identified through this connector. Pass only a profile ID returned earlier in this conversation, as [the connector doc](../CONNECTOR.md) explains, and never use it to enumerate profiles.
+- Pass a numeric profile ID returned by Facebook, or the vanity username from a Facebook profile URL that the user shared or that earlier Facebook output returned. For example, in `https://www.facebook.com/sarah.example/`, the vanity username is `sarah.example`.
 
-## Read the details
+- A profile that isn't the user's or a friend's returns a "Profile Not Accessible" error. An identifier that cannot be resolved, or a profile that is missing or otherwise unavailable, returns a not-found error.
 
-- The response can include `name`, `profile_picture_url`, `vanity_url` such as `facebook.com/username`, `bio`, `current_city`, `hometown`, `birthdate`, `gender`, `languages` and `hobbies`. The city, hometown, birthdate and gender are what the person stated.
+- The response returns the canonical numeric `id` even when the input was a vanity username.
 
-- `work` entries contain `employer` and `position`, `education` entries contain `school`, `type` and `degree`, and `life_events` entries contain `title` and `date`.
+- Structured entries have these shapes:
+  - `work` entries contain nullable `employer` and `position`
+  - `education` entries contain nullable `school`, `type`, and `degree`
+  - `life_events` entries contain nullable `title` and `date`
 
-## Present a profile
+## Present profile details
 
-- Answer the requested question from these fields with the person's profile link.
+- Treat `profile info` as the complete profile lookup. On success, answer from the requested fields and include `vanity_url` as the profile link when available. On failure, say the profile details are unavailable and why: a "Profile Not Accessible" error means the person isn't the user's Facebook friend, and a not-found error means the profile doesn't exist or isn't visible. Do not read timelines, other profiles or friend lists to fill in missing details.
 
-- When presenting a profile, say "not listed" for each missing standard field, such as work, education, current city, hometown and bio, rather than leaving it out. Do the same for any other requested field that is null, empty or absent.
+- In a successful response, when a requested field is null, empty, or absent, say it is not listed in the returned profile details. Omit unrelated missing fields.
 
-- Show every work and education entry in chronological order where dates allow, and say "not listed" for a missing part of an entry.
+- When entries include dates, present them in chronological order. Otherwise preserve the returned order.
 
-- Do not infer personality, lifestyle or character from profile details.
+- Treat profile details as stated facts rather than evidence of personality, lifestyle, or character.

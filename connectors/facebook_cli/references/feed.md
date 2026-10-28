@@ -32,6 +32,6 @@
 
 - Read [Reading posts](/opt/hatch/connectors/facebook_cli/references/reading-posts.md) when presenting captions and available media context.
 
-- To read comments, use [Comments](/opt/hatch/connectors/facebook_cli/references/comments.md).
+- To read comments, use [Comments](/opt/hatch/connectors/facebook_cli/references/reading-comments.md).
 
 - To read reactions, use [Reactions](/opt/hatch/connectors/facebook_cli/references/reactions.md).

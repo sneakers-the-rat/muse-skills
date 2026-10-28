@@ -1,17 +1,23 @@
-# Facebook reactions
+# Fetching Facebook reactions
+
+- The `post reactions` commands are useful for fetching and analyzing reactions on a Facebook post.
 
 ```sh
-/opt/hatch/bin/facebook-cli post reactions read --post-id '<post ID>'
+/opt/hatch/bin/facebook-cli post reactions read --post-id '<post_id from a timeline, feed or group posts>'
 ```
 
-- This command returns a post's current reaction totals only. `summary.total_count` is the total, and `summary.reaction_counts` lists `reaction_type` and `count` pairs such as Like, Love, Wow, Haha, Sad, Angry, Thankful and Care.
+- Responses include:
+  - Total reaction count through `summary.total_count`
+  - A list of `reaction_type` and `count` pairs through `summary.reaction_counts`
 
-- `data` is always empty because the command does not return the people who reacted. If the user asks who reacted or who liked a post, say that list is not available and offer the counts by type.
+- The specific list of users who reacted is not available through this command.
+
+- Counts are each post's current reaction totals and cannot be filtered by reaction time.
+
+- When selecting posts by date, state the date range used and explain that the counts are current totals.
 
 ## Present reactions
 
-- Compare posts with their actual numbers and a link to each post. Do not call a post very popular or viral without the numbers that support it.
+- Include the post's link with every reaction summary. When comparing posts, give each post's reaction counts and link. When listing comments, include each comment's `comment_url`, including in follow-up answers.
 
-- There is no filter by reaction time. Selecting posts from the past week still returns each post's current totals, so state the period used to select the posts and keep that distinction clear.
-
-- Map common words to reaction types without an extra question. Funny or laughing means Haha, sad means Sad, angry or mad means Angry, and hearts or love means Love. Ask only when the intended type remains unclear.
+- Map common words to reaction types without prompting the user, for example, funny or laughing maps to the Haha reaction type, angry or mad maps to Angry, etc.

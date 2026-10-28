@@ -1,31 +1,45 @@
-# Shop a Facebook Reel
+# Shopping from Facebook Reels
 
-- Read the Reel with `post read --url '<link>'`, decoding a share link first as [Reading posts](/opt/hatch/connectors/facebook_cli/references/reading-posts.md) describes. Use this connector for the Reel's context instead of opening it in the browser.
+- `post read` is useful for shopping for products found in a Facebook Reel. [Posts](/opt/hatch/connectors/facebook_cli/references/reading-posts.md) explains how to decode share links.
 
-- Before the read, collect only the requirements already known to apply. Resolve category-specific requirements from the returned context afterward. Apply relevant saved hard requirements even when the user did not repeat them, and let explicit current instructions override conflicting ones. A soft preference alone never starts a fresh search or changes the default recommendations or their order.
+```sh
+/opt/hatch/bin/facebook-cli post read --url '<Reel URL>' --out '<new file>'
+```
 
-- Keep detected `shoppable_products` separate from recommended `featured_products`. Neither establishes an exact item, current price or availability without supporting data.
+- `--out '<file>'` requests recommendations for products similar to those in the reel, and to save those recommendations as a local shopping catalog file.
 
-## Choose the discovery path
+- If the user asks to choose only from products already shown, filter just those by verified attributes. A missing or unclear attribute isn't a match, and if none fit, say so without starting another search. This comes before the fresh-search paths below.
 
-- If the user asks to choose only from products already shown, filter those results by verified attributes. A missing or unclear attribute is not a match, and if none fit, say so without starting another search.
+- If the response reveals a hard requirement, reuse its context for fresh searches rather than filtering recommendations or reading the Reel again.
 
-- For a named product, a category or an applicable hard requirement, read the Reel without `--out`. Then run fresh searches through [Shopping](/opt/muse/skills/shopping/SKILL.md) with every requirement, searching for the named target or otherwise the detected `shoppable_products`.
+- For a named product, a product type the Reel doesn't feature, or a hard requirement, leave out `--out` and use [Shopping](/opt/muse/skills/shopping/SKILL.md) for fresh searches with every requirement.
 
-- Ask which product the user means when neither a named target nor a detected product identifies one. Filtering the similar-product recommendations never replaces those searches.
+```sh
+/opt/hatch/bin/facebook-cli post read --url '<Reel URL>'
+```
 
-- For general Reel shopping, add `--out '<new file>'`. If the read then reveals an applicable hard requirement, reuse its context for fresh searches without reading the Reel again or filtering the recommendations. Search for the detected products, or ask which product when none were detected.
+- `shoppable_products` contains detected products. `featured_products` contains recommendations for similar products. Exact matches, current prices and availability need supporting product data.
 
-## Use the general recommendations
+## Find products
 
-- If no hard requirement applies and `featured_products_status` is `available`, pass the `--out` file and every ID from `ordered_featured_product_ids`, unchanged and in the same order, to `shopping.resolve_results`. Do not drop, rerank or add searches, and do not read the file, because the command's summary is enough.
+- When shopping from Reels, prioritize the stated requirements and instructions. Apply relevant saved hard requirements even when the user did not repeat them, and let explicit current instructions override conflicting ones.
 
-- If the status is `unavailable`, the ordered IDs are empty and no catalog was written, so ignore the output path. Use Shopping to find the detected products, or ask what the user wants when there is no target.
+- Without a hard requirement, use the `--out` recommendations. A soft preference alone keeps those recommendations and their order.
 
-## Compare and present
+- If a required detail is missing, explain what you couldn't verify.
 
-- Fresh searches follow Shopping's normal choice of sources. Honor a request for catalog-only results, and otherwise use suitable catalog and browser sources.
+## Use recommendations
 
-- Finish the required searches before one presentation, combining every usable file and selected ID in a single `shopping.resolve_results` call.
+- Without a hard requirement, `featured_products_status` describes the next step:
 
-- Present the resolved products as shopping cards with their returned citation markers, keeping the file and status details out of the reply. Before a purchase, verify the offer and follow Shopping's price, delivery and checkout checks.
+  - `available`: pass the file and all `ordered_featured_product_ids`, unchanged and in order, to `shopping.resolve_results`. These recommendations are ready to use without extra searches. The summary provides the context; the file goes directly to the resolver.
+
+  - `unavailable`: the IDs are empty and no catalog was written. Search for detected products through Shopping, or ask what the user wants if there is no target.
+
+## Present products
+
+- Fresh searches use Shopping's catalog and browser sources, or catalog sources only when requested.
+
+- After the searches are complete, combine all usable files and selected IDs in one `shopping.resolve_results` call. Present the results together as shopping cards with corresponding citation markers. File paths and statuses are internal handoff details.
+
+- Before a purchase, verify the offer and use Shopping's price, delivery and checkout checks.
