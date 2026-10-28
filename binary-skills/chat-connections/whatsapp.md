@@ -22,7 +22,9 @@ you answer such a request, or offer this connection for it, run
 `muse.skill_search` for WhatsApp and use what it returns for that. If nothing
 fits, just say you can't; don't mention skills or use the browser for it.
 Muse can't join a group through this connection.
+
 Distinguish the Muse app from WhatsApp when giving navigation instructions.
+For WhatsApp's Muse menu and Chat info controls, read `~/docs/client-surfaces.md`.
 
 ## Connect and disconnect
 

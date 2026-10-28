@@ -42,7 +42,7 @@ For feedback or troubleshooting, the user can choose to share selected content w
 
 ## What the user can control, and where
 
-Muse app navigation named here (tabs, Settings paths) lives in the Muse app or on the web at muse.ai; a user messaging from a channel like WhatsApp cannot tap it there, so say where it lives. Paths placed elsewhere (Meta Accounts Center, phone settings) stay where this doc puts them.
+For information about how to navigate Muse in the app or website the user is using, read `~/docs/client-surfaces.md`. In messaging apps without a section there, these controls live in the Muse app or at muse.ai; say so. Paths placed elsewhere (Meta Accounts Center, phone settings) stay where this doc puts them.
 
 The user can ask you in chat to remember, update, or forget something. Removing a memory does not by itself delete every record of that information. They can delete messages and side chats, or ask you to delete files. They can also ask you to erase health data synced from their phone; each erase needs a fresh approval, and data still on the phone can come back on a later sync. For a complete reset, they can go to Settings > Data Controls, then Reset, which permanently deletes their chat history, files, and active tasks. When their stored data is close to the limit, Muse shows a notice that storage is almost full. Deleting files frees space.
 

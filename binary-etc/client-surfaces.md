@@ -1,15 +1,104 @@
 # Where users access Muse
 
-Users reach Muse on iOS, Android, web, or the Mac app. This page lists shared
-functionality on iOS, Android, and web, then platform-specific differences.
-Muse app navigation named here (tabs, Settings paths) lives in the named Muse
-app or on the web at muse.ai; a user messaging from a channel like WhatsApp,
-or chatting inside Instagram or Messenger, cannot tap it there, so say where
-it lives.
+Users reach Muse through its iOS, Android, web, and Mac apps, and inside
+Instagram and WhatsApp. This page lists their controls and platform differences.
+
+For Instagram and WhatsApp, use the current message's `Sent from` context
+or channel prefix to choose the section below. `Instagram app` and
+`[whatsapp]` identify the app, not the phone's OS. Name any app or website
+a step opens. For other messaging apps, Muse app controls live in the
+Muse app or at muse.ai; say where they live.
 
 Muse went live on September 8, 2026. It is available in the US, Canada,
 and Japan. The iOS app is on the App Store and the Android app is on Google
 Play Store. Details in `~/docs/muse.md`.
+
+## Instagram on iOS and Android
+
+### Thread details
+
+In the Muse chat, tap the agent header to open Thread details. On iPhone,
+the info button opens it too. This is separate from Instagram's account
+settings. The page shows the avatar, name, connection status, Activity,
+Approvals, and plan usage when available. Open app opens the Muse app;
+Get app leads to its download.
+
+### Settings
+
+Settings rows, in order:
+
+- Connectors
+- Devices
+- Wallet
+- Secure credentials store
+- Permissions
+
+These pages open inside Instagram.
+For connectors: Muse chat > Thread details > Settings > Connectors.
+Choose the connector and follow its setup; sign-in may open another app
+or website. Read `~/docs/connectors.md` for connection behavior and status.
+
+Account & support rows:
+
+- Data controls (see `~/docs/privacy-and-credentials.md` and
+  `~/docs/data-handling.md` for data actions)
+- Report an issue (opens Instagram's bug reporter on iPhone)
+- Help & support (when available)
+- Legal info
+
+### Platform differences
+
+- **Shortcuts:** Activity, Approvals, and More on both platforms. iPhone
+  also has Mute before More.
+- **More:** Upcoming and Share on iPhone, plus Browser when the live
+  browser is available. Android has Upcoming and Browser.
+- **Chat info:** Library and Identity on both. iPhone also has Ideas;
+  Android puts Ideas in the chat header.
+- **Appearance:** under Preferences in Thread details on iPhone.
+  Android has no Appearance row in Thread details.
+- **Plan changes:** the iPhone usage card has no Upgrade action. On
+  Android, an available upgrade or manage action opens the Muse app's
+  subscription page, or its store page if Muse needs to be installed or
+  updated.
+
+Thread details has no Messaging channels, Notifications, or Disconnect
+rows. The Muse app's notification settings do not control Instagram
+notifications. Availability can vary by account and app version.
+
+## WhatsApp on iOS and Android
+
+### Menu and Chat info
+
+In the Muse chat, the hamburger menu offers Ideas, Library, Connectors,
+and Activity when available. Tap the Muse avatar or name at the bottom
+of that menu to open Chat info. Tapping the Muse avatar or name in the
+chat header opens the same page.
+On iPad and Mac, the shortcuts use a popup menu without the avatar row;
+open Chat info from the chat header.
+
+Chat info settings include:
+
+- Connectors (also in the menu; see `~/docs/connectors.md` for connections)
+- Wallet (see `~/docs/payments-and-purchases.md`)
+- Secure credentials store (saved logins; see `~/docs/privacy-and-credentials.md`)
+- Permissions
+
+These pages open inside WhatsApp; sign-in may continue in another app or
+website.
+
+Other Muse controls in Chat info include Library, Identity, Activity,
+Scheduled tasks, and Data controls when enabled. Android also has Browser
+tasks. Subscription controls are also in Chat info; they can open inside
+WhatsApp or follow a link to the Muse app or a website.
+
+Chat info also offers disconnecting from this Muse while linked. For
+disconnect behavior, read `~/docs/chat-connections/whatsapp.md`. Data
+controls and WhatsApp's Clear chat are different actions; read
+`~/docs/privacy-and-credentials.md` before explaining a reset or export.
+
+For controls documented only in a Muse app section, such as Feed or
+Devices, name that app and give its path. Menus and rows depend on the
+app version, enabled features, and whether Muse is connected.
 
 ## Mac app
 
@@ -56,7 +145,7 @@ top:
 The Mac app gets no push notifications. It can notify the user only while it
 is running.
 
-## iOS, Android, and web
+## Muse iOS app, Android app, and web
 
 ### Tabs (variations per platform below)
 
@@ -198,7 +287,7 @@ It covers importing context from another AI assistant and chat exports.
 
 ---
 
-## iOS app only
+## Muse iOS app only
 
 ### Tabs
 
@@ -242,7 +331,7 @@ Android - the Muse Android app Settings has an "Add to home screen" row that pin
 
 ---
 
-## Android app only
+## Muse Android app only
 
 ### Tabs
 

@@ -48,7 +48,9 @@ apps, the user also opens the things you make:
   updates.
 - Library tab: where their artifacts, media, and files collect.
 
-Muse app navigation named here (tabs, Settings paths) lives in the Muse app or on the web at muse.ai; a user messaging from a channel like WhatsApp cannot tap it there, so say where it lives.
+For information about how to navigate Muse in the app or website the user
+is using, read `~/docs/client-surfaces.md`. In messaging apps without a
+section there, these controls live in the Muse app or at muse.ai; say so.
 
 ## Models
 

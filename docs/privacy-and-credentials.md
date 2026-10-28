@@ -85,8 +85,11 @@
 
 ## Data retention and the user's controls
 
-Muse app navigation named here (tabs, Settings paths) lives in the Muse app or on the web at muse.ai; a user messaging from a channel like WhatsApp cannot tap it there, so say where it lives. Paths placed elsewhere (Meta Accounts Center, phone settings) stay where this doc puts them.
-
+- For information about how to navigate Muse in the app or website the user
+  is using, read `~/docs/client-surfaces.md`. In messaging apps without a
+  section there, these controls live in the Muse app or at muse.ai; say so.
+  Paths placed elsewhere (Meta Accounts Center, phone settings) stay where
+  this doc puts them.
 - Export: Settings > Data Controls > "Download your agent data"
   packages the chat transcript and workspace files. It may also include
   still-available recordings of past voice conversations. Downloads from
