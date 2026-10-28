@@ -286,6 +286,10 @@
 
 - `recovery_owner_id` resolves in [agent.recovery_owners.owner_id](/opt/muse/skills/muse_db/references/tables/agent.recovery_owners.md).
 
+- `relocated_from` resolves in [device.nodes.node_id](/opt/muse/skills/muse_db/references/tables/device.nodes.md).
+
+- `relocating_to` resolves in [device.nodes.node_id](/opt/muse/skills/muse_db/references/tables/device.nodes.md).
+
 - `replay_id` resolves in [self_improvement.calculation_records.replay_id](/opt/muse/skills/muse_db/references/tables/self_improvement.calculation_records.md).
 
 - `reply_target_message_id` resolves in [runtime.messages.message_id](/opt/muse/skills/muse_db/references/tables/runtime.messages.md).

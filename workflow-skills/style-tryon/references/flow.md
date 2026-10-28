@@ -12,9 +12,11 @@
 
 - Save only the approved photo's path, nothing about the user's looks.
 
+- If you call `react_to_user_message`, do it alongside your first call of the turn so it doesn't add a step.
+
 ## 1. Find the user's photo
 
-- Use the photo the user attaches now for try-on, or the one they just chose to use after the photo check below. Otherwise read `~/workspace/style-tryon/photo.txt`. Its saved likeness photo counts only if the image it names still exists.
+- Use the photo the user attaches now for try-on, or the one they just chose to use after the photo check below. Otherwise use the photo named in `~/workspace/style-tryon/photo.txt`, which counts only if that image still exists.
 
 - Use no other photos, even if earlier chats, memory notes, the media library or their profile photos (including `~/workspace/profile-images/`) show one, because you should only use photos the user uploaded specifically for try-on.
 
@@ -50,19 +52,25 @@ workspace/user/media_library/image/<xx>/<hash>.jpg
 
 ## 3. Get each product photo
 
-- Save it with the helper, passing every results file behind the shopping results.
+- Once you have the user's photo, save every chosen product's photo with one helper call, in the same step as checking the user's photo and loading the `media` tools if they aren't loaded yet. Set `yield_ms` to 30000 so a slow download finishes in that step.
 
-- If the helper fails or the user declines the download, don't retry. Drop that product and say you couldn't load its photo, since a render needs the product photo. If none are left, offer another product.
+- Add `--alternates-for` for each catalog product worn on the head, face or ears, so its other views arrive in the same call. Add `--results` with every results file behind the shopping results.
 
-- Check the photo with `muse.read`. If a model's face shows on a catalog product, save its other views with the helper, `muse.read` each in order, and use the first that shows the whole item with no face.
+- Unless the user named the products, also pass up to 2 of the products step 2 would pick next, with `--fallback-id`, so one replaces any product whose photo won't load. Unused fallbacks print nothing and aren't rendered.
 
-- If no view does, or it is a browser product, crop the face off unless the item is worn on the head, face or ears. Estimate the model's mouth as a whole-number percentage of the height from the top and crop there.
+- If a fallback replaced a product, use the fallback from then on and briefly say the original product's photo wouldn't load.
 
-- Use the crop only if no eyes or nose show and the whole item is still visible. Otherwise use the original.
+- If a product's photo won't load and no fallback is left for it, don't retry. Drop that product and say you couldn't load its photo, since a render needs the product photo. If the user declines the download, drop the products without retrying. If none are left, offer another product.
+
+- Once the helper finishes, read all the saved product photos at once with `muse.read`, and in the same step save the path of a newly sent likeness photo if it passed step 1's checks or the user chose to use it.
+
+- If a model's face shows in the photo of an item worn on the head, face or ears, use the first other view that shows the whole item with no face, or else the original.
+
+- If a model's face shows in the photo of any other item, estimate the line just below the model's nose as a whole-number percentage of the height from the top, and crop each such photo at its line, all in one helper call. If that line is past 60% or would cut into the item, or the crop fails, render the original.
 
 ## 4. Render
 
-- Call `media.generate_image` once per selected product, all at once. If any weren't rendered, name them so the user can ask for them next. Each call takes a `style_preset`, a short `product` label and two images, the user's photo then the product photo, with no text entry.
+- Call `media.generate_image` once per selected product, all at once. If any weren't rendered, name them so the user can ask for them next. Each call takes a `style_preset`, a short `product` label and two images, the user's photo then the product photo or its crop, with no text entry.
 
 - Use `product_try_on_head_and_shoulders` for items worn on the head, face, ears or neck, and `product_try_on` for everything else.
 
@@ -72,7 +80,7 @@ workspace/user/media_library/image/<xx>/<hash>.jpg
 
 ## 5. Show the results
 
-- Call `shopping.resolve_results` once with the rendered products in render order, only for their markers. If a catalog results file is gone, rebuild it with the helper first.
+- Read the renders and call `shopping.resolve_results` together, once with the rendered products in render order, only for their markers. If a catalog results file is gone, rebuild it with the helper first.
 
 - Reply with the images, with nothing between them. Then write one short line naming the products by marker, in gallery order.
 
@@ -98,13 +106,13 @@ workspace/user/media_library/image/<xx>/<hash>.jpg
 
 ## Helper commands
 
+Saving prints one line per photo, `<product_id>: <path>` for the main photo, `<product_id> view <n>: <path>` for another view, or `<product_id>: failed (<reason>)`. A fallback that replaced a failed product prints `<fallback id>: <path> (in place of <product_id>)`. Cropping prints `<path>: <crop path>` or `<path>: failed (<reason>)`.
+
 ```sh
-# Save the product photo
-python3 /opt/muse/skills/style-tryon/scripts/product_image.py --product-id '<product_id>' --results '<results file>' [--results '<another results file>']
-# Save up to three other views of a catalog product
-python3 /opt/muse/skills/style-tryon/scripts/product_image.py --product-id '<product_id>' --results '<results file>' --alternates
-# Crop a saved photo at the mouth line
-python3 /opt/muse/skills/style-tryon/scripts/product_image.py --from-file '<saved path>' --crop-top-percent <mouth percent>
+# Save the chosen products' photos, plus other views for head, face and ear items
+python3 /opt/muse/skills/style-tryon/scripts/product_image.py --product-id '<catalog product_id or browser result_id>' [--product-id '<another id>'] [--alternates-for '<head item product_id>'] [--fallback-id '<next product id>'] [--results '<results file>']
+# Crop saved photos at the line below the model's nose (one --crop per photo)
+python3 /opt/muse/skills/style-tryon/scripts/product_image.py --crop '<saved path>=<percent>' [--crop '<another saved path>=<percent>']
 # Rebuild missing catalog results files (one --product-id per product)
 python3 /opt/muse/skills/style-tryon/scripts/product_image.py --rebuild-results --product-id '<product_id>'
 ```

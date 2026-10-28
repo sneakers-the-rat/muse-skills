@@ -19,16 +19,13 @@
 
 - Pass the returned `paging.cursors.after` value as `--after <cursor>` to load another page of conversation summaries.
 
-## List or revoke owner addresses
+## List owner addresses
 
 ```sh
 /opt/hatch/bin/muse-mail owners list
-/opt/hatch/bin/muse-mail owners revoke <owner-id>
 ```
 
-- The user verifies an owner address themselves in Muse Mail settings. Never report success until the server confirms it.
-
-- Revoke an owner address only when the user asks for that exact revocation.
+- The user verifies and removes owner addresses themselves in Muse Mail settings. Never report success until the server confirms it.
 
 ## Exceptional reply targets
 

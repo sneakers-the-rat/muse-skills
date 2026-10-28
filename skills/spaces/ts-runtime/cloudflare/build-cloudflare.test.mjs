@@ -509,6 +509,62 @@ export const Actions = {
   );
 });
 
+test("builds privileged actions from the generated contract without the VM handlers", async () => {
+  const spaceDir = await makeSpace({
+    actionsSource: `
+import { defineAction, z, type ActionsModule } from "@hatch/space-sdk";
+import { privileged } from "@space/privileged";
+
+export const Actions = {
+  countNotes: defineAction({
+    request: z.object({}),
+    response: z.object({ count: z.number() }),
+    privileged: [privileged.readNotes],
+    async handler(ctx) {
+      const { notes } = await ctx.executePrivileged(privileged.readNotes, {});
+      return { count: notes.length };
+    },
+  }),
+} satisfies ActionsModule;
+`,
+  });
+  const contract = `{
+  readNotes: {
+    request: z.object({}),
+    response: z.object({ notes: z.array(z.string()) }),
+  },
+}`;
+  await fs.writeFile(
+    path.join(spaceDir, "server", "src", "privileged.ts"),
+    `
+import { readFileSync } from "node:fs";
+import { definePrivilegedContracts, definePrivilegedHandlers, z } from "@hatch/space-sdk";
+
+export const privileged = definePrivilegedContracts(${contract});
+
+export const privilegedHandlers = definePrivilegedHandlers(privileged, {
+  readNotes() {
+    return { notes: readFileSync(\`\${process.env.HOME}/vm-only-notes.txt\`, "utf8").split("\\n") };
+  },
+});
+`,
+  );
+  await fs.mkdir(path.join(spaceDir, "server", ".generated"));
+  await fs.writeFile(
+    path.join(spaceDir, "server", ".generated", "privileged.contract.ts"),
+    `import { definePrivilegedContracts, z } from "@hatch/space-sdk";
+
+export const privileged = definePrivilegedContracts(${contract});
+`,
+  );
+
+  const { workerPath } = await buildCloudflareArtifacts({
+    spaceDir,
+    outDir: path.join(spaceDir, "cloudflare-dist"),
+  });
+  assert.doesNotMatch(await fs.readFile(workerPath, "utf8"), /vm-only-notes/);
+});
+
 test("rejects unbranded hand-authored action objects during typecheck", async () => {
   const spaceDir = await makeSpace({
     actionsSource: `

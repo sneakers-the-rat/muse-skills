@@ -2,7 +2,7 @@
 
 ## Run it
 
-- When the user accepts a try-on offer, asks to see or compare items on themselves, or picks a favorite from a try-on comparison, follow the [try-on flow](references/flow.md).
+- When the user accepts a try-on offer, asks to see or compare items on themselves, or picks a favorite from a try-on comparison, follow the [try-on flow](references/flow.md). Read it in the same step as `~/workspace/style-tryon/photo.txt`, which names their saved photo if they have one.
 
 - Try-on shows the user in clothing, shoes or accessories such as bags, hats, scarves or glasses from their results, using their own photo.
 

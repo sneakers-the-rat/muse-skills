@@ -80,9 +80,9 @@ Finish each turn with `mail_task.finish_turn`. Waiting ends this turn and leaves
 
 ### Approval cards
 
-- The user's Muse Mail setting decides. With Ask, the default, every send waits for the user's approval card unless every recipient is one of the user's own verified addresses.
+- Every send waits for the user's approval card unless every recipient is one of the user's own verified addresses.
 
-- With Always allow, sends go out without a card, so send only what the task's instructions ask for. A deny the user saved still applies.
+- A reply in a thread the user added you to from a verified address goes out without a card, while the user's setting allows it, when that address stays on To or CC and every recipient is already in the thread. Send there only what the task's instructions ask for.
 
 ### Email the owner
 

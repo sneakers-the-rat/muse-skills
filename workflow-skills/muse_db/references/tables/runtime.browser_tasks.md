@@ -198,6 +198,20 @@ Browser tasks, their ownership, session and execution state.
 
   Default: `now()`.
 
+- `relocation_hold_until` uses `timestamp with time zone` and is nullable.
+
+- `relocating_to` uses `text` and is nullable.
+
+  Soft local reference → `device.nodes.node_id`.
+
+- `relocated_from` uses `text` and is nullable.
+
+  Soft local reference → `device.nodes.node_id`.
+
+- `on_shared_tab` uses `boolean` and is required.
+
+  Default: `false`.
+
 ## Keys and relationships
 
 - PRIMARY KEY `browser_tasks_pkey` covers `task_id`.

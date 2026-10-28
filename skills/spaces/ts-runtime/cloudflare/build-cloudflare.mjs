@@ -68,6 +68,13 @@ function parseArgs(argv) {
   return parsed;
 }
 
+// The Space build extracts this portable contract from server/src/privileged.ts
+// for actions to import as `@space/privileged`. The handlers in that file run
+// only on the VM.
+function privilegedContractPath(spaceDir) {
+  return path.join(spaceDir, "server", ".generated", "privileged.contract.ts");
+}
+
 function toImportSpecifier(fromDir, targetPath) {
   const relative = path.relative(fromDir, targetPath).replaceAll(path.sep, "/");
   if (relative.startsWith(".")) {
@@ -305,11 +312,15 @@ async function writeTypecheckConfig(entryDir, entryPath, spaceDir, aliases) {
         zod: [relativeZod],
         "drizzle-orm": [relativeDrizzle],
         "drizzle-orm/*": [`${relativeDrizzle}/*`],
+        "@space/privileged": [toImportSpecifier(entryDir, privilegedContractPath(spaceDir))],
       },
     },
     include: [
       toImportSpecifier(entryDir, entryPath),
-      toImportSpecifier(entryDir, path.join(spaceDir, "server", "src", "**", "*.ts")),
+      // Space modules are not roots, so only what the Worker imports is checked
+      // against the Worker libs. VM-only modules such as the privileged handlers
+      // stay out unless an action imports them.
+      toImportSpecifier(entryDir, path.join(spaceDir, "server", "src", "**", "*.d.ts")),
       toImportSpecifier(entryDir, path.join(__dirname, "src", "**", "*.ts")),
     ],
   };
@@ -369,6 +380,9 @@ async function bundleWorker({ entryPath, outDir, spaceDir }) {
           }));
           build.onResolve({ filter: /^drizzle-orm(\/.*)?$/ }, (args) => ({
             path: resolveModule(args.path, spaceDir),
+          }));
+          build.onResolve({ filter: /^@space\/privileged$/ }, () => ({
+            path: privilegedContractPath(spaceDir),
           }));
         },
       },
