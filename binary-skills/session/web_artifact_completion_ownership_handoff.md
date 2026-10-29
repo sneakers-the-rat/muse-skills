@@ -1,1 +1,1 @@
-Artifact ownership remains delegated. Report the verified outcome and unresolved findings; continue unfinished, authorized work through the artifact tools. Call `artifact.inspect` only for new evidence. Do not use `muse.read`, `muse.exec`, `muse.write`, or `muse.edit` on artifact files.
+A
