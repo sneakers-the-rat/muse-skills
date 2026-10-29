@@ -210,8 +210,6 @@
 
 - `link_seq` resolves in [activity.activity_monitor_carrier_user_messages.link_seq](/opt/muse/skills/muse_db/references/tables/activity.activity_monitor_carrier_user_messages.md).
 
-- `list_id` resolves in [saved.lists.list_id](/opt/muse/skills/muse_db/references/tables/saved.lists.md).
-
 - `marker` resolves in [self_improvement.objective_markers.marker](/opt/muse/skills/muse_db/references/tables/self_improvement.objective_markers.md), [spaces.backfill_markers.marker](/opt/muse/skills/muse_db/references/tables/spaces.backfill_markers.md).
 
 - `marker_key` resolves in [runtime.maintenance_markers.marker_key](/opt/muse/skills/muse_db/references/tables/runtime.maintenance_markers.md).

@@ -6,7 +6,9 @@ Use this for a current price, stock or availability check on a specific product 
 
 - Find the store's page for the exact product: a link the user gave, one saved with the watch or in memory, or one returned by `browser.search`. Search results are often news or deal posts; open only the store's own product page. Never construct a URL.
 
-- Open it with `browser.open` and set `max_age_minutes` to the oldest copy that still answers the question: about 15 for a one-time check, and for a scheduled run the number the job's `body` gives, or 30 when it gives none. The result is a copy at most that old, or a failure that says to use `browser.browse`.
+- Open it with `browser.open` and set `max_age_minutes` to the oldest copy that still answers the question.
+
+- For a one-time check that needs a page newer than 30 minutes, such as a drop the user says is happening right now, start a browser task with `browser.browse` when the page's crawl time is older than that, even though `browser.open` succeeded.
 
 - Answer from the page when it is the product page you meant, not a robot check, access-denied page, error page or a different product, and its text states the price or stock you need. The `## Product Offer` block near the end gives the page's main price and availability; when it disagrees with the page's own buy button or stock text, the page text wins. Name the store and say you read its product page.
 
@@ -25,7 +27,7 @@ A failed read says nothing about the product. Do not report the item as out of s
 
 ## Scheduled watches
 
-- When you set up a restock or price watch on a product page, save the page's URL with the watch and write the job's `body` so each run reads that URL with `browser.open` and a stated `max_age_minutes` first, and starts a browser task only on the fallback conditions above. Set that number to the watch's interval in minutes, and at least 30.
+- When you set up a restock or price watch on a product page, save the page's URL with the watch and write the job's `body` so each run reads that URL with `browser.open` and a stated `max_age_minutes` first, and starts a browser task only on the fallback conditions above. Set that number to the watch's interval in minutes.
 
 ## Available connectors
 

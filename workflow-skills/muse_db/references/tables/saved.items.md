@@ -1,6 +1,6 @@
 # `saved.items`
 
-Entities saved into a list, with stable display data, note, purchase state and the agent, chat and turn that saved them.
+Entities the user saved, each once, with notes saying what it was saved for, purchase state and the agent, chat and turn that saved it.
 
 - Return to the [table index](/opt/muse/skills/muse_db/references/schema.md) or [query rules](/opt/muse/skills/muse_db/references/querying.md).
 
@@ -9,10 +9,6 @@ Entities saved into a list, with stable display data, note, purchase state and t
 - `item_id` uses `text` and is required.
 
   Local row identifier (primary key).
-
-- `list_id` uses `text` and is required.
-
-  Potential local reference; resolve by domain context in: `saved.lists.list_id`.
 
 - `entity_type` uses `text` and is required.
 
@@ -31,6 +27,8 @@ Entities saved into a list, with stable display data, note, purchase state and t
 - `image_url` uses `text` and is nullable.
 
 - `note` uses `text` and is nullable.
+
+  Short phrases, one per line, saying what the item was saved for.
 
 - `raw_input` uses `text` and is nullable.
 
@@ -64,4 +62,4 @@ Entities saved into a list, with stable display data, note, purchase state and t
 
 - PRIMARY KEY `items_pkey` covers `item_id`.
 
-- UNIQUE `items_list_id_entity_type_entity_key_key` covers `list_id`, `entity_type`, `entity_key`.
+- UNIQUE `saved_items_entity_unique` covers `entity_type`, `entity_key`.

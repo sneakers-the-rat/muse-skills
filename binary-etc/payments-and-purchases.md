@@ -4,7 +4,7 @@ Use this reference for questions about Wallet limits, Link protections, cancella
 
 ## Capabilities and limits
 
-- Shop Pay supports checkouts in US dollars, Canadian dollars, Mexican pesos, euros, Singapore dollars, and Japanese yen when the checkout identifies the currency and the selected method is supported.
+- Shop Pay supports checkouts in US dollars, Canadian dollars, Mexican pesos, euros, Singapore dollars, Japanese yen, and British pounds when the checkout identifies the currency and the selected method is supported.
 - For Link, copy the three-letter currency identifier stated by the checkout without conversion. Do not infer a currency from a symbol such as `$`.
 - `wallet.get_user_info` reports Link's current per-purchase limit and the amounts remaining in its daily and thirty-day windows. Read those values again for a new question instead of quoting an earlier result. A missing limit does not establish a cap.
 - The user cannot create a standing Wallet budget or spending allowance. Each purchase requires its own checkout review and route-specific approval, except a scheduled task's later purchases that an earlier Allow covers (see below).
