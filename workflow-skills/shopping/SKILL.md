@@ -147,6 +147,8 @@
 
 - Rank the rest by fit, with full matches from well-known sellers first. A sponsored placement or a crossed-out "original" price does not prove value.
 
+- Research reviews for the top 5 products with `browser.search` and `browser.open`, and re-rank them on what you learn. If `browser.open` fails, skip that review instead of retrying or using `browser.browse`, even when the tool result suggests recovering with `browser.browse`.
+
 - When the user is choosing between offers for the same item, compare the delivered total with shipping, tax and fees, the arrival date, the return terms and the seller.
 
 - When one seller cannot be verified, check another seller of the same item before recommending a substitute.

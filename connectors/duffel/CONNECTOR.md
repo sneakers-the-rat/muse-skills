@@ -78,7 +78,11 @@
 
 - `error.kind: connector_country_not_allowed` means Duffel is unavailable for this account's country. Stop all Duffel commands for the task, including retries of other reads; changing the itinerary or reconnecting will not resolve it. Use Flight Booking's browser fallback for flight shopping. Scheduled fare checks skip Duffel for this run under the [fare check](references/fare-check.md) rules.
 
-- `ok: false` with `code: duffel_unavailable` means Duffel's separate rollout gate is off, even if connector search returned Duffel. Stop `search`, `places`, `seat-options`, `validate-booking` and `book` for the rest of the turn; changing the query will not help. Use Flight Booking's browser fallback for flight shopping. Scheduled fare searches wait for the next run.
+- `ok: false` with `code: duffel_account_country_unavailable` without `account_country: unresolved_us_default` means `book` or traveler-profile creation stopped because the account-country lookup failed. Stop those operations for the rest of the turn; changing the booking arguments will not help. Continue booking directly with the airline using `browser.browse`. Searches and existing-booking management remain subject to their own availability, ownership and retry rules.
+
+- `account_country: unresolved_us_default` means a booking could not be read while the account country was unavailable; it does not mean the user lacks the booking, so manage it with the airline using `browser.browse` instead of retrying. A partial list retains readable bookings and identifies affected IDs under `enumeration.country_fallback_unreadable_order_ids`; this applies only to those IDs.
+
+- `ok: false` with `code: duffel_unavailable` means the Duffel rollout gate is off, even if connector search returned Duffel. Stop `search`, `places`, `seat-options`, `validate-booking` and `book` for the rest of the turn; changing the query will not help. The rollout gate leaves existing-booking management available. Use Flight Booking's browser fallback for flight shopping. Scheduled fare searches wait for the next run.
 
 - For other errors, an unchanged failed search fails the same way again, even when its response says `retriable: true`, so a changed query or another source is the next step.
 
