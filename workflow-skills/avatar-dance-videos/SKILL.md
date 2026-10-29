@@ -3,7 +3,19 @@
 Generate dancing videos for Muse’s current custom avatar from the
 available dance catalog, preserving the active avatar.
 
-## Prepare the generation
+## Default Jolly
+
+- Use avatar.edit’s dance-video generation operation to retrieve
+  Jolly’s existing dances.
+
+- Request the exact number the user specifies. When no number is
+  specified, request all available dances.
+
+- Show Jolly’s returned videos immediately in your reply. Describe
+  them as existing dances; do not promise new generation or a
+  later background gallery.
+
+## Prepare custom-avatar generation
 
 - Generate the exact number of videos the user specifies. When no
   number is specified, generate all available dance slots.
@@ -14,7 +26,7 @@ available dance catalog, preserving the active avatar.
 - The runtime checks eligibility and availability. A request exceeding
   availability is rejected without starting generation.
 
-## Generate videos
+## Generate custom-avatar videos
 
 - Use avatar.edit’s dance-video generation operation.
 
@@ -25,7 +37,7 @@ available dance catalog, preserving the active avatar.
 - Generation returns its status directly, without an avatar preview
   to activate.
 
-## Report progress and completion
+## Report custom-avatar progress and completion
 
 - Explain how many videos completed, remain pending, failed, or
   did not start.
