@@ -128,6 +128,10 @@ Artifact inventory, names, source locations and session associations.
 
   Default: `false`.
 
+- `builtin_manifest_sha256` uses `text` and is nullable.
+
+  cloudflare_share_manifest_sha256 of the build artifact.add_builtin produced for a built-in app; a share of that exact build skips the text and disclosure reviews.
+
 ## Keys and relationships
 
 - PRIMARY KEY `spaces_pkey` covers `space_slug`.
