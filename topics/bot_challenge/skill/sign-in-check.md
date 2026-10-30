@@ -1,1 +1,0 @@
-../../../binary-skills/sign-in-check/SKILL.md

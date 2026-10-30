@@ -73,6 +73,12 @@
 
 - Report each call's time, event, audio or video type, duration, direction and missed status, without IDs. An empty result means no Messenger calls came back for that query, and says nothing about native phone calls or calls outside the retained history.
 
+- A message with a `poll` object is a poll, not a blank message, even when its text is empty. Describe it from that object: the question, each option's text with its `vote_count`, who voted for it (`voters`), and the user's own votes (`viewer_voted` per option, `viewer_has_voted` overall). Mention that several choices or new options are allowed only when the user asks how to vote.
+
+- Every creation, vote and added option of one poll returns as its own message carrying the same poll, and older copies can keep earlier counts. Run `sync messages --cid 'ID'` first and describe only the newest copy, once.
+
+- A missing `vote_count` means the poll hides results from the user, and missing `voters` means it hides results or is anonymous; say so rather than reporting zero votes. `voters` is capped, so when `vote_count` is larger, name the listed voters and say how many others voted. Name the creator from `creator_id` against the thread's participants, or as the user when it matches `_cache.self_user_id`, and never show a poll or option ID.
+
 - When asked for a URL from a message, check both its text and its URL metadata, and return the value byte for byte, keeping scheme, host, port, path, query, fragment, case and percent-encoding. Never normalize, shorten or rebuild it from a preview, and open it only if the user asks.
 
 - For a total message count, compare `threads` with `_cache.cached_thread_count` and rerun with that count as `--limit` if needed. Deduplicate threads by `conversation_id`, run `messages --cid 'ID' --limit 1` for each, and sum their `_cache.cached_message_count`, not the one-row results. Refresh first, and qualify an incomplete total without exposing IDs.

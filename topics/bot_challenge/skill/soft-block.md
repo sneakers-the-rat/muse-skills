@@ -1,1 +1,0 @@
-../../../binary-skills/soft-block/SKILL.md

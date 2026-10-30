@@ -1,6 +1,6 @@
 # Account insight metrics
 
-- The field list describes `account-insights`; [Account analytics results](account-analytics-results.md) covers `analytics-account-insights`. **Interpret the values** applies to both commands and user-supplied figures. Use each returned definition for counting scope.
+- The field list describes `account-insights`; [Account analytics results](account-analytics-results.md) covers `analytics-account-insights`. Audience selection and interpretation apply to account and post insights, including user-supplied figures. Use each returned definition for counting scope.
 
 - Explain the external Metric Catalog definitions in plain language, preserving their meaning and units.
 
@@ -9,6 +9,14 @@
 - For `account-insights`, Unix-second time bounds override a period and date bounds; a period overrides date bounds. Date-only bounds start at UTC midnight. The response omits the window, so state the window you used beside the values.
 
 - A returned metric can be absent or `null`; otherwise it is a list of entries with a `value` and optional `dimension_values` codes. Absence and `null` do not mean zero. `account-insights` is refused when Access analytics is set to deny or ask; explain the setting rather than retrying.
+
+## Audience metric selection
+
+- Lead account summaries and eligible media summaries with the actual **Viewers** metric. Keep its Accounts Center count separate from **Accounts reached**, which counts Instagram accounts.
+
+- Posts published before February 1, 2026 retain **Accounts reached**. Establish the publication date from matching media metadata before using the returned Accounts reached value as the legacy audience count. Missing Viewers alone does not establish eligibility.
+
+- Unavailable Viewers is not zero; preserve a measured zero. Do not substitute Accounts reached for unavailable Viewers on account insights or newer posts.
 
 ## Interpret the values
 
@@ -34,7 +42,7 @@
 
 ## Fields returned by account-insights
 
-- `accounts_reached` (or `reach`) is **Accounts reached**, counted in accounts. It is the number of unique accounts that have seen your content at least once, including promoted posts and stories. It differs from Views, which may include several views by the same accounts, and it is estimated.
+- `accounts_reached` is **Accounts reached**, counted in accounts. It is the number of unique accounts that have seen your content at least once, including promoted posts and stories. It differs from Views, which may include several views by the same accounts, and it is estimated.
 
 - `viewers` is **Viewers**, counted in Accounts Center accounts. It is the number of Accounts Center accounts that have viewed your content at least once, across reels, posts, stories, videos, live videos and ads, and it is estimated.
 

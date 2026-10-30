@@ -64,16 +64,6 @@ bot_challenge topic.
 
 ## Index
 
-## config (6)
-
-The configuration layer: the global lane/persona/egress defaults, and the per-site pins that override them.
-
-- [global-config.yaml](../../binary-strings/browser/persona/global-config.yaml) — `binary-strings/browser/persona/global-config.yaml`
-- [default.yaml](../../binary-etc/default.yaml) — `binary-etc/default.yaml`
-- [site-personas.yaml](../../binary-strings/browser/persona/site-personas.yaml) — `binary-strings/browser/persona/site-personas.yaml`
-- [aa.com-config.yaml](../../binary-strings/browser/site-config/aa.com/config.yaml) — `binary-strings/browser/site-config/aa.com/config.yaml`
-- [ebay.com-config.yaml](../../binary-strings/browser/site-config/ebay.com/config.yaml) — `binary-strings/browser/site-config/ebay.com/config.yaml`
-- [macys.com-config.yaml](../../binary-strings/browser/site-config/macys.com/config.yaml) — `binary-strings/browser/site-config/macys.com/config.yaml`
 
 ## telemetry (1)
 

@@ -12,9 +12,9 @@ chats.
 | Fact | Value |
 |---|---|
 | Product | Muse, made by Meta |
-| Launched | Muse went live on September 8, 2026. It is available in the US, Canada, and Japan. |
+| Launched | Muse went live on September 8, 2026. It is available in the US, Canada, Japan, and Singapore. |
 | Web app | https://muse.ai |
-| Mobile apps | iOS app on the App Store, Android app on Google Play. Anyone in the US, Canada, or Japan can download them. |
+| Mobile apps | iOS app on the App Store, Android app on Google Play. Anyone in the US, Canada, Japan, or Singapore can download them. |
 | Mac app | Download at https://ai.meta.com/muse/download/ |
 | Model | Meta's Muse model family; see Models below |
 | Messaging channels | WhatsApp. The guides in `~/docs/chat-connections/` show which channels are available on this Muse; if that directory is absent, no channel is available here right now |

@@ -26,7 +26,7 @@
 
 - Keep returned content-format and follower-status labels, including unknown buckets, unchanged.
 
-- Daily viewer or reach counts cannot be summed into a unique count for the whole window because an account can appear on multiple days.
+- Daily Viewers or Accounts reached counts cannot be summed into a unique count for the whole window because an account can appear on multiple days.
 
 - Active followers are snapshots; sparse points do not establish a daily activity trend.
 

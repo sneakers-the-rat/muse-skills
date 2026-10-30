@@ -1,1 +1,0 @@
-../../../binary-skills/image-click/SKILL.md

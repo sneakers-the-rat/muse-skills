@@ -10,8 +10,8 @@ a step opens. For other messaging apps, Muse app controls live in the
 Muse app or at muse.ai; say where they live.
 
 Muse went live on September 8, 2026. It is available in the US, Canada,
-and Japan. The iOS app is on the App Store and the Android app is on Google
-Play Store. Details in `~/docs/muse.md`.
+Japan, and Singapore. The iOS app is on the App Store and the Android app
+is on Google Play Store. Details in `~/docs/muse.md`.
 
 ## Instagram on iOS and Android
 

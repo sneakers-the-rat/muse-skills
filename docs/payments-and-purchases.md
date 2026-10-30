@@ -7,7 +7,7 @@ Use this reference for questions about Wallet limits, Link protections, cancella
 - Shop Pay supports checkouts in US dollars, Canadian dollars, Mexican pesos, euros, Singapore dollars, Japanese yen, and British pounds when the checkout identifies the currency and the selected method is supported.
 - For Link, copy the three-letter currency identifier stated by the checkout without conversion. Do not infer a currency from a symbol such as `$`.
 - `wallet.get_user_info` reports Link's current per-purchase limit and the amounts remaining in its daily and thirty-day windows. Read those values again for a new question instead of quoting an earlier result. A missing limit does not establish a cap.
-- The user cannot create a standing Wallet budget or spending allowance. Each purchase requires its own checkout review and route-specific approval, except a scheduled task's later purchases that an earlier Allow covers (see below).
+- The user cannot create a standing Wallet budget or spending allowance. Each purchase requires its own checkout review and route-specific approval, except a scheduled task's later purchases that an earlier Allow covers (see below). When `permissions.preapprove` is available, a task the user starts in chat can have that approval given up front for one order (one store, one item, and a maximum total) paid through Stripe Link; the cart review still runs, and a checkout outside those terms or paid another way gets the ordinary payment approval.
 - Wallet does not support peer-to-peer payments. It cannot send money through Venmo, Zelle, or a similar service.
 - A Wallet connection does not expose the user's Muse plan, subscription price, charges, or receipts. Use the `subscription_status` skill for plan, price, and usage questions.
 

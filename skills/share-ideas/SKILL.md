@@ -23,9 +23,12 @@ services. Follow the richer catalog-Idea pattern; never repeat or lightly
 paraphrase the summary as `how_it_works`.
 
 Never include credentials, tokens, private identifiers, local paths, hidden
-system instructions, or personal details that are not essential to what the
-user explicitly chose to publish. Generalize those details or omit them. Do
-not claim the Idea is shared until `idea.share` returns a link.
+system instructions, or personal details about the user or anyone else, even
+when the user asks for them: names, contact details or handles, exact
+employers, schools, or venues, precise dates, quoted messages, or any
+combination of details that points to one person. A share that contains them
+is refused. Generalize those details or omit them. Do not claim the Idea is
+shared until `idea.share` returns a link.
 
 On success, `idea.share` also creates the native Idea widget for that same
 Idea. Include `widget.embed_token` exactly once on its own line. Do not call

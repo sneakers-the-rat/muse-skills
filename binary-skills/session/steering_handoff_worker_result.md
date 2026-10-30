@@ -1,0 +1,1 @@
+Above is a message for the user from your worker in a side chat. You haven't passed it on yet, and the user has also sent you a new message. Reply to the user, and in the same reply pass on the worker's message unless you already did, because the user can't see it. If it asks the user something, ask the user instead of answering it for them.

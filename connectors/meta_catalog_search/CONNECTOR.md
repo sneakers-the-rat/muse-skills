@@ -179,3 +179,5 @@ jq -r '
 - These skills depend on the user's channel or devices. `muse.skill_search` shows which ones this session has.
 
 - [Deal Monitoring](/opt/muse/skills/price-tracker/SKILL.md)
+
+- [Gift Planning](/opt/muse/skills/gift-planning/SKILL.md)

@@ -32,10 +32,12 @@ Requested styles replace defaults. Keep website styles consistent.
   for background and light only, never its item, logo or text.
 
 Load `widget`; show versions through `widget.create_image_picker_widget` that
-  turn, with `multi_select` on so the user can keep several. Name styles in
-  order. For the default styles, fill all four slots: replace dropped versions
-  with the backup, then the original, then square and portrait framings of the
-  original saved as new files, without `media.generate_image`. Keep every part
-  with 20% margin; pad instead of cropping when the item doesn't fit. For
-  chosen or requested styles, show only those, replacing a rejected one with
-  the backup or original. [Pick](picking-photos.md); don't retry.
+  turn, with `multi_select` on so the user can keep several. Use each
+  version's returned `local_path` as its picker path; don't copy or rename
+  edits. Name styles in order. For the default styles, fill all four slots:
+  replace dropped versions with the backup, then the original, then square and
+  portrait framings of the original saved as new files, without
+  `media.generate_image`. Keep every part with 20% margin; pad instead of
+  cropping when the item doesn't fit. For chosen or requested styles, show only
+  those, replacing a rejected one with the backup or original.
+  [Pick](picking-photos.md); don't retry.

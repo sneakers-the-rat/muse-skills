@@ -1,1 +1,0 @@
-../../../binary-skills/game-puzzle/SKILL.md

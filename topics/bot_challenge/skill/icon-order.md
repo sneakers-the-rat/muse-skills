@@ -1,1 +1,0 @@
-../../../binary-skills/icon-order/SKILL.md

@@ -134,7 +134,7 @@ users threads get --params '{"userId":"me","id":"<thread_id>","format":"full"}'
 
 ## Confirm before sending
 
-- Before any send, reply or forward, show the user the exact recipients, subject and body and get an explicit go-ahead. Do this even when the recipient is obvious or the user asked in one line to "reply to X". The only exception is a message the user has already seen exactly and told you to send.
+- Before any send, reply or forward, show the user the exact recipients, subject and body and get an explicit go-ahead. Do this even when the recipient is obvious or the user asked in one line to "reply to X". The exceptions are a message the user has already seen exactly and told you to send, and a send the user pre-approved for this task with `permissions.preapprove`, which runs without another confirmation.
 
 - For a reply or forward, tell the user the resolved recipients and subject in plain words before sending.
 
@@ -149,6 +149,8 @@ users threads get --params '{"userId":"me","id":"<thread_id>","format":"full"}'
 - For a direct `+send`, the card can let the user edit the subject and body or remove attachments, while the sender and recipients stay fixed. Saving an edit sends nothing. Only the user's approval sends, and it sends the latest saved copy.
 
 - Replies, forwards, draft sends and raw sends are approved exactly as prepared.
+
+- When `permissions.preapprove` is available and a task will send after the user leaves, pre-approve that one send before starting: connector `gmail`, method `users.messages.send`, and a binding with `recipients`, every To, Cc and Bcc address the send will use, plus `thread_id`, the source email's thread ID, for a reply or forward. Omit `thread_id` only for a new email: a new-email pre-approval does not cover a reply or forward, nor the reverse. The send still runs only to exactly those recipients, and anything else asks when it runs.
 
 - When a successful `+send` prints a `Final sent message (supersedes the original request):` note, that note carries the copy that went out, with `user_edited: true` when the user changed it. Describe that copy, not your original text.
 

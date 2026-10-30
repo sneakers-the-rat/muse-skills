@@ -43,30 +43,6 @@ the regions yielded.
 
 ## Index
 
-## skill (20)
-
-The per-challenge-type handling guides — the playbooks `bot_challenge.guide` serves to the specialist.
-
-- [arithmetic-and-counting.md](../../binary-skills/arithmetic-and-counting/SKILL.md) — `binary-skills/arithmetic-and-counting/SKILL.md`
-- [audio-challenge.md](../../binary-skills/audio-challenge/SKILL.md) — `binary-skills/audio-challenge/SKILL.md`
-- [automatic-check.md](../../binary-skills/automatic-check/SKILL.md) — `binary-skills/automatic-check/SKILL.md`
-- [block-page.md](../../binary-skills/block-page/SKILL.md) — `binary-skills/block-page/SKILL.md`
-- [game-puzzle.md](../../binary-skills/game-puzzle/SKILL.md) — `binary-skills/game-puzzle/SKILL.md`
-- [icon-order.md](../../binary-skills/icon-order/SKILL.md) — `binary-skills/icon-order/SKILL.md`
-- [image-click.md](../../binary-skills/image-click/SKILL.md) — `binary-skills/image-click/SKILL.md`
-- [image-grid.md](../../binary-skills/image-grid/SKILL.md) — `binary-skills/image-grid/SKILL.md`
-- [network-block.md](../../binary-skills/network-block/SKILL.md) — `binary-skills/network-block/SKILL.md`
-- [page-load-failure.md](../../binary-skills/page-load-failure/SKILL.md) — `binary-skills/page-load-failure/SKILL.md`
-- [path-drawing.md](../../binary-skills/path-drawing/SKILL.md) — `binary-skills/path-drawing/SKILL.md`
-- [press-and-hold.md](../../binary-skills/press-and-hold/SKILL.md) — `binary-skills/press-and-hold/SKILL.md`
-- [rotation-puzzle.md](../../binary-skills/rotation-puzzle/SKILL.md) — `binary-skills/rotation-puzzle/SKILL.md`
-- [sign-in-check.md](../../binary-skills/sign-in-check/SKILL.md) — `binary-skills/sign-in-check/SKILL.md`
-- [slider-puzzle.md](../../binary-skills/slider-puzzle/SKILL.md) — `binary-skills/slider-puzzle/SKILL.md`
-- [soft-block.md](../../binary-skills/soft-block/SKILL.md) — `binary-skills/soft-block/SKILL.md`
-- [start-gate.md](../../binary-skills/start-gate/SKILL.md) — `binary-skills/start-gate/SKILL.md`
-- [text-captcha.md](../../binary-skills/text-captcha/SKILL.md) — `binary-skills/text-captcha/SKILL.md`
-- [verification-checkbox.md](../../binary-skills/verification-checkbox/SKILL.md) — `binary-skills/verification-checkbox/SKILL.md`
-- [waiting-room.md](../../binary-skills/waiting-room/SKILL.md) — `binary-skills/waiting-room/SKILL.md`
 
 ## browser-instructions (2)
 
@@ -91,70 +67,6 @@ The prose that steers the machinery: the specialist's role-registry entry, and t
 - [roles.txt](../../binary-strings/browser/bot_challenge/roles.txt) — `binary-strings/browser/bot_challenge/roles.txt`
 - [classifier.txt](../../binary-strings/browser/bot_challenge/classifier.txt) — `binary-strings/browser/bot_challenge/classifier.txt`
 
-## sites (60)
-
-Per-site bot-detection notes, split out of the site guides — what each site's defences do and what the guide says about them.
-
-- [affirm.com.md](../../binary-strings/browser/bot_challenge/sites/affirm.com.md) — `binary-strings/browser/bot_challenge/sites/affirm.com.md`
-- [amazon.com.md](../../binary-strings/browser/bot_challenge/sites/amazon.com.md) — `binary-strings/browser/bot_challenge/sites/amazon.com.md`
-- [apple.com.md](../../binary-strings/browser/bot_challenge/sites/apple.com.md) — `binary-strings/browser/bot_challenge/sites/apple.com.md`
-- [baidu.com.md](../../binary-strings/browser/bot_challenge/sites/baidu.com.md) — `binary-strings/browser/bot_challenge/sites/baidu.com.md`
-- [bestbuy.com.md](../../binary-strings/browser/bot_challenge/sites/bestbuy.com.md) — `binary-strings/browser/bot_challenge/sites/bestbuy.com.md`
-- [bing.com.md](../../binary-strings/browser/bot_challenge/sites/bing.com.md) — `binary-strings/browser/bot_challenge/sites/bing.com.md`
-- [booking.com.md](../../binary-strings/browser/bot_challenge/sites/booking.com.md) — `binary-strings/browser/bot_challenge/sites/booking.com.md`
-- [cdninstagram.com.md](../../binary-strings/browser/bot_challenge/sites/cdninstagram.com.md) — `binary-strings/browser/bot_challenge/sites/cdninstagram.com.md`
-- [chatgpt.com.md](../../binary-strings/browser/bot_challenge/sites/chatgpt.com.md) — `binary-strings/browser/bot_challenge/sites/chatgpt.com.md`
-- [cloudflare.com.md](../../binary-strings/browser/bot_challenge/sites/cloudflare.com.md) — `binary-strings/browser/bot_challenge/sites/cloudflare.com.md`
-- [costco.com.md](../../binary-strings/browser/bot_challenge/sites/costco.com.md) — `binary-strings/browser/bot_challenge/sites/costco.com.md`
-- [craigslist.org.md](../../binary-strings/browser/bot_challenge/sites/craigslist.org.md) — `binary-strings/browser/bot_challenge/sites/craigslist.org.md`
-- [duckduckgo.com.md](../../binary-strings/browser/bot_challenge/sites/duckduckgo.com.md) — `binary-strings/browser/bot_challenge/sites/duckduckgo.com.md`
-- [ebay.com.md](../../binary-strings/browser/bot_challenge/sites/ebay.com.md) — `binary-strings/browser/bot_challenge/sites/ebay.com.md`
-- [expedia.com.md](../../binary-strings/browser/bot_challenge/sites/expedia.com.md) — `binary-strings/browser/bot_challenge/sites/expedia.com.md`
-- [facebook.com.md](../../binary-strings/browser/bot_challenge/sites/facebook.com.md) — `binary-strings/browser/bot_challenge/sites/facebook.com.md`
-- [fbcdn.net.md](../../binary-strings/browser/bot_challenge/sites/fbcdn.net.md) — `binary-strings/browser/bot_challenge/sites/fbcdn.net.md`
-- [google.com.md](../../binary-strings/browser/bot_challenge/sites/google.com.md) — `binary-strings/browser/bot_challenge/sites/google.com.md`
-- [googlevideo.com.md](../../binary-strings/browser/bot_challenge/sites/googlevideo.com.md) — `binary-strings/browser/bot_challenge/sites/googlevideo.com.md`
-- [grab.com.md](../../binary-strings/browser/bot_challenge/sites/grab.com.md) — `binary-strings/browser/bot_challenge/sites/grab.com.md`
-- [greenhouse.io.md](../../binary-strings/browser/bot_challenge/sites/greenhouse.io.md) — `binary-strings/browser/bot_challenge/sites/greenhouse.io.md`
-- [homedepot.com.md](../../binary-strings/browser/bot_challenge/sites/homedepot.com.md) — `binary-strings/browser/bot_challenge/sites/homedepot.com.md`
-- [icloud.com.md](../../binary-strings/browser/bot_challenge/sites/icloud.com.md) — `binary-strings/browser/bot_challenge/sites/icloud.com.md`
-- [indeed.com.md](../../binary-strings/browser/bot_challenge/sites/indeed.com.md) — `binary-strings/browser/bot_challenge/sites/indeed.com.md`
-- [instacart.com.md](../../binary-strings/browser/bot_challenge/sites/instacart.com.md) — `binary-strings/browser/bot_challenge/sites/instacart.com.md`
-- [instagram.com.md](../../binary-strings/browser/bot_challenge/sites/instagram.com.md) — `binary-strings/browser/bot_challenge/sites/instagram.com.md`
-- [jd.com.md](../../binary-strings/browser/bot_challenge/sites/jd.com.md) — `binary-strings/browser/bot_challenge/sites/jd.com.md`
-- [klaviyo.com.md](../../binary-strings/browser/bot_challenge/sites/klaviyo.com.md) — `binary-strings/browser/bot_challenge/sites/klaviyo.com.md`
-- [linkedin.com.md](../../binary-strings/browser/bot_challenge/sites/linkedin.com.md) — `binary-strings/browser/bot_challenge/sites/linkedin.com.md`
-- [loblaws.ca.md](../../binary-strings/browser/bot_challenge/sites/loblaws.ca.md) — `binary-strings/browser/bot_challenge/sites/loblaws.ca.md`
-- [microsoft.com.md](../../binary-strings/browser/bot_challenge/sites/microsoft.com.md) — `binary-strings/browser/bot_challenge/sites/microsoft.com.md`
-- [naver.com.md](../../binary-strings/browser/bot_challenge/sites/naver.com.md) — `binary-strings/browser/bot_challenge/sites/naver.com.md`
-- [offerup.com.md](../../binary-strings/browser/bot_challenge/sites/offerup.com.md) — `binary-strings/browser/bot_challenge/sites/offerup.com.md`
-- [openai.com.md](../../binary-strings/browser/bot_challenge/sites/openai.com.md) — `binary-strings/browser/bot_challenge/sites/openai.com.md`
-- [paypal.com.md](../../binary-strings/browser/bot_challenge/sites/paypal.com.md) — `binary-strings/browser/bot_challenge/sites/paypal.com.md`
-- [pinimg.com.md](../../binary-strings/browser/bot_challenge/sites/pinimg.com.md) — `binary-strings/browser/bot_challenge/sites/pinimg.com.md`
-- [pinterest.com.md](../../binary-strings/browser/bot_challenge/sites/pinterest.com.md) — `binary-strings/browser/bot_challenge/sites/pinterest.com.md`
-- [qualtrics.com.md](../../binary-strings/browser/bot_challenge/sites/qualtrics.com.md) — `binary-strings/browser/bot_challenge/sites/qualtrics.com.md`
-- [rakuten.co.jp.md](../../binary-strings/browser/bot_challenge/sites/rakuten.co.jp.md) — `binary-strings/browser/bot_challenge/sites/rakuten.co.jp.md`
-- [reddit.com.md](../../binary-strings/browser/bot_challenge/sites/reddit.com.md) — `binary-strings/browser/bot_challenge/sites/reddit.com.md`
-- [resy.com.md](../../binary-strings/browser/bot_challenge/sites/resy.com.md) — `binary-strings/browser/bot_challenge/sites/resy.com.md`
-- [shop.app.md](../../binary-strings/browser/bot_challenge/sites/shop.app.md) — `binary-strings/browser/bot_challenge/sites/shop.app.md`
-- [shopback.com.md](../../binary-strings/browser/bot_challenge/sites/shopback.com.md) — `binary-strings/browser/bot_challenge/sites/shopback.com.md`
-- [shopify.com.md](../../binary-strings/browser/bot_challenge/sites/shopify.com.md) — `binary-strings/browser/bot_challenge/sites/shopify.com.md`
-- [snapchat.com.md](../../binary-strings/browser/bot_challenge/sites/snapchat.com.md) — `binary-strings/browser/bot_challenge/sites/snapchat.com.md`
-- [starbucks.com.md](../../binary-strings/browser/bot_challenge/sites/starbucks.com.md) — `binary-strings/browser/bot_challenge/sites/starbucks.com.md`
-- [stripe.com.md](../../binary-strings/browser/bot_challenge/sites/stripe.com.md) — `binary-strings/browser/bot_challenge/sites/stripe.com.md`
-- [target.com.md](../../binary-strings/browser/bot_challenge/sites/target.com.md) — `binary-strings/browser/bot_challenge/sites/target.com.md`
-- [temu.com.md](../../binary-strings/browser/bot_challenge/sites/temu.com.md) — `binary-strings/browser/bot_challenge/sites/temu.com.md`
-- [tiktok.com.md](../../binary-strings/browser/bot_challenge/sites/tiktok.com.md) — `binary-strings/browser/bot_challenge/sites/tiktok.com.md`
-- [tradingview.com.md](../../binary-strings/browser/bot_challenge/sites/tradingview.com.md) — `binary-strings/browser/bot_challenge/sites/tradingview.com.md`
-- [turo.com.md](../../binary-strings/browser/bot_challenge/sites/turo.com.md) — `binary-strings/browser/bot_challenge/sites/turo.com.md`
-- [twimg.com.md](../../binary-strings/browser/bot_challenge/sites/twimg.com.md) — `binary-strings/browser/bot_challenge/sites/twimg.com.md`
-- [united.com.md](../../binary-strings/browser/bot_challenge/sites/united.com.md) — `binary-strings/browser/bot_challenge/sites/united.com.md`
-- [walmart.com.md](../../binary-strings/browser/bot_challenge/sites/walmart.com.md) — `binary-strings/browser/bot_challenge/sites/walmart.com.md`
-- [x.com.md](../../binary-strings/browser/bot_challenge/sites/x.com.md) — `binary-strings/browser/bot_challenge/sites/x.com.md`
-- [yahoo.co.jp.md](../../binary-strings/browser/bot_challenge/sites/yahoo.co.jp.md) — `binary-strings/browser/bot_challenge/sites/yahoo.co.jp.md`
-- [yahoo.com.md](../../binary-strings/browser/bot_challenge/sites/yahoo.com.md) — `binary-strings/browser/bot_challenge/sites/yahoo.com.md`
-- [youtube.com.md](../../binary-strings/browser/bot_challenge/sites/youtube.com.md) — `binary-strings/browser/bot_challenge/sites/youtube.com.md`
-- [zillow.com.md](../../binary-strings/browser/bot_challenge/sites/zillow.com.md) — `binary-strings/browser/bot_challenge/sites/zillow.com.md`
 
 ## reference (3)
 

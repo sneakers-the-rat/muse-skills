@@ -80,9 +80,7 @@ Finish each turn with `mail_task.finish_turn`. Waiting ends this turn and leaves
 
 ### Approval cards
 
-- Every send waits for the user's approval card unless every recipient is one of the user's own verified addresses.
-
-- A reply in a thread the user added you to from a verified address goes out without a card, while the user's setting allows it, when that address stays on To or CC and every recipient is already in the thread. Send there only what the task's instructions ask for.
+- A send to anyone other than the user's own verified addresses can wait for the user's approval card.
 
 ### Email the owner
 

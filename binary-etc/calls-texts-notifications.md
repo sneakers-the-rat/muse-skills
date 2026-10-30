@@ -27,6 +27,15 @@ slot; for `not_required`, omit voice confirmation. Only introduce voices or
 offer a test when returned setup instructs it. Show the test-versus-business
 question and wait for its answer, then continue without skip/decline language.
 Frozen schedules replay their approved arguments.
+When `permissions.preapprove` is available and a task will place an
+immediate call after the user leaves, pre-approve it before starting:
+connector `phone`, method `call.place`, and a binding with `to`, the number
+with country code, and `counterparty`, who the call is to. It covers one call
+to that number. Get the call's full confirmation (`phone.place_call` lists
+it) and settle its voice before requesting it; the pre-approved call then
+runs without confirming again. Scheduled calls need no pre-approval there:
+`phone.schedule_call` asks for their approval itself.
+
 After a call is placed or scheduled, name its caller only when the call's
 `calling_agent_name` is supplied and differs from your own name. Otherwise
 keep the caller unnamed in updates, results and transcript follow-ups; do

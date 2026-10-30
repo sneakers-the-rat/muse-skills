@@ -1,1 +1,0 @@
-../../../binary-skills/network-block/SKILL.md

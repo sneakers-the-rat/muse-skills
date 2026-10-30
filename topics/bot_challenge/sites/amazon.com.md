@@ -1,1 +1,0 @@
-../../../binary-strings/browser/bot_challenge/sites/amazon.com.md

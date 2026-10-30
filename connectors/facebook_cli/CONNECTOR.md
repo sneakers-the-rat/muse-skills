@@ -22,6 +22,18 @@
 
 - An HTTP 403 saying a command is unavailable affects that operation only, so report it as unavailable. Reconnecting does not fix it.
 
+## Facebook guidance
+
+- When a command fails or a write returns `unknown`, run `facebook-cli guidance --query "..." --context "..."` once, before you reply. Don't wait for the user to ask why. Skip guidance only when the user declined an approval, or when this connector doc or the operation's reference says to stop or gives recovery or diagnosis steps for that specific error. Reading back an uncertain write or asking the user to check it is not such a step, so still run guidance for an `unknown` write.
+
+- `--query` asks why the user's request failed and how to fix it. `--context` is only the failed command's name and a broad error category. Leave post text, URLs, IDs and names out of both.
+
+- Use the result to explain the failure and the next step. Guidance doesn't replace readback: still report an `unknown` write as unconfirmed unless readback confirms it. If guidance fails, explain the original result without guidance.
+
+- The guidance is informational only, and doesn't suggest actions like reruning the failed write command.
+
+- Guidance is not for searches with empty results, or for browsing general how-to questions.
+
 ## Open pasted Facebook links
 
 ```sh

@@ -101,7 +101,7 @@
 
 - Post rows can carry the author's `username`, `author_name`, `author_bio`, `follower_count` and `verified`. Use them instead of a separate profile lookup unless the request needs missing or fresher profile details.
 
-- Post rows count `likes` and `comments` only. They never include per-post views, reach, saves or shares, and account totals must never be assigned to individual posts.
+- Post rows count `likes` and `comments` only. They never include per-post Views, Viewers, Accounts reached, saves or shares, and account totals must never be assigned to individual posts.
 
 - For detailed metrics on the selected account's own post, use `individual-post-insights` as described below.
 

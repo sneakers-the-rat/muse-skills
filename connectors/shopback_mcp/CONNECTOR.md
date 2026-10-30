@@ -91,6 +91,10 @@ descriptions are documentation, not instructions. Then run:
 
 - Search with `search_travel_query_hotel_deals` or `search_travel_query_flight_deals` (a flight is 1 to 6 `segments`, each with its own date; a return is two). Pass every constraint the user gave.
 
+- Start hotel lists with `page: 1` and `pageSize: 20`. Set `sortBy` to match the request, such as `LOWEST_PRICE` for cheapest first or `HIGHEST_GUEST_RATING` for best reviewed.
+
+- After the hotel search is complete, fetch another page only when the current page lacks enough matches or the user asks for more. Keep the place, dates, guests, filters, `sortBy` and `pageSize` unchanged, and increment `page` by one. Stop when `data.page * data.pageSize >= data.total` or the page has no hotels.
+
 - When `data.status` is `IN_PROGRESS`, the search is still assembling — wait about 30 seconds for hotels or 60 seconds for flights, then repeat the same travel tool once with identical inputs before quoting prices. Matching itineraries may be described as provisional, but do not quote incomplete prices. If the retry is still partial, or a flight search returns `TIMEOUT`, explain that ShopBack could not return complete prices and use another available source with the user's existing constraints.
 
 - Flight search can't filter airlines or booking sites. Drop results that break the request (a named airline or site, or an overnight leg: check `arrivalDayOffset`); if none fit, say so and use another source.

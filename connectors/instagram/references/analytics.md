@@ -20,6 +20,8 @@
 
 - `analytics-metric-metadata` resolves a metric's display name and definition, and `--metric-name` can repeat. Use the returned display name and definition verbatim. Omit a metric that has no display name, and never invent a missing definition.
 
+- The account **Viewers** key is `instagram_organic_account_content_meta_viewer_count`, optional during rollout. Follow [Audience metric selection](account-insights-metrics.md#audience-metric-selection) for selection, labels and availability.
+
 - `analytics-account-insights` reads the selected account's metrics. For several owned accounts, call it once per account. Add `--include-time-series` when the question needs a trend.
 
 - It defaults to `last-28d`. Follow [Read account insights](../CONNECTOR.md#read-account-insights) for command selection and supported windows, and [Account analytics results](account-analytics-results.md) for metric interpretation.
@@ -38,11 +40,13 @@
 
 ## Owned media results
 
+- The media **Viewers** key is `instagram_organic_media_content_meta_viewer_count`. Follow [Audience metric selection](account-insights-metrics.md#audience-metric-selection) for the legacy publication cutoff, labels and availability.
+
 - Resolve requested metrics with `analytics-metric-metadata`. `individual-post-insights` does not return a content type. When matching media metadata establishes the type, use `--content-type reel`, `feed` for feed posts or carousels, `story`, or `live_video`. Omit the flag when the type is unknown. Preserve returned units and estimate status.
 
 - Missing or `null` values are unavailable, not zero. Paid/organic splits apply only when returned. Rates and shares are fractions (`0.125` means 12.5%); follower shares under `instagram_organic_media_content_views_count` describe organic views, not distinct accounts or paid-inclusive views.
 
-- `has_paid_traffic_in_window` reflects positive paid traffic in available lifetime metrics; false or a missing split does not prove there was no paid distribution. Reach, rates and watch time retain their returned organic basis. The catalog does not specify watch-time duration units, so keep them unchanged and identify the unit as unknown.
+- `has_paid_traffic_in_window` reflects positive paid traffic in available lifetime metrics; false or a missing split does not prove there was no paid distribution. Accounts reached, Viewers, rates and watch time retain their returned organic basis. The catalog does not specify watch-time duration units, so keep them unchanged and identify the unit as unknown.
 
 ## Read the results correctly
 
