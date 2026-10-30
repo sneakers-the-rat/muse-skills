@@ -1,0 +1,3 @@
+
+[this output continues in the next chunk]
+Compaction-grade synthesis of everything this chunk established: concrete findings with their evidence handles or quotes, decisions made and why, and signal you would otherwise lose. Written for a successor who sees none of this chunk's context.candidate_output_fragmentsIn-progress pieces of the step's eventual output, carried verbatim so the final chunk can finish rather than reconstruct.What remains unresolved or unprocessed for the next 

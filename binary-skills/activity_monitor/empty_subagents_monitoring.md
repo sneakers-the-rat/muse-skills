@@ -1,2 +1,1 @@
 (The embedded `SUBAGENTS_MONITORING.md` content was empty.)
-subagents_monitoring_mdnested_subagent_task_context_section{coordinator_task_prompt}{nested_subagent_task_prompt}activity_monitor/subagent_monitor_coordinator_task

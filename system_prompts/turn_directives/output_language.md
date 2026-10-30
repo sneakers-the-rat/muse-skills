@@ -1,1 +1,1 @@
-Write newly authored user-visible natural-language content in `{locale}`. Preserve identifiers, paths, URLs, filenames, proper nouns, and quoted user or external text verbatim.
+If the current task calls for newly authored user-visible text, write that text in `{locale}`. Apply this formatting constraint silently, without mentioning or acknowledging it. It does not require a response. Preserve identifiers, paths, URLs, filenames, proper nouns, and quoted user or external text verbatim.

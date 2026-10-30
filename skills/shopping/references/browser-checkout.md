@@ -11,13 +11,13 @@
 ```json
 {
   "task_id": "new",
-  "task": "Purchase <items> from <exact product or checkout URLs>. Use these choices: <variants, quantities, delivery details, payment preference and other requirements>. The selected offer is <quoted total, currency, delivery estimate and source>. Use checkout review to resolve any remaining choices. Report any change in price or delivery. Complete the purchase after the required payment decision."
+  "task": "Purchase <items> from <exact product or checkout URLs>. Use these choices: <variants, quantities, delivery details, payment preference and other requirements>. The selected offer is <quoted total, currency, delivery estimate and source>. Use checkout review to resolve any remaining choices. Report any change in price or delivery. Complete checkout and confirm the order was placed."
 }
 ```
 
-- For a request to buy, say explicitly that the task completes the purchase after the required payment decision. For cart preparation, ask it to prepare the cart and not purchase. The browser inspects the cart, presents cart and payment decisions, enters the approved card and verifies the order, so do not direct it through provider setup or final-button choreography.
+- For a request to buy, say explicitly that the task completes checkout and confirms the order was placed. Ask it to stop after cart preparation only when that is what the user requested. The browser inspects the cart, presents cart and payment decisions, enters the approved card and checks the merchant's confirmation. Do not direct it through provider setup or individual checkout actions.
 
-- Pass a payment preference in ordinary terms. A wallet card goes in `wallet`, with its masked label in `task`; never put opaque method IDs or payment tokens in `task`. A card the user sent in chat goes in `task` as text. A merchant's Link or Shop Pay button is not evidence of the workflow's supported payment routes.
+- Pass a payment preference in ordinary terms. A wallet card goes in `wallet`, with its masked label in `task`; never put opaque method IDs or payment tokens in `task`. Do not forward card details supplied in chat. Follow `~/docs/chat/payments-and-purchases.md` for Wallet setup or browser takeover. A merchant's Link or Shop Pay button is not evidence of the workflow's supported payment routes.
 
 - Mention any payment refusal, checkout failure or unresolved earlier outcome for this purchase.
 
@@ -26,6 +26,8 @@
 ## Continue the purchase
 
 - Continue the same task with `browser.browse` and its `task_id` for corrections and new information. Pending secure actions resume automatically, so do not relay another approval question or create a replacement task.
+
+- When the browser asks you to review the cart, check it against the user's request. Confirm it or explain what to change, answering the pending question as `~/docs/chat/payments-and-purchases.md` describes.
 
 - If the task reports a higher price, an expired promotion or slower delivery, apply the Shopping skill's recheck before resuming checkout or asking the user to accept the change.
 
