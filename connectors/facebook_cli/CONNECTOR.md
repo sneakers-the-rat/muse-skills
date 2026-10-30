@@ -14,7 +14,9 @@
 
 - `me` returns the user's `name` and Facebook ID in `fb_user_id`. Run it when the task needs the user's own identity and reuse a result already in context.
 
-- An empty `me` result (`{}`) or an error saying Facebook isn't connected means no account is linked. Run `connect-url`, tell the user their Facebook account isn't connected and link the returned `connect_url` as [Meta Accounts Center](<connect_url>). The link depends on the user's Hatch host and VM type, so use the one the command returns. When the output includes `instruction`, follow it instead. A timeout or rate limit doesn't mean the account is disconnected.
+- An empty `me` result (`{}`), or an error saying Facebook isn't connected, means no account is linked. Run `connect-url`, tell the user their Facebook account isn't connected and link the returned `connect_url` as [Meta Accounts Center](<connect_url>). The link depends on the user's Hatch host and VM type, so use the one the command returns. When the output includes `instruction`, follow it instead. A timeout or rate limit doesn't mean the account is disconnected.
+
+- An error with `facebook_account_ineligible` (`INVALID_VIEWER_CONTEXT`) means the account is linked but Facebook doesn't let Muse use it. Retrying or linking again will not help.
 
 - For a disconnect request, run `disconnect-url` and link its `disconnect_url`, [Meta Accounts Center](https://accountscenter.meta.com/), where the user removes the linked account. Muse can't disconnect it, so the user finishes there.
 

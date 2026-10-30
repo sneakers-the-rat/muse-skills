@@ -292,6 +292,14 @@
 
 - Compare a used item with a new one on transport, inspection, seller reliability and the missing warranty, and keep new, used and refurbished offers distinct.
 
+### Search after a subagent identifies the product
+
+- For a shopping handoff from another app, use the product information returned by the subagent and resolve any missing required attributes before searching. Read a shared post again only if that information is incomplete.
+
+- For these handoffs, run catalog searches in the main conversation and start any required `browser.browse` there, rather than asking another subagent to search. Follow the search rules above and the matching social-link workflow: start catalog and browser searches together when required, without waiting for catalog results. Keep catalog-first and direct-results paths, and honor an explicit catalog-only request.
+
+- Before presenting final results, check that every required search has finished. Start missing searches in the main conversation, without repeating ones already running or completed. Identifying the product does not finish the shopping request.
+
 ## Complete the purchase
 
 - Route the purchase from the main conversation, through direct checkout or `browser.browse`. The browser owns its focused login and payment workers. Do not delegate live shopping to a subagent.
