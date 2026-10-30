@@ -136,6 +136,7 @@ catalog_results=$(mktemp "${TMPDIR:-/tmp}/shopping-catalog-search.XXXXXX")
 
 ## Read the results
 
+<!-- product-search-improvements-off-only:start -->
 - Preview products while keeping their IDs and leaving out image URLs:
 
 ```text
@@ -156,6 +157,40 @@ jq -r '
 - Keep `product_id` in every projection you print, because `shopping.resolve_results` selects by it. Pass the original results file to the resolver so the signed image URLs reach the cards without entering your reply.
 
 - Select only products that have a `url`, `name` and `image_url`, because `shopping.resolve_results` rejects the whole call when a selected catalog product lacks one.
+<!-- product-search-improvements-off-only:end -->
+<!-- product-search-improvements-on-only:start -->
+<!-- catalog-search-v1-only:start -->
+- Preview products while keeping their IDs and leaving out image URLs:
+
+```text
+jq -r '.products[0:20][] | [.product_id, .brand, .name, (.sale_price // .price), .seller_type, .seller_quality, .rating, .size] | @tsv' "$catalog_results"
+```
+
+- Check every result against each firm requirement before selecting it, because `--prefer-brand` and `--domain` can backfill with others. For example, keep only one seller's products at or under 100.00:
+
+```text
+jq -r '
+  .products[]
+  | select(.url // "" | test("^https?://([^/]+\\.)?nordstrom\\.com(/|$)"))
+  | select(((.sale_price // .price // "") | gsub("[^0-9.]"; "")) as $p | $p != "" and ($p | tonumber) <= 100)
+  | [.product_id, .brand, .name, (.sale_price // .price), .seller_type, .seller_quality] | @tsv
+' "$catalog_results"
+```
+
+- Keep `product_id` in every projection you print, because `shopping.resolve_results` selects by it. Pass the original results file to the resolver so the signed image URLs reach the cards without entering your reply.
+
+- Select only products that have a `url`, `name` and `image_url`, because `shopping.resolve_results` rejects the whole call when a selected catalog product lacks one.
+<!-- catalog-search-v1-only:end -->
+<!-- catalog-search-v2-only:start -->
+- Choose products from the preview instead of listing the results file.
+
+- Check every result against each firm requirement before selecting it, because `--prefer-brand` and `--domain` can backfill with others. When the user requires a retailer you passed with `--domain`, select only rows whose `domain_match` is `y`, or, for rows read with `jq`, whose `url` host is that domain or one of its subdomains.
+
+- The preview leaves out URLs, so read `[.product_id, .url]` with one `jq` call for just the products you verify.
+
+- Every product in the results file has the `url`, `name` and `image_url` that `shopping.resolve_results` needs.
+<!-- catalog-search-v2-only:end -->
+<!-- product-search-improvements-on-only:end -->
 
 - Each product has `product_id`, `url`, `name`, `brand`, `price`, `currency`, `description` and `image_url`, plus `sale_price` only when the source shows a real sale. When known, it adds `color`, `material`, `size`, `gender`, `category` and `rating`.
 
