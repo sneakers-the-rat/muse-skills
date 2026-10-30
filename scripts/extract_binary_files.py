@@ -24,6 +24,14 @@ extractor reads each one at its own authority level, in one pass:
      separators; markers are censused, clustered, sliced to the next
      marker and validated. Used only for files no mechanism above
      covers, and reported as such.
+  6. Agent definitions — the sub-agent registry is stored as
+     consecutive TOML documents in .rodata, each document starting
+     at its `id = "<agent id>"` line and running to the next
+     document's start; an entry name (the id itself) abuts some
+     documents and is stored elsewhere for others, so the documents
+     are anchored on their own first line, delimited by the next
+     anchor, and validated field-by-field. These names carry no
+     path and no extension, so no mechanism above can see them.
 
 A file covered by a higher mechanism is never taken from a lower one.
 The manifest records {source, target, offset} per file exactly as
@@ -51,6 +59,11 @@ binary-strings/, and system-prompt/ became system_prompts/):
   session/, chat/, devices/, voice/, activity_monitor/, channels/,
   chat-connections/, shopping/
                     -> binary-skills/<root>/  (the real multi-file roots)
+  agent-definitions/<id>.toml
+                    -> binary-strings/agent-definitions/<id>.toml
+                       (mechanism 6: the embedded entry name is the
+                       bare agent id; the .toml is archive-side naming
+                       for its TOML content)
   anything else     -> binary-etc/<source>  (unsorted; the snapshot hook
                       holds NEW binary-etc files out of the commit and
                       asks the user to classify them — see sync-skills.sh)
@@ -126,6 +139,8 @@ def clean_path(raw):
 
 def target_for(source):
     top, _, rest = source.partition("/")
+    if top == "agent-definitions":
+        return f"binary-strings/{source}"
     if top == "browser":
         return f"binary-strings/{source}"
     if top == "self_improvement":
@@ -236,6 +251,80 @@ def validate(body, is_last):
     if text[0].islower() and not re.match(r"^[a-z_]+:", text):
         return "starts mid-sentence (a mention, not a file start)"
     return None
+
+
+# ---------------------------------------------------------------------
+# Agent definitions (mechanism 6): the sub-agent registry is a run of
+# consecutive TOML documents in .rodata. Each document begins with
+# `id = "<agent id>"` followed by a `name = ` line; the next document
+# begins at the next such anchor (an entry name — the id itself —
+# abuts some documents, so an anchored document's slice ends that
+# many bytes before the next anchor). A document is accepted only if
+# it carries the registry's required fields and every line is
+# TOML-shaped; anything else wearing the anchor is reported as a
+# rejected candidate, never silently dropped.
+# ---------------------------------------------------------------------
+
+AGENT_DEF_ANCHOR = re.compile(rb'id = "([a-z0-9_]+)"\nname = "')
+AGENT_DEF_LINE = re.compile(
+    rb'^[A-Za-z_]+ = |^    "|^    [A-Za-z_]|^#|^\]|^\[\[|^\[|^$')
+AGENT_DEF_REQUIRED = (b'\nmodel = "', b'\nprovider = "',
+                      b'\ntool_loading = "', b'\ntools = ')
+
+
+def _agent_def_invalid(block):
+    """Return None if the slice is a whole agent definition, else a
+    reason."""
+    if b"\x00" in block:
+        return "NUL bytes in slice"
+    try:
+        block.decode("utf-8")
+    except UnicodeDecodeError:
+        return "slice is not UTF-8"
+    for req in AGENT_DEF_REQUIRED:
+        if req not in block:
+            return f"missing required field {req.decode().strip()}"
+    for line in block.split(b"\n"):
+        if not AGENT_DEF_LINE.match(line):
+            return f"non-TOML line: {line[:60]!r}"
+    return None
+
+
+def agent_definitions(data):
+    """Census the agent-definition registry. Returns
+    ({id: (content_offset, body)}, [problem strings])."""
+    cands = [(m.start(), m.group(1))
+             for m in AGENT_DEF_ANCHOR.finditer(data)]
+    found = {}
+    problems = []
+    for idx, (start, aid_b) in enumerate(cands):
+        aid = aid_b.decode()
+        if idx + 1 < len(cands):
+            nstart, nid = cands[idx + 1]
+            end = nstart - len(nid) \
+                if data[nstart - len(nid):nstart] == nid else nstart
+            block = data[start:end].rstrip(b"\n")
+        else:
+            # Last document: its end is not delimited by a successor,
+            # so take a generous window and trim trailing lines that
+            # are not part of the document.
+            block = data[start:start + MAX_FILE].rstrip(b"\n")
+            while block and _agent_def_invalid(block) is not None:
+                nl = block.rfind(b"\n")
+                if nl == -1:
+                    block = b""
+                    break
+                block = block[:nl]
+        why = _agent_def_invalid(block)
+        if why is not None:
+            problems.append(f"agent-def {aid}: {why}")
+            continue
+        if aid in found:
+            problems.append(f"agent-def {aid}: duplicate id, "
+                            "first occurrence kept")
+            continue
+        found[aid] = (start, block)
+    return found, problems
 
 
 # ---------------------------------------------------------------------
@@ -635,7 +724,8 @@ def main():
         try:
             old = json.loads(manifest_path.read_text())
             oldbin = old["bins"][0]
-            if oldbin["sha256"] == sha and all(
+            if oldbin["sha256"] == sha and \
+                    oldbin.get("agent_definitions") is not None and all(
                     (REPO / c["target"]).exists()
                     for c in oldbin["contents"]):
                 print(f"binary unchanged ({sha[:12]}…); extraction skipped")
@@ -736,9 +826,9 @@ def main():
         return 1
 
     # ---- merge by authority: table > slice > struct > register > heur.
-    RANK = {"table": 7, "slice": 6, "descriptor-struct": 5,
-            "descriptor-register": 4, "matcher": 3,
-            "descriptor-general": 2, "heuristic": 1}
+    RANK = {"table": 7, "agent-def": 7, "slice": 6,
+            "descriptor-struct": 5, "descriptor-register": 4,
+            "matcher": 3, "descriptor-general": 2, "heuristic": 1}
     found = {}   # source -> (offset, body, via)
     rank = {}
 
@@ -798,6 +888,14 @@ def main():
     for s, (cfo, ln) in d_match.items():
         if target_for(s) is not None:
             put(s, cfo, data[cfo:cfo + ln], "matcher")
+    # agent definitions (mechanism 6): anchored TOML documents whose
+    # entry names are bare ids — invisible to every path-based
+    # mechanism above, so they merge here on their own authority
+    d_agents, agent_problems = agent_definitions(data)
+    for aid, (cfo, body) in d_agents.items():
+        put(f"agent-definitions/{aid}.toml", cfo, body, "agent-def")
+    for p in agent_problems:
+        print(f"  SKIP {p}", file=sys.stderr)
     problems = [p for p in problems if p not in found]
 
     # ---- write ---------------------------------------------------------
@@ -827,6 +925,7 @@ def main():
     # binary-strings/browser/{bot_challenge,errors.csv} belong to the
     # topical string extractions and are never pruned from here.
     MANAGED_ROOTS = ["system_prompts", "binary-skills", "binary-etc",
+                     "binary-strings/agent-definitions",
                      "binary-strings/artifacts",
                      "binary-strings/browser/instructions",
                      "binary-strings/browser/site-config",
@@ -867,6 +966,9 @@ def main():
         "sha256": sha,
         "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "size": len(data),
+        "agent_definitions": sum(
+            1 for c in contents
+            if c["target"].startswith("binary-strings/agent-definitions/")),
         "contents": contents,
     }]}
     (REPO / "binary-map.json").write_text(json.dumps(manifest, indent=2) + "\n")
