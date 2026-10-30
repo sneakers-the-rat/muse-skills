@@ -110,4 +110,4 @@ Finish each turn with `mail_task.finish_turn`. Waiting ends this turn and leaves
 
 - Download an attachment to inspect it after checking the message's handling rules, because metadata does not show content.
 
-- Attach each outgoing file with its own `--attachment '<workspace-path>'`, up to 10 files and 10 MiB in total. Add `::MIME_TYPE` only when the extension does not identify the type, such as `report.pdf::application/pdf`.
+- Attach each outgoing file with its own `--attachment '<workspace-path>'`, up to 10 files and 25 MiB in total. Add `::MIME_TYPE` only when the extension does not identify the type, such as `report.pdf::application/pdf`.

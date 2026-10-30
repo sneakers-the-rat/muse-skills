@@ -323,7 +323,7 @@ function createCtx(
   // artifacts, so a view-only recipient's data access is the DB and blobs,
   // guarded here.
   const denyWrite = (): never => {
-    throw new SpaceActionForbiddenError(READ_ONLY_DENIAL_MESSAGE);
+    throw new SpaceActionForbiddenError(READ_ONLY_DENIAL_MESSAGE, "view_only");
   };
   const blobs = createBlobClient(env);
   return {
