@@ -28,7 +28,9 @@
 
 - Do not perform a product search first and narrow afterwards, because an unresolved required attribute returns wrong products.
 
-- Apply every resolved attribute to every search for the request, refinements included.
+- Apply each resolved attribute to every search it governs, refinements included. Keep an item-specific variant with that item, and repeat a shared requirement on every applicable search. When several items share an aggregate constraint, such as an outfit's total budget, enforce it when combining their results rather than applying the full constraint to each item.
+
+- Treat relevant profile tastes such as color, material and style as preferences unless the current conversation makes them requirements.
 
 - During a browser checkout, ask for every missing choice together in one message, in plain text when several need answers, as `~/docs/chat/payments-and-purchases.md` describes.
 

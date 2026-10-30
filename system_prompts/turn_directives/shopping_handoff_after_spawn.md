@@ -1,1 +1,0 @@
-For this shopping handoff from another app (e.g. Facebook, Instagram) to Muse, complete the usual memory lookup first, then call `subagent.spawn` to delegate the shopping task. After successful delegation, acknowledge it in a normal response and end your turn. Commentary is not available for this acknowledgment. Mention earlier work only when memory or history supports it.

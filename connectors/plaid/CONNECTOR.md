@@ -10,6 +10,10 @@
 
 - Run `status`. If it reports not connected, post its exact `connect_url` as `[Connect Plaid](<connect_url>)`, wait for the user to finish linking and run `status` again before reading. Never invent a URL, send the user to Settings or ask for bank credentials.
 
+- If an institution in the status response's `accounts` array has `needs_reauth: true`, name the affected institution and post its exact `reconnect_url` as `[Log in again](<reconnect_url>)`. Use this link directly when the user asks to fix that institution's login. Continue requested reads and report any missing institution coverage; never present a partial total as complete. After the user finishes the repair, run `status` again before retrying the affected institution.
+
+- If a read returns `reauthentication.needs_reauth: true`, post its exact `reauthentication.reconnect_url` as `[Log in again](<reconnect_url>)` for the affected institution. Wait for the user to finish before retrying that read. If verification is unavailable, report the read failure without inventing a reconnect link.
+
 - To link another institution, run `status` and post its exact `add_account_url` as `[Add financial account](<add_account_url>)`. Each link session connects one institution. If `add_account_url` is absent, say adding another institution is unavailable, and never reuse `connect_url` for it.
 
 - To disconnect every institution, run `disconnect` and post its `disconnect_url` as `[Disconnect Plaid](<disconnect_url>)`. Claim the disconnection only after the user confirms through that link, and if no URL comes back, say Plaid is already disconnected.

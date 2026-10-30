@@ -24,6 +24,8 @@
 
 - `checkout_preparation_rejected` preserves a known traveler-profile requirement during 3DS preparation. This attempt did not submit its order or payment; earlier bookings and funding remain unverified. Explain the required profile details and stop. Updating them or renewing permission does not resolve funding uncertainty or permit another purchase.
 
+- `checkout_pricing_stopped` means checkout stopped before 3DS and no order was sent. With `reason: purchase_terms_changed`, the card charge or terms changed after approval, and `changed_fields` says which; with `reason: quote_unavailable`, the approved price couldn't be confirmed. Tell the user which one and stop. The approved payment is still open, so rerunning `book` or `booking-status` can't continue this checkout, and another purchase could leave two payments open.
+
 - `held_payment_failed` preserves Duffel's failed status for the listed payment attempt on an existing order. Report those references and that status without inferring the current order status, other payments, refunds or hold release. Stop there, since another payment or a replacement purchase could duplicate effects that are still unknown.
 
 - `order_submission_rejected` means Duffel created no order for this submission, and this checkout is closed: rerunning `book` on the same offer, even with another card, returns the same rejection. Its `next_step` says what that allows. `requote` means the fare changed or is gone, and `change_payment` means the card was declined; for either, offer a new search and book the new offer only after a fresh approval, or the airline's own site. `fraud_rejected` means Duffel flagged the booking as a fraud risk, so another attempt here is likely to be refused too; offer the airline's own site. `fix_request` means the result doesn't say what Duffel objected to, so report the rejection and offer a new search with a fresh approval, or the airline's own site. `check_existing_booking` means Duffel reports an earlier booking or attempt for this offer, so run `booking-status` and leave the offer unbooked. An earlier attempt with an unknown outcome stays unresolved either way.
@@ -42,6 +44,6 @@
 
 - A success with `resource_authorization.persisted: false` is still a booking. Report it and warn that later management may be unavailable; booking again would create a second booking.
 
-- The same offer with the same booking data is the same checkout and can resume. A new offer starts another checkout and may place another hold, so it is a new purchase for the user to choose, not a retry.
+- The same offer with the same booking data is the same checkout and can resume, except after `checkout_pricing_stopped`. A new offer starts another checkout and may place another hold, so it is a new purchase for the user to choose, not a retry.
 
 - After success, report every carrier booking reference and ticket status from the receipt. A loyalty account marked `not_confirmed_on_order` is unconfirmed, not rejected. Suggest checking with the airline using the booking reference; rebooking would buy a second ticket.

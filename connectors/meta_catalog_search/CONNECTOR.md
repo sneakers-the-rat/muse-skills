@@ -33,16 +33,19 @@ catalog_results=$(mktemp "${TMPDIR:-/tmp}/meta-catalog-search.XXXXXX")
 <!-- catalog-search-v2-only:start -->
 - Run `/opt/hatch/bin/shopping catalog-search` with up to eight semantic `--query` values, using only as many as help. Write the results to a new file with `--out` and pass `--retries 2`. The default is 20 products per query, and `--num-results` or `-n` changes it.
 
-- Pass every user requirement as a flag on every search, the first one included. A requirement without its own flag, such as a size, model, variant or compatibility, goes in `--require`. A search with `--require` needs at least one `--query`, an image search included, and items with different requirements, such as different sizes, need separate searches.
+- Pass every requirement through its matching argument on every search it applies to, the first one included. A model, compatibility or other requirement without its own argument goes in `--require`, which needs at least one `--query`.
+
+- Size, color, and material apply to every `--query` in the command. Use separate commands for items that need different values.
 
 Example usage:
 - Base search showing the shared flags. `--intent` is optional:
 ```text
 catalog_results=$(mktemp "${TMPDIR:-/tmp}/shopping-catalog-search.XXXXXX")
 /opt/hatch/bin/shopping catalog-search \
-  --query "Nike men's cushioned daily training shoes from Nordstrom" \
+  --query "Nike men's cushioned daily training shoes US size 10 from Nordstrom" \
   --category footwear --gender male --restrict-brand Nike \
-  --require "US men's size 10" \
+  --size "US men's size 10" \
+  --require "wide fit" \
   --domain nordstrom.com --currency USD --max-price 12000 \
   --retries 2 --out "$catalog_results"
 ```
@@ -101,6 +104,12 @@ catalog_results=$(mktemp "${TMPDIR:-/tmp}/shopping-catalog-search.XXXXXX")
 - `--restrict-brand` takes one brand the user limits acceptable results to. Repeat it for multiple brands.
 
 - `--prefer-brand` takes one brand the user favors but does not require. Repeat it for multiple brands. Also include each preferred brand in a `--query` with the product requirements.
+
+- `--size` takes one size to use for this search. Repeat it for multiple sizes.
+
+- `--color` takes one color to use for this search. Repeat it for multiple colors.
+
+- `--material` takes one material to use for this search. Repeat it for multiple materials.
 
 - Always pass `--domain` when the user names a retailer, giving its hostname without a scheme, path or port. Repeat it for multiple retailers.
 
