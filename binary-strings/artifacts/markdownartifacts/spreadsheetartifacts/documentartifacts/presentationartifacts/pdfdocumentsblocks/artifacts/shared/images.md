@@ -62,5 +62,4 @@ Before returning any link, verify the backing file exists under your contract's 
 
 At delivery, name any details you assumed on the user's behalf, and claim only output properties the validation pass actually rendered and checked.
 MEMORY.md# Room memory
-room MEMORY.md must be a regular fileside-chat memory directory must not be a symlinkcurrent_location_coordinate_guidanceideas_builder_avatar_schedule_guidanceartifact_generated_image_guidanceweb_builder_generated_media_source_guidanceweb_builder_generated_media_fallback_guidanceweb_builder_runtime_media_guidanceAudio notesPast conversationsRead the original messages with `chat.read_messages`, using the result's `message_id`. Set `before` and `after` to include surrounding user and assistant messages.
-Read more with `muse.memory_get`, using the result's file `path` and starting line `from`. Set `lines` to include the surrounding context you need.
+room MEMORY.md must be a regular fileside-chat memory directory must not be a symlinkruntime.event_hookexecute_resolve_owner_versionexecute_resolve_agent_idexecute_resolve_generationruntime.execute_resolve_workerexecute_resolve_worker_resolveinjected-context watch requested outside a tokio runtime; skippingfailed to watch injected-context directoryfailed to create injected-context watcher; retrying 
