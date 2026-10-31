@@ -24,7 +24,7 @@
 
 - `checkout_preparation_rejected` preserves a known traveler-profile requirement during 3DS preparation. This attempt did not submit its order or payment; earlier bookings and funding remain unverified. Explain the required profile details and stop. Updating them or renewing permission does not resolve funding uncertainty or permit another purchase.
 
-- `checkout_pricing_stopped` means checkout stopped before 3DS and no order was sent. With `reason: purchase_terms_changed`, the card charge or terms changed after approval, and `changed_fields` says which; with `reason: quote_unavailable`, the approved price couldn't be confirmed. Tell the user which one and stop. The approved payment is still open, so rerunning `book` or `booking-status` can't continue this checkout, and another purchase could leave two payments open.
+- `checkout_pricing_stopped` means checkout stopped before 3DS and no order was sent. With `reason: purchase_terms_changed`, the card charge or selected seats changed after approval, and `changed_fields` says which; with `reason: quote_unavailable`, the approved price couldn't be confirmed. Tell the user which one and stop. The approved payment is still open, so rerunning `book` or `booking-status` can't continue this checkout, and another purchase could leave two payments open.
 
 - `held_payment_failed` preserves Duffel's failed status for the listed payment attempt on an existing order. Report those references and that status without inferring the current order status, other payments, refunds or hold release. Stop there, since another payment or a replacement purchase could duplicate effects that are still unknown.
 
