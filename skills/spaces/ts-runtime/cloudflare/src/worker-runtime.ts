@@ -9,6 +9,7 @@ import {
   readOnlyDatabase,
 } from "./read-only-access";
 import {
+  actionDescription,
   createPrivilegedExecutor,
   isAction,
   type AgentClient,
@@ -759,11 +760,15 @@ export function createWorker(
       if ("kind" in body) {
         if (actions.size > 0 && !await sharedStateAvailable(env.DB)) throw new SharedStateUnavailable();
         const names = [...new Set([...actions.keys()].map(normalizeActionName))].sort();
-        const data = names.map(action => ({
-          slug,
-          action,
-          request_schema: z.toJSONSchema(actions.get(action)!.request, { io: "input", unrepresentable: "any" }),
-        }));
+        const data = names.map(action => {
+          const definition = actions.get(action)!;
+          return {
+            slug,
+            action,
+            request_schema: z.toJSONSchema(definition.request, { io: "input", unrepresentable: "any" }),
+            description: actionDescription(definition),
+          };
+        });
         return jsonResponse({ data, version: 1 });
       }
 

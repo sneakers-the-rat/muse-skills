@@ -8,11 +8,11 @@
 
 ## Set up the mailbox
 
-- Run `mailbox get`. Reuse an existing mailbox and report its `email_address`.
-
-- When no mailbox exists, run `mail.setup_card`. Use `mailbox create` below only when its result says this chat can't show the card.
-
-- Create a mailbox only after the lookup confirms absence with `MAILBOX_NOT_FOUND`. Report any other error as it is, never as a missing mailbox, because a lookup does not authorize creation.
+- Run `mailbox get` and act on its result:
+  - A mailbox: reuse it and report its `email_address`.
+  - `MAILBOX_NOT_FOUND`: run `mail.setup_card`, and use `mailbox create` below only when its result says this chat can't show the card.
+  - `MAILBOX_TAKEN_DOWN`: the mailbox was disabled for a policy violation. Skip `mail.setup_card` and use `mailbox create` below, which replaces it.
+  - Any other error: report it as it is, never as a missing mailbox, because a lookup error does not authorize creation.
 
 - Use the handle and display name the user chose, and keep your proposal for any field they did not choose. Otherwise propose the main agent's current name in lowercase as the handle and `<main agent's name>, <user's preferred name>'s AI Assistant` as the display name.
 

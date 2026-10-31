@@ -8,6 +8,7 @@
 
 - Schema in `server/src/schema.ts`, migrations in `drizzle/*.sql`, action logic in `server/src/actions.ts`. The client calls typed server actions.
 - `ctx.db` for structured rows, `ctx.blobs` for binary payloads. After mutations, use `ctx.invalidateQueries` or the local query helper pattern.
+- Give each `defineAction` a one-sentence `description` for the user's agent.
 - Schema changes: update `server/src/schema.ts`, create a forward migration with `web_artifacts.new_migration`, edit the new `drizzle/<NNNN>_*.sql`, then build as below. Don't edit migrations already applied to `app.db`. In multi-statement SQL migrations, put `--> statement-breakpoint` on its own line between statements.
 - If an action needs native host capabilities (local files, installed CLIs, Node/Bun-only APIs, subprocesses), put that work in `server/src/privileged.ts` with `definePrivilegedContracts` and `definePrivilegedHandlers`, import descriptors from `@space/privileged`, declare them on the action, and call `ctx.executePrivileged`. Don't import `server/src/privileged.ts` from action-reachable code.
 

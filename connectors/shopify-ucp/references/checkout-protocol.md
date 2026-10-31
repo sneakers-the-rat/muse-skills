@@ -1,8 +1,22 @@
 # Shopify UCP checkout protocol
 
-- Use this protocol after the user selects catalog products from one Shopify merchant whose product details carry a `checkout_token`, or when the user asks about a native order confirmed in this conversation by a successful `checkout complete` or a successful `order get` after an unclear completion.
+- Use this protocol after the user selects catalog products from one Shopify merchant whose product details carry a `checkout_token`, after a browser completion result supplies a privately captured `shopify_cart`, or when the user asks about a native order confirmed in this conversation by a successful `checkout complete` or a successful `order get` after an unclear completion.
 
 - Every command runs as `/opt/hatch/bin/shopify-ucp-cli`, and every command except `order get` takes a JSON input file.
+
+## Use a captured storefront cart
+
+- After a browser completion result supplies `shopify_cart`, keep its exact `shopify_cart.browser_task_id` and currency. Skip catalog product checks and optional catalog cart commands for this source. Never request, copy or reconstruct the private cart ID, key or UCP endpoint.
+
+- Choose the payment route and prepare buyer details below before creation. If those rules require website checkout, continue the original browser task using `shopify_cart.browser_task_id`. Tell it to continue website checkout without capturing again. The runtime releases the unused capture before preparing browser payment.
+
+- Create the same buyer-and-currency input described below, using the currency read from checkout (ask if it is unknown), replacing the entire `items` field with `"browser_task_id": "<shopify_cart.browser_task_id>"`. Never provide both sources. One CLI invocation converts the captured cart and applies the prepared buyer and delivery details before returning its quote.
+
+- Never recapture. Retry captured-cart creation only when the CLI reports `buyer.email must contain @`, `buyer.country_code must be a two-letter ISO country code`, or `unsupported Shopify checkout currency`, with no `create_outcome` or checkout reference. These errors occur before the cart is claimed. Correct the draft from confirmed details, asking the user if needed, and run `checkout create` once more with the same `browser_task_id`. Missing `create_outcome` alone does not permit a retry. For any other failure with neither `create_outcome` nor a checkout reference, including a corrected attempt that still fails or cannot claim the cart, stop and report the unresolved outcome without switching routes. Catalog-token refresh instructions below do not apply to a captured cart.
+
+- When `create_outcome` is `rejected`, stop and report the rejection; if the user chooses website checkout, continue the original browser task without another capture. When `create_outcome` is `created` but `ok` is false, read `agent_state.checkout_id` with `checkout get` and address the reported issue, using `checkout update` for buyer corrections before reviewing the quote. Keep that checkout instead of reopening the original cart.
+
+- After successful creation, use the returned checkout and the completion rules below. A continuation URL alone does not require browser checkout. If the checkout requires buyer action or review, continue at its exact returned URL without reopening the original storefront cart.
 
 ## Check the products
 
@@ -105,21 +119,21 @@
 
   - `requires_buyer_input` and `requires_buyer_review` continue in the browser from the checkout URL.
 
-  - `unrecoverable` ends direct checkout, so explain it and offer browser checkout from the product URL.
+  - `unrecoverable` ends direct checkout, so explain it and offer browser checkout at the returned checkout URL. Only catalog checkouts may fall back to the original product URL; for a captured cart without a checkout URL, report the blocker.
 
 - Read `requested_currency`, `checkout_currency` and `currency_changed`. Shopify may choose a supported currency for the shipping destination, which is not an error and needs no browser fallback.
 
 - When the currency changed, use only the checkout currency and amounts from then on. Tell the user both currencies, explain that Shopify chose the market from the shipping address, and show the new item price and total.
 
-- After creation the checkout currency is fixed, and `checkout get` or `checkout update` fails if the merchant answers in another currency. Explain the failure and offer browser checkout from the checkout URL instead of retrying.
+- After the first usable quote is established, the checkout currency is fixed, and `checkout get` or `checkout update` fails if the merchant answers in another currency. Explain the failure and offer browser checkout from the checkout URL instead of retrying.
 
 - Recheck any budget against the checkout amounts. If the budget is in another currency and no user-approved equivalent exists, ask for a limit in the checkout currency, and never compare currencies as raw numbers or invent an exchange rate. The user approves the final quote in its own currency, and a decision about the catalog price does not cover it.
 
-- Take the checkout URL from `result.continue_url` or `result.checkout.continue_url`, or else use a selected product's original storefront URL. Never construct one. A continuation URL alone does not require browser completion.
+- Take the checkout URL from `result.continue_url` or `result.checkout.continue_url`, or, for a catalog checkout only, use a selected product's original storefront URL. If a captured checkout needs the browser but has no continuation URL, report the blocker. Never construct one. A continuation URL alone does not require browser completion.
 
 - An error containing `no_ucp_descriptor` means an item's `checkout_token` was missing, expired or did not match it. Run product-details for that product once more and retry with the new `checkout_token`. If it fails again, offer browser checkout from the product URL.
 
-- If creation fails or rejects an item for any other reason, explain the result and offer browser checkout from the original product URL without retrying. If the user accepts, follow `/opt/muse/skills/shopping/references/browser-checkout.md`.
+- If catalog creation fails or rejects an item for any other reason, explain the result and offer browser checkout from the original product URL without retrying. If the user accepts, follow `/opt/muse/skills/shopping/references/browser-checkout.md`.
 
 ## Choose direct or browser completion
 
@@ -245,6 +259,8 @@
 - Summarize the order status, products, merchant, final amount, delivery estimate and the returned confirmation link, without raw JSON, internal IDs, buyer contact details or the shipping address.
 
 - After a successful native completion, follow **Check order status** below to read the placed order and include its merchant order link in the completion summary. If that read fails, the successful completion still confirms the purchase: summarize its available fields, keep any returned confirmation link, and explain that current order details could not be read. Never repeat checkout to recover order details or a missing link.
+
+- For a captured checkout, once `checkout complete` or `order get` confirms the purchase, call `browser.browse` with the original `shopify_cart.browser_task_id` to display its confirmation. Open the exact returned merchant order, confirmation or status URL for that purchase; if none was returned, refresh the existing checkout tab once. Tell the browser the purchase completed through UCP and this task is display-only: do not fill forms, prepare checkout or pay again. Failure to display confirmation does not undo the confirmed purchase.
 
 - For a later status question about a native order confirmed in this conversation by successful `checkout complete` or `order get`, follow **Check order status** below. Keep a browser-completed Shop Pay or Link order on the browser-owned path.
 

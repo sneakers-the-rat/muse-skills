@@ -130,7 +130,13 @@ Artifact inventory, names, source locations and session associations.
 
 - `builtin_manifest_sha256` uses `text` and is nullable.
 
-  cloudflare_share_manifest_sha256 of the build artifact.add_builtin produced for a built-in app; a share of that exact build skips the text and disclosure reviews.
+  Approved digest of the complete publish manifest, icon and preview included, that artifact.add_builtin recorded for a built-in app; a matching share skips the text, credential and disclosure reviews, and also the image and video checks unless builtin_personalized is true.
+
+- `builtin_personalized` uses `boolean` and is required.
+
+  Default: `false`.
+
+  True when the recorded built-in copy carries the user's own Muse; a matching share still runs the image and video checks.
 
 ## Keys and relationships
 
