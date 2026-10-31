@@ -1,0 +1,19 @@
+update feed.run_steps
+                     set output_json = jsonb_set(
+                             case when jsonb_typeof(output_json) = 'object'
+                                  then output_json else '{}'::jsonb end,
+                             '{units}',
+                             coalesce(output_json->'units', '[]'::jsonb)
+                                 || jsonb_build_array($5::jsonb)),
+                         updated_at_ms = $6
+                     where run_id = $1 and step_id = $2 and attempt = $3
+                       and agent_id = $4 and status = 'running'
+                       and coalesce(jsonb_array_length(output_json->'units'), 0) < $7
+                     returning jsonb_array_length(output_json->'units')::bigintselect run_id, step_id, attempt, input_hash, status, agent_id, message_id,
+            output_json, error, started_at_ms, finished_at_ms, updated_at_ms
+     from feed.run_steps
+     where run_id = $1 and step_id = $2
+       and status = 'running'
+     order by attempt desc
+     limit 1select count(*) from feed.run_steps
+                     where run_id = $1 and step_id = $2

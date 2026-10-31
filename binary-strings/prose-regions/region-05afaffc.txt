@@ -1,0 +1,147 @@
+internal error: entered unreachable codeDRAFTTRASHCATEGORY_PROMOTIONSINBOXuser_messageidagent_messagetool_calllabelmetadata_jsontool_outputsuccessroot_user_message_idoutputinternally tagged enum ExecutionItemconnectorqueuedoutcomestateafterbeforeversionprocessed_throughin_progressfollow_through_retrieswindowattemptmarketplaceurlsent_atsharedstatusfoundambiguouswatermarkwatermark_idspage_tokennewestnewest_idshistory_idlinked_at_epoch_secsinitial_scanoffsetmessage_idsnext_page_tokenaccountaccount_idinitialized_atretry_windowscan_afterscan_beforeinitialconnectedregisteredsessionmessage_refdeleted_atdelete_messages_beforemessage_revokedmessage_deleted_for_mechat_clearedchat_deletedvariant index 0 <= i < 4this pair has already been serializedkeydestinationstarts_atends_atplaceslongituderadius_metersreferencequotesourcetitlebriefminutesschema_versioncall_idstream_idseqreceived_at_mshandoff_statusprovider_statussummarytranscriptstarted_atduration_msdisconnection_reasontranscript_unavailablecall_successfulin_voicemailuser_sentimenttwilio_call_sidmonitor_end_reasonnext_update_atfollow_up_offerquestion_idmsgcontent_hintssectionsubsectionindexsource_domainsfiltersdeveloper_messageurgencysend_aftersend_beforesend_timeframepayloadmessageowner_run_idpresentation_localeedition_idpresentationrow_idsletter_briefing_idskindssource_itemsdevice_typelatestuses_legacy_recordneeds_reauthtrackedthread_fbidlast_message_sent_atdisplay_namecontentfrom_meexpires_atsender_display_nameinitializeddigestsemantic_fingerprintpublication_revisionrestartcompleted_dayrecentformatchangesnext_cursordeletions_supported_metaengagement_idengagement_kindoperationsubjectpost_idpermalinkpost_created_atcaptionmedia_typetagged_location_nameconversation_idtimeframeexactsuggestion_iddecision_idofferletterfollow_upscaffoldssource_idsource_atdeletionsbody_partsattachmentsbody_completeattachments_completefewer elements in mapmap with a single keystring or mapfalseFailed to record a get opFailed to schedule write op for removegave up waiting for a socket-activated service to answerstill waiting for a socket-activated service to answersocket-activated service answered after waitingall branches are disabled and there is no else branchbackground task failederrorsocial link preview enrichment failedsocial link preview enrichment budget elapsedidea_idfailed to classify dogfood idea widgets for history hydrationfailed to prefetch idea widget records for history hydrationwrite_admissionwritepostgres write completed slowlypostgres write failedretrying idempotent postgres writehatch:db:operationcontext worker cancellation exceeded its cleanup deadlineruntime.voice_persistencevoice_post_call_persistencenothing_to_docall persistence cancelled before worker admissioncompleted call history does not belong to this voice conversationpost-call persistence cancellation terminal timed outfailed to close rejected post-call persistence workerfailed to close post-call persistence workerprivate maintenance settlement lostprivate maintenance settlement timed outone-shot postgres write invoked more than oncecompleted call history is unavailablepost-call persistence cancellation timed outselect distinct idea_id,
+                            metadata_json -> 'publication_hold' ->> 'fingerprint',
+                            metadata_json -> 'publication_hold' ->> 'reason'
+                       from ideas.idea_sources
+                      where idea_id = any($1::text[])
+                        and (source_namespace, source_kind) in (
+                          ('idea_share', 'pending_share'),
+                          ('user', 'http_create'),
+                          ('shared_www', 'shared_idea')
+                        )
+                        and metadata_json -> 'publication_hold' ->> 'fingerprint' is not null
+                        and metadata_json -> 'publication_hold' ->> 'reason' is not nulltransaction.acquire_and_beginregistry_lockselect id, domains from context.subscriptions where subscription_key = $1 for updatesubscription.lookup_for_updatedomainssources.enroll_previousinsert into context.subscriptions (id, subscription_key, domains) values ($1,$2,$3)subscription.insertupdate context.group_cursors g set lease_token=null, lease_expires_at=null, evidence_expires_at=null,
+                        window_position=null, batch_position=null, retry_at=null,
+                        available_position=coalesce((select max(e.append_position) from context.events e
+                          where e.source_id=g.source_id and e.group_id=g.group_id
+                          and e.append_position>g.acknowledged_position and e.append_position<=g.available_position
+                          and (e.expires_at is null or e.expires_at>statement_timestamp())
+                          and ($2 or e.content_hints && $3::text[])),g.acknowledged_position)
+                        where subscription_id=$1hints.reconcile_leasestransaction.commitsources.enroll_desiredupdate context.subscription_sources ss set active = ($2 or s.source_domain = any($3))
+                from context.sources s where ss.subscription_id = $1 and s.id = ss.source_idupdate context.group_cursors g set lease_token = null, lease_expires_at = null, evidence_expires_at = null
+                from context.subscription_sources ss where g.subscription_id = $1
+                and ss.subscription_id = g.subscription_id and ss.source_id = g.source_id and not ss.activeleases.invalidate_removedupdate context.subscriptions set domains = $2, updated_at = now() where id = $1 and domains <> $2coverage.updateen-USphone live transcript observation unavailablewith candidates as (
+                       select work_id,
+                              state as prior_state,
+                              lease_owner as prior_lease_owner,
+                              heartbeat_at as prior_heartbeat_at,
+                              deadline_at as prior_deadline_at,
+                              (metadata_json::jsonb)->>'schedule_reason'
+                                as prior_schedule_reason,
+                              (metadata_json::jsonb)->>'maintenance_occurrence'
+                                as occurrence,
+                              (metadata_json::jsonb)->>'maintenance_attempt'
+                                as attempt,
+                              coalesce(
+                                (metadata_json::jsonb)->>'schedule_reason',
+                                ''
+                              ) = $5::text as recovery_phase_already_assigned
+                       from runtime.work_items
+                       where work_class = 'maintenance_job'
+                         and terminalized_at is null
+                         and (metadata_json::jsonb)->>'maintenance_kind' = $1
+                         and ($10::text is null or work_id > $10::text)
+                         and (
+                           (
+                             state = 'queued'
+                             and (deadline_at is null or deadline_at <= now())
+                           )
+                           or (
+                             state = 'running'
+                             and (lease_owner is null or lease_owner <> $2)
+                           )
+                         )
+                       order by work_id
+                       limit $9
+                       for update
+                     ),
+                     updated as (
+                       update runtime.work_items work
+                       set lease_owner = null,
+                           state = 'queued',
+                           deadline_at = case
+                             when candidates.recovery_phase_already_assigned
+                               then work.deadline_at
+                             else $3::timestamptz
+                           end,
+                           updated_at = now(),
+                           metadata_json = case
+                             when candidates.recovery_phase_already_assigned
+                               then work.metadata_json
+                             else (
+                               work.metadata_json::jsonb || jsonb_build_object(
+                                 'schedule_policy', $4::text,
+                                 'schedule_reason', $5::text,
+                                 'cadence_secs', $6::bigint,
+                                 'jitter_offset_secs', $7::bigint,
+                                 'jitter_window_secs', $8::bigint
+                               )
+                             )::text
+                           end
+                       from candidates
+                       where work.work_id = candidates.work_id
+                       returning work.work_id, work.request_id, work.request_origin,
+                                 work.deadline_at, $1::text as maintenance_kind,
+                                 candidates.occurrence,
+                                 candidates.attempt, candidates.prior_state,
+                                 candidates.prior_lease_owner,
+                                 candidates.prior_heartbeat_at,
+                                 candidates.prior_deadline_at,
+                                 candidates.prior_schedule_reason,
+                                 not candidates.recovery_phase_already_assigned
+                                   as recovery_phase_assigned
+                     )
+                     select * from updated order by work_idfailed to resolve owning root session from chat event recordselect domains from context.subscriptions where id = $1 for updateupdate context.subscriptions set last_polled_at = clock_timestamp() where id = $1select g.source_id, g.group_id, g.acknowledged_position,
+              coalesce(g.window_position, g.available_position) as through_position, ss.start_position
+            from context.group_cursors g join context.subscription_sources ss
+              on ss.subscription_id = g.subscription_id and ss.source_id = g.source_id
+            join context.sources s on s.id = g.source_id
+            where g.subscription_id = $1 and ss.active and g.acknowledged_position < g.available_position
+              and not (s.source_domain = any($2))
+              and (g.lease_expires_at is null or g.lease_expires_at <= clock_timestamp())
+              and (g.retry_at is null or g.retry_at <= clock_timestamp())
+            order by g.last_pulled_at nulls first, g.source_id, g.group_id limit 1 for update of gacknowledged_positionstart_positione.id, e.dedupe_key as key, e.group_key, e.payload_kind, e.content_hints,
+     e.occurred_at, e.ingested_at, e.ttl_secondsappend_positionupdate context.group_cursors set acknowledged_position = $4,
+                window_position = null, batch_position = null, lease_token = null,
+                lease_expires_at = null, evidence_expires_at = null, retry_at = null, last_error = null,
+                last_pulled_at = clock_timestamp()
+                where subscription_id = $1 and source_id = $2 and group_id = $3select exists(select 1 from context.group_cursors g
+                join context.subscription_sources ss on ss.subscription_id = g.subscription_id and ss.source_id = g.source_id
+                join context.sources s on s.id = g.source_id
+                where g.subscription_id = $1 and ss.active and g.acknowledged_position < g.available_position
+                and not (s.source_domain = any($2)))select id, source_domain, source_key as key, display_name, created_at::text as created_at
+            from context.sources where id = $1update context.group_cursors set window_position = $4, batch_position = $5,
+            lease_token = $6, lease_expires_at = least(clock_timestamp() + $7 * interval '1 second', $8::timestamptz), evidence_expires_at = $8, last_pulled_at = clock_timestamp(), retry_at = null
+            where subscription_id = $1 and source_id = $2 and group_id = $3 returning lease_expires_atcontext_store.initializenot_foundresolve pathpath escapes mount rootforbiddentimed out while writing egress approval mirror requesttimed out while reading egress approval mirror response`DateTime + TimeDelta` overflowedstore_initsync_localebackground locale observation lockrefresh_enqueuebackground locale refresh wake deferred to maintenancelocale_changedcommittedterminalization_deferredview ideaview canonical idearesolve canonical on not-foundlist ideas by idsshopping_results_v2navigationnavigation.scheduled_tasknode_card.notification_opt_inGatekeeper response omitted requested gate; using defaultfailed to serialize idea for reply_to_target hydrationhttpsdevice_reconciliation_retry_settlement_faileddevice_reconciliation_terminal_settlement_faileddevice_reconciliation_claim_failedStripe Link connection status is unavailableStripe Link connection status failed to startStripe Link connection status was invalidStripe Link connection inspection timed outStripe Link connection status timed outStripe Financial Insights permission was unavailableshopping objective did not reportcall persistence terminal receipt lostcall Companion disappeared before persistence admissioncall persistence attempt cancelled before admissionruntime config state retains the completion sendercontext_store.accesscontext_store.reusesourcescontext_table.sourceseventscontext_table.eventsingest_attemptscontext_table.ingest_attemptssubscriptionscontext_table.subscriptionssubscription_sourcescontext_table.subscription_sourcesgroup_cursorscontext_table.group_cursorscontextpath is not accessibleavailable_plansideas.list_idea_publication_holdsacquired connection, but time to acquire exceeded slow thresholdacquired connectionprivate maintenance has not settledwrite egress approval mirror requestread egress approval mirror responseat most 1001–100 hintscontext.subscription.ensureruntimefollow_up_queue_deliveryfailed to read the next due maintenance work itemfailed to claim due maintenance work itemsreleased maintenance work another owner left running with a stale heartbeatfailed to release stale foreign maintenance leasesfailed to read the oldest foreign maintenance leaserv_storage_usage_unavailablerv_storage_usage_join_failedrv_storage_warning_state_v1usage_percentrv_storage_warning_store_unavailablebelow_thresholdthreshold_percentdelivery_confirmedmessage_idinternal error: entered unreachable code: already-notified action requires a delivered warningrv_storage_warning_marker_invalidrv_storage_warning_marker_read_failedgatekeeper_offinternal error: entered unreachable code: claim reconciliation requires a claimed warninginternal error: entered unreachable code: no-op and rearm actions returned before deliveryrv_storage_warning_marker_clear_failedwork_idrequest_idrv_storage_warning_claim_failedrv_storage_warning_delivery_identity_conflictmessage_kindrv_storage_warningrv_storage_warning_message_idmaintenance_work_idexclude_from_context_windowrv_storage_warning_message_id_invalidrv_storage_warning_delivery_lookup_failedclaimedrv_storage_warning_delivery_failedrv_storage_warning_delivery_record_failedwarning_sentwarning_delivery_recoveredreplaced_legacy_claimwork_items.recover_due_maintenance_kindwork_itemsFailed to reschedule a write opinternal error: entered unreachable code: unexpected stageFailed to schedule write op for insertbackground_content_jobsload_root_conversation_candidate_by_session_idruntime work enforce mode requires a DB-backed registryruntime work start collided with an active row with different ownershippersisted runtime work startfailed to persist runtime work startruntime_work_pending_terminalfailed to persist runtime work terminal statefailed to persist runtime work pending terminal intentruntime work terminal CAS did not find a terminal DB row in enforce modefailed to mirror canonical runtime work terminal rowmaintenance startup recovery could not open the runtime work storefailed to list maintenance kinds for startup recoverymaintenance startup recovery failed; keeping this kind closedx-hatch-gk-assignment-confirmedruntime egress context registrationroot session has no durable public-session classificationfailed to classify root session visibilityfailed to load root session visibilityhttp://localhost/hatch/check_gatekeepersGatekeeper response was invalid; using defaultGatekeeper check failed; using defaultfailed to prefetch reply_to_target ideas for history hydrationreply_to_targetfailed to prefetch reply_to_target feed units for history hydrationfailed to hydrate idea reply_to_targetfailed to hydrate image reply_to_targetfailed to hydrate images reply_to_target entryfailed to hydrate presentation reply_to_targetfailed to hydrate feed unit reply_to_targetfailed to prefetch reply_to_target message records for history hydrationfailed to normalize image reply_to_target pathfailed to resolve image reply_to_target pathfailed to stat image reply_to_target pathfailed to prefetch reply_to_target presentation records for history hydrationfailed to hydrate message reply_to_targetfailed to load presentation reply_to_target eventfailed to prefetch reply_to_target goals for history hydrationfailed to hydrate goal reply_to_targetfailed to load widget presentations for chat record hydrationdisplay_textfailed to resolve public session id for persisted message broadcastdropping persisted public message broadcast because owning root session could not be resolvedshow_do_it_buttonhide_summaryfailed to hydrate native idea widgetfailed to prefetch idea widget icon contexts for history hydrationattachment signing task failedhost_message_idreply_to_message_idtranscript_surfacechat_contextchat_event_seqsession_idis_threadrefreshed expired shopping card image urlsselect pg_advisory_xact_lock(4841544348435458)deleted sessions.updated events require an owner-visible deletion proofsession row unavailable for sessions.updated payloadfailed to hydrate sessions.updated payloaddropped companion progress frame after its voice call changedinternal error: entered unreachable code: private terminal identity requires a terminal eventprivate Companion maintenance terminal matched unexpected RuntimeWorkprivate Companion maintenance RuntimeWork did not terminalize_flight_presentationitemsflight_actionIDENTITY.mdfailed to hydrate native letter widget title because briefing path is invalidfailed to hydrate native letter widget title because briefing is too largefailed to hydrate native letter widget title metadatafailed to hydrate native letter widget titlefailed to hydrate native letter widget identity metadatafailed to hydrate native letter widget because briefing was not foundfailed to hydrate native letter widgetfailed to resolve Letter artifactartifact_slugfailed to hydrate native letter widget because self-improvement storage was unavailablefailed to hydrate native letter widget because relationship brief was not foundcomplimentary plan-name lookup failedruntime.skillsJARVIS_HOMEJARVIS_VAR_LIB_DIRCREDENTIALS_DIRECTORYJARVIS_TRACE_CONTEXTJARVIS_RUNTIME_CONTEXT_TOKENskill command runtime context registration faileddatabase write admission gate closedadmission_timeoutassert_table_existstable_presence.queryinsert into context.subscription_sources
+        (subscription_id, source_id, active, start_position, discovery_position)
+        select $1, s.id, true, boundary.position, boundary.position
+        from (select id, last_append_position from context.sources
+          where ($2 or source_domain = any($3)) and not exists
+            (select 1 from context.subscription_sources ss where ss.subscription_id = $1 and ss.source_id = context.sources.id)
+          order by id for update) s
+        cross join lateral (select case
+          when $4 then s.last_append_position
+          when $5::timestamptz is null then 0
+          else coalesce((select min(e.append_position) - 1 from context.events e
+            where e.source_id=s.id and e.ingested_at > $5
+              and e.append_position <= s.last_append_position), s.last_append_position)
+          end as position) boundary
+        on conflict do nothingcontext.subscription.pullbatch_limits1–100 new events, at most 100 history events, 1 MiB, lease 1–5400 secondsselect ss.source_id, ss.start_position, ss.discovery_position, s.last_append_position
+        from context.subscription_sources ss join context.sources s on s.id = ss.source_id
+        where ss.subscription_id = $1 and ss.active and ss.discovery_position < s.last_append_position
+        order by ss.discovered_at nulls first, ss.source_id limit 1discovery_positionlast_append_positionwith page as materialized (
+            select group_id, append_position, content_hints from context.events
+            where source_id = $1 and append_position > $2 and append_position <= $3
+            and (expires_at is null or expires_at > statement_timestamp())
+            order by append_position limit 1000
+        ), heads as (
+            insert into context.group_cursors
+                (subscription_id, source_id, group_id, acknowledged_position, available_position)
+            select $4, $1, group_id, $5, max(append_position) from page
+            where ($6 or content_hints && $7::text[]) group by group_id
+            on conflict (subscription_id,source_id,group_id) do update
+                set available_position = greatest(context.group_cursors.available_position, excluded.available_position)
+            returning available_position
+        ) select case when count(*) < 1000 then $3 else max(append_position) end from pageupdate context.subscription_sources set discovery_position = $3, discovered_at = clock_timestamp()
+            where subscription_id = $1 and source_id = $2select exists(select 1 from context.subscription_sources ss
+        join context.sources s on s.id = ss.source_id where ss.subscription_id = $1
+        and ss.active and ss.discovery_position < s.last_append_position)standaloneretry_scheduledterminal_device_errorfull_sync_terminalfull_sync_claimeddata_source.backfillspace_preview_repairspace preview repair: handler not registeredspace preview repair: handler registry unavailablespace_preview_missingspace preview repair: runtime work store unavailablequeued Space preview repairspace preview repair: seeding failedspace preview repair: catalog read failed on viewstripe-linkinspectStripe Link connection inspection failedStripe Link connection status failedconnector_call_reasonIdea catalog sharing context read failedIdea share variant projection read failedIdea share revision projection read failedIdea direct sharing read failedIdea publication hold read failedmaintenance scheduler could not open runtime work storeheld maintenance work is no longer leased by this owner; dropping itreasonquarantine_cool_down_elapseddeferral_hold_elapsedstorage_backoff_elapsedfailed to readmit held maintenance work; parking for another cool-downassigned startup recovery phase to due maintenancerequeued due maintenance without redrawing its startup recovery phasemaintenance recovery page was full without a work-id cursoremailpurchase_activitysocialsource_pausedbatchesskipped_groupssource_policy_skipped_groupssource_policy_retried_groupsskip_reasonshopping_context_batch_fullshopping_context_aggregate_failedshopping_context_failedretrying_groupssource_policy_pausedcontext_eventsack_lease_lostgroups_waitingdiscovery_pendingshopping_context_renew_failedfailed to release shopping context batches after renewal failure� 

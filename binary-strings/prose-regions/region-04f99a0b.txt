@@ -1,0 +1,363 @@
+phone_transcriptsmaterialized Phone transcript in workspace  
+transcript_objectrecording_urltranscript_pathfailed to materialize Phone transcript; returning summary without linkPhone transcript had no call ID; omitting transcript linkcards`lane` must be one of exploit, explore, or stretchicon_name/tool_context/ideas_draft/section_keyscreen.snapobserved_pagesfilesystemview-sourceaboutspace_slugcontinued_from_space_build_idspace_generation_ask_resumedspace_generation_modify_delete_failedspace_generation_modify_delete_startedspace_generation_modify_delete_successevent_duration_msspace_generation_modify_builder_spawn_failedspace_generation_modify_builder_spawn_startedspace_generation_modify_builder_spawn_successsnapshot_idresume_from_snapshot_idmedia_snapshot_imagessnapshot_carried_image_countrich_place requires place_id and name; marker accepts title, subtitle and background_image_url. Both require coordinate.background_image_urlPresent immediately as a standalone card. Otherwise embed the returned token in the message.widget.create_map_widgetCreate a map showing real-world places and location pins.
+
+Prefer `rich_place` elements:
+they render a photo and a place card, and `places details <place_id>`
+fetches details whenever you have place ids. Usually omit element `id`s
+(the server assigns them); supplied ids must be unique, and the `hatch_`
+prefix is reserved for system pins.
+
+```
+{
+  elements: Array<           // 1-24 elements
+    { kind: "rich_place",
+      place_id: string,      // numeric id copied verbatim from a `browser.search` or `places details` place result; never invent one
+      name: string,
+      coordinate: { latitude: number, longitude: number },
+      category?: string, description?: string, id?: string }
+    | { kind: "marker",      // plain pin for anything without a place id
+      coordinate: { latitude: number, longitude: number },
+      title?: string,        // short name for the pin; untitled markers display as the literal text "Marker"
+      subtitle?: string, background_image_url?: string, id?: string }>,
+  display_text?: string,
+  initial_zoom?: number,     // 1-20
+  motivation?: string | null // the user need this map answers, one short phrase (for example "dinner options near the theater"); omit when purely illustrative
+}
+```
+Create a map showing real-world places and location pins.
+widget.create_html_widgetCreate compact interactive HTML in the current chat reply.
+
+Use an in-chat HTML fragment for controls, picker UIs, small cards, local previews, or charts. Follow
+every rule in the "HTML widget authoring" section of the `widget` namespace description.
+
+`{ html: string, display_text?: string, fallback_text?: string }`
+Create compact interactive HTML in the current chat reply, not a document or app the user keeps.
+For link rows, supply url. For send_message rows, supply non-empty text. For flight rows, supply flight_data or flight_details_file with optional json_pointer, following the flight input contract below.response_message_prefixLanguage of generated list text as a BCP 47 tag, for example fr-FR. Set this for connector lists so official connector names match the conversation language. Omitted or unsupported languages use the request language.widget.create_list_widgetCreate a native list card of skill-directed results, links, flights, calendar entries, or email entries.
+
+For connector search results, follow the current connector instructions and use its dedicated result creator when one is specified.
+
+Use native list cards for skill-directed results such as flights and fitness classes. Use 1–20 rows. Non-flight rows require non-empty titles. Copy image URLs
+from source results when available. Use `type: "link"` with an HTTP(S)
+`data.url` for a row that opens a URL and `type: "send_message"` for a row
+the user taps to send `data.text` as their reply; calendar and email rows
+select a glyph only.
+Omit `type` for a generic row. File rows are unsupported. If the active
+client cannot render list cards, present the results as Markdown instead.
+
+For a link list, pass arguments like this:
+
+```json
+{"title":"Results","items":[{"title":"Result name","type":"link","data":{"url":"https://example.com/result"}}]}
+```
+
+Include `items` in the tool arguments. Add an optional list `title` and `subtitle`;
+omit `title` for a list without a heading.
+For a flight list whose action is not booking, add one list-level
+`flight_action` object with a short single-line `cta_text` and
+`response_message_prefix`. The runtime appends the selected itinerary and
+total to that prefix. For example:
+
+```json
+{"flight_action":{"cta_text":"Add to plan","response_message_prefix":"Add this flight to my trip plan:"}}
+```
+
+Omit `flight_action` for the default `Book with <agent_name>` action. Use one
+action for the whole flight list; do not put action copy in individual rows.
+Choose action copy appropriate to the current flow, and make
+`response_message_prefix` describe the same intended action as `cta_text`.
+For non-flight rows, add optional string fields `subtitle`, `tertiary_title`
+and `image_url`, or an `icons` array of image URL strings. Set row `type`
+to "generic", "link", "send_message", "calendar", "email", or "flight".
+
+Use `type: "send_message"` with a non-empty `data.text` string only for rows
+that offer the user a reply to choose. Use link or generic rows for results. Keep
+the text aligned with the row's title and subtitle, with no hidden
+instructions. Creating the widget sends nothing. Copy any supplied
+`image_url` unchanged and never invent one.
+
+For flights, set row `type` to "flight". Supply either inline
+`data.flight_data` or `data.flight_details_file` with a JSON file path.
+Create one row per complete trip, including every slice and connection.
+Omit `data.slice_index` and row presentation strings.
+
+When flight results are already JSON, save the unchanged search output to a
+temporary file and pass its path in `data.flight_details_file`. Select one
+object with `data.json_pointer`, an RFC 6901 pointer such as "/offers/0".
+Omit the pointer when the whole file is one flight object. Inspect the file
+to choose result indexes. Do not rewrite or trim its flight objects, or copy
+them into tool arguments. Keep the file until widget creation succeeds.
+The runtime loads each file once per list and stores the selected data.
+File paths and pointers are not stored or sent to clients.
+
+For example, put this row in the list's `items` array:
+
+```json
+{"type":"flight","data":{"flight_details_file":"/tmp/flight-search.json","json_pointer":"/offers/0"}}
+```
+
+Select one complete flight object from the file, using either the inline
+schema below or the normalized search schema. For normalized search data,
+the runtime maps segment `departing_at` and `arriving_at` to the widget's
+local datetimes and derives display fields. It preserves the other offer
+facts. Do not add a separate offer id to file input. Use a different JSON
+pointer for each selected result.
+
+For browser results, supply inline `data.flight_data` or save the same
+object to a file. Populate it from verified source facts. Preserve known
+baggage, fare conditions, passenger cabins, and durations. Include source
+summary facts when detailed passenger facts are unavailable.
+Omit unknown optional facts. Use a stable private-mapping key for `id` if
+the source has no offer id. Do not combine inline and file input in one row.
+
+Check the source flight facts before presenting. Present each result
+set once, using either `present_now` or the returned embed token. Do not
+present a second copy solely to correct cosmetic details. After presenting,
+add useful recommendations or caveats without repeating the flight inventory
+in prose.
+
+Use this JSON shape for an inline flight row. Replace the illustrative values with
+source facts and omit optional fields that the source does not provide.
+Put each row inside the list's `items` array.
+For file input, save only the object inside `data.flight_data`, or use
+`json_pointer` to select that object within a larger document.
+
+```json
+{"type":"flight","data":{"flight_data":{"id":"offer_id_from_source","passengers":[{"type":"adult"},{"age":8}],"expires_at":"2026-09-14T18:00:00Z","price":"567.00","currency":"USD","airline":"Example Airlines","duration":"2h20m","slices":[{"duration":"2h20m","fare_brand":"Business Flex","segments":[{"from":"SFO","to":"PDX","depart":"2026-09-15T07:35:00","arrive":"2026-09-15T09:55:00","flight":"EX24","carrier":"Example Airlines","operating_carrier":"Example Regional","operating_flight":"ER24","duration":"2h20m","passengers":[{"cabin":"Business","bags":{"carry_on":1,"checked":2}},{"cabin":"Business","bags":{"carry_on":1,"checked":2}}],"carrier_code":"EX"}]}],"refundable":"yes","changeable":"yes","refund_penalty":"200.00 USD","change_penalty":"100.00 USD","refund_penalty_status":"applies","change_penalty_status":"applies","flight_link":"https://example.com/flight-details"}}}
+```
+
+For inline rows, include `flight_data` inside the row’s `data`. Include these required
+`flight_data` fields: `id`, `passengers`, and `slices`.
+Include at least one slice and at least one segment per slice. Include
+`segments` for each slice. Include `from`, `to`,
+`depart`, and `arrive` for each segment. All other flight fields shown are
+optional, including segment `passengers`. Within passenger templates, `type` and `age` are
+optional. Within segment passengers, `cabin` and `bags` are optional.
+Within baggage objects, `carry_on` and `checked` are optional.
+Use nonnegative integers for counts and ages; booleans for
+`nonstop`, `cabin_varies`, and `baggage_varies`; and strings for other scalar
+values, including `price`. Set `refundable` and `changeable` to "yes", "no",
+or "not stated". Omit unknown optional fields rather than passing null.
+
+Keep slices and segments in travel order. Use one slice for a one-way trip
+and two slices for a round trip. Keep connecting flights in their slice's
+`segments`. Present each complete offer once in one row, from comparison
+through selection. Do not split outbound and return into separate rows or
+lists. Treat `price` as the whole trip price for all passengers.
+Do not invent per-slice prices or combine legs from different offers.
+Set each segment's `depart` and `arrive` to one airport-local ISO 8601
+datetime, such as "2026-09-15T07:35:00", without a timezone suffix. Copy
+Duffel's segment `departing_at` into `depart` and `arriving_at` into `arrive`.
+Omit Duffel's display-time strings and the slice-level `depart` and `arrive`.
+Do not supply formatted timestamps. The server derives slice endpoints and
+client timestamp strings from the first and last segments. For browser
+results, obtain the local date and time for every endpoint before creating
+a flight row. Preserve source duration strings.
+Preserve known segment cabins and baggage in `segments[].passengers`.
+The runtime derives cabin and baggage summaries when the detailed facts are
+complete. Known differences mark variation; missing facts remain unknown.
+When only source-reported summaries are available, use offer-level `bags`
+and `slices[].cabin`; retain source-reported `baggage_varies` or
+`slices[].cabin_varies` when detailed passenger facts are unavailable.
+Include a slice's source-reported `stops` when technical stops occur within
+a segment. Otherwise omit it and let the runtime count connections.
+Preserve each segment's `carrier` name and `flight` number. Put its source
+IATA or ICAO code in `segments[].carrier_code` when available.
+Keep codeshare operators separately in
+`operating_carrier` and `operating_flight`.
+Omit `response_message`, slice `from` and `to`, offer `stops`, and `nonstop`
+when authoring flight data. Both input forms receive the same route/stop
+summaries and an identifying reply before storage.
+Keep the offer id as the private checkout mapping. The server supplies
+"Book with <agent_name>" as the CTA when `flight_action` is omitted. When it
+is present, the server uses its CTA and response prefix while still appending
+the exact selected itinerary and total. Do not calculate elapsed durations
+by subtracting airport-local clocks; preserve source durations.
+Creating a row does not submit it or authorize a purchase. Add `flight_link`
+only for a verified absolute HTTP(S) details URL. Keep checkout credentials
+out of the payload.
+Create a native list card of skill-directed results, links, flights, calendar entries, or email entries. Follow current connector instructions when they specify a dedicated result creator.
+relationship_briefwidget.create_letter_widgetPresent an existing briefing or relationship brief as a native Letter.
+
+This tool presents the widget immediately as a standalone card. Subagents and background workers cannot call it; report the content back instead. In TypeScript-style shapes, `?` marks an optional field; every other field is required.
+
+`{ content: { type: "briefing" | "relationship_brief",
+data: { id: string } } }`
+Present an existing briefing or relationship brief as a native Letter.
+Create inline text reply options, including a single affirmative reply, and
+embed the returned token in the question or offer.
+For an open-ended question, ask in plain text. For a known, bounded choice,
+call `muse.create_options` with the reply texts in `options`, then place the
+returned `embed_token` unchanged in your reply to the user, in the same message
+as your question or offer.
+Writing a tool name in your reply does not create a widget.
+The options are invisible until you embed the token in your reply to the user.
+If another agent will deliver the reply, return the token to that agent for
+embedding. Tapping an option sends its exact text as the user's next message.
+
+Write each option as a short reply that naturally answers your question.
+For an offer to do something, provide one option that accepts the offer.
+For a choice between actions, provide one option per action.
+Use “Yes” only when it reads naturally as the user's answer.
+Generally provide no more than two options; include more when the question
+depends on a larger bounded set.
+Do not add question titles, descriptions, weak fallback choices, or fake
+free-text choices such as “Other” or “Type your own”.
+Do not use this tool to present specific Meta Ads ad accounts, campaigns, ad
+sets, or ads: option labels cannot carry the required Ads entity references.
+Resolve those objects with `ads.resolve_entities` and put the returned markers
+in the response text instead.
+center_aligned_filledButton appearance. Defaults to dotted_lines.Short replies the user can tap, including a single affirmative reply.Present an already-created widget as a standalone chat presentation, not inline in an assistant text message. Pass a `widget_id` returned by a widget creator, or one the runtime handed to you. Do not use this for inline-only widgets such as `muse.create_options` choices; include their returned `embed_token` in the assistant message instead. This tool does not create or update widget data.
+widget_idThe id of an already-created widget to present now.Present an already-created widget as a standalone chat presentation instead of inline in a message. Pass a widget_id returned by a widget creator or handed to you by the runtime.
+widget.create_html_file_widgetCreate an in-chat HTML widget from a local HTML file.
+
+Read HTML from a local `.html` or `.htm` file. Relative
+paths resolve from the home directory; `workspace/...`, `/workspace/...`,
+`~/...`, `file://...`, and `sandbox://workspace/...` work. Files over 1 MB
+are rejected: widgets are compact UI, not media containers. Never pass paths
+under `workspace/your_files/` or `workspace/visual_grounding/`; return those
+as own-line preview links instead. Follow every rule in the "HTML widget
+authoring" section of the `widget` namespace description.
+
+`{ path: string, display_text?: string, fallback_text?: string }`
+Create an in-chat HTML widget from a local HTML file, not a document or app the user keeps.
+Create a native card that opens an app tab or invokes a UI control when tapped.
+
+Use a navigation card for app navigation such as opening a tab or view.
+The widget only stores the control; the client performs it on click, and an
+unknown `target` fails there, not at creation.
+
+`{ title: string, ui_control: { action: "navigate" | "set",
+target: string, params: object, mode: "suggest" | "perform" },
+summary?: string, image_path?: string, icon?: string }`
+ui.create_navigation_widgetCreate a native card that opens an app tab or invokes a UI control when tapped.
+Present an existing saved idea by its idea_id.
+
+`{ idea_id: string }`
+idea.create_idea_widgetPresent an existing saved idea by its idea_id.
+Create a native sharing card for the assistant avatar.
+
+Supply non-empty text
+fields. Omit `image_url` unless you have an HTTPS image URL. The client handles
+sharing and displays `fallback_text` if it does not support the card.
+
+`{ image_url?: string, button_text: string, title: string,
+subtitle: string, fallback_text: string }`
+avatar.create_avatar_share_widgetCreate a native sharing card for the assistant avatar.
+Set true to let the user pick several images where their app supports it; older apps return one.widget.create_image_picker_widgetShow up to four local images in a grid for the user to pick from. Each `path`
+is a jpg, jpeg, png, webp, gif or avif file under `workspace/`. The grid shows
+no captions. Set `multi_select` to true when the user may keep several images;
+some apps then let them pick several and others only one, so invite a choice
+without asking for a number of picks, and work with whatever arrives. A single
+pick comes back as a user message "Option N", where N is the image's 1-based
+position in `images`; several picks come back as one user message that lists
+each picked image.
+Let the user pick from up to four local images.
+travel.create_hotel_results_widgetCreate native hotel cards from an unmodified saved Expedia search JSON file. Pass 1–4 search-row `id` values in `hotel_ids` to select and order the preview, or omit them to preview the first four hotels. See all opens the original search; it does not preserve a curated subset or your ranking. Cards use each row's offer and price, and open details for that rate. Follow the current connector instructions when selecting offers and presentation.
+Create native hotel cards from saved Expedia search JSON, with up to four preview properties and See all for the original search.
+Defaults to true. Set false to place the cart at the returned embed_token after your summary.shopping.create_shopping_cart_widgetPresent a verified shopping cart using a reference returned by shopping.read_cart.
+
+Omit `present_now` or set it to `true` to present the cart immediately. To show
+the cart after your summary instead, set `present_now: false` and place the
+returned `embed_token` after that summary. If you are a subagent or background
+worker, set `present_now: false` and include the unchanged `embed_token` in
+your final report.
+
+Create a cart widget only when a loaded connector doc
+explicitly documents using `shopping.read_cart` and supplies its provider
+identifier.
+
+`{ cart_ref: string, present_now?: boolean }`
+
+Call `shopping.read_cart` with the doc's identifier, then copy its returned
+reference into `cart_ref`. Never pass raw cart
+JSON or use search results as a cart; ordinary product recommendations use
+`shopping.create_shopping_results_widget`. Cart widgets save a snapshot; supported clients read
+the current cart when View cart opens. This is read-only: opening a cart does
+not change items or start checkout. Older clients retain the saved snapshot.
+Present a verified shopping cart using a reference returned by shopping.read_cart.
+priceis_image_availableis_agentic_checkout_creation_enabledis_agentic_checkout_completion_enabledshopping.create_shopping_results_widgetPresent shopping product cards from resolved catalog, Marketplace, connector, or browser results.
+
+This tool presents the widget immediately as a standalone card. Subagents and background workers cannot call it; report the content back instead. In TypeScript-style shapes, `?` marks an optional field; every other field is required.
+
+Use the artifact returned by `shopping.resolve_results`. Preserve the returned
+URLs, product references, provider identity, retailer context, and advertised
+actions; follow the owning connector doc for provider-specific workflows.
+Pass exactly one of `path` or `products`; prefer `path`
+when another tool wrote a `kind: "shopping_results"` JSON file.
+
+`{ path?: string, products?: { url: string, name: string, citation_id: string,
+image_url?: string | null, type?: "catalog" | "marketplace" | "browser", product_id?: string,
+provider?: string,
+brand?: string, price?: string, sale_price?: string, retailer_name?: string,
+primary_action?: "add_to_cart" }[] }`
+
+`provider` is the owning connector doc's canonical identifier, independent
+of the rendering type. Connector cards use `type: "browser"`. The server adds
+trusted provider attribution when all products share a provider, and a retailer
+subtitle when they also share a non-empty `retailer_name`; do not supply logos
+or attribution yourself. `brand` identifies the product brand.
+
+Advertise `primary_action: "add_to_cart"` only when that connector doc
+supports the operation. It requires `type: "browser"`, `provider`, and a
+non-empty `product_id` unique within the widget. `retailer_name` is optional
+context as required by the connector. Keep both agentic checkout capability
+flags false. A click queues a normal agent turn requesting one additional
+unit; it does not mean the cart changed or authorize checkout. Omit the action
+for ordinary shopping cards to preserve their existing purchase behavior.
+Present shopping product cards from resolved catalog, Marketplace, connector, or browser results.
+hatch-media-workspace-mapping-unavailableList the website logins the Secure Vault holds for this user: each entry's site, label, saved field names, and whether it is available right now. This returns metadata only, so do not say you have seen a password or a code. Call it when the user asks what is saved. A browser task needs no check first: when its site needs a sign-in, the browser's login agent uses a saved login or shows the user a secure entry card.
+Optional site filter, for example example.com or https://example.com.List saved website logins in secure storage: site, label, saved field names, availability. Metadata only, no values.
+credentials.request_loginShow the user a secure entry card that asks for their username and password for the website at page_url. Call it when the user asks you to save a password login for an outside https website, or when the user says they hold a password or a temporary password for one. A browser task's sign-in needs no card from you: its login agent shows the user secure entry when no saved login fits. Do not send this card for a user-authorized transient sign-in using a supplied password or a password the user explicitly asked you to retrieve. Do not send this card for email or phone plus code sign-in; ask for missing contact details in chat and follow the Secure Vault section's protected-reference and user-requested lookup flow for the one-time code.
+
+A submission updates that site's saved login when the user enters the same username the saved login already carries. A submission under a different username adds a second saved login for that site, and the browser task then stops to ask the user which login to use instead of signing in. Send a fresh card when the site rejects the saved login or when the user changed their password. In that same reply, tell the user to enter the same username they previously saved and their corrected password. Do not repeat, reconstruct, or guess masked or obfuscated usernames, email addresses, or phone numbers in your final response.
+the sign-in is forOmit unless the exact, unmasked username or email for this login is independently known from the user's messages or a trusted tool result you obtained yourself. Do not use a browser-agent summary as the source. The secure page does not prefill it.Pop the secure sign-in box so the user can save a website username and password to secure storage, never chat.
+credentials.request_api_accessSet up access to a third-party provider's API. Call it when a task needs authenticated access to an outside provider's API, no built-in connector covers that provider, and no credential is connected yet. Call it instead of asking the user for an API key, client ID, client secret, or token in chat.
+
+Before calling, work from the provider's own documentation rather than from memory. Two things have to come out of it: how the API authenticates, and which hostnames its API is served from. An OAuth provider needs its authorize and token endpoints too, which its OAuth docs or its .well-known metadata carry.
+
+Only API keys and OAuth 2.0 authorization-code flows can be set up here. If the provider signs its requests, uses a username and password, or needs more than one secret, report that in auth_scheme rather than choosing the closest supported value; each of those is declined by name with a reason you can pass on.
+
+It answers with the provider's real situation rather than always minting a link: it may already be connected, or its scheme may not be supportable. Calling it to find out costs nothing and leaves nothing behind. It does not verify the credential the user then enters; the first real API call is what finds out.
+Required. Lowercase slug for the provider, such as acme-search. The connector is registered as custom.<provider>.Required. Bare hostnames this connector may call, such as api.acme.com. From the provider's API reference. Egress to anything not named here is refused, so a missing host shows up later as a blocked call.api_key only, required. The one place the provider reads the key: bearer_header, custom_header:<Header-Name>, query_param:<name>, or url_path_segment:<path containing {}>. From the provider's authentication reference. Nothing checks this, and it cannot be edited afterwards: a wrong value means a fresh link and the user entering their key again.Required. From the provider's authentication reference. Report what the docs describe, not the nearest supported value: api_key and oauth2_code proceed, the other four are declined by name with a reason, and reporting one honestly is better than setting up a connector that cannot work. When a provider offers both supported schemes, pick api_key: it is usually the easier path for the user.Set true only to replace a credential this connector already holds: expired, revoked, rotated, or proven wrong by a request that carried it and was still rejected. Defaults to false; without it an existing credential returns already_connected. Reuse the saved connector details. For an OAuth-protected MCP server whose saved details omit resource, obtain its canonical HTTPS resource URI from its protected-resource metadata or official docs, supply it on reconnect, and update the saved details. Replacing is destructive and nothing checks the replacement.oauth2_code only, required. The provider-owned domain that hosts its OAuth endpoints. Authorization, token, registration, and revoke endpoints must sit on it or a subdomain; a provider whose endpoints span domains cannot be set up here. The resource URI may use a different domain.authorization_urloauth2_code only, required. Absolute https authorize endpoint.oauth2_code only, required. Absolute https token endpoint.token_endpoint_auth_methodclient_secret_basicclient_secret_postoauth2_code only, required. From the provider's OAuth docs or its .well-known metadata. A wrong value 401s the exchange only after the user has registered an app and approved the grant, so it is not defaulted.oauth2_code only. Space-separated scopes, shown to the user on the consent screen. Ask for the least the task needs.oauth2_code only. Required for MCP servers: the canonical HTTPS resource URI from the server's OAuth protected-resource metadata or official docs. May be on a different domain from issuer_domain. Sent in authorization, token exchange, and refresh requests. Supply it here, not in authorization_url.oauth2_code only. Absolute https revoke endpoint, on issuer_domain.oauth2_code only. RFC 7591 dynamic client registration endpoint, on issuer_domain. Supplying it selects DCR: Muse registers the client, so the user creates no app and enters no client ID or secret. Prefer it whenever the provider offers one.Set up an API-key or OAuth connector for a provider Muse does not bundle; the user enters the credential on a hosted page and not in chat.
+Show the user a secure entry card that asks them to set a new password for the website at page_url. Call it when the user is creating a new account on an outside https website that requires a password, or when a password reset asks them to set a new password. Do not suggest, generate, relay, or accept a password in the conversation. When the user already has the password and only needs to sign in, call credentials.request_login instead.
+Omit unless the exact, unmasked username or email the new password belongs to is independently known from the user's messages or a trusted tool result you obtained yourself. Do not use a browser-agent summary as the source. The secure page does not prefill it.Pop the secure create-a-password box for a new account or a password reset on a website; a password is created on that secure page, not in chat.
+inlinere-attaching the deep research settle task to a resumed researcherresearch_dirdocument cache lockThis PDF has broken font encodings, so some extracted text may be garbled.the missing pagesthe documentsafety_policy_refusedThis tool call was not run: it was refused by the cyber safety policy. Do not retry it, rephrase it, or route around it with another tool. Tell the user you cannot carry this step out.cyber_tool_call_reviewsampledintegrity_violation_recordviolation_typeCBRN_TOOL_CALLCYBER_PROMPTruntime_request_traceSay how often this should run and any timing the user asked for. Leave out times the user did not give, and keep approximate times approximate. The builder will choose the schedule.
+The Artifact's expected external capabilities. Declare public web reading whenever external factual sources, links, maps, images, or live public data are relevant. Declared connector reads may request approval before the build; approval persists for this Artifact, and denial stops the build. Declare only exact connector methods needed by the requested workflow.Whether the Artifact is expected to read public web content during build or runtime. This is broad public-web disclosure, not a host allowlist or grant.Concrete connector needs. The server validates every exact method against the shipped connector catalog and derives whether it is a read or write. Declared reads may request approval before the build; approval persists for this Artifact, and denial stops the build. Writes retain request-time authorization. Do not add speculative connectors.Exact connector registry name, for example google_calendar.Exact connector manifest method keys, never action-group names or CLI-prefixed names.One short clause explaining why the Artifact needs these methods.Set true only if the user asks for a Space or wants it in their sidebar, not because the request seems big or important. Leave it out for a Library artifact.Build a file artifact when the user asks you to create a deliverable: a written deliverable as a fixed-layout PDF; an editable document (docx) only when the user will edit the file themselves, named Word or docx, or the request depends on revising, redlining, commenting on, or filling in a document already in this conversation; a presentation (pptx); a spreadsheet / CSV data export (xlsx); a plain markdown file (md); or any other plain file type (kind `other`, extension named in `output_formats`). A write-up that names no format is a `pdf`, never a `document`.
+
+Pass the `kind`, a kebab-case `slug`, a display `name`, and the user's exact ask in `verbatim_request`.
+
+Author Google Docs and Slides decks as artifacts, then publish with the Google connector. Revise one published from an artifact by editing that artifact and publishing again, never through the cloud API. An uploaded deck has no editable text; agree that first if they need to edit it in Slides. Write and format a Google Sheet through the Sheets connector.
+document: an editable written deliverable (docx). pdf: a fixed-layout document. presentation: a slide deck (pptx by default). spreadsheet: a workbook, table, or CSV data export (xlsx by default). markdown: a plain markdown file (md); only when the user asked for markdown or a .md file. other: any other plain file deliverable (txt, ics, json, srt, ...); name its extension in output_formats.Short, neutral name shown to the user. Use the literal artifact category or supplied name from `verbatim_request`. If the current request is anaphoric, such as "Yes, build that", use the literal category or name from the exact prior user quote or explicitly accepted assistant proposal it refers to. Otherwise do not derive the name from preferences or facts. Do not invent a product concept, audience, mood, positioning, benefit, or aesthetic. Example: "Make me a trip planner" becomes `Trip Planner`, not `Kyoto Slow Days`.
+^[a-z0-9][a-z0-9-]*$One lowercase kebab-case slug for the artifact's own directory.Exact text of the request that asks to build this artifact. On a turn driven by a literal user message, copy the user's message exactly. If that message answers a clarifying question you asked about their earlier build request, copy that request and then their whole message on a new line, each word for word. On a producer turn (scheduler, feed, workflow, or subagent work), copy the exact originating build instruction; when that instruction is embedded in a larger packet, copy only its explicitly labeled requested outcome and instructions, excluding activation text, titles, summaries, ids, prerequisites, and wrapper text. This field is authoritative for the current requested scope: the builder reads it as the requester's own words, so anything you add becomes a fabricated requirement. Add nothing else: no summary, no other conversation, nothing of your own; the builder gathers and validates its own sources, images included.
+The exact goal ID, when this deliverable is a document for an existing goal; omit it otherwise. Set it and the file is built inside that goal's folder, so it is one of that goal's documents from the moment it exists. Leave it out and the file is built in the shared artifacts area. Do not move or copy a file between the two afterwards: pick the destination here. A slug names one file artifact across both places, so pick a slug no existing document uses; scope a goal document's slug to its goal (`board-prep-q3-report`) when a plain one might already exist. A slug that already names a built document in the other place is refused, and nothing is built.
+Only for an explicitly requested container. document: docx. pdf: pdf. presentation: pptx, pdf, or html. spreadsheet: xlsx or csv. Omit otherwise; each kind renders its canonical container. Required for kind other: the deliverable's file extension(s). An audience or occasion names no container, and a second file being useful is not a request for one.slide_count_targetPresentation only: exact slide count or range, only when the user gave one; omitted, 6 to 10 slides.Create a PDF quarterly report from the results I pastedMake a launch-plan deck covering positioning, milestones, channels, and metricsBuild a new file artifact: an editable document (docx), a fixed-layout PDF, a presentation (pptx), a spreadsheet / CSV export (xlsx), a plain markdown file (md), or any other plain file type (kind other). To change an existing artifact use artifact.edit. To author a Google Doc or Slides deck, build it here and publish with the Google connector. Create and edit Google Sheets through the Sheets connector.
+Build a hosted page whose content is fixed at build and saves nothing a visitor enters. A static page runs client-side JavaScript, maps, and any CSS framework; it resets on reload and is the only kind that can be exported. A page rendering data the user already provided, with no ongoing entry and no refresh, is static with the data embedded. Anything it must do at use time beyond the browser (save entries, fetch current or account data, run a model) needs the fullstack kind, as does content that goes stale, or is reshuffled on a schedule, unless the user asked for a one-time result or declined a refresh.
+
+Before creating, consider whether the request means changing an existing artifact instead. When the page's content depends on data you do not have (schedules, rosters, menus, personal content), ask the user for it before building rather than filling in invented stand-ins.
+
+Pass the user's exact ask in `verbatim_request`, a display `name`, and a factual `icon_subject` describing the artifact's subject and purpose.
+A static page is shareable as a public link: everyone with the link opens the same page, each visitor runs it alone, and nothing one visitor enters is saved or visible to anyone else. The fullstack kind that saves entries has no public link, so when a request needs both, name the choice (a page anyone can open, or a private app that saves their entries) and create nothing until they pick. When the request implies people writing together or seeing each other's changes, say so plainly rather than presenting the page as shared or approximating sharing with a workaround.
+Short, neutral name shown to the user; it sets the slug. Use the literal artifact category or supplied name from `verbatim_request`. If the current request is anaphoric, such as "Yes, build that", use the literal category or name from the exact prior user quote or explicitly accepted assistant proposal it refers to. Otherwise do not derive the name from preferences or facts. Do not invent a product concept, audience, mood, positioning, benefit, or aesthetic. Example: "Make me a trip planner" becomes `Trip Planner`, not `Kyoto Slow Days`.
+Describe what the artifact is about and what it lets the user do in one or two plain sentences. Ground this in the user's request or explicitly accepted context. Start with the main subject and purpose. `icon_subject` is factual topic context for automatic icon selection, not a requested depiction or an icon name. Keep it separate from the builder's instructions in `verbatim_request`; do not add requirements, suggest an icon, or describe visual styling. Example: "A concert-date tracker for the rock band Train."
+The exact goal ID, supplied when this new artifact directly supports an existing goal; optional otherwise. After the build succeeds, the runtime attempts to link it. Omit this for unrelated artifacts, and confirm the artifact appears in the matching read tool (`user_goal.get` or `tracking.get`) before claiming the link exists.
+Optional, web artifacts only. The research directory from finished deep research (the `Research directory:` path in its handoff, under the workspace's research_notes folder, holding report.md), whose values the builder embeds with their sources and researches beyond only where they stop. The builder reads the folder itself; keep `verbatim_request` as the user's exact words.A visual template for the web artifact. Set it only when the user asks to use a template by name, such as "use the muse template"; never infer one from a look they describe.
+Backyard Bird GuideA field guide for identifying common backyard birds from photographs.Make me a field guide to common backyard birds with photosBuild a hosted static web page or app: runs full JavaScript but resets on reload, and the only kind that can be exported. Before calling the tool, declare every connector method clearly required by the user's workflow; do not defer known connector needs to the builder. To change an existing artifact use artifact.edit.
+Build a hosted web app with a storage/server layer when the experience calls for saved state, live or refreshed data, or data from the app that you need to retrieve and use. Choose based on the intended workflow, even if the user hasn't specified storage or backend requirements.
+
+Before creating around a connected account or live source, check the source is available. If it isn't, surface that before creating: tell the user now and let them choose to connect it, provide the data, or start it empty. Create with an empty state only on their explicit choice, and never describe a stub integration or seeded stand-in as pulling real data.
+
+Pass the user's exact ask in `verbatim_request`, a display `name`, and a factual `icon_subject` describing the artifact's subject and purpose; set `refresh_triggers` for content that goes stale, or is reshuffled on a schedule.
+A fullstack app runs privately for this user and has no public link. When the request involves sharing the app or other people using it, say so before building and let them decide.
+Add a trigger whenever the artifact should record or update data on a schedule without the user asking each time: content that goes stale or is reshuffled, or records it keeps in sync. Add one for each schedule the user asked for; if they named none, add one daily trigger without asking first and tell them, unless they declined a refresh. Omit it when the artifact needs no refresh.
+A training planner that schedules practice sessions leading up to an event.Make me a training planner based on the event date in my calendarfind the target date and add training sessionsBuild a hosted web app with a storage/server layer for saved state, live or refreshed data, or data from the app that you need to retrieve and use. Before calling the tool, declare every connector method clearly required by the user's workflow; do not defer known connector needs to the builder. To change an existing artifact use artifact.edit.
+Voice characteristics are unspecified.Spoken accent is unspecified.checkout_records_unavailablepurchase_receipt_failedcheckout_save_failedWhen this call only records cart details and no order has been submitted for this checkout, you can retry the recording.
+
+If an order has been submitted or its submission is uncertain, a recording error does not establish whether it was placed. Do not repeat the submission to resolve it or keep retrying the same failed record.
+
+If recording remains unavailable, finish with `browser.report` using `status: blocked` and `summary`. Describe what the merchant showed, any confirmation number, and what remains unresolved. Leave out `outcome` and `confirmation` for this handoff; it returns the existing purchase records without trying to record the order again.
+When the result calls for corrected purchase details, record them with `checkout.inspect` and use `checkout.review_cart` if cart review is needed. Use `checkout.commit` when the result calls for another payment attempt.
+When the result calls for a correction or another payment attempt, use `checkout.prepare` with the current purchase. Follow the result's conditions for continuing.
+The browser environment was replaced, or its replacement was not confirmed. This call chain must return to the browser planner before work continues. You may inspect the current tabs and page and record what you can verify. Do not reconstruct the workflow, start another specialist, repeat a submission, or request another replacement.
+
+Finish with `browser.report`. In `summary`, give your completed steps, relevant choices and constraints, verified entry URLs, current page, and what must be reconstructed. Include uncertain submissions and relevant progress from your children. Distinguish recorded outcomes from assumptions; a reopened URL does not restore POST data, JavaScript state, sign-in or form entries. When your assignment remains unfinished, use `blocked` and explain why. The runtime carries the replacement fact and saved nested reports back through your callers to the browser planner.
+walletbrowser.files Write it as {"tab": "t1", "kind": "download", "target": "@e12"}, with only the fields its kind takes.sign_in_records_unavailablesign_in_page_unreadablesign_in_fields_unavailablesaved_logins_unavailablesign_in_consent_failedsecure_entry_failedsign_in_fill_failedafter_inferenceawaiting_approvalafter_tool_dispatchruntime.voice_s2s_record.unspoken_public_answerRIFFph

@@ -1,0 +1,1 @@
+This delivery is no longer open: it expired, another submission owns it, or it already ended. Do not present its items.

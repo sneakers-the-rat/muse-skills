@@ -1,0 +1,1 @@
+The user's answer to phone.begin_call's caller question for this call, or ai_assistant when phone.begin_call says human calling is unavailable. Direct AI-demo requests also use ai_assistant. Never reuse another call's choice.

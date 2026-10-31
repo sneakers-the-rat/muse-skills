@@ -1,0 +1,48 @@
+update shell.user_state
+                     set accessed_at_ms = null,
+                         last_opened_at_ms = null,
+                         frequency_score = null,
+                         updated_at_ms = $3
+                     where source = $1 and item_key = $2select pg_advisory_xact_lock(hashtext('shell.user_state.reconcile_library'))with existing as (
+                       select item_key from shell.user_state where source = 'library'
+                     ),
+                     upserted as (
+                       insert into shell.user_state
+                         (source, item_key, display_name, icon, accessed_at_ms,
+                          frequency_score, updated_at_ms)
+                       select 'library', item_key, display_name, icon, accessed_seed,
+                         case when accessed_seed is not null then $6 else null end, $4
+                       from unnest($1::text[], $2::text[], $3::text[], $5::bigint[])
+                         as scan(item_key, display_name, icon, accessed_seed)
+                       on conflict (source, item_key) do update set
+                         display_name = excluded.display_name,
+                         icon = excluded.icon,
+                         updated_at_ms = excluded.updated_at_ms
+                       where shell.user_state.display_name is distinct from excluded.display_name
+                          or shell.user_state.icon is distinct from excluded.icon
+                       returning item_key
+                     )
+                     select u.item_key, (e.item_key is null) as is_new
+                     from upserted u
+                     left join existing e on e.item_key = u.item_keydelete from shell.user_state
+                     where source = 'library' and item_key <> all($1)
+                     returning item_keyinsert into shell.user_state
+                       (source, item_key, is_favorite, favorite_order, updated_at_ms)
+                     values ($1, $2, $3, $4, $5)
+                     on conflict (source, item_key) do update set
+                       is_favorite = excluded.is_favorite,
+                       favorite_order = excluded.favorite_order,
+                       updated_at_ms = excluded.updated_at_msinsert into shell.user_state
+                           (source, item_key, display_name, icon, accessed_at_ms,
+                            frequency_score, updated_at_ms)
+                         values ('library', $1, $2, $3, $4,
+                           case when $4 is not null then $5 else null end, $6)
+                         on conflict (source, item_key) do update set
+                           display_name = excluded.display_name,
+                           icon = excluded.icon,
+                           updated_at_ms = excluded.updated_at_ms
+                         where shell.user_state.display_name is distinct from excluded.display_name
+                            or shell.user_state.icon is distinct from excluded.iconselect tabs from shell.tab_order where singletonselect tabs from shell.tab_order where singleton for updateselect case source when 'local' then 'space' else 'saved_space' end, space_slug
+                     from spaces.spaces where space_slug = any($1)
+                       and (source = 'local' or ($2 and source = 'saved' and saved_record_id is not null))
+                       and is_promotedupdate shell.tab_order set tabs = $1 where singleton and tabs is distinct from $1sidebar order accepts at most 500 entriessidebar membership changed; reload before reorderingshell_user_state.getshell_user_state.touch_recentshell_user_state.remove_recentshell_user_state.reconcile_libraryshell_user_state.set_favorite_ordershell_user_state.upsert_library_itemshell.tab_order.getshell.tab_order.setacquired connection, but time to acquire exceeded slow thresholdacquired connectiondatabase write admission gate closedadmission_timeoutcalled `Result::unwrap()` on an `Err` valueshortcodestateformat Historical save receipt; acceptance does not imply current saved membership.descriptionsaved_shortcodeupdated_at_msvariant identifierstruct NavigationTabstruct ArtifactAuditTurnstruct ArtifactAuditVerdictstruct ArtifactAuditReviewis_favoriteaccessed_at_mslast_opened_at_msfrequency_scorefavorite_orderdisplay_nameBUG: inner connection already taken!description() is deprecated; use Display

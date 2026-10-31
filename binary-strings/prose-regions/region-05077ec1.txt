@@ -1,0 +1,39 @@
+invocation_id, task_id, planner_agent_id, parent_invocation_id, caller_agent_id, caller_submission_id, call_id, agent_id, submission_id, runtime_work_id, input_digest, kind, state, input_json, context_json, result_json, wait_call_id, ordinal, tab_id, (extract(epoch from created_at) * 1000)::bigint as created_at_ms, (extract(epoch from stop_requested_at) * 1000)::bigint as stop_requested_at_ms, terminal_reason, handoff_state, (extract(epoch from finished_at) * 1000)::bigint as finished_at_mspost_start_importinitial_importspacesteer_id, invocation_id, task_id, sender_agent_id, sender_submission_id, call_id, body, request_trace_context_json, (extract(epoch from created_at) * 1000)::bigint as created_at_ms, (extract(epoch from delivered_at) * 1000)::bigint as delivered_at_ms, (extract(epoch from undeliverable_at) * 1000)::bigint as undeliverable_at_ms
+SELECT f.event_seq, f.field_path, f.scalar_type, f.scalar_value, f.text_value
+FROM event_payload_fields AS f
+WHERE f.event_seq IN (
+, ) ORDER BY f.event_seq ASC, length(f.field_path) ASC, f.field_path ASCevent_seqfield_pathscalar_typescalar_valuetext_value
+SELECT event_seq, ordinal, resource_kind AS kind, resource_key AS uri, label, mime_type, size_bytes, metadata_json
+FROM resources
+WHERE event_seq IN (
+) ORDER BY event_seq ASC, ordinal ASCurisize_bytesmetadata_jsonINSERT INTO agents (agent_id, id, session_id, kind, parent_id, parent_agent_id, root_session_id, depth, created_at, updated_at, model, status, last_assistant_message, ephemeral, agent_type, presentation_root_session_id, spawn_metadata_json, originating_location_context_json)
+             VALUES ($1, $1, $2, $3, $4, $4, $5, $6, $7, $8, $9, $10, NULL, $11, $12, $13, $14, $15)
+INSERT INTO agent_ancestors (descendant_id, ancestor_id, distance)
+VALUES ($1, $1, 0)
+ON CONFLICT (descendant_id, ancestor_id) DO NOTHING
+
+INSERT INTO agent_ancestors (descendant_id, ancestor_id, distance)
+SELECT $1, ancestor_id, distance + 1
+FROM agent_ancestors
+WHERE descendant_id = $2
+ON CONFLICT (descendant_id, ancestor_id) DO NOTHING
+
+INSERT INTO agent_ancestors (descendant_id, ancestor_id, distance)
+VALUES ($1, $2, 1)
+ON CONFLICT (descendant_id, ancestor_id) DO NOTHING
+freshtransaction.acquire_and_beginregistry_lockselect id, domains from context.subscriptions where subscription_key = $1 for updatesubscription.lookup_for_updatesources.enroll_previousinsert into context.subscriptions (id, subscription_key, domains) values ($1,$2,$3)subscription.insertupdate context.group_cursors g set lease_token=null, lease_expires_at=null, evidence_expires_at=null,
+                        window_position=null, batch_position=null, retry_at=null,
+                        available_position=coalesce((select max(e.append_position) from context.events e
+                          where e.source_id=g.source_id and e.group_id=g.group_id
+                          and e.append_position>g.acknowledged_position and e.append_position<=g.available_position
+                          and (e.expires_at is null or e.expires_at>statement_timestamp())
+                          and ($2 or e.content_hints && $3::text[])),g.acknowledged_position)
+                        where subscription_id=$1hints.reconcile_leasestransaction.commitsources.enroll_desiredupdate context.subscription_sources ss set active = ($2 or s.source_domain = any($3))
+                from context.sources s where ss.subscription_id = $1 and s.id = ss.source_idupdate context.group_cursors g set lease_token = null, lease_expires_at = null, evidence_expires_at = null
+                from context.subscription_sources ss where g.subscription_id = $1
+                and ss.subscription_id = g.subscription_id and ss.source_id = g.source_id and not ss.activeleases.invalidate_removedupdate context.subscriptions set domains = $2, updated_at = now() where id = $1 and domains <> $2coverage.updateselect i.invocation_id, i.kind, i.sign_in_site
+    from runtime.browser_invocations i
+    join runtime.browser_tasks t on t.task_id = i.task_id
+    where i.task_id = $1 and i.result_json is null
+      and i.planner_agent_id = t.owner_agent_id
+    order by i.ordinalideas_build_hand_offweb_artifacts.exit_buildthe browser follow-up is no longer due

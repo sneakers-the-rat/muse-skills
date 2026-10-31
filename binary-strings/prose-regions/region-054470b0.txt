@@ -1,0 +1,148 @@
+  definition_changedwake_not_admittedinvocation_idhook_idstarted_at_msfinished_at_msduration_msoutcomereasonpayloadscript_logsstdoutstderrdry_rundisable_requestederrorexecute_resolve_run_iddisable_outcomedisable_errorscheduled_at_msdefinition_updated_at_msactionstruct variant CronExecution::SpaceAction with 3 elementsuntagged and internally tagged enums do not support enum inputMapAccess::next_value called before next_key}{{site}authoritative cron file name does not contain a schedule keyauthoritative cron file name is invaliddefault heartbeat file name is invalidauthoritative cron definition validation failedfailed to parse authoritative cron definition/...[SCHEDULED TASK HANDOFF][HEARTBEAT HANDOFF]heartbeat[PROACTIVITY HANDOFF]proactivityUse `worker_message`, `task_context`, and result files explicitly referenced in them as the source of user-facing content, and apply this turn's delivery rules: always surface what the user explicitly asked to receive; otherwise surface only what is genuinely new and worth their attention.
+
+Honor `task_context`'s explicit notification conditions before considering novelty. If this occurrence completed and those conditions are not met, call `muse.nothing_to_do`. A return to healthy or in-progress state, a fully recovered probe, or an earlier warning does not override a request to remain quiet. An unresolved failure or gap in coverage warrants a message when the task explicitly asks for it, an unrepairable job is disabled and an expected result will no longer arrive, or the user has a concrete decision or action that would unblock the work. Investigate and attempt an authorized repair first.
+
+Treat a report whose only substantive claim is no material change or no alert as negative evidence under the genuinely new and worth attention rule. Surface the report despite that negative evidence when `task_context` explicitly directs delivery every run, or when the report includes a useful verified repair, explains that an unrepairable job was disabled and an expected result will no longer arrive, or presents a concrete decision or action for the user. Call `muse.nothing_to_do` when that negative evidence remains.
+
+Worker reports are internal. If the worker claims it already messaged the user, check the current conversation for a user-visible assistant response that actually conveyed the result before treating it as a duplicate. A completed goal or successful cron run is not proof of message delivery.
+
+Read referenced files as needed to deliver the requested result. For a full readout, read all relevant content and deliver it in the requested format; use a summary or link only when that format allows it. Report missing or unreadable portions.
+
+Distinguish when the job ran, when the source was observed, when results were saved, and when the user received them. Suppressing a duplicate warning does not make an incomplete run successful.
+
+When nothing qualifies for the user's attention, call `muse.nothing_to_do` before writing anything; never emit visible filler about having nothing to report.
+
+When explaining a failure, use the supplied recovery status as a point-in-time observation. Do not promise another attempt just because a run is in flight or another occurrence is scheduled. Deliver ready results according to the task's notification conditions. Avoid repeating an unchanged failure already conveyed to the user.
+Use task_context, worker_message and their explicitly referenced result files for the requested output.
+
+Apply task_context's notification conditions before novelty. If this occurrence completed and those conditions are not met, call muse.nothing_to_do. A return to healthy or in-progress state, a recovered probe or an earlier warning does not override a request for silence. If worth surfacing, put the substantive result in the response.
+
+Investigate and attempt authorized repair before reporting an unresolved failure or coverage gap. Such a failure warrants a message when the task asks for it, an unrepairable job is disabled and an expected result will no longer arrive, or the user has a concrete decision or action that would unblock work. A no-change or no-alert report otherwise stays quiet unless delivery is requested every run, it includes a useful verified repair, or it presents a concrete decision or action for the user.
+
+Distinguish the run, source-observation, save and delivery times. Treat a supplied recovery snapshot as a point-in-time observation; do not promise another attempt merely because a run is in flight or scheduled.
+This schedule is owned by goal `{goal_slug}`. If handling this turn updates its tracking state (watermarks, check or run logs, seen lists, raw snapshots), write it under `~/workspace/goals/{goal_slug}/hidden_files/`, never `files/` or `~/workspace/your_files/`.
+{goal_slug}If worth surfacing and `delivery_targets` includes a visible chat target (`main` or `side_chat`), put the substantive result in the visible response.
+
+Your response is for the user. Speak directly to them in the tone and voice established in this conversation, following your writing style instructions. Do not repeat the handoff's internal addressing or instructions to you. Bring the useful result into the conversation, preserving its facts, limitations and required links or attachments. Follow any requirement to deliver particular text unchanged. Keep the reply no longer than the user needs.
+</worker_message>
+goalscrons[JOB BLOCKED]
+This job is paused because {blocker}.
+{blocker}[SIGN-IN NEEDED]
+This run stopped at the sign-in page for {site}. The schedule keeps running, and the next run succeeds once a login for {site} is saved and allowed. Work out the actual cause from the worker report; use `credentials.list` to see whether a login for {site} is saved. When none is saved and the site signs in with a password, call `credentials.request_login` with page_url `https://{site}/` so this reply carries the secure sign-in card. When the saved login needed approval that no one gave in time, tell the user they can still answer that sign-in request while it is open, or on the next run, and that Allow there covers this schedule's later runs. If the saved login was rejected, or the site needs a code, push approval or security key, follow the credential tools' guidance for that case. Tell the user in one or two plain sentences, without internal codes.
+[SIGN-IN STILL NEEDED]
+This run stopped at the sign-in page for {site} again, like the run before it, so the user has already been asked. Do not ask again or send another sign-in card for {site}; mention it only if the user brings it up.
+hatch_hook_runtime.shpoll-schedule# shellcheck shell=bash
+
+_HATCH_HOOK_DISABLE_AFTER_RUN=false
+
+_hatch_hook_compact_json() {
+    local value="${1-}"
+    printf '%s' "$value" | jq -ce '.'
+}
+
+_hatch_hook_object_json() {
+    local value="${1-}"
+    printf '%s' "$value" | jq -ce 'select(type == "object")'
+}
+
+_hatch_hook_emit() {
+    local decision="$1"
+    local reason="${2-}"
+    local payload="${3-}"
+    local result
+
+    if [[ -n "$payload" ]]; then
+        payload="$(_hatch_hook_compact_json "$payload")" || return
+        result="$(
+            jq -cn \
+                --arg decision "$decision" \
+                --arg reason "$reason" \
+                --argjson payload "$payload" \
+                --argjson disable_after_run "$_HATCH_HOOK_DISABLE_AFTER_RUN" \
+                '{
+                    decision: $decision,
+                    reason: $reason,
+                    payload: $payload
+                } + if $disable_after_run then {disable_after_run: true} else {} end'
+        )" || return
+    else
+        result="$(
+            jq -cn \
+                --arg decision "$decision" \
+                --arg reason "$reason" \
+                --argjson disable_after_run "$_HATCH_HOOK_DISABLE_AFTER_RUN" \
+                '{
+                    decision: $decision,
+                    reason: $reason
+                } + if $disable_after_run then {disable_after_run: true} else {} end'
+        )" || return
+    fi
+
+    printf 'HATCH_HOOK_RESULT:%s\n' "$result"
+    exit 0
+}
+
+silent() {
+    _hatch_hook_emit "silent" "${1-}" "${2-}"
+}
+
+wake() {
+    _hatch_hook_emit "wake" "${1-}" "${2-}"
+}
+
+disable_after_run() {
+    _HATCH_HOOK_DISABLE_AFTER_RUN=true
+}
+
+log() {
+    local message="${1-}"
+    local fields="${2-}"
+    local entry
+
+    if [[ -z "$fields" ]]; then
+        fields='{}'
+    fi
+    fields="$(_hatch_hook_object_json "$fields")" || return
+    entry="$(
+        jq -cn \
+            --arg message "$message" \
+            --argjson fields "$fields" \
+            '$fields + {message: $message}'
+    )" || return
+    printf 'HATCH_HOOK_LOG:%s\n' "$entry" >&2
+}
+
+_hatch_hook_state_path() {
+    printf '%s/%s.json' "${HATCH_HOOK_STATE_DIR:?HATCH_HOOK_STATE_DIR is unset}" \
+        "${HATCH_HOOK_ID:?HATCH_HOOK_ID is unset}"
+}
+
+# Read this hook's persisted state object. Prints `{}` when nothing has been
+# stored yet or the stored file is unreadable/corrupt, so callers can pipe
+# straight into jq without a first-run special case.
+hook_state_get() {
+    local path
+    path="$(_hatch_hook_state_path)" || return
+    if [[ ! -f "$path" ]]; then
+        printf '{}'
+        return 0
+    fi
+    jq -ce 'select(type == "object")' <"$path" 2>/dev/null || printf '{}'
+}
+
+# Persist this hook's state object. The value is validated on every run, but
+# the write is SKIPPED on dry runs so testing a hook can never consume a
+# detection the next live poll still needs to make.
+hook_state_set() {
+    local value path temporary
+    value="$(_hatch_hook_object_json "${1-}")" || return
+    if [[ "${HATCH_HOOK_DRY_RUN-0}" == "1" ]]; then
+        return 0
+    fi
+    path="$(_hatch_hook_state_path)" || return
+    temporary="${path}.${HATCH_HOOK_INVOCATION_ID:-$$}.tmp"
+    printf '%s\n' "$value" >"$temporary" || return
+    mv -f "$temporary" "$path"
+}
+
+script_path cannot be emptyhook script must use a .sh extensionyearlymonthlyweeklydailyhourlyrunoncecron definition authority is unresolved pending host-store statuscron definition authority is blocked pending host-store validation__host cron definition authority is already activeblocked cron definition authority cannot become unresolvedinitialize authoritative cron store clientmd.tmp30m2026-01-01T00:00:00Run the heartbeat checklist from HEARTBEAT.md.ensure_scheduler_workspaceseed_default_heartbeat_schedule_if_missingcron target path resolution failedgoal cron target path resolution failedauthoritative system cron path has no frequencysystem cron target path resolution failedauthoritative cron removal succeeded but projection archival failedauthoritative cron commit succeeded but projection write failedauthoritative cron commit succeeded but stale projection archival failedcron projection path failedauthoritative cron store operation failedSpace cron cleanup requires at least one slugauthoritative cron definition failed identity validationsystem crons are managed by the runtimeevent hatch-engine/crates/hatch-cron-core/src/mutations/host_authority.rs:257hatch_cron::tools::cron::host_authoritymessagejob_idspace_slugshatch_cron_core::mutations::host_authorityhatch-engine/crates/hatch-cron-core/src/mutations/host_authority.rsevent hatch-engine/crates/hatch-cron-core/src/mutations/host_authority.rs:265event hatch-engine/crates/hatch-cron-core/src/mutations/host_authority.rs:184event hatch-engine/crates/hatch-cron-core/src/mutations/host_authority.rs:540event hatch-engine/crates/hatch-cron-core/src/mutations/host_authority.rs:482event hatch-engine/crates/hatch-cron-core/src/mutations/host_authority.rs:513event hatch-engine/crates/hatch-cron-core/src/mutations/host_authority.rs:492variant identifierstruct HookInvocationLogstruct HookPollSchedulea Display implementation returned an error unexpectedlyError

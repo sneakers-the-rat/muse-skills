@@ -1,1 +1,0 @@
-hatch-engine/crates/hatch-self-improvement/prompts/lenses/de_generalization.md

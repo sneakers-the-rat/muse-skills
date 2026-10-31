@@ -1,0 +1,309 @@
+errorsuccesswrite_admissionwritepostgres write completed slowlypostgres write failedretrying idempotent postgres writeone-shot postgres write invoked more than onceneeds_interpretationreasonlocal_datehour_slotgeneration_queued_at_msstatusoutput_jsonsubmitted_at_msselect n, signal_key, source, kind, strength, use_case,
+                            sub_use_case, horizon, as_of_ms, due_at_ms, first_seen_ms,
+                            last_cited_at_ms, rendered, drop_reason
+                       from feed.run_signals
+                      where run_id = $1 and seat = $2
+                      order by n ascdelete from feed.run_signals where run_id = $1 and seat = $2insert into feed.run_signals
+                         (run_id, seat, n, signal_key, source, kind, strength,
+                          use_case, sub_use_case, horizon, as_of_ms, due_at_ms,
+                          first_seen_ms, last_cited_at_ms, rendered, drop_reason,
+                          recorded_at_ms)
+                     select $1, $2, r.n, r.signal_key, r.source, r.kind, r.strength,
+                            r.use_case, r.sub_use_case, r.horizon, r.as_of_ms,
+                            r.due_at_ms, r.first_seen_ms, r.last_cited_at_ms,
+                            r.rendered, r.drop_reason, $17
+                       from unnest($3::integer[], $4::text[], $5::text[], $6::text[],
+                                   $7::double precision[], $8::text[], $9::text[],
+                                   $10::text[], $11::bigint[], $12::bigint[],
+                                   $13::bigint[], $14::bigint[], $15::boolean[],
+                                   $16::text[])
+                            as r(n, signal_key, source, kind, strength, use_case,
+                                 sub_use_case, horizon, as_of_ms, due_at_ms,
+                                 first_seen_ms, last_cited_at_ms, rendered,
+                                 drop_reason)delete from feed.run_signals where recorded_at_ms < $1delete from feed.run_signals where source = any($1)select needs_interpretation, reason
+                       from feed.prompt_scope_verdict
+                      where prompt_sha256 = $1
+                        and classifier_version = $2insert into feed.prompt_scope_verdict
+                         (singleton, prompt_sha256, needs_interpretation, reason,
+                          classifier_version, classified_at_ms)
+                     values (true, $1, $2, $3, $4, $5)
+                     on conflict (singleton) do update set
+                         prompt_sha256 = excluded.prompt_sha256,
+                         needs_interpretation = excluded.needs_interpretation,
+                         reason = excluded.reason,
+                         classifier_version = excluded.classifier_version,
+                         classified_at_ms = excluded.classified_at_msinsert into feed.unit_signals
+                         (unit_id, n, signal_key, source, use_case, recorded_at_ms)
+                     select $1, r.n, r.signal_key, r.source, r.use_case, $6
+                       from unnest($2::integer[], $3::text[], $4::text[], $5::text[])
+                            as r(n, signal_key, source, use_case)
+                     on conflict (unit_id, n) do update set
+                         signal_key = excluded.signal_key,
+                         source = excluded.source,
+                         use_case = case
+                             when feed.unit_signals.signal_key = excluded.signal_key
+                             then coalesce(excluded.use_case, feed.unit_signals.use_case)
+                             else excluded.use_case
+                         end,
+                         recorded_at_ms = excluded.recorded_at_msselect s.signal_key, max(u.created_at_ms) as used_at_ms,
+                            count(distinct s.unit_id) as posts
+                       from feed.units u
+                       join feed.unit_signals s on s.unit_id = u.unit_id
+                      where u.created_at_ms >= $1
+                      group by s.signal_keyselect count(*) from feed.units u
+                      where u.prompt_id = $1 and u.edition_local_date = $2
+                        and u.beat = any($3)
+                        and not exists (
+                          select 1 from feed.unit_signals s where s.unit_id = u.unit_id
+                        )delete from feed.unit_signals where source = any($1)select claim_key, kind, subject, use_case, sub_use_case,
+                            origin, observations, first_seen_ms, last_seen_ms
+                       from feed.derived_claims
+                      where expires_at_ms > $1 and observations >= $2
+                      order by observations desc, last_seen_ms desc
+                      limit $3delete from feed.derived_claimsdelete from feed.derived_claims where expires_at_ms <= $1insert into feed.fleet_fetch_receipts
+                         (payload_hash, origin_id, first_fetched_at_ms)
+                     select distinct on (origin) hash, origin, $3
+                     from unnest($1::text[], $2::text[]) as t(hash, origin)
+                     order by origin, hash
+                     on conflict do nothing
+                     returning payload_hashselect t.hash
+                     from unnest($1::text[], $2::text[]) as t(hash, origin)
+                     where exists (
+                             select 1 from feed.fleet_fetch_receipts r
+                             where r.payload_hash = t.hash or r.origin_id = t.origin
+                           )select content_locale, updated_at from runtime.background_content_jobs
+                 where job_id = 'feed' and locale_revision = $1 and refresh_pendingcontent_localeupdated_atupdate feed.prompts set generation_queued_at_ms = $1,
+                     generation_queued_requester = case
+                         when generation_queued_at_ms is not null
+                             and (generation_queued_requester is null
+                                 or (jsonb_typeof(generation_queued_requester) = 'object'
+                                     and generation_queued_requester ->> 'content_locale_revision' is null))
+                         then (coalesce(generation_queued_requester, '{}'::jsonb)
+                               - 'content_locale_revision')
+                             || jsonb_build_object('content_locale', $2::jsonb -> 'content_locale')
+                         else $2
+                     end
+                 where enabled and (generation_queued_at_ms is null or generation_queued_at_ms <= $1)
+                 returning prompt_idcontent_locale_revisionselect exists(select 1 from feed.prompts where enabled)select queries
+                       from feed.prompt_query_plan
+                      where prompt_sha256 = $1
+                        and testimony_sha256 = $2
+                        and composer_version = $3queriesinsert into feed.prompt_query_plan
+                         (singleton, prompt_sha256, testimony_sha256, queries,
+                          composer_version, composed_at_ms)
+                     values (true, $1, $2, $3, $4, $5)
+                     on conflict (singleton) do update set
+                         prompt_sha256 = excluded.prompt_sha256,
+                         testimony_sha256 = excluded.testimony_sha256,
+                         queries = excluded.queries,
+                         composer_version = excluded.composer_version,
+                         composed_at_ms = excluded.composed_at_msselect signal_key, text_sha256, use_case, sub_use_case, subject,
+                            note_kind, note_valid_until, note_learned_on, note_covered_by
+                       from feed.signal_enrichment
+                      where signal_key = any($1) and taxonomy_version = $2update feed.signal_enrichment
+                        set use_case = $3, sub_use_case = $4, subject = $5,
+                            note_kind = $6, note_valid_until = $7, note_covered_by = $8,
+                            note_learned_on = $10, classified_at_ms = $9
+                      where signal_key = $1 and text_sha256 = $2update feed.signal_enrichment
+                        set use_case = $3, sub_use_case = $4, subject = $5,
+                            classified_at_ms = $6
+                      where signal_key = $1 and text_sha256 = $2delete from feed.signal_enrichmentinsert into feed.signal_enrichment
+                         (signal_key, source, text_sha256, taxonomy_version,
+                          classified_at_ms)
+                     values ($1, $2, $3, $4, $5)
+                     on conflict (signal_key) do update set
+                         source = excluded.source,
+                         text_sha256 = excluded.text_sha256,
+                         taxonomy_version = excluded.taxonomy_version,
+                         use_case = case
+                             when feed.signal_enrichment.text_sha256 = excluded.text_sha256
+                              and feed.signal_enrichment.taxonomy_version
+                                  = excluded.taxonomy_version
+                             then feed.signal_enrichment.use_case else null end,
+                         sub_use_case = case
+                             when feed.signal_enrichment.text_sha256 = excluded.text_sha256
+                              and feed.signal_enrichment.taxonomy_version
+                                  = excluded.taxonomy_version
+                             then feed.signal_enrichment.sub_use_case else null end,
+                         subject = case
+                             when feed.signal_enrichment.text_sha256 = excluded.text_sha256
+                              and feed.signal_enrichment.taxonomy_version
+                                  = excluded.taxonomy_version
+                             then feed.signal_enrichment.subject else null end,
+                         note_kind = case
+                             when feed.signal_enrichment.text_sha256 = excluded.text_sha256
+                              and feed.signal_enrichment.taxonomy_version
+                                  = excluded.taxonomy_version
+                             then feed.signal_enrichment.note_kind else null end,
+                         note_valid_until = case
+                             when feed.signal_enrichment.text_sha256 = excluded.text_sha256
+                              and feed.signal_enrichment.taxonomy_version
+                                  = excluded.taxonomy_version
+                             then feed.signal_enrichment.note_valid_until else null end,
+                         note_learned_on = case
+                             when feed.signal_enrichment.text_sha256 = excluded.text_sha256
+                              and feed.signal_enrichment.taxonomy_version
+                                  = excluded.taxonomy_version
+                             then feed.signal_enrichment.note_learned_on else null end,
+                         note_covered_by = case
+                             when feed.signal_enrichment.text_sha256 = excluded.text_sha256
+                              and feed.signal_enrichment.taxonomy_version
+                                  = excluded.taxonomy_version
+                             then feed.signal_enrichment.note_covered_by else null enddelete from feed.signal_enrichment
+                      where taxonomy_version <> $2
+                         or ($3 and not (signal_key = any($1)))with windows as (
+                        select w.label, w.lo, $3::bigint as hi
+                          from unnest($1::text[], $2::bigint[]) as w(label, lo)
+                      ),
+                      reaction as (
+                        select distinct on (w.label, i.unit_id) w.label, i.unit_id, i.value
+                          from windows w
+                          join feed.interactions i
+                            on i.created_at_ms >= w.lo and i.created_at_ms < w.hi
+                         where i.kind in ('reaction_set', 'reaction_cleared')
+                         order by w.label, i.unit_id, i.created_at_ms desc, i.interaction_id desc
+                      ),
+                      activity as (
+                        select w.label, i.unit_id,
+                               bool_or(i.kind = 'discuss') as discussed,
+                               bool_or(i.kind in ('tap_image', 'tap_video', 'tap_link',
+                                                  'tap_social_source')) as tapped,
+                               bool_or(i.kind = 'tap_image') as tapped_image,
+                               bool_or(i.kind = 'tap_video') as tapped_video,
+                               bool_or(i.kind = 'tap_link') as tapped_link,
+                               bool_or(i.kind = 'tap_social_source') as tapped_social_source,
+                               bool_or(i.kind = 'deleted') as deleted
+                          from windows w
+                          join feed.interactions i
+                            on i.created_at_ms >= w.lo and i.created_at_ms < w.hi
+                         where i.kind in ('discuss', 'deleted', 'tap_image', 'tap_video', 'tap_link',
+                                          'tap_social_source')
+                         group by w.label, i.unit_id
+                      ),
+                      thumbs as (
+                        select distinct on (w.label, f.entity_id)
+                               w.label, f.entity_id as unit_id, f.feedback
+                          from windows w
+                          join feedback.entity_feedback_events f
+                            on f.created_at >= to_timestamp(w.lo / 1000.0)
+                           and f.created_at < to_timestamp(w.hi / 1000.0)
+                         where f.entity_type = 'feed_unit'
+                           and f.feedback in ('feedback_up', 'feedback_down')
+                         order by w.label, f.entity_id, f.created_at desc, f.event_id desc
+                      ),
+                      scored as (
+                        select w.label, e.category, e.beat, e.use_cases, e.seen_at_ms,
+                               coalesce(r.value in ('like', 'love'), false)
+                                 or coalesce(t.feedback = 'feedback_up', false) as liked,
+                               coalesce(r.value = 'dislike', false) as disliked,
+                               coalesce(a.discussed, false) as discussed,
+                               coalesce(a.tapped, false) as tapped,
+                               coalesce(a.tapped_image, false) as tapped_image,
+                               coalesce(a.tapped_video, false) as tapped_video,
+                               coalesce(a.tapped_link, false) as tapped_link,
+                               coalesce(a.tapped_social_source, false) as tapped_social_source,
+                               coalesce(a.deleted, false) as deleted,
+                               coalesce(e.source_idea_id is not null
+                                 and e.seen_at_ms is not null and exists (
+                                 select 1 from ideas.idea_events ev
+                                  where ev.idea_id = e.source_idea_id
+                                    and ev.event_type = 'decision'
+                                    and ev.metadata ->> 'decision' = 'accepted'
+                                    and ev.created_at >= to_timestamp(
+                                          greatest(w.lo, e.seen_at_ms) / 1000.0)
+                                    and ev.created_at < to_timestamp(w.hi / 1000.0)),
+                                 false) as built,
+                               coalesce(t.feedback = 'feedback_down', false) as thumbs_down,
+                               coalesce(e.seen_at_ms < w.hi
+                                        and coalesce(e.last_seen_at_ms, e.seen_at_ms) >= w.lo,
+                                        false) as on_screen
+                          from windows w
+                          cross join feed.unit_engagement e
+                          left join reaction r on r.label = w.label and r.unit_id = e.unit_id
+                          left join activity a on a.label = w.label and a.unit_id = e.unit_id
+                          left join thumbs t on t.label = w.label and t.unit_id = e.unit_id
+                      ),
+                      counted as (
+                        select s.*,
+                               (s.liked or s.discussed) as positive_topic,
+                               (s.liked or s.discussed or s.built) as positive_beat,
+                               (s.disliked or s.deleted or s.thumbs_down) as negative
+                          from scored s
+                         where (s.on_screen or s.liked or s.disliked or s.discussed
+                                or s.tapped or s.built or s.deleted or s.thumbs_down)
+                           and ($5::bigint is null
+                                or (s.seen_at_ms is not null and s.seen_at_ms < $5::bigint))
+                      ),
+                      weighted as (
+                        select c.*, d.dimension, d.value, d.w
+                          from counted c
+                          cross join lateral (
+                            select 'category'::text, c.category, 1.0::float8
+                            union all
+                            select 'beat', coalesce(c.beat, '(none)'), 1.0::float8
+                            union all
+                            select 'use_case', uc, 1.0::float8 / cardinality(c.use_cases)
+                              from unnest(c.use_cases) as uc
+                            union all
+                            select 'use_case', '(unlabeled)', 1.0::float8
+                             where cardinality(c.use_cases) = 0
+                          ) as d(dimension, value, w)
+                         where d.dimension = any($4::text[])
+                      )
+                      select label, dimension, value, sum(w) as posts,
+                             coalesce(sum(w) filter (where liked), 0) as liked,
+                             coalesce(sum(w) filter (where disliked), 0) as disliked,
+                             coalesce(sum(w) filter (where discussed), 0) as discussed,
+                             coalesce(sum(w) filter (where tapped), 0) as tapped,
+                             coalesce(sum(w) filter (where tapped_image), 0) as tapped_image,
+                             coalesce(sum(w) filter (where tapped_video), 0) as tapped_video,
+                             coalesce(sum(w) filter (where tapped_link), 0) as tapped_link,
+                             coalesce(sum(w) filter (where tapped_social_source), 0)
+                               as tapped_social_source,
+                             coalesce(sum(w) filter (where built), 0) as built,
+                             coalesce(sum(w) filter (where deleted), 0) as deleted,
+                             coalesce(sum(w) filter (where thumbs_down), 0) as thumbs_down,
+                             coalesce(sum(w) filter (where case when dimension = 'beat'
+                                                                then positive_beat
+                                                                else positive_topic end), 0)
+                               as positive,
+                             coalesce(sum(w) filter (where negative), 0) as negative
+                        from weighted
+                       group by label, dimension, value
+                       order by label, dimension, posts desc, valueselect preferences_md, folded_through_ms, updated_by_run, updated_at_ms
+                     from feed.preferences_projection
+                     where singleton_id = 1insert into feed.preferences_projection
+       (singleton_id, preferences_md, folded_through_ms, updated_by_run, updated_at_ms)
+     values (1, $1, $2, $3, $4)
+     on conflict (singleton_id) do update
+       set preferences_md = excluded.preferences_md,
+           folded_through_ms = excluded.folded_through_ms,
+           updated_by_run = excluded.updated_by_run,
+           updated_at_ms = excluded.updated_at_ms
+       where excluded.folded_through_ms >= feed.preferences_projection.folded_through_msrun_id, trigger, edition_kind, local_date, hour_slot, tz, prompt_id, prompt_snapshot, requester, slot_fulfillment, interactions_watermark_ms, status, failure_reason, started_at_ms, finished_at_ms, created_at_ms, updated_at_msinsert into feed.runs
+       (run_id, trigger, edition_kind, local_date, hour_slot, tz, prompt_id,
+        prompt_snapshot, requester, status, created_at_ms, updated_at_ms)
+     select $1, $2, $3, $4, $10, $5, $6, $7, $8, 'queued', $9, $9
+     where $2 <> 'scheduled'
+        or not exists (
+             select 1 from feed.runs
+             where prompt_id = $6
+               and local_date = $4
+               and hour_slot = $10
+               and trigger = 'scheduled'
+               and status = 'failed')
+     on conflict (prompt_id, local_date, hour_slot)
+       where trigger = 'scheduled' and status in ('queued', 'running', 'succeeded')
+       do nothing
+     returning run_id, trigger, edition_kind, local_date, hour_slot, tz, prompt_id, prompt_snapshot, requester, slot_fulfillment, interactions_watermark_ms, status, failure_reason, started_at_ms, finished_at_ms, created_at_ms, updated_at_msselect exists (
+                                 select 1 from feed.runs
+                                 where prompt_id = $1
+                                   and local_date = $2
+                                   and hour_slot = $3
+                                   and trigger = 'scheduled'
+                                   and status = 'failed')update feed.runs
+                     set status = $2,
+                         failure_reason = $3,
+                         finished_at_ms = $4,
+                         updated_at_ms = $4
+                     where run_id = $1 and status in ('queued', 'running')

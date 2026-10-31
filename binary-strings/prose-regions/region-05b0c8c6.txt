@@ -1,0 +1,87 @@
+
+select input_grants_json
+from runtime.browser_tasks
+where task_id = $1
+  and owner_kind is distinct from 'user'
+  and admission_seq is not null
+  and status = 'user_controlled'
+  and owner_agent_id = $2
+  and stream_owner_message_id = $3
+  and state_revision = $4
+  and outcome_status is null
+for update
+select 1 from runtime.browser_tasks where task_id = $1 for updatet.status = 'running' and t.last_progress_at <= now() - ($2::bigint * interval '1 second') and not exists (select 1 from runtime.browser_calls c where c.task_id = t.task_id and c.kind = 'action' and c.phase = 'dispatched')
+select exists (
+    select 1
+    from runtime.browser_calls
+    where operation_id = $1
+      and kind = 'interaction'
+      and result_json is not null
+)
+
+update runtime.browser_tasks
+set status = $5,
+    terminal_reason = $6,
+    terminal_interrupt_subtype = null,
+    completed_at = now(),
+    terminal_user_update_due_at = now(),
+    outcome_status = $7,
+    outcome_reason = null,
+    outcome_at = now(),
+    retention_end_reason = $8,
+    requester_source = null,
+    requester_transport = null,
+    requester_model = null,
+    requester_effective_model = null,
+    request_mode_json = null,
+    max_training_tier_json = null,
+    initial_instruction = null,
+    deadline_at = null,
+    state_revision = state_revision + 1,
+    updated_at = now()
+where task_id = $1
+  and admission_seq is not null
+  and owner_agent_id = $2
+  and stream_owner_message_id = $3
+  and state_revision = $4
+  and status = 'running'
+  and outcome_status is null
+  and outcome_reason is null
+  and outcome_at is null
+  and retention_end_reason is null
+  and completed_at is null
+returning state_revision
+
+select state_revision
+from runtime.browser_tasks
+where task_id = $1
+  and admission_seq is not null
+  and owner_agent_id = $2
+  and stream_owner_message_id = $3
+  and state_revision = $4
+  and status = $5
+  and outcome_status = $7
+  and outcome_reason is null
+  and outcome_at is not null
+  and retention_end_reason = $8
+  and completed_at = outcome_at
+  and terminal_reason = $6
+  and terminal_interrupt_subtype is null
+  and deadline_at is null
+for update
+
+insert into runtime.browser_tasks (
+    task_id, browser_session_id, root_session_id, presentation_root_session_id,
+    owner_agent_id, root_message_id, stream_owner_message_id, parent_agent_id,
+    tool_call_id, continuation_root_task_id, admission_seq, status, title,
+    initial_instruction, run_presentation_locale, owner_kind, broker_instance,
+    request_trace_context_json, run_location_context_json, is_task_card_visible,
+    browser_harness_kind, browser_harness_version, profile_id, node_id, node_name,
+    on_shared_tab
+) values (
+    $1, 'default', $2, $3, null, $1, $1, $2,
+    $1, $1, nextval('runtime.browser_tasks_admission_seq_seq'), 'starting',
+    'Browser', 'Open browser', $4, $5, $6, $7, $8, false, $9, $10, $11, $12, $13, $14
+)
+on conflict (task_id) do nothing
+agent browser window has invalid reserved ownership or lifecycle

@@ -1,0 +1,156 @@
+errorsuccesswrite_admissionwritepostgres write completed slowlypostgres write failedretrying idempotent postgres writeone-shot postgres write invoked more than oncedetail_jsondiagnostic_jsonwork_idstateterminalized_atcreated_atinput_fingerprinttrigger_outcomeupdate runtime.work_items
+                         set metadata_json = $5, updated_at = now()
+                         where work_id = $1
+                           and work_class = 'maintenance_job'
+                           and state = 'queued'
+                           and lease_owner is null
+                           and terminalized_at is null
+                           and deadline_at = $2
+                           and deadline_at > now()
+                           and metadata_json = $3
+                           and updated_at = $4select work_id, deadline_at, metadata_json, updated_at
+                         from runtime.work_items
+                         where work_id = any($1)
+                           and work_class = 'maintenance_job'
+                           and state = 'queued'
+                           and lease_owner is null
+                           and terminalized_at is null
+                           and deadline_at > now()
+                         order by deadline_at, work_idselect (metadata_json::jsonb)->>'maintenance_occurrence'
+                     from runtime.work_items
+                     where work_class = 'maintenance_job'
+                       and terminalized_at is null
+                       and state = 'queued'
+                       and lease_owner is null
+                       and (metadata_json::jsonb)->>'maintenance_kind' = $1
+                     order by deadline_at asc
+                     limit 64update runtime.work_items
+                         set state = 'cancelled',
+                             phase = 'terminalization',
+                             subphase = null,
+                             terminal_reason = 'superseded',
+                             terminal_detail = $3,
+                             diagnostic_json = '{}',
+                             terminalized_at = now(),
+                             heartbeat_at = now(),
+                             updated_at = now()
+                         where work_class = 'maintenance_job'
+                           and terminalized_at is null
+                           and state = 'queued'
+                           and lease_owner is null
+                           and (metadata_json::jsonb)->>'maintenance_kind' = $1
+                           and (metadata_json::jsonb)->>'maintenance_occurrence' = any($2)
+                         returning work_id,
+                                   (metadata_json::jsonb)->>'maintenance_occurrence'
+                                     as occurrenceselect work_id from runtime.work_items
+                     where terminalized_at is null
+                       and state = 'checkpointed'
+                       and phase = 'terminalization' and created_at <  and updated_at <  and work_id >  order by work_id asc limit update runtime.work_items
+                     set state = 'interrupted',
+                         phase = 'terminalization',
+                         subphase = null,
+                         terminal_reason = 'interrupted',
+                         terminal_detail = $2,
+                         terminalized_at = now(),
+                         heartbeat_at = now(),
+                         updated_at = now()
+                     where work_id = any($1)
+                       and terminalized_at is null
+                       and state = 'checkpointed'
+                       and phase = 'terminalization'
+                       and created_at < $3
+                       and updated_at < $3
+                     returning work_idcheckpointed work lost its restart checkpoint owner during daemon restart
+SELECT work_id
+FROM runtime.work_items
+WHERE terminalized_at IS NOT NULL
+  AND terminalized_at < $1
+  AND terminal_detail IS DISTINCT FROM $2
+ORDER BY terminalized_at, work_id
+LIMIT $3
+FOR UPDATE SKIP LOCKED
+approval wait lost its exact restart checkpoint during daemon restart
+WITH referenced AS MATERIALIZED (
+    SELECT child.work_id
+    FROM unnest($1::text[]) AS doomed(work_id)
+    CROSS JOIN LATERAL (
+        SELECT work_id
+        FROM runtime.work_items
+        WHERE root_work_id = doomed.work_id
+        LIMIT $2
+        FOR NO KEY UPDATE SKIP LOCKED
+    ) AS child
+    LIMIT $2
+)
+UPDATE runtime.work_items AS child
+SET root_work_id = NULL,
+    parent_work_id = CASE WHEN child.parent_work_id = ANY($1)
+        THEN NULL ELSE child.parent_work_id END
+FROM referenced
+WHERE child.work_id = referenced.work_id
+
+WITH referenced AS MATERIALIZED (
+    SELECT child.work_id
+    FROM unnest($1::text[]) AS doomed(work_id)
+    CROSS JOIN LATERAL (
+        SELECT work_id
+        FROM runtime.work_items
+        WHERE parent_work_id = doomed.work_id
+        LIMIT $2
+        FOR NO KEY UPDATE SKIP LOCKED
+    ) AS child
+    LIMIT $2
+)
+UPDATE runtime.work_items AS child
+SET parent_work_id = NULL,
+    root_work_id = CASE WHEN child.root_work_id = ANY($1)
+        THEN NULL ELSE child.root_work_id END
+FROM referenced
+WHERE child.work_id = referenced.work_id
+
+DELETE FROM runtime.work_items AS doomed
+WHERE doomed.work_id = ANY($1)
+  AND NOT EXISTS (
+      SELECT 1 FROM runtime.work_items AS child
+      WHERE child.root_work_id = doomed.work_id
+  )
+  AND NOT EXISTS (
+      SELECT 1 FROM runtime.work_items AS child
+      WHERE child.parent_work_id = doomed.work_id
+  )
+update runtime.work_items
+                     set heartbeat_at = now(), updated_at = now()
+                     where work_id = $1 and terminalized_at is nullselect work_id, root_work_id, parent_work_id, request_id,
+                                    work_class, terminalized_at, false as inserted
+                             from runtime.work_items
+                             where work_id = $1select count(*)::bigint
+                     from runtime.work_items
+                     where terminalized_at is nullupdate runtime.work_items
+                     set state = $2,
+                         phase = $3,
+                         subphase = $4,
+                         heartbeat_at = now(),
+                         updated_at = now()
+                     where work_id = $1 and terminalized_at is nullupdate runtime.work_items
+                     set heartbeat_at = now(), updated_at = now()
+                     where work_id = any($1) and terminalized_at is nullselect work_id, state, terminal_reason, terminal_detail, terminalized_at from runtime.work_items where work_id = $1update runtime.work_items
+                     set agent_id = coalesce($2, agent_id),
+                         stream_owner_message_id = coalesce($3, stream_owner_message_id),
+                         metadata_json = $4,
+                         heartbeat_at = now(),
+                         updated_at = now()
+                     where work_id = $1 and terminalized_at is nullupdate runtime.work_items
+                     set heartbeat_at = now(), updated_at = now()
+                     where work_id = $1
+                       and lease_owner = $2
+                       and terminalized_at is nullupdate runtime.work_items
+                     set state = $2,
+                         phase = 'terminalization',
+                         subphase = null,
+                         terminal_reason = $3,
+                         terminal_detail = $4,
+                         diagnostic_json = $5,
+                         terminalized_at = now(),
+                         heartbeat_at = now(),
+                         updated_at = now()
+                     where work_id = $1 and terminalized_at is null

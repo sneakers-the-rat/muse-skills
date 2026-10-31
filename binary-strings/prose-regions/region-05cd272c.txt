@@ -1,0 +1,109 @@
+internal error: entered unreachable codeversioncreated_at_unix_msentriestotal_bytestier2_entriestier2_bytestier2_unavailabletier1_dropped_bytespostmaster_start_unix_msoffsetlenpath contains invalid UTF-8 characters}errorsuccesswrite_admissionwritepostgres write completed slowlypostgres write failedretrying idempotent postgres writeone-shot postgres write invoked more than oncereceipt_jsonclient_idsupported_presentationssupported_inline_presentationssubscription_idgenerationselect rv_epoch
+                     from runtime.writer_epoch
+                     where singletonupdate runtime.writer_epoch
+                     set rv_epoch = $2, updated_at = now()
+                     where singleton and rv_epoch = $1select system_identifier::text as id from pg_control_system()idselect client_id, platform, supported_presentations,
+                            supported_inline_presentations
+                     from runtime.client_rendering_capabilities
+                     where singletoninsert into runtime.client_rendering_capabilities
+                             (singleton, client_id, platform,
+                              supported_presentations,
+                              supported_inline_presentations, declared_at)
+                         values (true, $1, $2, $3, $4, now())
+                         on conflict (singleton) do update set
+                             client_id = excluded.client_id,
+                             platform = excluded.platform,
+                             supported_presentations =
+                                 excluded.supported_presentations,
+                             supported_inline_presentations =
+                                 excluded.supported_inline_presentations,
+                             declared_at = excluded.declared_atselect skill_name, used, pending_invalidation_hash,
+                            pending_manifest_rel_path,
+                            last_delivered_invalidation_hash
+                     from runtime.skill_invalidation_state
+                     order by skill_name ascinsert into runtime.skill_invalidation_state
+                         (skill_name, used)
+                     values ($1, true)
+                     on conflict (skill_name) do update
+                         set used = runtime.skill_invalidation_state.used or excluded.usedselect s.skill_name,
+                            coalesce(s.pending_invalidation_hash,
+                                     s.last_delivered_invalidation_hash) as invalidation_hash,
+                            s.pending_manifest_rel_path as manifest_rel_path
+                       from runtime.skill_invalidation_state s
+                       left join runtime.skill_invalidation_receipts r
+                         on r.session_id = $1 and r.skill_name = s.skill_name
+                      where s.used
+                        and coalesce(s.pending_invalidation_hash,
+                                     s.last_delivered_invalidation_hash) is not null
+                        and r.invalidation_hash is distinct from
+                            coalesce(s.pending_invalidation_hash,
+                                     s.last_delivered_invalidation_hash)
+                      order by s.skill_nameinsert into runtime.skill_invalidation_receipts
+                         (session_id, skill_name, invalidation_hash)
+                     select $1, d.skill_name, d.invalidation_hash
+                       from unnest($2::text[], $3::text[]) as d(skill_name, invalidation_hash)
+                       join runtime.skill_invalidation_state s using (skill_name)
+                      where coalesce(s.pending_invalidation_hash,
+                                     s.last_delivered_invalidation_hash) = d.invalidation_hash
+                     on conflict (session_id, skill_name) do update
+                         set invalidation_hash = excluded.invalidation_hashinsert into runtime.skill_invalidation_state
+                             (skill_name, used, pending_invalidation_hash, pending_manifest_rel_path)
+                         values ($1, true, $2, $3)
+                         on conflict (skill_name) do update
+                             set used = runtime.skill_invalidation_state.used or excluded.used,
+                                 pending_invalidation_hash = excluded.pending_invalidation_hash,
+                                 pending_manifest_rel_path = excluded.pending_manifest_rel_pathblocknomuse.db redaction view must be schema-qualifiedpg_system_identifierget_client_rendering_snapshotset_client_rendering_snapshotlist_statesmark_skill_usedlist_pending_for_sessionmark_invalidations_deliveredset_pending_invalidation_hashcollect_hotset_manifestcollect_hotset_tier1_snapshotselect file_name::text as wal_file,
+                file_offset::bigint as wal_write_offset
+           from pg_walfile_name_offset(pg_current_wal_lsn())PostgreSQL physical hotset capture/var/lib/hatch/postgres/hatchselect pg_catalog.pg_relation_filepath(c.oid)::text as rel_path,
+                b.relblocknumber::bigint as blockno
+           from public.pg_buffercache b
+           join pg_catalog.pg_class c on c.relfilenode = b.relfilenode
+          where b.reldatabase = (select oid from pg_catalog.pg_database
+                                  where datname = current_database())
+            and b.relblocknumber is not null
+            -- main fork only: pg_buffercache carries FSM/VM fork buffers
+            -- under the same relfilenode, and projecting their block
+            -- numbers onto main-fork byte ranges warms garbage (or
+            -- past-EOF ranges the replay reads as zero).
+            and b.relforknumber = 0
+            and pg_catalog.pg_relation_filepath(c.oid) is not null
+          order by rel_path, blocknoagentagentscontext_item_resume_projectioncontext_itemsruntime_restart_checkpointsruntimeskill_invalidation_stateagent_compactionseventswork_itemsdevicenodesspacesaction_invocationswith startup_tables as (
+           select ord, table_schema, table_name
+             from unnest($1::text[], $2::text[])
+                  with ordinality as t(table_schema, table_name, ord)
+         ),
+         base as (
+           select st.ord, c.oid
+             from startup_tables st
+             join pg_catalog.pg_namespace n on n.nspname = st.table_schema
+             join pg_catalog.pg_class c
+               on c.relnamespace = n.oid and c.relname = st.table_name
+         ),
+         rels as (
+           select ord, 0 as kind_rank, oid from base
+           union all
+           select b.ord, 1 as kind_rank, i.indexrelid as oid
+             from base b
+             join pg_catalog.pg_index i on i.indrelid = b.oid
+         )
+         select pg_catalog.pg_relation_filepath(r.oid)::text as rel_path,
+                pg_catalog.pg_relation_size(r.oid, 'main') as rel_size
+           from rels r
+          where pg_catalog.pg_relation_filepath(r.oid) is not null
+          order by r.ord, r.kind_rank, r.oidselect (extract(epoch from pg_catalog.pg_postmaster_start_time()) * 1000)::bigint
+                as start_unix_msstart_unix_mspg_walselect pg_catalog.pg_relation_filepath(r.oid)::text as rel_path,
+                b.relblocknumber::bigint as blockno
+           from public.pg_buffercache b
+           cross join lateral (
+             select pg_catalog.pg_filenode_relation(b.reltablespace, b.relfilenode) as oid
+           ) r
+          where b.relblocknumber is not null
+            -- main fork only (see collect_buffercache_blocks).
+            and b.relforknumber = 0
+            and (b.reldatabase = 0
+                 or b.reldatabase = (select oid from pg_catalog.pg_database
+                                      where datname = current_database()))
+            and r.oid is not null
+            and pg_catalog.pg_relation_filepath(r.oid) is not null
+            and pg_catalog.pg_relation_filepath(r.oid) not like 'pg_tblspc/%'
+          order by rel_path, blocknodatabase write admission gate closedadmission_timeoutcalled `Result::unwrap()` on an `Err` valueskill_namepending_invalidation_hashpending_manifest_rel_pathglobal/pg_controlTryFlatten polled after completionstruct HotsetManifestHeaderReady polled after completionConfigurationInvalidArgumentIoTlsRowNotFoundTypeNotFoundtype_nameColumnIndexOutOfBoundsindexColumnNotFoundColumnDecodesourceEncodeDecodeAnyDriverErrorPoolTimedOutPoolClosedWorkerCrashedMigrateInvalidSavePointStatementBeginFaileda Display implementation returned an error unexpectedlyErrorMapAccess::next_value called before next_keymid > len“ð

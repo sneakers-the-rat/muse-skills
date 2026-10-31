@@ -1,0 +1,144 @@
+update runtime.browser_invocations set handoff_state = 'suppressed',
+                     handoff_settled_at = now() where invocation_id = $1 and handoff_state = 'owed'select epoch, context_json from runtime.browser_contexts where task_id = $1 and agent_id = $2insert into runtime.browser_contexts (task_id, agent_id, epoch, context_json)
+                select $1, $2, $3, $4 from runtime.browser_tasks t
+                left join runtime.browser_executions e on e.task_id = t.task_id and e.planner_agent_id = t.owner_agent_id
+                where t.task_id = $1 and t.status = 'running'
+                  and coalesce(e.epoch, 0) = $3
+                  and (t.owner_agent_id = $2 or exists(select 1 from runtime.browser_invocations i
+                    where i.task_id = t.task_id and i.planner_agent_id = t.owner_agent_id
+                      and i.agent_id = $2 and i.result_json is null))
+                on conflict (task_id, agent_id) do update set epoch = excluded.epoch, context_json = excluded.context_jsonbrowser seat changed before context publication
+SELECT f.event_seq, f.field_path, f.scalar_type, f.scalar_value, f.text_value
+FROM event_payload_fields AS f
+WHERE f.event_seq IN (
+, ) ORDER BY f.event_seq ASC, length(f.field_path) ASC, f.field_path ASCfield_pathscalar_typescalar_valuetext_value
+SELECT event_seq, ordinal, resource_kind AS kind, resource_key AS uri, label, mime_type, size_bytes, metadata_json
+FROM resources
+WHERE event_seq IN (
+) ORDER BY event_seq ASC, ordinal ASCurilabelmime_typesize_bytesmetadata_jsonhandoff event sequence
+SELECT e.event_seq, e.event_name, coalesce(e.message_id, '') AS message_id,
+       e.payload_json
+FROM events e
+WHERE e.idempotency_key = $1
+  AND e.payload_json IS NOT NULL
+context event identity already belongs to another writerSELECT event_seq FROM events WHERE idempotency_key = $1runtime_events_main_public_root_message_uidxruntime.messages.body
+INSERT INTO messages (message_id, event_seq, role, body, created_at)
+VALUES ($1, $2, $3::runtime.message_role, $4, to_timestamp($5::double precision / 1000.0))
+ON CONFLICT (message_id) DO NOTHING
+
+SELECT event_seq AS seq, event_name, role::text AS role
+FROM events
+WHERE message_id = $1
+  AND transcript_surface = 'main_chat'
+  AND visibility = 'public'
+  AND event_name IN ('message.user', 'message.assistant')
+  AND (parent_message_id IS NULL OR TRIM(parent_message_id) = '')
+LIMIT 1
+seqDELETE FROM chat.event_transports WHERE event_seq = $1INSERT INTO chat.event_transports (event_seq, provider) VALUES  ON CONFLICT (provider, event_seq) DO NOTHING()
+SELECT e.payload_json,
+       (extract(epoch from e.created_at) * 1000)::bigint AS occurred_at_ms
+FROM events AS e
+WHERE event_name = $2
+  AND message_id = $1
+  AND e.payload_json IS NOT NULL
+ORDER BY event_seq DESC
+LIMIT 1
+occurred_at_ms
+SELECT e.payload_json,
+       (extract(epoch from e.created_at) * 1000)::bigint AS occurred_at_ms
+FROM events AS e
+WHERE reply_target_message_id = $1
+  AND event_name = $2
+  AND e.payload_json IS NOT NULL
+ORDER BY event_seq DESC
+LIMIT 1
+
+SELECT event_seq
+FROM events
+WHERE idempotency_key = $1
+LIMIT 1
+FOR UPDATE
+
+UPDATE events
+SET display_text_ready = $2,
+    reply_target_message_id = $3,
+    payload_json = jsonb_set(
+      $4::jsonb,
+      '{metadata}',
+      CASE
+        WHEN jsonb_typeof($4::jsonb -> 'metadata') = 'object'
+          THEN $4::jsonb -> 'metadata'
+        ELSE '{}'::jsonb
+      END || jsonb_strip_nulls(jsonb_build_object(
+        'can_broadcast_share',
+          payload_json::jsonb #> '{metadata,can_broadcast_share}'
+      )),
+      true
+    )::text
+WHERE event_seq = $1
+RETURNING payload_json, event_name, parent_agent_id, agent_id
+parent_agent_id
+INSERT INTO messages (message_id, event_seq, role, body, created_at)
+SELECT e.message_id, e.event_seq, e.role, $2, e.created_at
+FROM events e
+WHERE e.event_seq = $1
+  AND e.message_id IS NOT NULL
+  AND e.role IS NOT NULL
+ON CONFLICT (message_id) DO UPDATE SET
+  body = excluded.body
+INSERT INTO agents (agent_id, id, session_id, kind, parent_id, parent_agent_id, root_session_id, depth, created_at, updated_at, model, status, last_assistant_message, ephemeral, agent_type, presentation_root_session_id, spawn_metadata_json, originating_location_context_json)
+             VALUES ($1, $1, $2, $3, $4, $4, $5, $6, $7, $8, $9, $10, NULL, $11, $12, $13, $14, $15)
+INSERT INTO agent_ancestors (descendant_id, ancestor_id, distance)
+VALUES ($1, $1, 0)
+ON CONFLICT (descendant_id, ancestor_id) DO NOTHING
+
+INSERT INTO agent_ancestors (descendant_id, ancestor_id, distance)
+SELECT $1, ancestor_id, distance + 1
+FROM agent_ancestors
+WHERE descendant_id = $2
+ON CONFLICT (descendant_id, ancestor_id) DO NOTHING
+
+INSERT INTO agent_ancestors (descendant_id, ancestor_id, distance)
+VALUES ($1, $2, 1)
+ON CONFLICT (descendant_id, ancestor_id) DO NOTHING
+freshSELECT EXISTS (SELECT 1 FROM agent.agents WHERE id = $1)handoff policy owner no longer existsSELECT prompt_floor_seq, checkpoint_seq, variant_json FROM agent.volatile_context_pins WHERE agent_id = $1 AND variant_hash = $2handoff_policymessage task panickedwith recursive chain as (
+        select invocation_id, parent_invocation_id from runtime.browser_invocations
+        where invocation_id = $1
+        union all select p.invocation_id, p.parent_invocation_id
+        from runtime.browser_invocations p join chain c on c.parent_invocation_id = p.invocation_id)
+    select invocation_id from chain where parent_invocation_id is nulltab_id, alias, holder_invocation_id, actor_invocation_id, actor_agent_id, (select holder.kind from runtime.browser_invocations holder where holder.invocation_id = browser_task_tabs.holder_invocation_id) as holder_kindselect 1 from runtime.browser_tasks where task_id = $1 for updateadmission_acceptance_prepare_submissionadmission_acceptance_restart_drain_recheckrejecting a follow-up a conversation clear supersededduplicate submission already belongs to the active streamchat worker is busy; retry its queued inputpending submission disappeared while committing follow-upaccepted handoff checkpointed behind an uncommitted predecessoraccepted non-projecting input into durable successor queueaccepted provider input checkpointed without transcript projectionsuccessor projection degraded to deferred turn after durable acceptancecommentary follow-up merge trace: committed follow-up recorded and acceptedpending submission disappeared while starting new active messaget.task_id, t.root_session_id, t.owner_agent_id as planner_agent_idselect i.invocation_id, i.kind, i.sign_in_site
+    from runtime.browser_invocations i
+    join runtime.browser_tasks t on t.task_id = i.task_id
+    where i.task_id = $1 and i.result_json is null
+      and i.planner_agent_id = t.owner_agent_id
+    order by i.ordinalselect state_revision from runtime.browser_tasks where task_id = $1 for updateeager subagent bootstrap failedadmission_acceptance_hidden_dev_notice_noticeadmission_acceptance_hidden_skill_invalidation_noticeadmission_acceptance_injected_context_change_noticeselect edition_local_date, count(*)
+                     from feed.units
+                     where (prompt_id = $1 or prompt_id is null)
+                       and ($2::date is null or edition_local_date < $2)
+                     group by edition_local_date
+                     order by edition_local_date desc
+                     limit $3select edition_local_date, count(*)
+                     from feed.units
+                     where (prompt_id = $1 or prompt_id is null)
+                       and edition_local_date > $2
+                     group by edition_local_date
+                     order by edition_local_date asc
+                     limit $3select exists (
+                       select 1 from feed.units
+                       where (prompt_id = $1 or prompt_id is null)
+                         and edition_local_date > $2)select exists (
+                       select 1 from feed.units
+                       where (prompt_id = $1 or prompt_id is null)
+                         and edition_local_date < $2)unit_id, run_id, prompt_id, edition_kind, edition_local_date, edition_generated_at_ms, position, manual_order, kicker, title, body_md, attachment_kind, header_image_path, video_media_path, image_urls, carousel_clip_paths, widget_html, social_embed_url, social_thumbnail_url, social_thumbnail_aspect_ratio, social_attribution_text, social_post_username, category, connector_attribution, stats, source_post_url, source_idea_id, why_did_i_see_this, emoji, icon_key, reaction, reaction_updated_at_ms, seen_at_ms, share_count, discuss_count, origin, source_fleet_origin_id, source_url_keys, activity_tier, beat, reader_response, stake_type, act_by, share_instructions, share_artifact_generated_at_ms, share_artifact_stale, created_at_ms, updated_at_msfrom feed.units units
+                     left join (
+                       select unit_id as placed_unit_id,
+                              manual_order as placed_manual_order
+                       from feed.promptless_unit_orders
+                       where prompt_id = $1
+                     ) placements on placements.placed_unit_id = units.unit_id
+                     where (units.prompt_id = $1 or units.prompt_id is null)
+                       and edition_local_date = any($2)
+                     order by edition_local_date desc,
+                              coalesce(units.manual_order, placements.placed_manual_order)
+                                asc nulls last,
+                              edition_generated_at_ms desc, position asc, units.unit_id ascruntime.subagent_monitorruntime_work_progress_endcontext_pressure_estimate_endestimated_prompt_tokensprovider_context_window_input_tokenscompact_limit_overrideno_context_pressure_estimatecontext_pressure_compaction_enddid_compacteager_background_compaction_startactive_turn_start_seqideas_build_hand_offfeed.finalize_unitanthropicazurecodexfireworkskimi_chat_completionsgemma_chat_completionsipnexthybridPhone recovery storage is unavailablePhone delivery is not owned by this conversationThe recorded phone result is ready for delivery./self_improvement/step/attempt/self_improvement/recovery_lease_ownerweb_artifacts.exit_buildbrowser mutation was not admitted

@@ -1,0 +1,100 @@
+select lower(space_slug) as space_slug, space_id::text as space_id
+                     from spaces.spaces
+                     where source = 'local' and lower(space_slug) = any($1::text[])update spaces.spaces
+                         set builder_provenance_pending_build_id = $2,
+                             content_share_allowed = null,
+                             content_share_review_sha256 = null
+                         where space_slug = $1
+                           and source = 'local'
+                           and current_build_id = $2update spaces.spaces
+                         set builder_provenance_build_id = $2,
+                             builder_provenance_evidence_jsonl = $3,
+                             builder_provenance_pending_build_id = null,
+                             builder_provenance_lost_build_id = null,
+                             content_share_allowed = null,
+                             content_share_review_sha256 = null
+                         where space_slug = $1
+                           and source = 'local'
+                           and current_build_id = $2select declared_capabilities_json, capability_manifest_revision
+                         from spaces.spaces
+                         where source = 'local' and space_slug = $1
+                         for updatedeclared_capabilities_jsoncapability_manifest_revisionupdate spaces.spaces
+                         set declared_capabilities_json = $3,
+                             capability_manifest_revision = capability_manifest_revision + 1
+                         where source = 'local'
+                           and space_slug = $1
+                           and capability_manifest_revision = $2
+                         returning capability_manifest_revisionupdate spaces.spaces
+                         set construction_status = $3,
+                             construction_updated_at_text = $4,
+                             updated_at_text = $4,
+                             updated_at = coalesce($5, now())
+                         where space_slug = $1
+                           and source = 'local'
+                           and current_build_id = $2
+                           and btrim(coalesce(construction_status, '')) in ('constructing', 'updating')
+                           and construction_status is distinct from $3update spaces.spaces
+                         set content_share_allowed = $4,
+                             content_share_review_sha256 = $5
+                         where space_slug = $1
+                           and source = 'local'
+                           and current_build_id = $2
+                           and content_share_review_sha256 = $3update spaces.spaces
+                         set content_share_allowed = $3,
+                             content_share_review_sha256 = $4
+                         where space_slug = $1
+                           and source = 'local'
+                           and current_build_id = $2update spaces.spaces
+                         set content_share_allowed = null,
+                             content_share_review_sha256 = $3
+                         where space_slug = $1
+                           and source = 'local'
+                           and current_build_id = $2update spaces.spaces
+                         set builder_provenance_pending_build_id = null,
+                             builder_provenance_lost_build_id = $2,
+                             content_share_allowed = null,
+                             content_share_review_sha256 = null
+                         where space_slug = $1
+                           and source = 'local'
+                           and current_build_id = $2select asset_key, 1.0 - (embedding <=> $4::vector) as similarity
+                     from spaces.artifact_icon_embeddings
+                     where model_name = $1 and model_fingerprint = $2 and catalog_digest = $3
+                     order by embedding <=> $4::vector asc, asset_key asc
+                     limit 1select count(*) as n from spaces.artifact_icon_embeddings
+                     where model_name = $1 and model_fingerprint = $2 and catalog_digest = $3nlock table spaces.artifact_icon_embeddings in share row exclusive modedelete from spaces.artifact_icon_embeddingsinsert into spaces.artifact_icon_embeddings
+                         (model_name, model_fingerprint, catalog_digest, asset_key, embedding)
+                     select $1, $2, $3, asset_key, literal::vector
+                     from unnest($4::text[], $5::text[]) as t(asset_key, literal)select space_id::text, space_slug,
+                       case source when 'local' then 'space' else 'saved_space' end as source,
+                       source = 'local' or saved_record_id is not null as can_set_placement,
+                       is_promoted and (source = 'local' or saved_record_id is not null) as is_promoted
+                     from spaces.spaces where space_slug = any($1)
+                       and source in ('local', 'saved')select is_promoted from spaces.spaces
+                     where source = $3 and space_slug = $1 and space_id = $2
+                       and (source = 'local' or saved_record_id is not null)
+                       for updateupdate spaces.spaces set is_promoted = $1 where space_id = $2web artifact no longer matches the supplied identityinstances.artifact_audit_reviewinstances.set_artifact_audit_reviewinstances.share_disclosure_reviewinstances.set_share_disclosure_reviewspace build idinstances.create_row_with_placementacquired connection, but time to acquire exceeded slow thresholdacquired connectioninstances.list_allinstances.has_any_localinstances.list_all_slugsinstances.delete_by_slugsinstances.space_id_by_sluginstances.ensure_row_existsinstances.auto_publish_enabledinstances.record_builtin_buildinstances.ensure_published_build.load_existinginstances.getinstances.set_construction_statusinstances.space_root_path_by_sluginstances.set_auto_publish_enabledinstances.get_construction_statusesinstances.builder_provenance_for_shareinstances.list_orderedinstances.slug_to_space_idinstances.arm_builder_provenance_for_current_build_idinstances.set_builder_provenance_for_current_build_idspace sluginstances.compare_and_set_artifact_capability_manifestArtifact capability manifest revision must not be negativeinstances.set_construction_status_for_current_build_idcurrent_build_id is requiredspace slug is requiredinstances.set_content_share_review_result_if_token_matchesinstances.set_content_share_review_result_for_current_build_idinstances.mark_content_share_review_pending_for_current_build_idinstances.mark_builder_provenance_capture_failed_for_current_build_idspaces.nearest_artifact_iconspaces.artifact_icon_embeddings_countspaces.replace_artifact_icon_embeddingsinvalid or duplicate artifact icon asset keyinvalid artifact icon embedding catalog sizeinstances.placementsonly local and saved web artifacts have sidebar placementsavedlocalinstances.set_placementinsert into spaces.spaces (
+           space_slug, display_name, source, space_root_path, db_path, force_order, session_id,
+           construction_status, created_from_proposal_id, cloudflare_share_manifest_sha256,
+           created_at_text, updated_at_text, created_at, updated_at
+         )
+         values ($1, $1, 'local', $2, $3, $4, $5, $6, $7, $8, $9, $10,
+                 coalesce($11, now()),
+                 coalesce($12, now()))
+         on conflict (space_slug) do update set
+           space_root_path = excluded.space_root_path,
+           db_path = excluded.db_path,
+           force_order = case
+             when $13 and excluded.force_order is null then spaces.spaces.force_order
+             else excluded.force_order
+           end,
+           session_id = coalesce(nullif(btrim(spaces.spaces.session_id), ''), excluded.session_id),
+           construction_status = coalesce(excluded.construction_status, spaces.spaces.construction_status),
+           created_from_proposal_id = coalesce(spaces.spaces.created_from_proposal_id, excluded.created_from_proposal_id),
+           cloudflare_share_manifest_sha256 = case
+             when $14 then spaces.spaces.cloudflare_share_manifest_sha256
+             else excluded.cloudflare_share_manifest_sha256
+           end,
+           created_at_text = excluded.created_at_text,
+           updated_at_text = excluded.updated_at_text,
+           updated_at = excluded.updated_at
+         where spaces.spaces.source = 'local'{"kind":"builder_provenance_capture","status":"failed"}database write admission gate closedadmission_timeoutcalled `Result::unwrap()` on an `Err` valueconstructingsucceededfailedinterruptedspace root pathspace db pathCloudflare share manifest SHA-256space construction status{"kind":"builder_provenance_capture","status":"captured_empty"}session_idcreated_from_proposal_idhas_server_actionsbuiltin_manifest_sha256builtin_personalizedcontent_share_allowedcontent_share_review_sha256created_atupdated_atarchived_atBUG: inner connection already taken!ConfigurationInvalidArgumentIoTlsRowNotFoundTypeNotFoundtype_nameColumnIndexOutOfBoundsindexlenColumnNotFoundColumnDecodesourceEncodeDecodeAnyDriverErrorPoolTimedOutPoolClosedWorkerCrashedMigrateInvalidSavePointStatementBeginFailed

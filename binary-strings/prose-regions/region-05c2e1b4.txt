@@ -1,0 +1,29 @@
+completedfaileddb_readerrorsuccesswrite_admissionwritepostgres write completed slowlypostgres write failedretrying idempotent postgres writeone-shot postgres write invoked more than onceselect arguments_sha256, schedule_id, destination, preparation_json, authorized_output_json, result_json
+                 from runtime.phone_schedule_operations
+                 where agent_id = $1 and message_id = $2 and tool_call_id = $3phone schedule operation input changedinsert into runtime.phone_schedule_operations
+                     (agent_id, message_id, tool_call_id, arguments_sha256, schedule_id, preparation_json,
+                      root_agent_id, destination)
+                 values ($1, $2, $3, $4, $5, $6, $7, $8)
+                 on conflict (agent_id, message_id, tool_call_id) do nothingupdate runtime.phone_schedule_operations
+                 set result_json = coalesce(result_json, $5)
+                 where agent_id = $1 and message_id = $2 and tool_call_id = $3
+                     and arguments_sha256 = $4
+                 returning result_jsonupdate runtime.phone_schedule_operations
+                 set authorized_output_json = coalesce(authorized_output_json, $5)
+                 where agent_id = $1 and message_id = $2 and tool_call_id = $3
+                     and arguments_sha256 = $4
+                 returning authorized_output_jsonselect o.arguments_sha256, o.schedule_id, o.destination, o.preparation_json,
+                        o.authorized_output_json, o.result_json
+                 from runtime.phone_schedule_operations o
+                 join runtime.phone_scheduled_call_grants g on g.schedule_id = o.schedule_id
+                 where o.root_agent_id = $1 and o.destination = $2 and o.result_json is null
+                   and g.expires_at_ms > $3
+                   and (o.agent_id, o.message_id, o.tool_call_id) <> ($4, $5, $6)
+                 limit 1select schedule_id, claim_token, expires_at_ms,
+                            call_payload_sha256, idempotency_nonce
+                     from runtime.phone_scheduled_call_grants
+                     where schedule_id = $1delete from runtime.phone_scheduled_call_grants where schedule_id = $1insert into runtime.phone_scheduled_call_grants
+                             (schedule_id, claim_token, expires_at_ms,
+                              call_payload_sha256, idempotency_nonce)
+                         values ($1, $2, $3, $4, $5)
+                         on conflict (schedule_id) do nothingphone_schedule_operations.loadphone_schedule_operations.preparephone_schedule_operations.completephone_schedule_operations.authorizedphone_schedule_operations.unresolved_destinationacquired connection, but time to acquire exceeded slow thresholdacquired connectionphone_scheduled_call_grants.deletephone_scheduled_call_grants.insert_newdatabase write admission gate closedadmission_timeoutschedule_idclaim_tokenexpires_at_mscall_payload_sha256idempotency_nonceBUG: inner connection already taken!€»Ê

@@ -1,0 +1,782 @@
+ !"#$%&'()*+,-./0123ÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿpeer cursor version is not supporteddaemon_subscription_quotaGet subscription quota (deprecated)Deprecated compatibility endpoint. Returns the credit-enforcement snapshot and best-effort subscription metadata; it will be removed in a future release.Subscriptiondaemon_subscription_callbackHandle subscription callbackProcesses a subscription completion callback.subscription_statussubscription_tiersubscription_tier_idsubscription_tier_rankcurrent_period_end_timegrant_timepurchase_platformstatus_subtitlesubscription_usage_statesubscription_usage_quota_statussubscription_usage_percentagesubscription_usage_resets_attopup_totaltopup_eligibleinvite_reward_eligiblecatalog_item_idstatus_transitionscurrent_periodbilling_cycle_anchortrialcancel_at_period_endcancel_atcancellation_detailspending_plan_changeentitlementlatest_order_idlatest_invoice_idstarted_atshould_block_llm_inferencemonthly_credits_statusmonthly_usage_percentagemonthly_next_refill_attopup_credits_statustopup_balancesubscription_sourcecredit_sourcedaemon_subscription_available_plansGet available subscription credit plansReturns currently available paid credit plans.credit-watcher available plans fallback/subscription/callback/subscription/quota/subscription/available-plans/subscription/check-complimentary/subscription/redeem-complimentaryTimeDelta::hours out of boundsupstream_unavailablerecording the product-improvements preference on the account failed; nothing was persisted, retry laterdaemon_product_improvements_getGet the product-improvements eligibility preferenceReturns whether the user's data is eligible for product improvements. The Meta account preference is the source of truth; the VM serves a cached copy no older than one day and fails open to the cached value (default true until the user makes an explicit choice) when the account preference is unreachable. Also returns the account's GenAI training objection, cached the same way except that an `unavailable` status is re-read after one hour. `training_enabled` is false whenever the objection status is `filed`.daemon_product_improvements_setSet the product-improvements eligibility preferenceRecords whether the user's data may be used for product improvements on the Meta account (the source of truth) and refreshes the VM's cached copy, and returns the same fields as the GET. While an objection is filed, a request to enable training is refused with HTTP 409 `training_objection_filed`; nothing is recorded unless the objection was filed after the VM last read the account. Account write failures return `upstream_unavailable`: HTTP 401 for an upstream HTTP 401, otherwise HTTP 502. Failed writes do not persist a new local preference.training_objection_fileda GenAI training objection is filed on a linked account, so training cannot be enabled while it stands/product-improvementsdaemon_debug_home_link_bug_reports_collectCollect live Home Link bug reportsReturns successful reports for feedback only (16 devices, 32 KiB per report, 30 seconds). Private, no-store; never exposed to the model or chat history.System/debug/home-link-bug-reportsdaemon_update_user_locationUpdate user locationAccepts the latest device location sample. Live location is served from the client data-source cache; the former daemon-owned append-only ledger under workspace/nodes was retired because nothing read it. A sample that names a `geofence_id` with an enter, dwell, or exit trigger is matched against the daemon's geofence registry and may hand that place's brief to the follow-up queue (an exit only for a region the user set themselves)./update-user-location/chats/primary/chats/start/chats/fork/chats/archive/chats/pin/chats/unpin/chats/delete/chats/list/chats/inventory-search/chats/has-unread/chats/renamedaemon_ac_oauth_callbackHandle Account Center OAuth callback (deprecated)Deprecated compatibility endpoint. Always returns 410 Gone; use the in-VM connector OAuth flow.OAuth/ac_oauth/callbackRedTeamdaemon_redteam_get_mocksAPI endpoint to get the current tool mocks applied by red teamers.daemon_redteam_apply_mocksAPI endpoint to let frontend apply mocked configurations for tools to enable red teaming.
+        After application, the mocked tools hit a shim rather than the real binaries.daemon_redteam_clear_mocksAPI endpoint to disable the tool mocking for red teaming. Restores tools to hitting their real underlying binaries.daemon_redteam_sidecar_tailTail mock sidecarAPI endpoint to get the trailing N JSONL entries from the mock sidecar for red teamers.#!/usr/bin/env python3
+"""Universal mock binary for eval tool responses.
+
+Dispatched via symlinks: argv[0] determines the tool name.
+Reads response config beside the staged mock tree. Candidate-routed invocations
+instead take their config path, operation groups, and selection from root-owned
+state under /run so command input cannot alter dispatch ownership.
+Auto-logs every invocation to $JARVIS_EVAL_SIDECAR.
+
+Modes:
+  subcommand (default) â€” argv[1] selects response entry
+  intercept            â€” regex-match argv[1:], pass-through on miss
+  sequence             â€” track call count, advance response list
+  rules                â€” evaluate match_args / match_env / default conditions
+"""
+
+import hashlib
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+
+_BINARY_CANDIDATES_KEY = "_binary_candidates"
+_SELECTION_FILE = "mock-binary-candidates.tsv"
+_TRUSTED_CANDIDATE_STATE_DIR = Path("/run/hatch/eval-binary-candidates")
+_TRUSTED_CANDIDATE_STATE_PATH = _TRUSTED_CANDIDATE_STATE_DIR / "state.json"
+_HELP_TOKENS = {"--help", "-h"}
+_LONG_OPTION_RE = re.compile(r"--[a-z][a-z0-9-]*")
+_VALUE_OPTION_RE = re.compile(r"(?:--[a-z][a-z0-9-]*|-[A-Za-z0-9])")
+
+
+def _tool_name() -> str:
+    return Path(sys.argv[0]).name
+
+
+def _trusted_candidate_state() -> dict | None:
+    if not _TRUSTED_CANDIDATE_STATE_PATH.exists():
+        return None
+    try:
+        state = json.loads(_TRUSTED_CANDIDATE_STATE_PATH.read_text())
+    except (OSError, json.JSONDecodeError) as exc:
+        print(
+            f"Error: trusted eval binary-candidate state is unreadable: {exc}",
+            file=sys.stderr,
+        )
+        sys.exit(125)
+    config_path = state.get("mock_config_path") if isinstance(state, dict) else None
+    groups = state.get(_BINARY_CANDIDATES_KEY) if isinstance(state, dict) else None
+    if (
+        not isinstance(config_path, str)
+        or not Path(config_path).is_absolute()
+        or not isinstance(groups, dict)
+        or not groups
+    ):
+        print(
+            "Error: trusted eval binary-candidate state is malformed",
+            file=sys.stderr,
+        )
+        sys.exit(125)
+    return state
+
+
+def _candidate_groups(config: dict) -> object:
+    state = _trusted_candidate_state()
+    if state is not None:
+        return state[_BINARY_CANDIDATES_KEY]
+    return config.get(_BINARY_CANDIDATES_KEY)
+
+
+def _config_path() -> Path:
+    state = _trusted_candidate_state()
+    if state is not None:
+        return Path(state["mock_config_path"])
+    legacy_override = os.environ.get("MOCK_CONFIG")
+    if legacy_override:
+        return Path(legacy_override)
+    # Derive the staged response config from the installed mock path. Environment
+    # variables are agent-controlled command input and cannot select dispatch
+    # rules for candidate cases because trusted state takes precedence.
+    invoked = Path(sys.argv[0])
+    if not invoked.is_absolute():
+        resolved = shutil.which(sys.argv[0])
+        if resolved:
+            invoked = Path(resolved)
+    parent = invoked.parent.resolve()
+    if parent == Path("/opt/hatch/bin"):
+        return Path("/home/hatch/mock-config.json")
+    if parent.name in {"bin", ".redteam-bin"}:
+        parent = parent.parent
+    return parent / "mock-config.json"
+
+
+def _load_config() -> dict:
+    with _config_path().open() as f:
+        return json.load(f)
+
+
+def _load_binary_candidate_selection(config: dict) -> dict[str, str]:
+    configured_groups = config.get(_BINARY_CANDIDATES_KEY)
+    if configured_groups is None:
+        return {}
+    state = _trusted_candidate_state()
+    if state is None:
+        print(
+            "Error: trusted eval binary-candidate state is unavailable",
+            file=sys.stderr,
+        )
+        sys.exit(125)
+    groups = state[_BINARY_CANDIDATES_KEY]
+    if configured_groups != groups:
+        print(
+            "Error: trusted eval binary-candidate groups do not match mock config",
+            file=sys.stderr,
+        )
+        sys.exit(125)
+    selection_path = _TRUSTED_CANDIDATE_STATE_PATH.parent / _SELECTION_FILE
+    try:
+        lines = selection_path.read_text().splitlines()
+    except OSError as exc:
+        print(
+            f"Error: eval binary-candidate selection is unavailable: {exc}",
+            file=sys.stderr,
+        )
+        sys.exit(125)
+    selection: dict[str, str] = {}
+    for line in lines:
+        parts = line.split("\t")
+        if len(parts) != 2 or not all(parts):
+            print(
+                "Error: eval binary-candidate selection is malformed",
+                file=sys.stderr,
+            )
+            sys.exit(125)
+        name, selected = parts
+        if name in selection:
+            print(
+                f"Error: duplicate eval binary-candidate group {name!r}",
+                file=sys.stderr,
+            )
+            sys.exit(125)
+        selection[name] = selected
+    if not isinstance(groups, dict) or set(selection) != set(groups):
+        print(
+            "Error: eval binary-candidate selection does not match mock config",
+            file=sys.stderr,
+        )
+        sys.exit(125)
+    return selection
+
+
+def _long_value_options(args: list[str], value_options: set[str]) -> set[str]:
+    """Return constrained long options using an explicit value-taking grammar."""
+    options: set[str] = set()
+    index = 0
+    while index < len(args):
+        argument = args[index]
+        option = argument.split("=", 1)[0]
+        if _LONG_OPTION_RE.fullmatch(option):
+            options.add(option)
+        if option in value_options and "=" not in argument:
+            index += 2
+        else:
+            index += 1
+    return options
+
+
+def _option_constraint(
+    group: dict, *, group_name: str, field: str
+) -> set[str]:
+    raw = group.get(field, [])
+    if (
+        not isinstance(raw, list)
+        or any(
+            not isinstance(option, str)
+            or _LONG_OPTION_RE.fullmatch(option) is None
+            for option in raw
+        )
+        or len(set(raw)) != len(raw)
+        or (field in group and not raw)
+    ):
+        print(
+            f"Error: eval binary-candidate group {group_name!r} has invalid {field}",
+            file=sys.stderr,
+        )
+        sys.exit(125)
+    return set(raw)
+
+
+def _value_option_constraint(group: dict, *, group_name: str) -> set[str]:
+    raw = group.get("value_options")
+    if (
+        not isinstance(raw, list)
+        or not raw
+        or any(
+            not isinstance(option, str)
+            or _VALUE_OPTION_RE.fullmatch(option) is None
+            for option in raw
+        )
+        or len(set(raw)) != len(raw)
+    ):
+        print(
+            f"Error: eval binary-candidate group {group_name!r} has invalid "
+            "value_options",
+            file=sys.stderr,
+        )
+        sys.exit(125)
+    return set(raw)
+
+
+def _enforce_binary_candidate(
+    config: dict, selection: dict[str, str], tool: str, args: list[str]
+) -> bool:
+    """Enforce owner selection and report an admitted exact capability probe."""
+    groups = _candidate_groups(config)
+    if groups is None:
+        return False
+    if not isinstance(groups, dict):
+        print("Error: eval binary-candidate groups are malformed", file=sys.stderr)
+        sys.exit(125)
+    args_str = " ".join(args)
+    matching_probe_groups: list[str] = []
+    matching_groups: list[str] = []
+    matching_subcommand_groups: list[str] = []
+    tool_is_secondary_candidate = False
+    for name, group in groups.items():
+        if not isinstance(group, dict):
+            print(
+                f"Error: eval binary-candidate group {name!r} is malformed",
+                file=sys.stderr,
+            )
+            sys.exit(125)
+        match_args = group.get("match_args")
+        if not isinstance(match_args, str) or not match_args:
+            print(
+                f"Error: eval binary-candidate group {name!r} has no match_args",
+                file=sys.stderr,
+            )
+            sys.exit(125)
+        required_any_options = _option_constraint(
+            group, group_name=name, field="required_any_options"
+        )
+        forbidden_options = _option_constraint(
+            group, group_name=name, field="forbidden_options"
+        )
+        if required_any_options & forbidden_options:
+            print(
+                f"Error: eval binary-candidate group {name!r} has overlapping "
+                "required and forbidden options",
+                file=sys.stderr,
+            )
+            sys.exit(125)
+        constrained_options = required_any_options | forbidden_options
+        if constrained_options:
+            value_options = _value_option_constraint(group, group_name=name)
+            missing_value_options = constrained_options - value_options
+            if missing_value_options:
+                print(
+                    f"Error: eval binary-candidate group {name!r} value_options "
+                    "omit constrained options",
+                    file=sys.stderr,
+                )
+                sys.exit(125)
+            present_options = _long_value_options(args, value_options)
+        else:
+            if "value_options" in group:
+                print(
+                    f"Error: eval binary-candidate group {name!r} has value_options "
+                    "without an option constraint",
+                    file=sys.stderr,
+                )
+                sys.exit(125)
+            present_options = set()
+        option_shape_matches = (
+            not required_any_options or bool(required_any_options & present_options)
+        ) and not bool(forbidden_options & present_options)
+        probe_args = group.get("probe_args")
+        if (
+            not isinstance(probe_args, list)
+            or not probe_args
+            or any(not isinstance(argument, str) for argument in probe_args)
+            or probe_args[-1] not in _HELP_TOKENS
+        ):
+            print(
+                f"Error: eval binary-candidate group {name!r} has invalid probe_args",
+                file=sys.stderr,
+            )
+            sys.exit(125)
+        candidates = group.get("candidates")
+        if (
+            not isinstance(candidates, list)
+            or not candidates
+            or any(not isinstance(candidate, str) for candidate in candidates)
+        ):
+            print(
+                f"Error: eval binary-candidate group {name!r} has invalid candidates",
+                file=sys.stderr,
+            )
+            sys.exit(125)
+        if tool not in candidates:
+            continue
+        tool_is_secondary_candidate |= candidates.index(tool) > 0
+        subcommand = probe_args[:-1]
+        if args[: len(subcommand)] == subcommand:
+            matching_subcommand_groups.append(name)
+        if (
+            len(args) == len(probe_args)
+            and args[:-1] == subcommand
+            and args[-1] in _HELP_TOKENS
+        ):
+            matching_probe_groups.append(name)
+        if option_shape_matches and re.search(match_args, args_str):
+            matching_groups.append(name)
+    if matching_probe_groups:
+        selected_tools = {selection.get(name) for name in matching_probe_groups}
+        if None in selected_tools or len(selected_tools) != 1:
+            print(
+                "Error: eval binary-candidate probe groups select conflicting owners "
+                f"for this help path: {matching_probe_groups!r}",
+                file=sys.stderr,
+            )
+            sys.exit(125)
+        if selected_tools != {tool}:
+            print("error: unrecognized subcommand", file=sys.stderr)
+            sys.exit(2)
+        return True
+    if not matching_groups:
+        if matching_subcommand_groups:
+            print(
+                "Error: eval binary-candidate operation matches a declared "
+                "subcommand but no operation group: "
+                f"{matching_subcommand_groups!r}",
+                file=sys.stderr,
+            )
+            sys.exit(125)
+        if tool_is_secondary_candidate:
+            print("error: unrecognized subcommand", file=sys.stderr)
+            sys.exit(2)
+        return False
+    selected_tools = {selection.get(name) for name in matching_groups}
+    if None in selected_tools or len(selected_tools) != 1:
+        print(
+            "Error: eval binary-candidate groups select conflicting owners for "
+            f"this operation: {matching_groups!r}",
+            file=sys.stderr,
+        )
+        sys.exit(125)
+    if selected_tools != {tool}:
+        print("error: unrecognized subcommand", file=sys.stderr)
+        sys.exit(2)
+    return False
+
+
+def _argument_fields(args: list[str]) -> dict[str, str]:
+    fields: dict[str, str] = {}
+    i = 0
+    while i < len(args):
+        argument = args[i]
+        if argument.startswith("--") and "=" in argument:
+            key, value = argument[2:].split("=", 1)
+            fields[key.replace("-", "_")] = value
+            i += 1
+        elif argument.startswith("--") and i + 1 < len(args):
+            fields[argument[2:].replace("-", "_")] = args[i + 1]
+            i += 2
+        else:
+            i += 1
+    return fields
+
+
+def _sidecar_log(tool: str, args: list[str]) -> None:
+    sidecar = os.environ.get("JARVIS_EVAL_SIDECAR") or "/tmp/jarvis-eval/sidecar.jsonl"
+    os.makedirs(os.path.dirname(sidecar), exist_ok=True)
+
+    entry: dict = {
+        "tool": tool,
+        "subcommand": args[0] if args else None,
+        "args": args,
+        "ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+
+    # Auto-parse --key value pairs into structured fields
+    entry.update(_argument_fields(args))
+
+    with open(sidecar, "a") as f:
+        f.write(json.dumps(entry) + "\n")
+
+
+_SHA256_TEMPLATE = re.compile(r"\{\{sha256:(?P<field>[A-Za-z0-9_]+)\}\}")
+
+
+def _render_template(template: str, args: list[str]) -> str:
+    fields = _argument_fields(args)
+
+    def replace(match: re.Match[str]) -> str:
+        field = match.group("field")
+        value = fields.get(field)
+        if not value:
+            print(
+                f"Error: response template requires non-empty --{field.replace('_', '-')}",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+    return _SHA256_TEMPLATE.sub(replace, template)
+
+
+def _config_relative_path(config_dir: str, value: str, *, field: str) -> Path:
+    relative = Path(value)
+    if relative.is_absolute() or ".." in relative.parts:
+        print(f"Error: {field} must be a safe relative path", file=sys.stderr)
+        sys.exit(2)
+    root = Path(config_dir).resolve()
+    resolved = (root / relative).resolve()
+    if not resolved.is_relative_to(root):
+        print(f"Error: {field} escapes the mock config directory", file=sys.stderr)
+        sys.exit(2)
+    return resolved
+
+
+def _materialize_response_files(
+    response_cfg: dict, config_dir: str, args: list[str]
+) -> None:
+    entries = response_cfg.get("materialize_files", [])
+    if not isinstance(entries, list):
+        print("Error: materialize_files must be a list", file=sys.stderr)
+        sys.exit(2)
+    for index, entry in enumerate(entries):
+        if not isinstance(entry, dict):
+            print(
+                f"Error: materialize_files[{index}] must be an object",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        source_value = entry.get("source")
+        destination_template = entry.get("destination_template")
+        if not isinstance(source_value, str) or not isinstance(
+            destination_template, str
+        ):
+            print(
+                f"Error: materialize_files[{index}] requires source and "
+                "destination_template strings",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        source = _config_relative_path(
+            config_dir, source_value, field=f"materialize_files[{index}].source"
+        )
+        destination = _config_relative_path(
+            config_dir,
+            _render_template(destination_template, args),
+            field=f"materialize_files[{index}].destination_template",
+        )
+        if not source.is_file():
+            print(
+                f"Error: response materialization source does not exist: {source}",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        temporary = destination.with_name(f".{destination.name}.tmp-{os.getpid()}")
+        try:
+            shutil.copyfile(source, temporary)
+            os.replace(temporary, destination)
+        finally:
+            temporary.unlink(missing_ok=True)
+
+
+def _emit_response(response_cfg: dict | str, config_dir: str, args: list[str]) -> None:
+    """Write the configured response to stdout/stderr and exit."""
+    if isinstance(response_cfg, str):
+        print(response_cfg)
+        sys.exit(0)
+
+    exit_code = response_cfg.get("exit_code", 0)
+
+    _materialize_response_files(response_cfg, config_dir, args)
+
+    if "file" in response_cfg:
+        file_path = os.path.join(config_dir, response_cfg["file"])
+        with open(file_path) as f:
+            content = f.read()
+        stream = sys.stderr if response_cfg.get("stderr") else sys.stdout
+        stream.write(content)
+        sys.exit(exit_code)
+
+    if "stdout" in response_cfg:
+        print(response_cfg["stdout"])
+
+    if "stdout_template" in response_cfg:
+        template = response_cfg["stdout_template"]
+        if not isinstance(template, str):
+            print("Error: stdout_template must be a string", file=sys.stderr)
+            sys.exit(2)
+        print(_render_template(template, args))
+
+    if "stderr" in response_cfg:
+        print(response_cfg["stderr"], file=sys.stderr)
+
+    sys.exit(exit_code)
+
+
+def _auto_help(tool_cfg: dict, tool: str) -> None:
+    """Generate help text from config keys."""
+    mode = tool_cfg.get("mode", "subcommand")
+    description = tool_cfg.get("description", "")
+    responses = tool_cfg.get("responses", {})
+
+    if mode == "subcommand":
+        print(f"Usage: {tool} <command> [OPTIONS]\n")
+        if description:
+            print(f"{description}\n")
+        if responses:
+            print("Available commands:")
+            for name in sorted(responses):
+                if name != "default":
+                    print(f"  {name}")
+    elif mode == "intercept":
+        print(f"Usage: {tool} [ARGS...]\n")
+        if description:
+            print(f"{description}\n")
+    elif mode == "sequence":
+        print(f"Usage: {tool} [ARGS...]\n")
+        if description:
+            print(f"{description}\n")
+    elif mode == "rules":
+        print(f"Usage: {tool} <command> [OPTIONS]\n")
+        if description:
+            print(f"{description}\n")
+    else:
+        print(f"Usage: {tool} [ARGS...]\n")
+        if description:
+            print(f"{description}\n")
+
+    print()
+    sys.exit(0)
+
+
+def _state_dir() -> Path:
+    d = Path("/tmp/jarvis-eval/mock-state")
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def _handle_subcommand(tool_cfg: dict, args: list[str], config_dir: str) -> None:
+    responses = tool_cfg.get("responses", {})
+    if not args:
+        if "default" in responses:
+            _emit_response(responses["default"], config_dir, args)
+        print(
+            f"Error: no subcommand provided. Available: {', '.join(sorted(responses))}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    subcmd = args[0]
+    if subcmd in responses:
+        _emit_response(responses[subcmd], config_dir, args)
+
+    # Try prefix matching
+    matches = [k for k in responses if k.startswith(subcmd)]
+    if len(matches) == 1:
+        _emit_response(responses[matches[0]], config_dir, args)
+
+    if "default" in responses:
+        _emit_response(responses["default"], config_dir, args)
+
+    print(
+        f"Error: unknown subcommand '{subcmd}'. Available: {', '.join(sorted(responses))}",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+
+def _handle_intercept(tool_cfg: dict, args: list[str], config_dir: str) -> None:
+    responses = tool_cfg.get("responses", {})
+    args_str = " ".join(args)
+
+    for pattern, response in responses.items():
+        if re.search(pattern, args_str):
+            _emit_response(response, config_dir, args)
+
+    # Pass-through to real binary
+    real_binary = tool_cfg.get("passthrough")
+    if real_binary:
+        real_path = _resolve_passthrough_binary(real_binary)
+        if real_path:
+            result = subprocess.run([real_path] + args, capture_output=False)
+            sys.exit(result.returncode)
+
+    if "default" in responses:
+        _emit_response(responses["default"], config_dir, args)
+
+    print(f"Error: no matching pattern for args: {args_str}", file=sys.stderr)
+    sys.exit(1)
+
+
+def _resolve_passthrough_binary(binary_name: str) -> str | None:
+    redteam_bin_dir = os.environ.get("JARVIS_REDTEAM_BIN_DIR")
+    if not redteam_bin_dir:
+        return shutil.which(binary_name)
+
+    path_entries = os.environ.get("PATH", "").split(os.pathsep)
+
+    # Avoids infinite recursion where redteam mocking scenario finds the mock shim again
+    path_minus_redteam_directory = os.pathsep.join(
+        entry for entry in path_entries if entry != redteam_bin_dir
+    )
+
+    return shutil.which(binary_name, path=path_minus_redteam_directory)
+
+
+def _handle_sequence(
+    tool_cfg: dict, tool: str, config_dir: str, args: list[str]
+) -> None:
+    responses = tool_cfg.get("responses", [])
+    if not responses:
+        sys.exit(0)
+
+    state_file = _state_dir() / f"{tool}.count"
+    count = int(state_file.read_text()) if state_file.exists() else 0
+    idx = min(count, len(responses) - 1)
+    state_file.write_text(str(count + 1))
+    _emit_response(responses[idx], config_dir, args)
+
+
+def _handle_rules(
+    tool_cfg: dict,
+    args: list[str],
+    config_dir: str,
+    *,
+    pure_help: bool = False,
+) -> None:
+    rules = tool_cfg.get("responses", [])
+    args_str = " ".join(args)
+    env = os.environ
+
+    for rule in rules:
+        # Exact candidate probes use only explicitly marked responses. Those
+        # responses never participate in ordinary or action-shaped dispatch.
+        candidate_probe_rule = rule.get("candidate_probe") is True
+        if pure_help != candidate_probe_rule:
+            continue
+        # Per-rule disabled toggle: skip without contributing to matching.
+        if rule.get("disabled"):
+            continue
+        if "match_args" in rule:
+            pattern = rule["match_args"]
+            if not re.search(pattern, args_str):
+                continue
+        elif pure_help:
+            continue
+        if "match_env" in rule:
+            match = True
+            for k, v in rule["match_env"].items():
+                if not re.search(v, env.get(k, "")):
+                    match = False
+                    break
+            if not match:
+                continue
+        _emit_response(rule.get("response", rule), config_dir, args)
+
+    if pure_help:
+        print(
+            "Error: admitted eval binary-candidate probe has no explicit response",
+            file=sys.stderr,
+        )
+        sys.exit(125)
+
+    # Fall through to default (also honor per-rule disabled here).
+    for rule in rules:
+        if rule.get("disabled") or rule.get("candidate_probe") is True:
+            continue
+        if rule.get("default"):
+            _emit_response(rule.get("response", rule), config_dir, args)
+
+    sys.exit(0)
+
+
+def main() -> None:
+    tool = _tool_name()
+    args = sys.argv[1:]
+    trusted_state = _trusted_candidate_state()
+    try:
+        config = _load_config()
+    except FileNotFoundError:
+        # Preserve the legacy top-level help fallback when an ordinary mock has
+        # no response config. Candidate-routed invocations remain fail-closed.
+        if trusted_state is None:
+            _sidecar_log(tool, args)
+            if args and args[0] in _HELP_TOKENS:
+                print(f"Usage: {tool} [SUBCOMMAND] [OPTIONS]")
+                sys.exit(0)
+        raise
+    except (OSError, json.JSONDecodeError):
+        # Legacy mocks historically ledgered the attempted invocation before
+        # surfacing config read/parse failures. Candidate state remains
+        # fail-closed and pre-ledger.
+        if trusted_state is None:
+            _sidecar_log(tool, args)
+        raise
+
+    if trusted_state is None:
+        # A candidate config without immutable state is rejected before the
+        # ledger. Ordinary mocks retain their previous config and dispatch flow.
+        if config.get(_BINARY_CANDIDATES_KEY) is not None:
+            _load_binary_candidate_selection(config)
+        candidate_probe = False
+        _sidecar_log(tool, args)
+    else:
+        selection = _load_binary_candidate_selection(config)
+        candidate_probe = _enforce_binary_candidate(config, selection, tool, args)
+        if not candidate_probe:
+            _sidecar_log(tool, args)
+
+    # Handle top-level --help / -h. An admitted candidate subcommand probe is
+    # dispatched below only to an explicitly marked candidate-probe response.
+    if args and args[0] in _HELP_TOKENS:
+        tool_cfg = config.get(tool, {})
+        _auto_help(tool_cfg, tool)
+
+    tool_cfg = config.get(tool)
+    if tool_cfg is None:
+        print(f"Error: no mock config for tool '{tool}'", file=sys.stderr)
+        sys.exit(1)
+
+    # Per-tool disabled toggle: behave as if the tool is unmocked. If a
+    # passthrough binary is configured, fall through to it; otherwise
+    # surface a clear error so the agent sees that the tool was not
+    # actually mocked.
+    if tool_cfg.get("disabled"):
+        real_binary = tool_cfg.get("passthrough")
+        if real_binary:
+            # Use the recursion-safe resolver (strips JARVIS_REDTEAM_BIN_DIR from
+            # PATH). Plain shutil.which would find the staged `.redteam-bin` shim
+            # symlink instead of the real binary and re-launch the shim.
+            real_path = _resolve_passthrough_binary(real_binary)
+            if real_path:
+                result = subprocess.run([real_path] + args, capture_output=False)
+                sys.exit(result.returncode)
+        print(f"Error: mock for tool '{tool}' is disabled", file=sys.stderr)
+        sys.exit(1)
+
+    config_dir = str(_config_path().parent)
+
+    mode = tool_cfg.get("mode", "subcommand")
+
+    if mode == "subcommand":
+        _handle_subcommand(tool_cfg, args, config_dir)
+    elif mode == "intercept":
+        _handle_intercept(tool_cfg, args, config_dir)
+    elif mode == "sequence":
+        _handle_sequence(tool_cfg, tool, config_dir, args)
+    elif mode == "rules":
+        _handle_rules(tool_cfg, args, config_dir, pure_help=candidate_probe)
+    else:
+        print(f"Error: unknown mock mode '{mode}'", file=sys.stderr)
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
+#!/usr/bin/env python3JARVIS_EVAL_SIDECAR/usr/bin/python3.12/usr/bin/python3.11.redteam-bin/redteam/mocks/redteam/mocks/sidecardaemon_contacts_statusContacts sync statusReturns contact-sync status for paired mobile devices.daemon_subagents_listList subagentsReturns subagents in scope for the root agent.Subagentsdaemon_subagents_statusGet subagent statusReturns status for a single subagent./subagents/subagents/statusprotected discretion documents cannot be deleted or renameddaemon_subscription_check_complimentaryCheck for an eligible complimentary card during an app sessionCall after app onboarding, connector setup, and offer assignment succeed, and the UI client has registered its rendering capabilities. No request operands. Uses the same eligibility, Gatekeeper, setup, and per-offer initial-delivery checks as client registration. Fetches fresh localized eligibility when the gates permit a check. Calls before app setup completes are no-ops and must be repeated afterward. App setup completion does not signify the end of a conversational welcome. Success includes no eligible offer or an already-delivered card; it does not guarantee a new card. Cards arrive through chat subscriptions and remain in history. Repeated or concurrent calls do not create reminders or duplicate initial cards. Accept-Language applies only to newly created cards. Check failures return retryable 503 complimentary_check_unavailable.complimentary subscription redemption is temporarily unavailablecomplimentary_offer_unavailablecomplimentary subscription offer is unavailabledaemon_subscription_redeem_complimentaryRedeem the viewer's complimentary subscription offerRedeems the complimentary grant Stefi advertises on `GET /hatch/subscription` as `complimentary_offer`. The request carries no operands; Stefi derives every grant parameter and re-checks eligibility, so a viewer with no offer or existing access is refused upstream. Requires the `hatch_complimentary_subscription_jarvis_enabled` Gatekeeper.How payments workwallet.checkout_info.payments.titleSection title explaining how wallet checkout payments workChecking out with Shop Paywallet.checkout_info.shop_pay.titleTitle of the checkout information sheet for Shop PayChecking out with Linkwallet.checkout_info.stripe_link.titleTitle of the checkout information sheet for Stripe LinkHow estimated total is calculatedwallet.checkout_info.estimated_total.titleSection title explaining how the estimated checkout total is calculatedYour cart total can shift at checkout with taxes, regulatory fees, or shipping changes.wallet.checkout_info.estimated_total.descriptionExplanation that a checkout total can change because of taxes, fees, or shippingShop Pay uses a secure, one-time payment credential for each purchase your agent makes. The agent never sees your payment info directly.wallet.checkout_info.shop_pay.payments.descriptionExplanation of how Shop Pay protects payment information during agent checkoutYou'll review and approve the checkout total before the order is placed. You'll only be charged the final merchant total.wallet.checkout_info.shop_pay.estimated_total.detailExplanation that Shop Pay checkout requires approval and charges only the merchant's final totalLink generates a one-time use virtual credit card for each purchase your agent makes. The agent never sees your payment info directly.wallet.checkout_info.stripe_link.payments.descriptionExplanation of how Stripe Link protects payment information during agent checkoutVirtual cards add a small buffer to cover changes and ensure your order doesn't fail. You'll only be charged the final merchant total.wallet.checkout_info.stripe_link.estimated_total.buffer_descriptionExplanation that a virtual card includes a buffer but the user is charged only the final merchant totaldaemon_chat_sxs_selectSelect a Side-by-Side responseSelects a candidate for an active Side-by-Side response. The primary candidate may be selected immediately and keeps the transcript unchanged; the alternate candidate may be selected only after it is ready, and selecting it persists the alternate as the turn's canonical assistant response in the transcript (model context follows unless the turn already left the live prompt window). Repeating the selected candidate is idempotent, while selecting the other candidate after resolution conflicts.this SxS response was already resolved to another candidateUnable to record the connection after consent.consent.callback.record_unavailableConsent callback reason when recording a consent-only connector connection failsUnable to verify the connection status after consent.consent.callback.verify_unavailableConsent callback reason when the provider connection status cannot be verified
+Stop working on this activity immediately.
+
+Task info:
+{{task_info}}
+
+Do not call any tool except `muse.nothing_to_do`.
+Call `muse.nothing_to_do` immediately. Do not explain, summarize, continue this activity, or start replacement work.
+{{task_info}}avatar_unavailableavatar_id is no longer available; refresh onboarding identity optionsProductivityconnectors.marketplace.category.productivityConnectors marketplace category title for work and productivity apps such as email, calendar, and documentsSocialconnectors.marketplace.category.socialConnectors marketplace category title for social media, messaging, music, and events appsHealthconnectors.marketplace.category.healthConnectors marketplace category title for health, fitness, and wellness appsconnectors.marketplace.category.businessConnectors marketplace category title for business operations, commerce, design, and software development appsWalletconnectors.marketplace.category.walletConnectors marketplace category title for payment wallets such as Link by Stripe and Shop PayConnectedconnectors.marketplace.category.connectedConnectors marketplace list title for the connectors the user has already connectedCustom connectorsconnectors.marketplace.category.customConnectors marketplace list title for connectors the user added themselvesinvalid marketplace ID or wallet placementoversized or duplicate marketplace listJARVIS_CONNECTOR_MARKETPLACE_COUNTRY_OVERRIDEYour Muse's email was deletedemail.mailbox.restriction.taken_down.titleTitle of the Muse Mail notice shown after the assistant's email address was disabled for a policy violation; Muse is the product name of the assistantWe detected something that goes against our policies. You can create a new email address.email.mailbox.restriction.taken_down.bodyBody of the Muse Mail notice shown after the assistant's email address was disabled for a policy violation; the user can create a new address for the assistantCreate an emailemail.mailbox.restriction.taken_down.actionButton on the deleted Muse Mail notice that starts setting up a new email address for the assistantYour Muse can't send emails until you change the sender name associated with this email.email.mailbox.restriction.sender_name.body.unnamed_assistantNotice in Muse Mail when the assistant's email address may not send until the user changes its sender name, the name recipients see; shown when the assistant has no name; Muse is the product name of the assistant{assistant} can't send emails until you change the sender name associated with this email.email.mailbox.restriction.sender_name.bodyNotice in Muse Mail when the assistant's email address may not send until the user changes its sender name, the name recipients see; assistant is the assistant's nameYour Muse's email is pausedemail.mailbox.restriction.sender_name.titleTitle of the Muse Mail notice shown while the assistant's email address may not send until the user changes its sender name; Muse is the product name of the assistantemail.mailbox.restriction.sender_name.actionButton on the paused Muse Mail notice that opens the page for changing the name recipients see on the assistant's emailsevent hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/product_improvements.rs:319hatch_server::daemon::http_api::routes::product_improvementshatch_daemon_http_client::daemon::http_api::routes::product_improvementshatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/product_improvements.rsevent hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/product_improvements.rs:500event hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/subscription/check_complimentary.rs:28hatch_server::daemon::http_api::routes::subscription::check_complimentaryhatch_daemon_http_client::daemon::http_api::routes::subscription::check_complimentaryhatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/subscription/check_complimentary.rsevent hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/subscription/redeem_complimentary.rs:44hatch_server::daemon::http_api::routes::subscription::redeem_complimentaryhatch_daemon_http_client::daemon::http_api::routes::subscription::redeem_complimentaryhatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/subscription/redeem_complimentary.rsevent hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/subscription/redeem_complimentary.rs:39event hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/subscription.rs:570hatch_server::daemon::http_api::routes::subscriptionhatch_daemon_http_client::daemon::http_api::routes::subscriptionhatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/subscription.rsevent hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/subscription.rs:379event hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/subscription.rs:401event hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/subscription.rs:518event hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/product_improvements.rs:306event hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/product_improvements.rs:308event hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/product_improvements.rs:345event hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/product_improvements.rs:261event hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/product_improvements.rs:154event hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/product_improvements.rs:427event hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/product_improvements.rs:459event hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/product_improvements.rs:524event hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/debug_home_link_bug_reports.rs:90hatch_server::daemon::http_api::routes::debug_home_link_bug_reportsattempted_countsucceeded_countfailed_countomitted_counthatch_daemon_http_client::daemon::http_api::routes::debug_home_link_bug_reportshatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/debug_home_link_bug_reports.rsevent hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/subscription/redeem_complimentary.rs:48event hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/email/mailbox_id.rs:36hatch_daemon_http_client::daemon::http_api::routes::email::mailbox_idhatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/email/mailbox_id.rsevent hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/activity/stop.rs:530hatch_server::daemon::http_api::routes::activity::stopactivity_thread_idhatch_daemon_http_client::daemon::http_api::routes::activity::stophatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/activity/stop.rsevent hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/activity/stop.rs:460event hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/activity/stop.rs:468event hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/activity/stop.rs:611event hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/activity/stop.rs:281killed_session_countevent hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/activity/stop.rs:290event hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/activity/stop.rs:78event hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/activity/stop.rs:490agent_countevent hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/activity/stop.rs:342event hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/bootstrap/avatar.rs:86hatch_server::daemon::http_api::routes::bootstrap::avataravatar_idhatch_daemon_http_client::daemon::http_api::routes::bootstrap::avatarhatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/bootstrap/avatar.rsevent hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/bootstrap/avatar.rs:118event hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/subscription.rs:584ClientTransportSubscriptionQuotaHttpResponsewhether the user's data is eligible for product improvements; true until the user explicitly opts out, and false whenever `training_objection.status` is `filed`epoch milliseconds when the objection was recorded; null unless `status` is `filed`GenAI training objection filed through the objection form on a linked Facebook, Instagram or Meta account. Read-only.`unavailable` means the status could not be loaded, not an objection Meters above sea level; recorded for the client's benefit only. Horizontal accuracy in meters. Widens server-side geofence matching
+ by at most a bounded amount; absent means exact. Set when the sample is a region-monitoring event for a geofence the
+ daemon armed (`geofence.set`), naming that geofence. Client-side label of the triggered region; informational. `enter`, `dwell`, or `exit`. An exit delivers only for a region the
+ user set themselves; the serendipity loop's regions ignore exits. Maximum number of trailing entries to return. Bounded by
+ [`SIDECAR_TAIL_MAX_LIMIT`]. Defaults to [`SIDECAR_TAIL_DEFAULT_LIMIT`]. True when the on-disk file was longer than `SIDECAR_MAX_READ_BYTES`
+ and we returned the tail of what we read â€” not the tail of the file.variant identifierErrorcontextstruct UploadStatusRequeststruct PeerPageCursorEnvelopestruct SubscriptionQuotaHttpResponsestruct SubscriptionCallbackHttpResponsestruct SubscriptionCallbackRequeststruct SubscriptionAvailablePlansRequeststruct ProductImprovementsSetHttpRequeststruct StefiTrainingOptOutstruct StefiTrainingObjectionstruct SxsSelectRequeststruct Documentstruct Categorystruct Homepagestruct CountryOverrideBUG: inner connection already taken!hatch_daemon_http_foundation::response_compression::CompressibleRawTextFilehatch_daemon_http_foundation::logging::ApiRequestArtifactPathhatch_daemon_http_client::daemon::http_api::client_compat::LegacyStreamCreationfuture still here when droppingstruct variant PeerPageCursorPayload::Contactsassertion failed: prevstruct variant PeerPageCursorPayload::Requestsstruct variant PeerPageCursorPayload::Invitationsa Display implementation returned an error unexpectedly`Ready` polled after completioninconsistent in dropcannot serialize marketplace documentinvalid marketplace documentmarketplace document is too largestruct variant PeerPageCursorPayload::IssuedGrantsstruct variant PeerPageCursorPayload::HeldGrantsutf-8InvalidPathMissingPublicBaseUrldescription() is deprecated; use Display

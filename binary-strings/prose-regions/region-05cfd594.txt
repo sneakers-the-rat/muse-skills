@@ -1,0 +1,90 @@
+errorsuccesswrite_admissionwritepostgres write completed slowlypostgres write failedretrying idempotent postgres writeone-shot postgres write invoked more than onceartifact_idspace_slugspace_root_pathconstruction_statusstatus_updated_atstatus_updated_at_unix_msproposal_idsourcecan_set_placementis_promotedwith desired(space_slug, owner_source, favorite_order) as (), locked_owners as (
+                           select owner.space_slug, desired.favorite_order
+                           from desired
+                           join spaces.spaces owner
+                             on owner.space_slug = desired.space_slug
+                            and owner.source = desired.owner_source
+                           order by owner.space_slug
+                           for key share of owner
+                         ), upserted as (
+                           insert into spaces.user_state
+                             (space_slug, favorite_order, is_favorite)
+                           select space_slug, favorite_order,
+                                  favorite_order is not null
+                           from locked_owners
+                           where true
+                           on conflict (space_slug) do update set
+                             favorite_order = excluded.favorite_order,
+                             is_favorite = excluded.is_favorite
+                           returning 1
+                         ) select count(*) from upsertedinsert into shell.user_state (source, item_key, is_favorite, favorite_order, updated_at_ms)  on conflict (source, item_key) do update set is_favorite = excluded.is_favorite, favorite_order = excluded.favorite_order, updated_at_ms = excluded.updated_at_msselect true as space_owner,
+                                ''::text as source,
+                                space_slug as item_key,
+                                favorite_order is not null as is_favorite,
+                                accessed_at_ms,
+                                last_opened_at_ms,
+                                frequency_score,
+                                favorite_order,
+                                null::text as display_name,
+                                null::text as icon,
+                                0::bigint as updated_at_ms
+                         from spaces.user_state
+                         union all
+                         select false as space_owner,
+                                source,
+                                item_key,
+                                is_favorite,
+                                accessed_at_ms,
+                                last_opened_at_ms,
+                                frequency_score,
+                                favorite_order,
+                                display_name,
+                                icon,
+                                updated_at_ms
+                         from shell.user_stateinsert into spaces.action_invocations
+                     (invocation_id, space_slug, space_display_name, action, transport,
+                      invoked_at_text, invoked_at_unix_ms, invoked_at, args_preview, status,
+                      source_kind, source_ref, trigger_ref)
+                     values ($1, $2, $3, $4, $5, $6, $7,
+                             coalesce($10, now()), $8, $9, $11, $12, $13)
+                     on conflict (invocation_id) do nothingin_flightselect invocation_id, space_slug, action, transport, status, invoked_at_unix_ms,
+                            settled_at_unix_ms, duration_ms, args_preview, result_preview, error,
+                            stream_protocol_messages, stream_data_messages,
+                            source_kind, source_ref, trigger_ref
+                     from spaces.action_invocations
+                     where space_slug = $1 and invocation_id = $2
+                     limit 1succeededfailedcancelledselect invocation_id, space_slug, action, transport, status, invoked_at_unix_ms,
+                            settled_at_unix_ms, duration_ms, args_preview, result_preview, error,
+                            stream_protocol_messages, stream_data_messages,
+                            source_kind, source_ref, trigger_ref
+                     from spaces.action_invocations
+                     where invocation_id = $1
+                     limit 1select invocation_id, action, status, invoked_at_unix_ms
+                     from spaces.action_invocations
+                     where space_slug = $1 and invocation_id = $2
+                     limit 1select invocation_id, space_slug, action, transport, status, invoked_at_unix_ms,
+                            settled_at_unix_ms, duration_ms, args_preview, result_preview, error,
+                            stream_protocol_messages, stream_data_messages,
+                            source_kind, source_ref, trigger_ref
+                     from spaces.action_invocations
+                     order by global_seq desc
+                     limit $1select invocation_id, space_slug, action, transport, status, invoked_at_unix_ms,
+                            settled_at_unix_ms, duration_ms, args_preview, result_preview, error,
+                            stream_protocol_messages, stream_data_messages,
+                            source_kind, source_ref, trigger_ref
+                     from spaces.action_invocations
+                     where source_kind = $1
+                     order by invoked_at_unix_ms desc, invocation_id desc
+                     limit $2select invocation_id, action, transport, status,
+                                invoked_at_unix_ms, settled_at_unix_ms, duration_ms,
+                                (result_preview is not null) as has_result_preview,
+                                (error is not null) as has_error,
+                                stream_protocol_messages, stream_data_messages
+                         from spaces.action_invocations
+                         order by global_seq desc
+                         limit $1navigation_favorites.set_orderslocalsavednavigation_favorites.list_user_stateactions.claim_invokedactions.find_invocationactions.prune_settled_beforeactions.find_invocation_by_idactions.find_invocation_statusactions.list_recent_invocationsactions.list_recent_by_source_kindactions.list_recent_invocation_provenanceacquired connection, but time to acquire exceeded slow thresholdacquired connectionBUG: panicked while holding a lockdelete from spaces.user_state
+         where accessed_at_ms is null
+           and last_opened_at_ms is null
+           and frequency_score is null
+           and favorite_order is null
+           and sharing_state is nulldatabase write admission gate closedadmission_timeoutcalled `Result::unwrap()` on an `Err` valuetracing::span::activeinvocation_idactiontransportstatusinvoked_at_unix_mssettled_at_unix_msduration_msargs_previewsource_kindsource_reftrigger_refresult_previewstream_protocol_messagesstream_data_messageshas_result_previewhas_errorBUG: inner connection already taken!ConfigurationInvalidArgumentIoTlsRowNotFoundTypeNotFoundtype_nameColumnIndexOutOfBoundsindexlenColumnNotFoundColumnDecodeEncodeDecodeAnyDriverErrorPoolTimedOutPoolClosedWorkerCrashedMigrateInvalidSavePointStatementBeginFailedtracing::spanspace_owneris_favoriteaccessed_at_mslast_opened_at_msfrequency_scorefavorite_orderdisplay_nameupdated_at_ms

@@ -1,0 +1,71 @@
+postgres write failedretrying idempotent postgres writeone-shot postgres write invoked more than oncecontent_referencecandidate_idupdate context.group_cursors set lease_expires_at = least(clock_timestamp() + $3 * interval '1 second', evidence_expires_at)
+                where subscription_id = $1 and lease_token = $2 and lease_expires_at > clock_timestamp()select min(least(
+                        case when g.retry_at > clock_timestamp() then g.retry_at end,
+                        case when g.lease_expires_at > clock_timestamp() then g.lease_expires_at end))
+                    from context.group_cursors g
+                    join context.subscription_sources ss
+                      on ss.subscription_id = g.subscription_id and ss.source_id = g.source_id
+                    where g.subscription_id = $1 and ss.active
+                      and g.acknowledged_position < g.available_position
+                      and (g.retry_at > clock_timestamp() or g.lease_expires_at > clock_timestamp())select domains, forward_only_disabled_domains
+                     from context.subscriptions where id = $1 for updatedomainsforward_only_disabled_domainsselect exists(select 1 from context.group_cursors g
+                         join context.subscription_sources ss
+                           on ss.subscription_id = g.subscription_id and ss.source_id = g.source_id
+                         join context.sources s on s.id = g.source_id
+                         where g.subscription_id = $1 and ss.active
+                           and s.source_domain = any($2)
+                           and g.lease_expires_at > clock_timestamp())select s.id from context.sources s
+                         join context.subscription_sources ss on ss.source_id = s.id
+                         where ss.subscription_id = $1 and ss.active
+                           and s.source_domain = any($2)
+                         order by s.id for update of s, ssdelete from context.group_cursors g
+                         using context.subscription_sources ss, context.sources s
+                         where g.subscription_id = $1
+                           and ss.subscription_id = g.subscription_id
+                           and ss.source_id = g.source_id and ss.active
+                           and s.id = g.source_id and s.source_domain = any($2)update context.subscription_sources ss set
+                           start_position = s.last_append_position,
+                           discovery_position = s.last_append_position,
+                           discovered_at = clock_timestamp()
+                         from context.sources s
+                         where ss.subscription_id = $1 and ss.source_id = s.id and ss.active
+                           and s.source_domain = any($2)
+                           and (ss.start_position != s.last_append_position
+                             or ss.discovery_position != s.last_append_position)update context.subscriptions
+                         set forward_only_disabled_domains = $2, updated_at = now()
+                         where id = $1select forward_only_disabled_domains
+                     from context.subscriptions where id = $1acquired connection, but time to acquire exceeded slow thresholdacquired connectioninvalid delivery continuation identitiesBUG: panicked while holding a lockupdate context.group_cursors set lease_token = null, lease_expires_at = null, evidence_expires_at = null,
+            retry_at = clock_timestamp() + $3 * interval '1 second', last_error = $4
+            where subscription_id = $1 and lease_token = $2 and lease_expires_at > clock_timestamp()context.subscription.acklease_secondscontext.subscription.renewerror_codecontext.subscription.retrydelay_secondsmust be at most 86400context.subscription.next_dueselect e.id, e.append_position, e.expires_at,
+            case when e.payload_kind = 'device_sync.observed'
+                and e.ttl_seconds between 1 and 172800
+                and e.expires_at > statement_timestamp()
+                and octet_length(e.payload::text) <= 262144
+                and exists(select 1 from ingest.device_context_records r
+                    join ingest.data_source_events d on d.ingest_id = r.ingest_id
+                    where r.event_id = e.id and d.ingest_id = e.dedupe_key
+                        and d.producer_id = $4 and d.source = $5)
+                then e.payload end as payload
+         from context.events e join context.sources s on s.id = e.source_id
+         where e.source_id = $1 and e.append_position > $2 and e.append_position <= $3
+           and s.source_domain = 'device_sync' and s.source_key = $4 || ':' || $5
+         order by e.append_position limit 32select pg_advisory_xact_lock(4841544348435458)database write admission gate closedadmission_timeoutcontext.subscription.reopen_sources_to_nowcontext.subscription.disable_sources_to_nowcontext.subscription.forward_only_disabled_domainsinsert into context.subscription_sources
+        (subscription_id, source_id, active, start_position, discovery_position)
+        select $1, s.id, true, boundary.position, boundary.position
+        from (select id, last_append_position from context.sources
+          where ($2 or source_domain = any($3)) and not exists
+            (select 1 from context.subscription_sources ss where ss.subscription_id = $1 and ss.source_id = context.sources.id)
+          order by id for update) s
+        cross join lateral (select case
+          when $4 then s.last_append_position
+          when $5::timestamptz is null then 0
+          else coalesce((select min(e.append_position) - 1 from context.events e
+            where e.source_id=s.id and e.ingested_at > $5
+              and e.append_position <= s.last_append_position), s.last_append_position)
+          end as position) boundary
+        on conflict do nothingselect id from context.subscriptions where id = $1 for updateupdate context.group_cursors g set acknowledged_position = g.batch_position,
+        window_position = case when g.batch_position >= g.window_position then null else g.window_position end,
+        batch_position = null, lease_token = null, lease_expires_at = null, evidence_expires_at = null, retry_at = null, last_error = null,
+        acknowledged_at = clock_timestamp() from context.subscription_sources ss
+        where g.subscription_id = $1 and g.lease_token = any($2) and g.lease_expires_at > clock_timestamp()
+        and ss.subscription_id = g.subscription_id and ss.source_id = g.source_id and ss.activecalled `Result::unwrap()` on an `Err` valuetracing::span::activedroppedcommitmentfollow_updelivery_continuationsproactivity_admittedstatereceived_at_unix_mstimestampupload_timestamp_mschat_streamlocation_getcontent_hintlowercase ASCII letters, digits, and underscores onlycontributor_keyeventexceeds 256 KiBmust not contain U+0000at most eight hintsmust be a positive number of seconds or nullcontributionexceeds 1 MiBeventsappend requires 1–100 eventssource_domainmust use lowercase ASCII letters, digits, underscores or hyphenssource keydisplay_namelimitmust be 1–100a reference-only payload must not also carry evidenceexceeds 2 KiBhydrator must be lowercase ASCII, digits, '_' or '.'must be an object naming its hydratorinvalid connector observationconnector page exceeds boundsallowed_toolsallocationfollow_up_idmessagesource_root_agent_iddelivery_instructionsmetadata_jsonconversation_deriveddisposition_reasondelivery_submission_idclaimed_atterminal_atcreated_atupdated_atresearch_flowflow_generationrun_idpresentation_localeedition_idlocal_dateitemspresentationitem_countskip_reasonhandoff_message_idcomposed_atsurfaced_atoutcome_scorescored_ata proactive edition with no items is recorded as `skipped`, not `pending_delivery`a proactive edition with items is recorded as `pending_delivery`, not `skipped`proactive edition `items` must be a JSON arrayanchored_idea_idstitlebody_htmlrequest_idlast_opened_atobjective_idstep_idattemptinput_hashstatusoutput_jsontelemetrystarted_atfinished_atdecision_idcandidate_keygoal_idoutcomedecided_atsuggestion_idstringvariant identifierTryFlatten polled after completionMap must not be polled after it returned `Poll::Ready`struct DeviceHistoryRangestruct DeviceHistoryGapstruct HistoryReceiptstruct ContextGroupInputstruct ProactivityFlowstruct ProactiveItemDecisionstruct ProactiveDeliveryItemBUG: inner connection already taken!AuthorityUnprovenPermissionUnprovenInvalidCursorWorkLimitExceededInvalidStateTimeoutRuntimeUnavailableStorageErrorExpiredDuringReadPageLimitExceededDeviceUnavailableCoverageGapReadFailedReady polled after completionErrorConfigurationInvalidArgumentIoTlsRowNotFoundTypeNotFoundtype_nameColumnIndexOutOfBoundsindexlenColumnNotFoundColumnDecodeEncodeDecodeAnyDriverErrorPoolTimedOutPoolClosedWorkerCrashedMigrateInvalidSavePointStatementBeginFailedtracing::spanSerializationFailureLockedConnectionTransientConstraintMalformedOrCorruptTransientIoIoTransientIoErrorPoolTimeoutChannelClosedLimitExceededQuickCheckUnknowna Display implementation returned an error unexpectedlyDbBackendErrorsqlstate_codeTextLengthMetadataOverflowJsonSerializationJsonValidationAgentStatusParseErrorvaluecontext source or event not foundevent key already exists with different contentcontext batch lease expired, was replaced, or its domain was removednext context event exceeds the batch byte limitcontext JSON serialization failedStorageInvariantViolationfielddescription() is deprecated; use Display

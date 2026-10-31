@@ -1,0 +1,76 @@
+connector_call_reasonJARVIS_TRACE_CONTEXTJARVIS_HOMEJARVIS_VAR_LIB_DIRCREDENTIALS_DIRECTORYJARVIS_RUNTIME_CONTEXT_TOKENskill command runtime context registration faileddefault reference avatar activatedkept avatar imagewardrobe avatar worn againhttp://localhost/hatch/object-removal-callbacksobject removal callback failedcallback_failedobject removal: row lookup failedobject removal: stamping processed rows faileddatabase write admission gate closedadmission_timeoutassert_table_existstable_presence.queryinsert into context.subscription_sources
+        (subscription_id, source_id, active, start_position, discovery_position)
+        select $1, s.id, true, boundary.position, boundary.position
+        from (select id, last_append_position from context.sources
+          where ($2 or source_domain = any($3)) and not exists
+            (select 1 from context.subscription_sources ss where ss.subscription_id = $1 and ss.source_id = context.sources.id)
+          order by id for update) s
+        cross join lateral (select case
+          when $4 then s.last_append_position
+          when $5::timestamptz is null then 0
+          else coalesce((select min(e.append_position) - 1 from context.events e
+            where e.source_id=s.id and e.ingested_at > $5
+              and e.append_position <= s.last_append_position), s.last_append_position)
+          end as position) boundary
+        on conflict do nothingcontext.subscription.pullbatch_limits1–100 new events, at most 100 history events, 1 MiB, lease 1–5400 secondsselect ss.source_id, ss.start_position, ss.discovery_position, s.last_append_position
+        from context.subscription_sources ss join context.sources s on s.id = ss.source_id
+        where ss.subscription_id = $1 and ss.active and ss.discovery_position < s.last_append_position
+        order by ss.discovered_at nulls first, ss.source_id limit 1discovery_positionlast_append_positionwith page as materialized (
+            select group_id, append_position, content_hints from context.events
+            where source_id = $1 and append_position > $2 and append_position <= $3
+            and (expires_at is null or expires_at > statement_timestamp())
+            order by append_position limit 1000
+        ), heads as (
+            insert into context.group_cursors
+                (subscription_id, source_id, group_id, acknowledged_position, available_position)
+            select $4, $1, group_id, $5, max(append_position) from page
+            where ($6 or content_hints && $7::text[]) group by group_id
+            on conflict (subscription_id,source_id,group_id) do update
+                set available_position = greatest(context.group_cursors.available_position, excluded.available_position)
+            returning available_position
+        ) select case when count(*) < 1000 then $3 else max(append_position) end from pageupdate context.subscription_sources set discovery_position = $3, discovered_at = clock_timestamp()
+            where subscription_id = $1 and source_id = $2select exists(select 1 from context.subscription_sources ss
+        join context.sources s on s.id = ss.source_id where ss.subscription_id = $1
+        and ss.active and ss.discovery_position < s.last_append_position)update self_improvement.connector_context_records set current = false
+        where connector = $1 and account_id = $2 and generation = $3 and subject_id = $4
+        and current and ($5::text is null or suggestion_id <> $5) returning suggestion_idupdate self_improvement.follow_up_queue set state = 'cancelled',
+        disposition_reason = 'connector_source_deleted', terminal_at = now(), updated_at = now()
+        where follow_up_id = any($1) and state = 'pending'connector context contribution does not match its checkpointdeletedselect e.group_key from self_improvement.connector_context_records r
+                join context.events e on e.id = r.event_id
+                where e.source_id = $1 and r.subject_id = $2
+                  and (e.expires_at is null or e.expires_at > statement_timestamp()) order by e.append_position desc limit 1select count(*) from unnest($1::text[]) requested(event_id)
+        left join context.events e on e.id = requested.event_id
+        where e.id is nullconnector context publication event is unavailableinsert into self_improvement.connector_context_records
+            (connector,account_id,generation,subject_id,suggestion_id,event_id,current,
+             source_id,group_id,append_position)
+            select $1,$2,$3,$4,$5,$6,true,e.source_id,e.group_id,e.append_position
+            from context.events e where e.id = $6 on conflict do nothingupdate self_improvement.connector_mailbox_state m
+        set responded_seen_at = $7
+        from unnest($4::text[], $5::text[], $6::bigint[]) as s(thread_id, message_id, position)
+        where m.connector = $1 and m.account_id = $2 and m.generation = $3
+          and m.thread_id = s.thread_id and m.source_id <> s.message_id
+          and m.arrival_position < s.position and m.responded_seen_at is nullinsert into self_improvement.connector_mailbox_state as existing
+        (connector, account_id, generation, source_id, thread_id,
+         arrival_position, position, facts, recorded_at, expires_at)
+        select $1, $2, $3, s.source_id, s.thread_id, s.arrival, s.position, s.facts, $9, $10
+        from unnest($4::text[], $5::text[], $6::bigint[], $7::bigint[], $8::jsonb[])
+          as s(source_id, thread_id, arrival, position, facts)
+        on conflict (connector, account_id, generation, source_id) do update
+        set arrival_position = least(existing.arrival_position, excluded.arrival_position),
+            position = greatest(existing.position, excluded.position),
+            facts = case when excluded.position > existing.position
+                then excluded.facts else existing.facts end,
+            recorded_at = case when excluded.position > existing.position
+                then excluded.recorded_at else existing.recorded_at end
+        where excluded.position > existing.position
+           or excluded.arrival_position < existing.arrival_positionselect source_id, position, facts from self_improvement.connector_mailbox_state
+        where connector = $1 and account_id = $2 and generation = $3
+          and source_id = any($4)
+        for updateupdate self_improvement.connector_mailbox_state m
+        set position = c.position, facts = c.facts, recorded_at = $7
+        from unnest($4::text[], $5::bigint[], $6::jsonb[]) as c(source_id, position, facts)
+        where m.connector = $1 and m.account_id = $2 and m.generation = $3
+          and m.source_id = c.source_idfactsgmaildelete from self_improvement.connector_mailbox_state
+            where connector = $1 and account_id = $2delete from self_improvement.connector_mailbox_state
+            where connector = $1 and account_id = $2 and generation = $3
+              and source_id = any($4)standalonestripe-link--insighttop_brand_by_transaction_count_per_category_t180dStripe Link Financial Insights fetch failedStripe Link Financial Insights response exceeded the size limitStripe Link Financial Insights response was too largeinspectStripe Link connection inspection failedStripe Link connection status failedconnector_status_cachemessenger_readinstagram_messagescredentialsrefresh_token_rejectedfailed to resolve local authd account status; keeping legacy statusfailed to resolve Plaid Item statuscheckmessenger-companion-auth-statusconnector catalog could not resolve Privacy Jurisdiction countrydue-occurrence coalesce check failed; seeding immediate occurrence anywayPIN enrollment check timed outstoragecommitskip_reasonconnector_sync_pausedavailability_error_codeconnector_not_authorizedconnector_background_sync_disabledcontext_ingest_disabledconnector_sync_disabled_or_read_not_allowedpendingconnector account work failedconnector_sync_follow_through_whatsappwhatsapp_scan_windowconnector sync cancelledfailed to seed immediate WhatsApp follow-throughconnector_sync_follow_through_chatsfailed to seed immediate chat follow-throughconnector history checkpoint reset; coverage gapinvalid connector account identityconnector account inventory exceeds boundflight_trackingemailtoflight_tracking_pausedsource_pausedgroup_keyflight_tracking_failedflight Tracking cancelledreconcileobject removal: saving the drain cursor failedsummarization: capping shadow summarization per run; remainder picked up on later stale cyclessummarization: inference client unavailable; skipping shadow summarization passsummarization: writeback persist failed; leaving retained row unchangedsummarization: failed to load retained outputs chunk for shadow summarization; stopping passsummarization: shadow pass stopping early (preempted or over budget); remainder re-selects on a later run once its recheck window elapsessummarization: could not rebuild tool-output envelope for writeback; skippingplaid_canada_retirement_v1Plaid Canada retirement marker store unavailablestageplaid_canada_retirement_marker_store_unavailableskipped_already_completePlaid Canada retirement marker read failedplaid_canada_retirement_marker_read_failedjurisdictionplaid_canada_retirement_country_unresolvedplaid_canada_retirement_country_lookup_failedauthd_unavailableplaid_canada_retirement_authd_unavailableskipped_non_canadaauthd_duration_msplaid_canada_retirement_incompletePlaid Canada retirement authd request failedPlaid Canada retirement authd task failedplaid_canada_retirement_authd_task_failedPlaid Canada retirement marker write failedplaid_canada_retirement_marker_write_failedstefi_clientspace_share_acceptance_report_client_unavailablespace_share_acceptance_report_read_failedtransient_by_statusspace_share_acceptance_reportshare_accept_continuespace_share_acceptance_report_incompletefailed to queue remaining shared Space acceptance reportsinvoke_failedLink OTA invoke failedtarget_versionlink_ota_invoke_failedLink OTA invoke acceptedlink_ota_invoke_acceptedLink OTA check: no devices connectedno_devices_connectedno_opfailed to fetch Link OTA manifestlink_ota_manifest_fetch_failedmanifest_fetch_faileddevices_dispatcheddevices_dispatch_failedLink device already on latest versionpushing OTA update to Link deviceLink OTA manifest version invalid/hatch/link/ota-manifest?device_type=hatchlinkmaintenance_occurrencemaintenance_attemptrequest_generationgeneric_maintenancejitter_offset_secsjitter_window_secsmaintenance occurrence collided with terminalized work itemOutlook Mailinvalid Outlook Mail received timepreviewis_readhas_attachmentsprimarynextPageToken,items(id,etag,status,updated,summary,description,location,start,end,organizer,attendees,hangoutLink,conferenceData,attachments,htmlLink,recurringEventId,originalStartTime,recurrence,eventType)Google Calendar window unavailablecalendarsGoogle Calendar primary calendar unavailablechat follow-through admission read failedhas_next_pageend_cursorafterthread--account-id--thread-fbid--first25/opt/hatch/bin/instagram-messages-cliinvalid Instagram accounts responseInstagram Direct inventory omitted the account idInstagram inbox is unavailableinbox20--message-count1instagram_messages.threadsenderfull_nameusersparticipantsmemberslast_message_timestamplast_message_timelast_activity_timestamp_msthread_titletitlethread_namethread_typeOutlook Calendar window unavailableOutlook Calendar page exceeds boundcould not checkpoint chat follow-through retry window after concurrent updatescould not checkpoint chat follow-through retry windowchat follow-through turn failedcould not checkpoint failed chat follow-through window for retryterminal_failuresabandoned_windowsconnector_sync_read_not_allowedchat follow-through cancelledinvalid WhatsApp message listWhatsApp message list did not finish paging--chat-refretry_attemptWhatsApp scan evidence omitted scan_afterWhatsApp scan evidence omitted scan_beforewhatsapp.direct_chatMarketplace listings are unavailableinvalid Marketplace listings response/paging/cursors/afterMarketplace listings did not finish pagingmy-listings/opt/hatch/bin/facebook-climarketplace_listingsscoperemoved_listing_idschanges_knowncould not checkpoint WhatsApp retry window after concurrent updatesWhatsApp incremental scan exhausted its retry budgetWhatsApp initial backfill exhausted its retry budgetWhatsApp follow-through turn failedcould not checkpoint WhatsApp scan cursor stateWhatsApp account generation disappeared before retry checkpointcould not checkpoint failed WhatsApp scan for retrycould not checkpoint settled WhatsApp initial windowWhatsApp follow-through cancelledtop_brand_by_category_180d/opt/hatch/bin/hatch_gws_cliGoogle account inventory unavailableauthd unavailableGoogle account inventory exceeds boundmissing initial scanpageTokenGmail initial page unavailablenextPageTokenmissing Gmail initial pageinvalid Gmail initial pageuserIdinvalid Gmail linking timehistoryinvalid Gmail history offsetmessagesAddedmessagesDeletedhistoryIdgetProfileGmail profile unavailableemailAddressmissing Plaid institution selectortransactions-syncPlaid institution identity mismatch/opt/hatch/bin/plaidPlaid read unavailableokPlaid connection status unavailablePlaid status read failedcredential_idconnector_syncconnector sync disabledJARVIS_TOOL_CALL_ID connector sync requires interactive permissionconnector CLI read failedconnector CLI timed outinvalid WhatsApp Companion statusWhatsApp Companion status omitted account identityWhatsApp Companion returned an empty account identitymissing Instagram account selectorInstagram account identity mismatchInstagram engagement page has more results without a cursorInstagram engagement pagination made no progress/opt/hatch/bin/instagram-cliInstagram read unavailableInstagram account inventory unavailable/data/messagesmplace/data/has_keys/data/user_idJARVIS_STEFI_PROXY_SOCKhttp://localhost/hatch/existsFBproactive_notificationawaiting_connector_syncfailed to wake research waiting on connector syncwhatsapp deletions audit hit its wall-clock budget; keeping the partial deletion set so the run still completes in timewhatsapp deletions audit hit its page cap; the tail past this prefix stays invisible until a resume cursor is persistedwhatsapp deletions audit cancelled mid-walkwhatsapp deletions audit failed mid-walk; keeping the partial deletion set and flagging it truncatedauditreading hatch_wai_cli deletions audit outputwaiting on hatch_wai_cli deletions auditmessaging summarization: expired-message redaction persist failed; leaving retained row unchangedmessaging summarization: failed to load outputs for the expired-message pass; retrying them next runmessaging summarization: could not rebuild tool-output envelope for an expired-message redaction; skippingid,threadId,labelIds,historyId,snippet,internalDate,payload(headers)id,threadId,labelIds,historyId,snippet,internalDateattachments_coveragenonempty pagination queueproactive explanation disappearedproactive explanation publication collidedphone region identity missingnot_dueno_capable_clientspin_reminder_dispatch_failedconnector_sync_cancelledconnector_sync_source_not_readystripe_statusconnector_sync_storage_failedconnector_sync_read_failedflight Tracking context processing failed� 

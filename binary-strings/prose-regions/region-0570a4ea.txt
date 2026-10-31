@@ -1,0 +1,483 @@
+feed:pulsepulse_pickfeed_pulse_pickfeed pulse picker exceeded its wall bound; using the deterministic fallback
+Finish through one `feed.finish_step` call: `output` is a JSON object holding `beat`, one of the lanes listed above and nothing else, and `reason`, one plain sentence naming why this lane, this hour. When you pick the ideas lane, add `idea_id` set to the exact id of the offered idea you chose.
+Also set `decided_by` to what most separated this lane from the runner-up.
+/properties/idea_idfeed pulse picker answered outside the valid beats; using the deterministic fallbackfeed pulse picker completion failed; using the deterministic fallbackfeed pulse pick step did not settle; using the deterministic fallbackmemory claim signals unavailable this runmemory note signals unavailable this rungoal signals unavailable this runrelationship signals unavailable this runderived claim signals unavailable this runfeed reader signals resolvedrun signal snapshot unreadable; numbering this render afreshrecent signal uses unavailable; no cooldown this renderv2signal labels unavailable this rundaily-note dates unavailable; undated notes stay undated this runfeed_idea_unitidea slot: budget store unavailable; skippingidea slot: budget read failed; skippingidea slot: prompt read failed; centroid uses the unfiltered windowidea slot: too few units since the prompt changed; centroid uses the unfiltered windowidea slot: centroid built from units published since the prompt changedidea slot: fresh centroid read failed; falling back to the unfiltered windowidea slot: centroid read failedfeed_unitidea slot: anchor no-repeat read failedidea slot: candidate lookup failedidea slot: dogfood visibility read failedidea slot: dropped candidates too far behind the newest Ideas contextidea slot: near-duplicate memory read failedidea slot: dropped candidates restating a recent suggestionidea slot: dropped candidates with no claim on this paperidea slot: prompt declares no subject; ranking on memory affinityidea slot: memory affinity read failed; ranking without itidea slot: shortlisted candidates for the seatidea slot: newest unit read failed; skippingself_improvement.ideasgenerated_cardidea slot: card freshness read failedidea slot: Ideas context database failedidea slot: latest Ideas context read failedidea slot: prompt embed failedidea slot: prompt embed task faileddatabase write admission gate closedadmission_timeoutassert_table_existstable_presence.querystandalonesucceededrun cancelledfeed step failure CAS lost to a concurrent settler; that settler owns the terminal eventfeed step failure CAS erroredfeed step adopted-submission settle erroredhttp://localhost/hatch/feed-engagement-populationfeed post image resolution failedwire media selection's post yielded no image; trying the next entrypost_unresolvedwire media selection refused; trying the next entryweb_url_refusedwire media selection's open-web clip skippedjournaled_web_video_skippedwire media selection's reader-life entry skippedjournaled_local_skippedwire media selection's commissioned illustration skippedgenerated_media_retiredfeed fill draft's commission not rendered; falling back to its record mediafill media resolution exceeded the interaction budget; materializing without the unresolved medianone_selectedunresolvedfeed media reclaim reference probe failedfeed carousel clips misaligned; the videos degrade to their poster stillsfeed carousel resolved under the two-item floor; publishing the unit without itpublic web page (HTML)One of your own saved ideas, back in front of you because it lines up with what your feed has been covering lately.availablebuiltfeed idea-unit build-status read failed; offering the action,feed post clip re-mint returned an address that is not hotlinkable; kept the posterfeed clip re-mint hit its read budget; remaining clips serve poster-onlyInstagram carousel task failed to joinInstagram carousel resolution failedfeed accepts either a unit_id anchor or a cursor, not bothcursor belongs to a different promptlimit must be greater than zerounit belongs to a different promptMake me a feed about my interests. Keep the tone clear and direct. Ensure it is quick to skim. Try to avoid clickbait.update needs the prompt's new text (free_text or full_prompt)prompt must be the feed prompt's non-empty new textfeed prompt-change generation trigger failed; the next scheduled edition carries the new textinfinite feed batch requested with skip_receipts (dev re-serve mode)infinite feed batch requested in direct (no-rewrite) mode; the rollout gate decides whether it runsno feed prompts exist{"busy":true}
+infinite feed batch admittedunit_id must not be emptyno feed prompts exist yet, so there is no feed day to reorderlane is an eval-only field and is not enabled on this VMlane must be one of pulse, wire, editionno feed prompt exists yet; the startup seed creates it momentarilyprovide at least one unit id in `unit_ids` or `views`topic_kind must be one of general, concretetopic must not be emptymaterialized feed unit vanished before the reaction landed// Hatch element picker: runs INSIDE the artifact (Space) document, in every frame.
+// Inert until a host enables pick mode. On a tap it describes the tapped element and
+// hands the description to the host (iOS WKScriptMessageHandler "hatchSpacesElementPicker",
+// Android WebMessageListener "HatchElementPicker", or, on web, the parent shell via
+// postMessage "hatch:space:element-picked"). The host collects one note per pick and sends
+// them all as the "artifact_annotations" context attachment on one chat message (see
+// CONTRACT.md). The host keeps numbered marks on the picked elements with
+// "setMarks([{pick_id, number, path, text, page_path}])"; path/text/page_path let a mark
+// come back after the document reloads.
+//
+// Page data never leaves through postMessage except to HOST_ORIGIN, which only the web
+// host fills in at injection time; native hosts leave the placeholder, which disables
+// every postMessage path. State reaches same-origin child frames by direct calls; other
+// frames are never told anything.
+(function () {
+  if (window.__hatchElementPicker) return;
+
+  var HOST_ORIGIN = "__HATCH_ELEMENT_PICKER_HOST_ORIGIN__";
+  var hostOrigin = null;
+  try {
+    var hostUrl = new URL(HOST_ORIGIN);
+    if ((hostUrl.protocol === "https:" || hostUrl.protocol === "http:") && hostUrl.origin === HOST_ORIGIN) {
+      hostOrigin = HOST_ORIGIN;
+    }
+  } catch (e) {}
+
+  var SEMANTIC = {
+    div: 1, section: 1, article: 1, main: 1, nav: 1, header: 1, footer: 1, aside: 1,
+    p: 1, h1: 1, h2: 1, h3: 1, h4: 1, h5: 1, h6: 1, li: 1, ul: 1, ol: 1, button: 1, a: 1,
+    img: 1, figure: 1, table: 1, tr: 1, td: 1, th: 1, form: 1, input: 1, textarea: 1,
+    select: 1, label: 1, details: 1, summary: 1, video: 1, canvas: 1, svg: 1
+  };
+  var TAP_SLOP_PX = 12;
+  var TAP_MAX_MS = 700;
+  var RECENT_PICKS_MAX = 20;
+  var MAX_PATH = 1200;
+  var MAX_DESCRIPTOR = 120;
+  var ELIDED = "\u2026";
+  var COLOR = "#0a7cff";
+  var frameToken = Math.random().toString(36).slice(2, 10);
+  var pickCounter = 0;
+  var enabled = false;
+  var overlay = null;
+  var inertStyle = null;
+  var downPoint = null;
+  var recentPicks = []; // [{pick_id, el}], newest last
+  var marks = {}; // pick_id -> {el, number, outline, badge}
+  var lastMarks = [];
+  var repositionQueued = false;
+
+  function tagOf(el) { return el && el.tagName ? String(el.tagName).toLowerCase() : ""; }
+
+  // At most max UTF-16 units, never splitting a surrogate pair, with lone
+  // surrogates dropped: JSON.stringify escapes those, and strict JSON parsers
+  // (the daemon's among them) reject the whole message over one.
+  function clean(s, max) {
+    var out = "";
+    for (var i = 0; i < s.length && out.length < max; i++) {
+      var c = s.charCodeAt(i);
+      if (c >= 0xD800 && c <= 0xDBFF) {
+        var d = s.charCodeAt(i + 1);
+        if (!(d >= 0xDC00 && d <= 0xDFFF)) continue;
+        if (out.length + 2 > max) break;
+        out += s.charAt(i) + s.charAt(i + 1);
+        i++;
+        continue;
+      }
+      if (c >= 0xDC00 && c <= 0xDFFF) continue;
+      out += s.charAt(i);
+    }
+    return out;
+  }
+
+  function describe(el) {
+    var tag = tagOf(el);
+    var id = typeof el.id === "string" ? el.id.trim() : "";
+    var classAttr = el.getAttribute ? el.getAttribute("class") : null;
+    var cls = typeof classAttr === "string"
+      ? classAttr.trim().split(/\s+/).filter(Boolean).slice(0, 3)
+      : [];
+    return clean(tag + (id ? "#" + id : "") + (cls.length ? "." + cls.join(".") : ""), MAX_DESCRIPTOR);
+  }
+
+  // A tap on a span deep inside a card should name the card-level element.
+  function snap(el) {
+    var c = el;
+    while (c && c.nodeType === 1 && tagOf(c) !== "body" && tagOf(c) !== "html") {
+      if (SEMANTIC[tagOf(c)]) return c;
+      c = c.parentElement;
+    }
+    return el;
+  }
+
+  // At most MAX_PATH long. A deeper path keeps body and the steps nearest the element,
+  // and replaces the outermost ancestors after body with one ELIDED step.
+  function pathOf(el) {
+    var parts = [];
+    var c = el;
+    while (c && c.nodeType === 1) {
+      parts.unshift(describe(c));
+      if (tagOf(c) === "body") break;
+      c = c.parentElement;
+    }
+    var path = parts.join(" > ");
+    if (path.length <= MAX_PATH) return path;
+    var head = parts[0] + " > " + ELIDED + " > ";
+    var tail = parts.slice(1);
+    while (tail.length > 1 && head.length + tail.join(" > ").length > MAX_PATH) tail.shift();
+    return head + tail.join(" > ");
+  }
+
+  function textOf(el) {
+    var t = (el.innerText != null ? el.innerText : el.textContent) || "";
+    return clean(String(t).replace(/\s+/g, " ").trim(), 200);
+  }
+
+  function round(v) { return Math.round(v); }
+
+  function payloadFor(el, x, y) {
+    var r = el.getBoundingClientRect();
+    pickCounter += 1;
+    var pickId = frameToken + "-" + pickCounter;
+    remember(pickId, el);
+    var data = {
+      pick_id: pickId,
+      element: describe(el),
+      path: pathOf(el),
+      viewport: { width: round(window.innerWidth), height: round(window.innerHeight) },
+      point: { x: round(x), y: round(y) },
+      rect: { x: round(r.left), y: round(r.top), width: round(r.width), height: round(r.height) }
+    };
+    var text = textOf(el);
+    if (text) data.text = text;
+    var pagePath = currentPagePath();
+    if (pagePath != null) data.page_path = pagePath;
+    return data;
+  }
+
+  function currentPagePath() {
+    try { return location.pathname + location.hash; } catch (e) { return null; }
+  }
+
+  function pickedElement(pickId) {
+    for (var i = recentPicks.length - 1; i >= 0; i--) {
+      if (recentPicks[i].pick_id === pickId) return recentPicks[i].el;
+    }
+    return null;
+  }
+
+  function remember(pickId, el) {
+    recentPicks.push({ pick_id: pickId, el: el });
+    if (recentPicks.length > RECENT_PICKS_MAX) recentPicks.shift();
+  }
+
+  // Walks "path" (pathOf's output) down from body, following every child whose
+  // descriptor matches the step, and returns the one element at the end whose text
+  // equals "text" (or the only element, without text). Ambiguity returns null.
+  function locate(path, text) {
+    var body = document.body;
+    var steps = String(path).split(" > ");
+    if (!body || steps[0] !== describe(body)) return null;
+    var frontier = [body];
+    var i = 1;
+    if (steps[1] === ELIDED) {
+      if (steps.length < 3) return null;
+      var all = body.getElementsByTagName("*");
+      frontier = [];
+      for (var a = 0; a < all.length && a < 20000 && frontier.length < 64; a++) {
+        if (describe(all[a]) === steps[2]) frontier.push(all[a]);
+      }
+      i = 3;
+    }
+    for (; i < steps.length && frontier.length; i++) {
+      var next = [];
+      for (var j = 0; j < frontier.length && next.length < 64; j++) {
+        var kids = frontier[j].children;
+        for (var k = 0; k < kids.length; k++) {
+          if (describe(kids[k]) === steps[i]) next.push(kids[k]);
+        }
+      }
+      frontier = next;
+    }
+    var hits = typeof text === "string" && text
+      ? frontier.filter(function (n) { return textOf(n) === text; })
+      : frontier;
+    return hits.length === 1 ? hits[0] : null;
+  }
+
+  function styleBox(s) {
+    s.position = "fixed"; s.pointerEvents = "none"; s.boxSizing = "border-box";
+    s.zIndex = "2147483647";
+  }
+
+  function ensureOverlay() {
+    if (overlay && overlay.isConnected) return overlay;
+    overlay = document.createElement("div");
+    overlay.setAttribute("data-hatch-element-picker", "");
+    overlay.setAttribute("aria-hidden", "true");
+    var s = overlay.style;
+    styleBox(s);
+    s.border = "2px solid " + COLOR; s.borderRadius = "6px";
+    s.background = "rgba(10,124,255,0.10)"; s.display = "none";
+    (document.body || document.documentElement).appendChild(overlay);
+    return overlay;
+  }
+
+  function placeAround(node, r) {
+    node.style.left = (r.left - 3) + "px"; node.style.top = (r.top - 3) + "px";
+    node.style.width = (r.width + 6) + "px"; node.style.height = (r.height + 6) + "px";
+  }
+
+  function highlight(el) {
+    var o = ensureOverlay();
+    placeAround(o, el.getBoundingClientRect());
+    o.style.display = "block";
+  }
+
+  function hideOverlay() { if (overlay) overlay.style.display = "none"; }
+
+  // Numbered marks on the elements the user has already left notes on.
+  function createMark(el, number) {
+    var root = document.body || document.documentElement;
+    var outline = document.createElement("div");
+    outline.setAttribute("data-hatch-element-picker", "");
+    outline.setAttribute("aria-hidden", "true");
+    styleBox(outline.style);
+    outline.style.border = "2px solid " + COLOR; outline.style.borderRadius = "6px";
+    var badge = document.createElement("div");
+    badge.setAttribute("data-hatch-element-picker", "");
+    badge.setAttribute("aria-hidden", "true");
+    var b = badge.style;
+    styleBox(b);
+    b.width = "22px"; b.height = "22px"; b.borderRadius = "11px"; b.background = COLOR;
+    b.color = "#fff"; b.font = "700 12px/22px -apple-system, system-ui, sans-serif";
+    b.textAlign = "center"; b.boxShadow = "0 1px 3px rgba(0,0,0,0.35)";
+    badge.textContent = String(number);
+    root.appendChild(outline); root.appendChild(badge);
+    return { el: el, number: number, outline: outline, badge: badge };
+  }
+
+  function positionMark(m) {
+    if (!m.el.isConnected) { m.outline.style.display = "none"; m.badge.style.display = "none"; return; }
+    var r = m.el.getBoundingClientRect();
+    m.outline.style.display = "block"; m.badge.style.display = "block";
+    placeAround(m.outline, r);
+    m.badge.style.left = (r.left - 11) + "px"; m.badge.style.top = (r.top - 11) + "px";
+  }
+
+  function positionAllMarks() {
+    repositionQueued = false;
+    for (var id in marks) if (Object.prototype.hasOwnProperty.call(marks, id)) positionMark(marks[id]);
+  }
+
+  function queueReposition() {
+    if (repositionQueued) return;
+    repositionQueued = true;
+    (window.requestAnimationFrame || window.setTimeout)(positionAllMarks);
+  }
+
+  function removeMark(id) {
+    var m = marks[id];
+    if (!m) return;
+    if (m.outline.parentNode) m.outline.parentNode.removeChild(m.outline);
+    if (m.badge.parentNode) m.badge.parentNode.removeChild(m.badge);
+    delete marks[id];
+  }
+
+  // Declarative: "list" is the complete set of marks the host wants shown. A pick id
+  // belongs to one document; after a reload or an in-page navigation the host still
+  // holds its notes, so an item may also carry the pick's "path", "text" and
+  // "page_path", and an unknown id is re-resolved when exactly one element on the same
+  // page matches. Ids that resolve to nothing here (another frame's or another page's
+  // picks) are ignored.
+  function setMarks(list) {
+    list = Array.isArray(list) ? list : [];
+    lastMarks = list;
+    var keep = {};
+    for (var i = 0; i < list.length; i++) {
+      var item = list[i] || {};
+      var id = typeof item.pick_id === "string" ? item.pick_id : null;
+      var number = typeof item.number === "number" ? item.number : null;
+      if (!id || number == null) continue;
+      var el = pickedElement(id);
+      if (!el && marks[id] && marks[id].el.isConnected) el = marks[id].el;
+      if (!el && typeof item.path === "string" &&
+          (typeof item.page_path !== "string" || item.page_path === currentPagePath())) {
+        el = locate(item.path, item.text);
+        if (el) remember(id, el);
+      }
+      if (!el) continue;
+      keep[id] = true;
+      if (marks[id] && marks[id].number !== number) {
+        marks[id].number = number; marks[id].badge.textContent = String(number);
+      } else if (!marks[id]) {
+        marks[id] = createMark(el, number);
+      }
+    }
+    for (var existing in marks) {
+      if (Object.prototype.hasOwnProperty.call(marks, existing) && !keep[existing]) removeMark(existing);
+    }
+    positionAllMarks();
+    hideOverlay();
+    relay("setMarks", list);
+  }
+
+  // Same-origin child frames only: reading a property of a cross-origin window throws, so
+  // those frames are skipped and learn nothing. (about:blank and srcdoc frames report a
+  // "null" location origin while being same-origin, so this access check is the test.)
+  function relay(method, arg) {
+    for (var i = 0; i < window.frames.length; i++) {
+      try {
+        var api = window.frames[i].__hatchElementPicker;
+        if (api && typeof api[method] === "function") api[method](arg);
+      } catch (e) {}
+    }
+  }
+
+  function deliver(data) {
+    try {
+      var wk = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.hatchSpacesElementPicker;
+      if (wk) { wk.postMessage(data); return; }
+    } catch (e) {}
+    try {
+      if (window.HatchElementPicker && typeof window.HatchElementPicker.postMessage === "function") {
+        window.HatchElementPicker.postMessage(JSON.stringify(data)); return;
+      }
+    } catch (e) {}
+    // Only the frame whose parent is the shell can match hostOrigin; postMessage drops the
+    // message for any other parent.
+    if (hostOrigin && window.parent && window.parent !== window) {
+      window.parent.postMessage({ type: "hatch:space:element-picked", payload: data }, hostOrigin);
+    }
+  }
+
+  function isOurs(node) {
+    return !!(node && node.getAttribute && node.hasAttribute("data-hatch-element-picker"));
+  }
+
+  function targetAt(x, y) {
+    var t = document.elementFromPoint(x, y);
+    if (!t || isOurs(t)) return null;
+    return snap(t);
+  }
+
+  // In pick mode the page is inert: no listener of the page sees a press, a click or a
+  // menu gesture, and nothing activates, focuses or selects. Scrolling still works, since
+  // nothing cancels touchstart or the moves; a press that moves more than TAP_SLOP_PX or
+  // lasts longer than TAP_MAX_MS is a scroll or a long-press, not a pick.
+  function swallow(ev) {
+    if (!enabled) return;
+    ev.stopImmediatePropagation();
+    if (ev.cancelable && ev.type !== "touchstart") ev.preventDefault();
+  }
+
+  function onPointerDown(ev) {
+    if (!enabled) return;
+    ev.stopImmediatePropagation();
+    if (ev.isPrimary === false) return;
+    downPoint = { x: ev.clientX, y: ev.clientY, t: Date.now() };
+    if (ev.pointerType === "mouse") { var t = targetAt(ev.clientX, ev.clientY); if (t) highlight(t); }
+  }
+
+  function onPointerMove(ev) {
+    if (!enabled || ev.pointerType !== "mouse") return;
+    var t = targetAt(ev.clientX, ev.clientY);
+    if (t) highlight(t);
+  }
+
+  function onPointerUp(ev) {
+    if (!enabled) return;
+    swallow(ev);
+    var start = downPoint; downPoint = null;
+    if (!start || ev.isPrimary === false) return;
+    if (Math.abs(ev.clientX - start.x) > TAP_SLOP_PX || Math.abs(ev.clientY - start.y) > TAP_SLOP_PX) return;
+    if (Date.now() - start.t > TAP_MAX_MS) return;
+    var el = targetAt(ev.clientX, ev.clientY);
+    if (!el) return;
+    highlight(el);
+    deliver(payloadFor(el, ev.clientX, ev.clientY));
+  }
+
+  function onPointerCancel(ev) {
+    if (!enabled) return;
+    ev.stopImmediatePropagation();
+    downPoint = null;
+  }
+
+  // Registered once at document start, before any page script, so these window capture
+  // listeners always run ahead of the page's own; each one checks "enabled".
+  var active = { capture: true, passive: false };
+  var passive = { capture: true, passive: true };
+  var SWALLOWED = ["mousedown", "mouseup", "click", "dblclick", "auxclick", "contextmenu", "dragstart", "touchend"];
+  window.addEventListener("pointerdown", onPointerDown, active);
+  window.addEventListener("pointermove", onPointerMove, passive);
+  window.addEventListener("pointerup", onPointerUp, active);
+  window.addEventListener("pointercancel", onPointerCancel, active);
+  window.addEventListener("touchstart", swallow, passive);
+  for (var si = 0; si < SWALLOWED.length; si++) window.addEventListener(SWALLOWED[si], swallow, active);
+
+  function setInert(on) {
+    if (on) {
+      inertStyle = document.createElement("style");
+      inertStyle.setAttribute("data-hatch-element-picker", "");
+      inertStyle.textContent = "*{-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important}";
+      (document.head || document.documentElement).appendChild(inertStyle);
+    } else if (inertStyle) {
+      if (inertStyle.parentNode) inertStyle.parentNode.removeChild(inertStyle);
+      inertStyle = null;
+    }
+  }
+
+  function setEnabled(on) {
+    on = !!on;
+    if (on !== enabled) {
+      enabled = on;
+      setInert(on);
+      if (!on) {
+        downPoint = null;
+        hideOverlay();
+      }
+    }
+    relay("setEnabled", on);
+  }
+
+  document.addEventListener("scroll", queueReposition, passive);
+  window.addEventListener("resize", queueReposition);
+
+  // Web: the shell toggles pick mode and sets the marks from hostOrigin. Native hosts call
+  // the API directly in the main frame.
+  window.addEventListener("message", function (ev) {
+    var d = ev.data;
+    if (!hostOrigin || !d || d.type !== "hatch:space:element-picker") return;
+    if (ev.source !== window.parent || ev.origin !== hostOrigin) return;
+    if (typeof d.enabled === "boolean") setEnabled(d.enabled);
+    if (Array.isArray(d.marks)) setMarks(d.marks);
+  });
+
+  var api = Object.freeze({
+    setEnabled: setEnabled,
+    isEnabled: function () { return enabled; },
+    setMarks: setMarks,
+    currentMarks: function () { return lastMarks.slice(); },
+    clearHighlight: function () { hideOverlay(); relay("clearHighlight"); }
+  });
+  Object.defineProperty(window, "__hatchElementPicker", {
+    value: api, writable: false, configurable: false, enumerable: false
+  });
+
+  // A same-origin child frame that loads after the host spoke adopts its parent's state
+  // once its own document exists.
+  function adoptParentState() {
+    try {
+      var parentApi = window.parent !== window ? window.parent.__hatchElementPicker : null;
+      if (!parentApi || parentApi === api) return;
+      if (parentApi.isEnabled()) setEnabled(true);
+      setMarks(parentApi.currentMarks());
+    } catch (e) {}
+  }
+  if (window.parent !== window) {
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", adoptParentState, { once: true });
+    } else {
+      adoptParentState();
+    }
+  }
+})();
+text/javascript; charset=utf-8private, max-age=60nosniffJARVIS_STEFI_PROXY_SOCKserialize artifacts.share payloadserialize artifacts.remove payloadserialize artifacts.fetch_url payloadmid > lencalled `Result::unwrap()` on an `Err` valuemorningmiddayeveningadhocrecent_3drecent_14drecent_90drecent_180dfeed_search_embeddingfeed_idea_slot_embeddingTimeDelta::days out of boundsTimeDelta::hours out of boundsLocal time out of range for `NaiveDateTime`heartbeatserendipityproactive_notifierdevice_syncreferral_invitationconfidential_vm_upsellinternal_messagesquota_noticesmuse_mail_owner_verifiedpicks_topicwrites_postedits_editionhero_imagewidgetsocial_embededition_publishedunits_changedconsent_refreshconsent_confirmationshare_check_refreshdisplay_refreshshare_check_precheckconsentshare_checkdisplaygeneratededitionassertion failed: !bucket_ptr.is_null()assertion failed: is_borrowed(bucket_ptr)assertion failed: !is_sentinel(bucket_ptr)dropped_video_in_image_slotdropped_not_an_imagedislikewindowmain probationmain protectedother### Using these figures
+These are all readers' figures, not this reader's, so they only break ties.
+- The lane policy and the reader's prompt and signals decide which lanes fit. Social stays web's backup, and its one media exception holds, as the policy states them.
+- Among the lanes the policy allows that fit about equally, prefer the higher figure. When the figures do not separate them, follow the policy's default.
+- Never pick a lane for its figure alone.
+For example, if web and schedule fit about equally and web shows 1.1x against schedule's 0.8x, pick web.
+## Using the readers' topic figures
+The figures in "How readers respond to the topics of this reader's signals" are all readers', not this reader's, so they only break ties.
+- Write from the reader's prompt and signals as always. A topic not listed is no reason to pass a story over.
+- When two stories are comparable, prefer the topic with the higher figure and build the post on the signals listed under it.
+- A figure never licenses a subject the reader ruled out.
+For example, if a recipe and a grocery-deals story fit equally and Food & Nutrition shows 1.1x against Shopping & Commerce's 0.9x, write the recipe, built on the signals listed under Food & Nutrition.
+How readers respond, by laneHow readers respond to the topics of this reader's signalsno_promptno_query_vectorexclusion_read_failedsearch_failedno_candidatesno_rankable_candidateall_near_duplicatesall_below_relevance_floorassertion failed: !new_ptr.is_null()assertion failed: self.buckets.len().is_power_of_two()transcoded4a905e79-a9af-4631-93a7-dac5bb408320InstagramThreadsfeed hotlinked clip address has expired; serving the poster without itRead one prompt's feedReturns the reader's feed (omitting `prompt_id` defaults to the singular prompt, echoed back): whole edition days per page, newest first, filled until the page carries at least 24 units (or history runs out) via the opaque cursor. Edition `title` mastheads render in the request's `Accept-Language`; stored unit copy remains verbatim. Paging is bidirectional — `pagination.next_cursor` walks older, `pagination.prev_cursor` walks newer, each `null` at that end of the history; round-trip either verbatim as `cursor`, never decode or construct one. Passing `unit_id` instead of a cursor anchors the read on the day that contains that unit (the deep-link entry point), returning that day exactly like any other page. `unit_id` and `cursor` are mutually exclusive; for a promptless (ingested) unit `prompt_id` picks the feed (defaulted like a plain read), while a prompt-owned unit rejects a `prompt_id` naming a different feed. No position is returned — within-day order is renumbered by `POST /api/feed/reorder` and reset when a fresh edition publishes, so only `(feed, day, unit_id)` is stable; match by id inside the page. Within a day, manually reordered units come first; clients render server order. Promptless ingested units appear in every prompt's feed. `404` for an unknown `unit_id` or explicit `prompt_id`.daemon_feed_searchSearch feed unitsFull-text + semantic search over the precomputed unit corpus, fused by reciprocal rank; `category` filters exactly (alone or with `q`).daemon_feed_unit_detailGet one feed unitReturns one feed unit by id.edition pushed above/feed/feed/search/feed/units/{unit_id}daemon_feed_statusRead one prompt's generation statusWhether an edition run is generating right now (with its run id and trigger), the next scheduled edition fire while idle, and the freshest published-edition watermark for cheap staleness checks. Omitting `prompt_id` defaults to the reader's singular prompt. `prompt_enabled` is always `true` (enablement is removed; the field is retained for older clients)./feed/statusdaemon_feed_prompt_readRead the feed promptThe canonical prompt read: the reader's ONE feed prompt as an object (`prompt` is `null` only on a pre-seed instant). The prompt is a single piece of plain text, carried in `full_prompt` (and mirrored in `free_text`). Only the exact shipped default is rendered in the negotiated `Accept-Language`; custom text remains verbatim. The stored default is unchanged, and missing translations use English; the other fields are retired-compat projections (`template_id` absent, `slot_values` `{}`, `slot_alternates` absent, `enabled` always `true`).daemon_feed_prompts_listList feed prompts (deprecated)Deprecated: use GET /api/feed/prompt. Returns the reader's singular feed prompt (the array never holds more than one row). A prompt is ONE piece of text, carried in both `free_text` and `full_prompt`; only the exact shipped default is rendered in the negotiated `Accept-Language`, while custom text stays verbatim; `template_id` is always absent and `slot_values` always `{}` (templates and madlib slots are retired), and `enabled` is always `true` (the feed has no off state).daemon_feed_prompt_createCreate a feed prompt (deprecated)Deprecated: use PATCH /api/feed/prompt (an upsert). Creates (or replaces in place) the reader's singular plain-text prompt: the text comes from `full_prompt` else `free_text`, and with neither the shipped default sentence is stored. The legacy `template_id`, `slot_values`, and `enabled` fields are accepted-and-ignored (templates, slots, and enablement are retired). A create kicks the feed's first generation in the request's `Accept-Language`, on the lane the reader's activity tier prints; because this route replaces in place, a re-POST of the text already stored or of its unchanged localized default display is a no-op. The localized-display no-op applies only while the canonical default is still stored and uses this request locale. The response localizes only the shipped default.daemon_feed_prompt_deleteDelete a feed promptPermanently removes the prompt AND its published units in one transaction; promptless ingested units are untouched. Destructive — clients should confirm first. Reads of the deleted prompt_id return 404.daemon_feed_prompt_updateUpdate a feed prompt (deprecated)Deprecated: use PATCH /api/feed/prompt. Replaces the prompt's text: `full_prompt` else `free_text` is stored verbatim as the whole prompt (a prompt is one piece of text; there is no template seed or override split left to reconcile). An edit that really changes the text queues a fresh generation in the request's `Accept-Language`, on the reader's own tier lane, exactly like PATCH /api/feed/prompt; a byte-identical re-save queues nothing. While the canonical default is still stored, saving its unchanged localized display in this request locale is also a no-op. The response localizes only the shipped default. In-flight runs keep their frozen prompt snapshot and already-published units never change. The legacy `slot_values` and `enabled` fields are accepted-and-ignored: slots and enablement are retired and the feed always generates.daemon_feed_prompt_upsertReplace the feed prompt textThe canonical prompt write: `{prompt: "<full text>"}` replaces the reader's ONE feed prompt whole (an upsert: in the rare no-prompt case it creates the prompt and kicks the feed's first generation). A write that really changes the text queues a fresh generation right away, on the lane the reader's activity tier already prints (an own-research pulse, or a one-unit pull from the fleet exchange); `Accept-Language` is frozen into that generation. A byte-identical re-save changes nothing and queues nothing. While the canonical default is still stored, saving its unchanged localized display in this request locale also changes nothing and queues nothing. The response localizes only the shipped default. Already-published units never change./feed/prompt/feed/prompts/feed/prompts/{prompt_id}feed_infiniteGenerate and stream one infinite-feed batchGenerates a fresh batch of ephemeral feed units for the served prompt and streams them as NDJSON (`application/x-ndjson`): one `{"unit_key", "unit"}` line per unit as its rewrite finishes, then one `{"done": true, "units", "reason"?}` terminal line. A `{"busy": true}` line (then end) means a batch for this prompt is already generating. Units are NOT persisted: the client owns them for the session, `unit_key` is the handle interactions use, and interacting with a unit materializes it server-side. `Accept-Language` is frozen into this batch and directs its newly authored user-visible copy. Send this request only on the reader's real end-of-scroll (or as the prefetch of the next batch); a plain feed read streams no units./feed/infiniteviews: seen_at_ms must be a positive epoch-ms timestampviews: timespent_ms must not be negativedaemon_feed_reorderMove a unit to a position within its dayMoves one unit to `position` within its day group (1 = top; past-the-end clamps to the bottom; `position < 1` and unknown units are rejected) in ONE feed's woven day view. `prompt_id` names that feed — the feed whose listing the client rendered — and omitting it defaults exactly like `GET /api/feed`; a unit outside the scoped feed's day group is rejected. The server splices the unit into that feed's day display order and renumbers the WHOLE group densely, so every unit below the insertion point shifts down — clients never compute order values. Prompt-owned units keep the order on the unit itself, while promptless (woven, shared/ingested) units are placed per feed, so arranging one feed never rearranges another. Day grouping itself never changes, and a fresh edition resets that feed's whole manual arrangement for its day, woven placements included.daemon_feed_regenerateGenerate a fresh adhoc editionAdmits an adhoc generation run appending a fresh edition to the reader's feed. `prompt_id` is an optional compatibility spelling; omitted or explicit, the singular prompt is the target. `Accept-Language` is frozen into the run and directs newly authored user-visible copy through retries and restart. Enablement is removed: the feed has no off state, and the response's `prompt_enabled` is always `true` (retained for older clients that reconcile a cached toggle from it). Idempotent per prompt and locale: a matching open run returns `already_in_progress: true`; a different-locale request queues the newer generation. One adhoc build runs at a time: while another build is open the response is `queued: true` (no `run_id`) and the run starts automatically when that build finishes. Explicit regeneration only — pull-to-refresh is a pure refetch and never calls this.daemon_feed_units_seenMark feed units seenMarks units seen, first-seen wins: each unit's seen_at_ms is set once (a compare-and-set on NULL) and never moved, so re-sends and unknown ids are no-ops. Batched by design — flush viewport crossings, don't post per card. Two forms, either or both per call (cap 200 each): `unit_ids` marks seen-only with a server timestamp; `views` (`[{unit_id, timespent_ms, seen_at_ms}]`) also carries client-observed view time — it accumulates timespent_ms and moves last_seen_at_ms on every flush while keeping first-seen fixed. Response `updated` counts unseen→seen transitions across both. Seen state feeds the units' seen_at_ms projection; deriving "all caught up" is comparing the fresh editions rendered against their seen flags.daemon_feed_unit_deleteDelete a feed unitRemoves one unit from the feed permanently. Interaction ledger rows referencing the unit survive by design (learning evidence is never erased), and the delete itself is recorded for the reader's engagement breakdown: a `deleted` ledger row beside a snapshot of what the unit was.Admit and drive one common-pool generation run for a topic.daemon_feed_unit_reactionSet or clear a unit reactionSets the unit's single reaction (`like`/`love`/`dislike`) or clears it (null), recording the interaction for preference learning. Idempotent per value.feed generation is currently disabled remotely; try again laterfeed_generation_disabled/feed/units/{unit_id}/reaction/feed/reorder/feed/pool/generatedaemon_spaces_element_picker_scriptRead the Space element picker scriptReturns the frame-side element picker that a client injects into the Space documents it renders, so a tap in pick mode describes an element for an `artifact_annotations` context attachment (docs/api/websocket.md). The bytes are the same for every Space; the route sits under the Space's path so the credential that loads the Space also fetches the script. The script is inert until the host calls `window.__hatchElementPicker.setEnabled(true)`. The response carries an `ETag` over the bytes and honors `If-None-Match` with 304; the bytes change only with the daemon build.Spacestext/javascriptThe element picker script/spaces/v2/{slug}/element-picker.js

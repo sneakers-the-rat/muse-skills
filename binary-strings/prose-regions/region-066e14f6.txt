@@ -1,0 +1,187 @@
+delete from health.samples
+                 where provider = $1
+                   and node_id is not distinct from $2
+                   and start_at <= $4
+                   and coalesce(end_at, start_at) >= $3internal error: entered unreachable code: bundle-specific clear always includes a sample typedelete from health.samples
+                 where provider = $1
+                   and node_id is not distinct from $2
+                   and sample_type = $3
+                   and bundle_id is null
+                   and start_at <= $5
+                   and coalesce(end_at, start_at) >= $4delete from health.samples
+                 where provider = $1
+                   and node_id is not distinct from $2
+                   and sample_type = $3
+                   and bundle_id is not distinct from $4
+                   and start_at <= $6
+                   and coalesce(end_at, start_at) >= $5delete from health.sample_values where sample_id = any($1)insert into health.events (
+                   provider, node_id, bundle_id, timezone, event_type, event_at, event_end_at
+                 )
+                 values ($1, $2, $3, $4, $5, $6, $7)
+                 returning health_event_idinsert into health.events (
+                   provider, node_id, external_event_id, bundle_id, timezone, event_type,
+                   event_at, event_end_at
+                 )
+                 values ($1, $2, $3, $4, $5, $6, $7, $8)
+                 returning health_event_idstart_epoch_secend_epoch_secbundle_idevent_typehealth.eventsinsert into health.sample_values (
+               sample_id, value_name, unit, numeric_value, text_value
+             )  on conflict (sample_id, value_name)
+              do update set
+                unit = excluded.unit,
+                numeric_value = excluded.numeric_value,
+                text_value = excluded.text_valuesleep_awake_duration_secsleep_core_duration_secsleep_deep_duration_secsleep_rem_duration_secsleep_asleep_unspecified_duration_secinsert into health.sleep_sessions (
+               provider, node_id, external_sleep_id, bundle_id, timezone, start_at, end_at,
+               quality_score, awake_seconds, core_seconds, deep_seconds, rem_seconds,
+               asleep_unspecified_seconds, asleep_seconds, in_bed_seconds
+             )
+             values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+             returning sleep_session_idquality_scoresleep_in_bed_duration_sechealth.sleep_sessionsaggregatesinsert into health.samples (
+               provider, node_id, external_sample_id, bundle_id, timezone, sample_type,
+               start_at, end_at, unit, numeric_value, text_value
+             )  returning sample_iddelete from health.record_values where record_table = $1 and record_id = $2insert into health.record_values (
+               record_table, record_id, value_name, unit, numeric_value, text_value
+             )  on conflict (record_table, record_id, value_name)
+              do update set
+                unit = excluded.unit,
+                numeric_value = excluded.numeric_value,
+                text_value = excluded.text_valueinsert into health.workouts (
+               provider, node_id, external_workout_id, bundle_id, timezone, workout_type,
+               start_at, end_at, active_seconds, energy_kcal, distance_meters,
+               hr_max_bpm, hr_average_bpm
+             )
+             values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+             returning workout_idactive_duration_secsenergy_burned_kcaldistance_metershr_max_bpmhr_average_bpmworkout_typehealth.workoutsinsert into health.aggregates (
+               provider, node_id, timezone, aggregate_type, period_start, period_end,
+               numeric_value, unit
+             ) with ns as (
+             select tstzrange($4::timestamptz, $5::timestamptz) as s
+         ),
+         matched as (
+             delete from health.synced_ranges
+             where provider = $1
+               and node_id is not distinct from $2::text
+               and category = $3
+               and (span && (select s from ns) or span -|- (select s from ns))
+             returning lower(span) as lo, upper(span) as hi
+         ),
+         bounds as (
+             select min(lo) as lo, max(hi) as hi from matched
+         )
+         insert into health.synced_ranges (provider, node_id, category, span)
+         select $1, $2::text, $3, tstzrange(
+             least(lower(ns.s), coalesce((select lo from bounds), lower(ns.s))),
+             greatest(upper(ns.s), coalesce((select hi from bounds), upper(ns.s)))
+         )
+         from nsselect pg_advisory_xact_lock_shared(hashtext($1))health.records.writedelete from health.samples
+         where node_id = $1
+           and start_at <= $3
+           and coalesce(end_at, start_at) >= $2select distinct provider from health.synced_ranges where node_id = $1delete from health.samples
+         where provider = $1
+           and node_id is not distinct from $2
+           and sample_type = $3
+           and start_at <= $5
+           and coalesce(end_at, start_at) >= $4active reconciliation changed while its staging was lockedfenced invalid device reconciliation attempt
+    select
+        node_id,
+        coalesce(display_name, node_id) as display_name,
+        platform,
+        enabled_permissions_json,
+        commands_json,
+        data_sources_json,
+        version,
+        device_family,
+        model_id,
+        metadata_json,
+        is_wakeup_supported,
+        delivery_app,
+        invoke_protocol,
+        coalesce(paired_at_text, created_at::text) as paired_at,
+        coalesce(last_seen_at_text, last_seen_at::text, created_at::text) as last_seen_at,
+        status,
+        pairing_status
+    from device.nodes
+pairing_status <> 'revoked'
+    update device.nodes
+    set health_last_received_at = $1,
+        health_last_sync_status = 'success',
+        health_last_sync_error = null
+    where node_id = $2
+    goal guide path is not a regular filegoal workspace path is not a real directorylegacy_ideas_markeralready_presentidea_cards_first_boot_warmupfirst_bootfirst-boot idea-cards warmup state check failedfirst-boot idea-cards warmup pending marker write failedseeded workspace AGENTS.md into pre-existing space workspacesone or more space AGENTS.md seeds failed; first boot will retryAGENTS.mdworkspace_agents.mdfailed to read workspace AGENTS.md template; will retry next bootspace-static.AGENTS.md.hatch-backfill-tmpfailed to stage workspace AGENTS.md; will retry next bootfailed to place workspace AGENTS.md; will retry next bootskipping workspace AGENTS.md backfill for unclassifiable spacespace_agents_backfillfirst-boot space workspace AGENTS.md backfill failednon_user_submissionsubmission_inputscompleted_output_classificationspecialist_turn_inputsspecialist_handoff_shapespecialist_handoff_missingspecialist_handoff_inputscurrenta browser specialist result carries an unexpected handoff payloada browser specialist result has no handoffa browser specialist result cannot carry another source or an overridea browser specialist result arrives only as its follow-upsession/avatar_completion_handoff.mdThe selected avatar image is active. Instagram profile available: {instagram_profile_available}. Use avatar.get to check that its current image path matches {image_path}. If a different avatar is now active, do not announce or present this completed avatar.
+
+### If instagram profile available is true
+- Videos may still be generating; do not wait for them. After confirming this is still the current avatar, give the user the option to add a Muse banner to their profile. 
+- This banner is a visual pill on the user's Instagram profile beneath their bio, showing their Muse avatar and name. Tapping it opens the Muse app if installed, or prompts the visitor to download it. It does not change the user's profile picture or bio. Adding the banner does not grant or change permissions for Muse or anyone else to read or access the user's Instagram profile, posts, or account. It does not give visitors access to the user's Muse and does not let them ask the user's Muse questions. Visitors only see the Muse avatar and name through the banner. Use these facts when explaining the banner or answering privacy questions.
+- To give the user the option to add a Muse banner to their profile, speak in first person and invite the user: "Want to show off my new look? Add me as a banner on your Instagram profile". Use this wording in English, or its natural equivalent in the user's language. Refer to yourself as "me" and the avatar as "my new look", not by your name in third person. Call muse.create_options with exactly one accepting reply: {"options":["Let's do it"]} in English, or its natural equivalent in the user's language. The option's displayed text is also the exact user message sent when tapped. Include the returned embed_token unchanged in the same message as the invitation; plain text alone is not a complete offer. Do not use the avatar_share card, open a share sheet, attach avatar media, or add a separate readiness announcement.
+- This handoff authorizes only the invitation, not a profile change. Wait for the user's acceptance; tapping "Let's do it" accepts this invitation. If they accept, read /opt/hatch/connectors/instagram/CONNECTOR.md to resolve their linked account and run instagram-cli profile-banner --account-id <user_own_fbid> --action add through the normal connector approval flow. If multiple accounts are linked and the intended account is unclear, ask which one. Recheck account availability before the write. If Instagram has been disconnected, do not update the profile or turn this offer into an account-linking upsell. Do not change the profile photo or bio. Confirm the banner was added only when the command returns success: true; otherwise explain that the update did not complete or could not be confirmed.
+
+### If Instagram profile available is false
+- Preserve the existing sharing flow: all required images and videos are published. After verifying the current avatar, call avatar.create_avatar_share_widget with the sharing-card fields. Set button_text to "Share avatar" and fallback_text to "You can share it with friends!" in the user's language. Write a short sharing invitation in title and subtitle in the user's language. Omit image_url. Send only the returned embed token in your final message. Do not send commentary, a readiness announcement, or other text. Do not attach avatar media. The client handles sharing when the user presses the button; do not open a share sheet or perform sharing yourself. Do not mention Instagram or offer to connect it.
+idle_video_path{image_path}{instagram_profile_available}runtime.background_execruntime_execinstagram profile banner invitation handed to agentavatar completion handoff acceptedconnector_call_reason/opt/hatch/bin/instagram-cliJARVIS_HOMEJARVIS_VAR_LIB_DIRJARVIS_TRACE_CONTEXTresumeThis subtask stopped during a restart and did not report a result. Its work may be partly or fully done: check what it already produced before redoing anything, then redo or redelegate only what is actually missing.Closed during restart recovery without reporting a result.failed to persist terminal state for closed checkpointed subagentfailed to persist terminal status for closed checkpointed agentclosed Spaces builder checkpoint has no parent identityclosed Spaces builder checkpoint has no storage rootfailed to load closed Spaces builder generationfailed to delete runtime restart checkpoint for closed agentpartial_recovery_descriptormissing_conversationinvalid_structural_owner_identityrecovery_identity_mismatchinvalid_recovery_descriptorinvalid_durable_owner_identityinvalid_inherited_execution_authoritytracking.set_statussession/tracking_context_section_preamble.mdSubstantial work the main agent keeps track of, manages, or follows up on for the user over time.
+session/tracking_active_section_preamble.mdThese are your currently active tracked items; close an item with `tracking.set_status` set to `completed` when user confirmation, the end of its relevant timeline, or other evidence shows that the whole responsibility has finished.
+Close the tracked item proactively when the evidence shows it is finished, without waiting for the user to explicitly ask you to close it.
+failed to load goals prompt snapshot; rendering empty goals sectiongoals prompt snapshot timed out; rendering empty goals sectionruntime.device_sync# Goals
+
+Personal goals are enduring outcomes the user is working toward; help them
+make real progress.
+
+Separately, keep track of concrete plans, commitments, and outcomes the user
+cares about beyond the immediate conversation, including reservations,
+deliveries, reminders, and ongoing projects.
+
+Both appear below, kept current for you automatically.
+
+When clarifying a goal, ask questions one at a time; don't bombard.
+Ask about conditions, medications, injuries, or limitations only when they
+affect the safety of the proposed activity.
+project context prompt loader task failed; omitting project contextproject context prompt loader timed out; omitting project context
+select *
+from runtime.checkout_spend_operations
+where operation_id = $1
+for update
+
+select *
+from runtime.checkout_spend_checkpoints
+where operation_id = $1
+order by claimed_at_ms, checkpoint_key
+for update
+
+coalesce((
+    o.state = 'cancelled'
+    and o.recovery_epoch = 1
+    and o.client_task_key like 'opentable:%'
+    and o.wallet_provider = 'stripe-link'
+    and o.wallet_request_id is not null
+    and o.terminal_result @> '{"provider":"opentable","payload":{"kind":"payment_setup_cancelled","retry_allowed":true}}'::jsonb
+    and coalesce(o.terminal_result->'reference_id', 'null'::jsonb) = 'null'::jsonb
+    and coalesce(o.terminal_result->'decline_reason', 'null'::jsonb) = 'null'::jsonb
+    and exists (
+        select 1 from runtime.checkout_spend_checkpoints c
+        where c.operation_id = o.operation_id
+          and c.provider = 'opentable'
+          and c.checkpoint_key = 'merchant_cancellation'
+          and c.external_id = o.wallet_request_id
+          and c.bound_at_ms is not null
+          and c.detail = '{"status":"canceled"}'::jsonb
+    )
+    and not exists (
+        select 1 from runtime.checkout_spend_checkpoints c
+        where c.operation_id = o.operation_id
+          and (c.checkpoint_key = 'merchant_execution' or c.provider <> 'opentable')
+    )
+    or (
+        o.state = 'declined'
+        and o.recovery_epoch = 1
+        and o.client_task_key like 'opentable:%'
+        and o.wallet_provider = 'stripe-link'
+        and o.terminal_result->>'provider' = 'opentable'
+        and o.terminal_result->>'decline_reason' = 'payment_setup_failed'
+        and coalesce(o.terminal_result->'reference_id', 'null'::jsonb) = 'null'::jsonb
+        and coalesce(o.terminal_result->'cancellation_reason', 'null'::jsonb) = 'null'::jsonb
+        and not exists (
+            select 1 from runtime.checkout_spend_checkpoints c
+            where c.operation_id = o.operation_id
+        )
+    )
+), false)
+cselect o.* from runtime.checkout_spend_operations o
+         where o.client_task_key = $1 and not (À€Õ

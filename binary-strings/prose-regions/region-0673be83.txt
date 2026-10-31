@@ -1,0 +1,30 @@
+select owner_agent_id,coalesce(parent_agent_id,root_session_id) as recipient,root_session_id,
+                 state_revision,request_trace_context_json,chat_context_json from runtime.browser_tasks
+                 where task_id=$1 and status in ('running','user_controlled') for updateselect invocation_id from runtime.browser_invocations
+                    where invocation_id=$1 and agent_id=$2 and planner_agent_id=$3 and task_id=$4 and result_json is null for updatebrowser question owner changedbrowser question asker no longer holds its seatselect request_digest,command_json,result_json from runtime.browser_calls
+                 where operation_id=$1 and task_id=$2 and agent_id=$3
+                   and invocation_id is not distinct from $4 and kind='interaction' for update{"status":"wait_interrupted"}update runtime.browser_calls set phase='complete',result_json=$2
+                where operation_id=$1 and kind='interaction'browser question or reply changedbrowser question is missingthe code's original login is no longer eligibleupdate runtime.browser_tasks set last_progress_at=now() where task_id=$1update runtime.browser_invocations set
+                    state=case when state='waiting_user' then 'running' else state end,
+                    suspended_state=case when state='waiting_control' and suspended_state='waiting_user'
+                        then 'running' else suspended_state end,
+                    wait_call_id=null,updated_at=now()
+                    where invocation_id=$1 and result_json is nullruntime.browser_tasks.request_trace_context_jsonupdate runtime.browser_tasks set request_trace_context_json=$2 where task_id=$1$2$3update runtime.browser_calls set phase='complete',result_json=$2
+                    where operation_id=$1 and kind='interaction' and result_json is null
+                    returning invocation_idupdate runtime.browser_invocations set
+                        state=case when state='waiting_user' then 'running' else state end,
+                        suspended_state=case when state='waiting_control' and suspended_state='waiting_user'
+                            then 'running' else suspended_state end,
+                        wait_call_id=null,updated_at=now()
+                        where invocation_id=$1 and result_json is nullupdate runtime.browser_calls set phase='complete',result_json=$4
+                where operation_id=$1 and task_id=$2 and agent_id=$3
+                  and kind='interaction' and result_json is nullselect result_json from runtime.browser_calls
+                where operation_id=$1 and task_id=$2 and agent_id=$3 and kind='interaction'update runtime.browser_tasks set wallet_selection_provider=$2,
+                     wallet_selection_payment_method_id=$3, updated_at=now()
+                     where task_id=$1 and status in ('running','user_controlled')select c.operation_id from runtime.browser_calls c
+                 join runtime.browser_tasks t using(task_id)
+                 where coalesce(t.parent_agent_id,t.root_session_id)=$1
+                   and ($2::text is null or c.task_id=$2 or c.operation_id=$2)
+                   and c.kind='interaction' and c.result_json=$3operation_id,agent_id,invocation_id,tab_id,kind,phase,request_digest,command_json,result_jsoninsert into runtime.browser_calls
+                (operation_id,task_id,agent_id,invocation_id,kind,request_digest,command_json,phase,tab_id)
+                values ($1,$2,$3,$4,$5,$6,$7,$8,$9) on conflict do nothingupdate runtime.browser_tasks set last_progress_at = now() where task_id = $1

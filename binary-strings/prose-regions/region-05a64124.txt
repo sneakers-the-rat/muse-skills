@@ -1,0 +1,128 @@
+parent_agent_idchat_event_seqdelta.presentationinternal error: entered unreachable codefalseunclassifiednot_foundsubagent handoff retry changed its committed identitylegacy handoff payload is unavailableruntime.subagent_progresssystempayload checked above/metadata/context_seq/metadata/subagent_completion_identitycommitted handoff context identity changedsubagent handoff event belongs to another identitycommitted handoff payload was replacedFailed to record a get opFailed to schedule write op for removeall branches are disabled and there is no else branchevaluation timed outgave up waiting for a socket-activated service to answerstill waiting for a socket-activated service to answersocket-activated service answered after waitingbackground task failederrorsuccesssocial link preview enrichment failedsocial link preview enrichment budget elapsedidea_idfailed to classify dogfood idea widgets for history hydrationfailed to prefetch idea widget records for history hydrationobjective lease lost during heartbeat renewalwrite_admissionwritepostgres write completed slowlypostgres write failedretrying idempotent postgres writehatch:db:operationen-USembed_permit_closedembed_timeoutembed_errorembed_task_joinmaintenance_handler_panickedre-placed maintenance occurrence collided with existing work twicequeued daily wake could not be moved to the resolved daily phaseexplanation_pathsdeliveredproactive explanation path changednothing_to_docommitted handoff has no context sequencenegative handoff event sequenceone-shot postgres write invoked more than onceinvalid evaluation responseevent_seqpayload_jsonevent_namemessage_idauthd unavailableVM owner unavailableselect b.*, a.connection_id as current_connection_id,
+                    a.revoked as account_revoked
+                from chat_private.binding_authorizations b
+                join chat_private.accounts a using(provider, account_id)
+                where b.provider = $1 and b.binding_id = $2account_revokedcurrent_connection_idselect distinct idea_id,
+                            metadata_json -> 'publication_hold' ->> 'fingerprint',
+                            metadata_json -> 'publication_hold' ->> 'reason'
+                       from ideas.idea_sources
+                      where idea_id = any($1::text[])
+                        and (source_namespace, source_kind) in (
+                          ('idea_share', 'pending_share'),
+                          ('user', 'http_create'),
+                          ('shared_www', 'shared_idea')
+                        )
+                        and metadata_json -> 'publication_hold' ->> 'fingerprint' is not null
+                        and metadata_json -> 'publication_hold' ->> 'reason' is not nullwith candidate as (
+                       select run_id
+                       from self_improvement.runs
+                       where state = 'queued'
+                         and objective_id = $2
+                         and ($4::text is null or run_id = $4)
+                         and available_at <= now()
+                         and (recovery_phase_version is null or recovery_phase_version = 1)
+                       order by available_at asc, queued_at asc, run_id asc
+                       for update skip locked
+                       limit 1
+                     )
+                     update self_improvement.runs run
+                     set state = 'running',
+                         phase = 'objective',
+                         subphase = 'queue_claimed',
+                         run_clock = case
+                           when coalesce(run.diagnostics, '{}'::jsonb)
+                                  ? 'restart_recovery_from_run_id'
+                             or coalesce(run.subphase, '') in (
+                                  'restart_requeued',
+                                  'restart_phase_deferred',
+                                  'restart_checkpoint_requeued',
+                                  'idle_deferred'
+                                )
+                             or run.recovery_phase_version is not null
+                           then run.run_clock
+                           else now()
+                         end,
+                         diagnostics = jsonb_set(
+                           jsonb_set(
+                             run.diagnostics,
+                             '{queue_claim_owner}',
+                             to_jsonb($1::text),
+                             true
+                           ),
+                           '{queue_claim_boot_id}',
+                           to_jsonb($3::text),
+                           true
+                         ),
+                         started_at = coalesce(run.started_at, now()),
+                         updated_at = now()
+                     from candidate
+                     where run.run_id = candidate.run_id
+                     returning run.*insert into goals.engagement_events
+                     (event_id, goal_id, event_type, surface, value, request_id, metadata,
+                      created_at)
+                     values ($1, $2, $3, $4, $5, $6, $7, coalesce($8::timestamptz, now()))
+                     returning event_id, goal_id, event_type, surface, value, request_id, metadata,
+                               created_at::text as created_athandoff event sequence
+SELECT e.event_seq, e.event_name, coalesce(e.message_id, '') AS message_id,
+       e.payload_json
+FROM events e
+WHERE e.idempotency_key = $1
+  AND e.payload_json IS NOT NULL
+context event identity already belongs to another writerSELECT event_seq FROM events WHERE idempotency_key = $1runtime_events_main_public_root_message_uidxruntime.messages.body
+INSERT INTO messages (message_id, event_seq, role, body, created_at)
+VALUES ($1, $2, $3::runtime.message_role, $4, to_timestamp($5::double precision / 1000.0))
+ON CONFLICT (message_id) DO NOTHING
+
+SELECT event_seq AS seq, event_name, role::text AS role
+FROM events
+WHERE message_id = $1
+  AND transcript_surface = 'main_chat'
+  AND visibility = 'public'
+  AND event_name IN ('message.user', 'message.assistant')
+  AND (parent_message_id IS NULL OR TRIM(parent_message_id) = '')
+LIMIT 1
+seqDELETE FROM chat.event_transports WHERE event_seq = $1INSERT INTO chat.event_transports (event_seq, provider) VALUES  ON CONFLICT (provider, event_seq) DO NOTHING, ()transaction.acquire_and_beginregistry_lockselect id, domains from context.subscriptions where subscription_key = $1 for updatesubscription.lookup_for_updateiddomainssources.enroll_previousinsert into context.subscriptions (id, subscription_key, domains) values ($1,$2,$3)subscription.insertupdate context.group_cursors g set lease_token=null, lease_expires_at=null, evidence_expires_at=null,
+                        window_position=null, batch_position=null, retry_at=null,
+                        available_position=coalesce((select max(e.append_position) from context.events e
+                          where e.source_id=g.source_id and e.group_id=g.group_id
+                          and e.append_position>g.acknowledged_position and e.append_position<=g.available_position
+                          and (e.expires_at is null or e.expires_at>statement_timestamp())
+                          and ($2 or e.content_hints && $3::text[])),g.acknowledged_position)
+                        where subscription_id=$1hints.reconcile_leasestransaction.commitsources.enroll_desiredupdate context.subscription_sources ss set active = ($2 or s.source_domain = any($3))
+                from context.sources s where ss.subscription_id = $1 and s.id = ss.source_idupdate context.group_cursors g set lease_token = null, lease_expires_at = null, evidence_expires_at = null
+                from context.subscription_sources ss where g.subscription_id = $1
+                and ss.subscription_id = g.subscription_id and ss.source_id = g.source_id and not ss.activeleases.invalidate_removedupdate context.subscriptions set domains = $2, updated_at = now() where id = $1 and domains <> $2coverage.updateselect m.submission_id, h.value->>'message_id' as handoff_id,
+                        m.submission_json::jsonb->>'message_source' as source
+                 from agent.message_mailbox m
+                 cross join lateral (select m.submission_json::jsonb->'follow_up_handoff' as value) h
+                 where m.agent_id=$1 and m.state in ('accepted','attached')
+                   and h.value->>'parent_message_id'=$2
+                   and h.value->>'source' in ('runtime.subagent_progress','runtime.subagent_monitor')
+                   and m.submission_json::jsonb->>'message_source'='runtime'
+                   and exists (select 1 from jsonb_array_elements_text(h.value->'subagent_completion_child_agent_ids') child(id)
+                     join agent.subagent_spawns s on s.child_agent_id=child.id
+                     where s.parent_agent_id=$1 and s.parent_message_id=$2)
+                   and not exists (select 1 from jsonb_array_elements_text(h.value->'subagent_completion_child_agent_ids') child(id)
+                     where not exists (select 1 from agent.subagent_spawns s
+                       where s.child_agent_id=child.id and s.parent_agent_id=$1 and s.parent_message_id=$2))
+                 order by m.accepted_ordinal limit 129
+JOIN LATERAL (
+  SELECT MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/kind') AS kind,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/action') AS action,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/handoff_message_id') AS handoff_message_id,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/handoff_source') AS handoff_source,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/submission_message_id') AS submission_message_id,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/submission_source') AS submission_source
+  FROM runtime.event_payload_fields AS f
+  WHERE f.event_seq = e.event_seq AND f.field_path IN (
+    '/metadata/kind', '/metadata/action', '/metadata/handoff_message_id',
+    '/metadata/handoff_source', '/metadata/submission_message_id', '/metadata/submission_source'
+  )
+) AS metadata ON true
+€¯

@@ -1,0 +1,158 @@
+follow_up_settlementnothing_to_do
+SELECT e.event_seq,
+       e.payload_json,
+       message.body AS display_text
+FROM runtime.events AS e
+JOIN runtime.messages AS message ON message.event_seq = e.event_seq
+WHERE e.parent_agent_id = $1
+  AND e.reply_to_message_id = $2
+  AND e.payload_json IS NOT NULL
+  AND (
+    (e.event_name = 'message.assistant' AND e.role = 'assistant' AND e.source = 'runtime')
+    OR (e.event_name = 'message.internal' AND e.source = ANY($3::text[]))
+  )
+ORDER BY e.event_seq DESC
+LIMIT 1
+FOR UPDATE OF e
+display_textroot follow-up assistant payload is not an objectstatus
+SELECT metadata_json FROM subagent_spawns WHERE child_agent_id = $1
+completion_resultcompletion_result_context_seqagent.subagent_spawns.metadata_json
+UPDATE subagent_spawns
+SET metadata_json = $1
+WHERE child_agent_id = $2
+  AND EXISTS (
+    SELECT 1 FROM agents
+    WHERE agents.id = subagent_spawns.child_agent_id
+      AND agents.status NOT IN ('shutdown', 'not_found')
+  )
+
+UPDATE agents
+SET updated_at = $1,
+    status = $2
+WHERE id = $3
+  AND status NOT IN ('shutdown', 'not_found')
+
+SELECT mode, recovery_class, recovery_owner_id, payload_json
+FROM runtime_restart_checkpoints
+WHERE agent_id = $1
+FOR UPDATE
+
+UPDATE runtime_restart_checkpoints
+SET mode = $2, payload_json = $3, updated_at = $4
+WHERE agent_id = $1
+executionscheduler phase attempt is too largeAgentControl requires HatchStorage for runtime work DB accessrecovery owner validator is not configuredCompanion requires a public text rootfailed to load parent message source map for spawn inheritancefailed to load parent client context for spawn inheritancefailed to load parent reply prefixes for spawn inheritancefailed to load parent transcript provenance for spawn inheritancesafety quarantine could not finish copied-context cleanupexplicit chat event seqscheduledmaterialize_submissionprompt_optionsskill_snapshottool_snapshotrequest_overlayclient_context_snapshotdevice_snapshotgoals_snapshothistory_projectionsystem_prompt_composecompaction_decisionprovider_request_readyrecovery_phase_deferredcompleted startup quota rejection has no eventnegative startup quota rejection event sequencecompleted startup quota rejection event is absentinference-proxy returned an invalid model selection routenegative cancellation event sequencecontext item sequence space is exhaustedcommitted cancellation has no context sequencestartup quota rejection payload is not an objectstartup quota rejection metadata is not an objectpublication has no chat ownerinvalid publication tracepublication owner does not match its transcript/metadata/message_kindpublication has no execution ownerinvalid publication authorityGatekeeper response omitted requested gate; using default# Agentic feature tour
+
+The scheduled worker selects and prepares one lesson in English, including any evidence-based adaptation below. The main agent chooses the response language and translates the lesson at delivery, using the current conversation.
+
+This scheduled task delivers the lessons of a one-week feature tour, one per day. At the start of each run, call `cron.runs` with id `agentic-feature-tour` and limit `12`. This run's lesson number is the count of returned rows whose status is exactly `succeeded`, plus 1; a number above 7 means lesson 7. Never count this occurrence's own row: it shows as `running` while the lesson is being selected and may already read `succeeded` by the time the lesson is relayed. Do not pick the lesson from dates, attempts, summaries, or lesson content. Never skip a lesson; the mapping deliberately repeats lesson 7 if cleanup previously failed. Lesson selection happens exactly once, inside the scheduled task run: the main agent delivers that selected lesson under the delivery rule below, without calling `cron.runs` or recomputing the lesson number.
+
+Each `## lesson N` heading below marks one lesson and is not part of its user-facing copy. Select exactly the text beneath the matching heading, stopping before the next `##` heading or the end of the task body. Keep the selected text in English. Do not add an introduction, conclusion, implementation details, or any other text.
+
+One exception: adapt the lesson to what the user has already done. Before returning a lesson whose call to action asks the user to connect or set something up, spend one quick check with your available tools on whether they already have (for the apps lesson, whether an app like Gmail or Calendar is already connected). When that check, the task context, or this run's other tool results show the user has already connected, used, or set up what the lesson introduces, keep the bold title lines, the lesson's image line, and the lesson's overall shape and length, but adjust its copy to acknowledge that and build on it instead of introducing it as new. Never ask the user to do something they have already done: if Gmail is already connected, do not ask them to connect Gmail; instead suggest something useful we can do with it next. The same applies to the other lessons, such as scheduled tasks they already created, websites they already had me use, avatar changes they already made, ideas they already opened, goals we already track, or projects we already built. Adapt only on clear evidence; without it, deliver the lesson exactly as written.
+
+Before returning lesson 7, call `cron.remove` with id `agentic-feature-tour` so the tour does not run again. Only this run performs the removal; if it fails, report that failure in the internal task result so the main agent can fix it, and never make cleanup part of a lesson. Hand off exactly the selected lesson as the delivery message, never a status report or execution summary: the user receives the lesson text itself and nothing else.
+
+Memory import can replace the first completed setup lesson, on lesson 1, lesson 2, or lesson 5 only. Apply this decision after selecting the lesson number; it does not advance, reorder, or add a lesson.
+
+- On lesson 1, use `cron.list` with `include_disabled: true` or clear existing context to confirm the user has already created a scheduled task. Exclude `agentic-feature-tour`, heartbeat schedules, and entries with `is_system: true`; automatic infrastructure schedules do not count as user setup. A paused user-created task still counts. Without clear evidence of user setup, keep the original scheduling lesson.
+- On lesson 2, require clear evidence that email is connected. Email alone qualifies, whether or not calendar is connected; calendar alone does not qualify. Without clear evidence of an email connection, keep the original app-connection lesson and adapt it to any setup already completed.
+- On lesson 5, require clear evidence that the user has already customized my avatar. A default or automatically generated avatar, or an unfinished customization request, does not count. Without clear evidence of completed customization, keep the original avatar lesson.
+- Before choosing the replacement on any eligible day, inspect earlier runs from the existing `cron.runs` response, excluding the current run. Their persisted `result_summary` fields record prior handoffs. A prior summary containing `<memory_import_offer/>` or the older `<portable_memory_prompt>` marker identifies an already prepared import offer, including older single-option offers. A previous user-visible import offer in conversation context also counts. Do not offer again just because the user ignored or declined it, and do not mistake the prompt included in this run's instructions for a prior offer.
+- On lessons 2 and 5, confirm the earlier successful lessons' summaries are available and do not contain an import offer before offering import. Missing, truncated, or unreadable prior evidence is not proof that it was never offered: keep the original lesson and adapt it to a useful next step instead. Do not change lesson counting or repeatedly query run history to fill a gap.
+- If existing context or a focused available lookup clearly shows the user already imported memory, skip the import pitch on any eligible day. Ordinary personalization alone is not evidence of an import. When import was already offered or completed, keep today's original topic, and still apply the standard lesson adaptation: with the completed setup already in evidence, acknowledge it and suggest something useful with the scheduled tasks, connected apps, or customized avatar, rather than delivering the original copy unadapted or repeating setup.
+
+When eligible, use the copy below, replacing N in the title with the selected lesson number so it reads exactly "Tip 1", "Tip 2", or "Tip 5". Never deliver the title as a bare "Tip" with no number. For lesson 1, open with "I'll share a few tips this week to show you more ways I can help. You've already got scheduled tasks going." For lesson 5, open with "You’ve already made my look your own." Then continue with the paragraph below. For lesson 2, use that paragraph directly with no setup acknowledgment. This replacement has no image: omit the original scheduling screenshot when replacing lesson 1 and the avatar inspiration image when replacing lesson 5. These are explicit exceptions to preserving the original lesson's title and image.
+
+🧩 **Tip N: Help me get to know you better**
+
+Already use another AI? I can give you a prompt to bring over context you’ve already shared there, so I can get up to speed and be even more helpful.
+
+Only when selecting this memory-import replacement, append the delivery instructions below to the internal handoff. They are guidance for the main agent, not text to display with the lesson. This exception admits exactly two additions: the [Delivery: ...] block and the `<memory_import_offer/>` marker. Everything else in the handoff remains the lesson copy alone, beginning with the bold title line — no preamble, no status report, no summary of the eligibility checks or run history you inspected; those observations belong nowhere in the handoff. Do not append them to the original scheduling, app-connection, or avatar lessons, or lessons 3, 4, 6, and 7. Keep the `<memory_import_offer/>` marker in the internal handoff so later runs can recognize the offer in the persisted `result_summary`; never render it to the user. Use this existing run history as the record, without writing a separate memory note, marker file, or schedule mutation.
+
+[Delivery:
+- Attach an inline option widget with the single option "Let's do it!", translated into the lesson's language. Include the returned embed token at the bottom of the lesson. Do not read the import guide or display the portable memory prompt for the initial offer.
+- If the user selects the option or otherwise asks to import context, read `~/assets/onboarding_tour/memory_import.md` then follow its guide for the copyable prompt and reviewing and importing the result. The guide contains the complete canonical migration prompt; do not reconstruct it from memory. If the guide cannot be read, explain that the import instructions are unavailable instead of inventing a prompt or claiming an import succeeded.
+]
+
+<memory_import_offer/>
+
+Delivery: The main agent sends the selected lesson in the language it would use to reply to the user now. Use the user's language and explicit response-language requests in the current conversation; default to English when unclear. In English, preserve the supplied wording. Otherwise translate faithfully, preserving meaning, paragraphs, lists, bold title lines, tip numbering, product names, and questions. Copy image lines byte-for-byte, on their own lines in the same positions. Translate option labels into the same language as the delivered lesson. Do not translate control instructions, add a preamble, or repeat lesson selection or adaptation.
+
+For lesson 3 only, append this line to the handoff after the lesson text: [Delivery: attach an option widget with the single option "Show me how it works", in the same language as the lesson, at the bottom of the lesson.] For lesson 4 only, append this line to the handoff after the lesson text: [Delivery: attach an option widget with the two options "Go to Ideas" and "Customize your Feed", in the same language as the lesson, at the bottom of the lesson. If the user picks "Go to Ideas", call `ui.navigate` with target "ideas" and send one short line saying you opened the Ideas tab. If the user picks "Customize your Feed", start customizing their Feed right here: ask in one short message what they'd like to keep up with, then set that up with the feed tools and point them to the Feed tab to see it fill in.] Both are instructions for the delivering agent, not lesson copy.
+
+## lesson 1
+
+**🗓️ Tip 1: Schedule a task, I'll keep it going**
+
+I'll share a few tips this week to show you more ways I can help. First up: scheduled tasks.
+
+I can take care of recurring tasks on a schedule — like putting together a morning briefing, watching Marketplace for price drops, or reordering household essentials each month.
+
+Want to start with a morning briefing? I can have it ready for tomorrow.
+
+![](sandbox://workspace/onboarding_tour/crons.png)
+
+## lesson 2
+
+**🔗 Tip 2: Connect your apps so I can do more**
+
+With your approval, I can connect directly to your apps, like Gmail and Calendar, to find emails, draft replies, or add an event to your calendar.
+
+You're in control. I'll always check with you before I send anything or make changes.
+
+Want to start with Calendar? Or I can pull up the full list of apps if you'd rather browse.
+
+## lesson 3
+
+**💻 Tip 3: I can use websites, not just search them**
+
+I have my own computer, so I can use websites the way you would — fill out forms, compare flights, make purchases, and book reservations.
+
+If a site needs a login, I'll give you a way to securely save it so I can sign in for you. I'll always check with you before I buy anything.
+
+Want to see my web browser in action?
+
+## lesson 4
+
+**💡 Tip 4: Explore Ideas and Feed**
+
+Not sure what to hand off next? The Ideas tab has suggestions based on what we've talked about.
+
+You can also make your own Feed with a custom prompt around the things you want to keep up with. Over time, both will get more tailored to you.
+
+Take a look around. If you're still looking for more ideas after that, let me know.
+
+## lesson 5
+
+**😎 Tip 5: You can change how I look**
+
+Give me a new outfit, switch up my style or colors, or reimagine me completely. Check out what other people have made below for inspiration.
+
+Want to start small? Try giving me sunglasses. Or tell me what you have in mind — you can even send a photo.
+
+![](sandbox://workspace/onboarding_tour/avatars.png)
+
+## lesson 6
+
+**✅ Tip 6: I can help you with your goals**
+
+Saving for something, training for an event, or learning something new?
+
+I can break it into next steps, set reminders, and build a simple tracker so you can see your progress and what's next.
+
+Think about something you've been wanting to accomplish — big or small. Tell me what comes to mind and we can figure out a plan together.
+
+![](sandbox://workspace/onboarding_tour/goals.png)
+
+## lesson 7
+
+**🛠️ Tip 7: I can make things for you**
+
+Tell me what you need and I'll make it here — slides, docs, a tracker. Then we can keep refining it together.
+
+If it turns into a bigger project, we can keep it going here in the main chat. Or, if you like organizing things by topic, you can start a side chat from the menu in the top left.
+
+Want to try one? I can make you a dashboard with a few things happening near you this weekend.
+
+![](sandbox://workspace/onboarding_tour/artifact.png)
+cron run has no worker leaseconnector_not_connectedreauth_requiredaccount_action_requiredsite_challengedevice_offlineReportStatusneeds_inputblockedServiceStatusauthenticatedchallengeneeds_user_controlcredentials_rejectedaccount_restrictedunrecognized_formaccount_selection_requiredcredentials_availablecredential_input_mismatchcredentials_updatednot_authorizedconsent_timed_outconsent_policy_deniedconsent_failedcredentials_unavailableinput_recordedinput_not_startedwaitingattempt_allowedrecovery_unconfirmedrecovery_unavailablerecovery_attemptedpurchasedpending_reconciliationpayment_optionscart_capturedreadyincompletenot_recordedpayment_input_appliedpayment_input_incompletecard_providedsubmittednot_submittedconfirmednot_groundedother/completion_result/needs_user_reasonbrowser_task_idread authoritative cron definitionlist authoritative cron definitionsretire authoritative cron definitionruntime.resources.metadata_jsonapproval checkpoint lacks a payloadapproval checkpoint lacks exact call identitiesapproval status reader is unavailableexact approval status is unavailableheartbeattool_call_ididtool_namerequestresulttool_idstream_owner_message_idlocked mailbox successor row has no agent identitylocked mailbox successor row has no custody statesession_idattached mailbox input has no stream ownerstagedqueuedexecutinginput chat is absentinvalid input binding epochConversationTransportStatelink_idneeds_reconciliationpending_cancellationinput provider is absentscheduler_cron_executescheduler_heartbeat_execute

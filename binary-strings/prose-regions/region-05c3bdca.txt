@@ -1,0 +1,71 @@
+select roster_version, creator_muse, left_at_ms from peer.circles
+                     where circle_id = $1 for shareleft_at_mscreator_museroster_versionselect m.muse_id from peer.circle_members m
+                     join peer.contacts c on c.muse_id = m.muse_id
+                     where m.circle_id = $1 and c.status = 'verified'
+                       and not (m.muse_id = any($2)) order by m.muse_id for share of chosted circle authority retiredselect last_seq, chat_id from chat_private.peer_conversations
+                     where conversation_id = $1 and circle_id = $2
+                       and kind in ('circle', 'build_thread') and archived_at_ms is null for updatechat_idselect exists(select 1 from peer.outbox
+                     where peer_muse = any($1) and state in ('pending', 'dispatching')
+                     group by peer_muse having count(*) >= $2)insert into chat_private.peer_publications
+                     (operation_id, conversation_id, chat_id, sequence, intent_sha256,
+                      requester_chat_id, recipient_muses, created_at_ms, expires_at_ms)
+                     values ($1,$2,$3,$4,$5,$6,$7,$8,$9)hosted recipient outbox backlog is fullinsert into peer.outbox (envelope_id, peer_muse, conversation_id, kind, payload,
+                         created_at_ms, not_before_ms, expires_at_ms, hosted_publication_id) update chat_private.peer_conversations set last_seq = $2,
+                     requester_chat_id = coalesce($3, requester_chat_id),
+                     requester_unavailable = case when $3::text is null then requester_unavailable else false end,
+                     requester_revision = requester_revision + case when $3::text is null then 0 else 1 end
+                     where conversation_id = $1select m.muse_id from peer.circle_members m
+                 join peer.contacts c on c.muse_id = m.muse_id
+                 where m.circle_id = $1 and c.status = 'verified'
+                   and not (m.muse_id = any($2)) order by m.muse_idselect request_seq, pending_agent_ids from peer.work_cleanup_obligations where peer_muse = $1
+insert into peer.work_cleanup_obligations (peer_muse, requested_at_ms)
+values ($1, $2)
+on conflict (peer_muse) do update
+set request_seq = peer.work_cleanup_obligations.request_seq + 1,
+    requested_at_ms = excluded.requested_at_ms
+returning request_seq, pending_agent_ids
+delete from peer.work_cleanup_obligations where peer_muse = $1 and request_seq = $2select peer_muse, request_seq, pending_agent_ids from peer.work_cleanup_obligations order by requested_at_ms, peer_muse limit $1
+update peer.work_cleanup_obligations
+set pending_agent_ids = array(
+  select distinct agent_id
+  from unnest(pending_agent_ids || $2::text[]) as agent_id
+  order by agent_id
+)
+where peer_muse = $1
+
+insert into peer.inbox_receipts (
+  envelope_id, peer_muse, conversation_id, kind, payload_sha256, message_utf8,
+  state, enqueue_claim_id, enqueue_claim_expires_at_ms, reserved_at_ms
+)
+select $1, contact.muse_id, conversation.conversation_id, $4, $5, $6, 'reserved', $7, $8 + $9, $8
+from peer.contacts as contact
+join chat_private.peer_conversations as conversation
+  on conversation.conversation_id = $3
+ and conversation.archived_at_ms is null
+where contact.muse_id = $2
+  and contact.status = 'verified'
+on conflict (envelope_id) do nothing
+update peer.inbox_receipts set enqueue_claim_id = $2, enqueue_claim_expires_at_ms = $3 + $4 where envelope_id = $1 and state = 'reserved'
+update peer.inbox_receipts
+set state = 'enqueued',
+    message_utf8 = ''::bytea,
+    enqueue_claim_id = null,
+    enqueue_claim_expires_at_ms = null,
+    enqueued_at_ms = $3,
+    canonical_message_id = $4,
+    canonical_event_seq = $5,
+    canonical_submission_id = $6
+where envelope_id = $1 and state = 'reserved' and enqueue_claim_id = $2
+
+with doomed as (
+  select envelope_id
+  from peer.inbox_receipts
+  where peer_muse = $1
+  order by envelope_id
+  limit $2
+  for update skip locked
+)
+delete from peer.inbox_receipts
+using doomed
+where inbox_receipts.envelope_id = doomed.envelope_id
+select exists(select 1 from peer.contacts limit 1) or exists(select 1 from peer.invites limit 1) or exists(select 1 from peer.grants limit 1) or exists(select 1 from peer.held_grants limit 1)insert into spaces.peer_user_state (space_slug, principal_muse, accessed_at_ms) values ($1, $2, $3) on conflict (space_slug, principal_muse) do update set accessed_at_ms = excluded.accessed_at_msselect exists(select 1 from peer.accept_confirmations where relationship_generation_id = $1)delete from peer.accept_confirmations where created_at_ms < $1insert into peer.accept_confirmations (relationship_generation_id, muse_id, created_at_ms) values ($1, $2, $3) on conflict (relationship_generation_id) do nothingrelationship_generation_id, relationship_revision, relationship_started_at_ms, request_expires_at_ms, muse_id, left(display_name, 256) as display_name, left(agent_name, 256) as agent_name, relationship_direction, status, active_sas_ceremony_id, request_terminal_cause, trust_preset, attested

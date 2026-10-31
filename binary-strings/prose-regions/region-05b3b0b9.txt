@@ -1,0 +1,74 @@
+select ingest_id from ingest.data_source_events
+                     where ingest_id = $1 and producer_id = $2 and source = $3
+                       and status = 'pending' for sharedevice_syncdevice ingress is no longer pendinginsert into ingest.device_context_records (event_id, ingest_id)
+                    values ($1,$2) on conflict (event_id) do nothingselect exists(select 1 from ingest.device_context_records r
+                     join ingest.data_source_events d on d.ingest_id = r.ingest_id
+                     where r.ingest_id = $1 and d.producer_id = $2 and d.source = $3)insert into ingest.last_seen_client_ip
+                           (singleton, client_ip, received_at_unix_ms)
+                         values (true, $1, $2)
+                         on conflict (singleton) do update
+                           set client_ip = excluded.client_ip,
+                               received_at_unix_ms = excluded.received_at_unix_ms
+                         where ingest.last_seen_client_ip.received_at_unix_ms
+                           <= excluded.received_at_unix_msselect client_ip, received_at_unix_ms
+                     from ingest.last_seen_client_ip
+                     where singleton and received_at_unix_ms >= $1ingest.data_source_events.payloadinsert into ingest.data_source_events (
+                       ingest_id, producer_id, source, origin, processing_lane,
+                       received_at_text, received_at_unix_ms, payload,
+                       payload_representation, payload_sha256, status, received_at,
+                       processed_at_text, processed_at_unix_ms, processed_at,
+                       summary_preview
+                     )
+                     values (
+                       $1, $2, $3, $4, $5, $6,
+                       $7, $8, $9, $10, $11,
+                       to_timestamp($7::double precision / 1000.0),
+                       $6, $7, to_timestamp($7::double precision / 1000.0),
+                       $12
+                     )
+                     on conflict (ingest_id) do nothing
+                     rawload admitted device-source changeload conflicting device-source changecontext append position exhaustedevents.pending_lanesevents.get_by_sync_idevents.lane_has_pendingevents.event_by_global_seqevents.pending_event_existsevents.oldest_pending_in_laneevents.prune_processed_beforeevents.recent_event_summariesevents.insert_pendingevents.recent_terminal_outcomes_beforeevents.recent_event_summaries_for_producerevents.freeze_presentation_localeacquired connection, but time to acquire exceeded slow thresholdacquired connectionmedia_uploads.pending_lanesmedia_uploads.claim_pending_batchmedia_uploads.insert_pendingmedia upload processing lane is emptymedia upload event_id is emptymedia_uploads.pending_lane_summarymedia_uploads.lane_has_pendingmedia_uploads.prune_processed_beforemedia_uploads.latest_notified_processed_atevents.contribute_contextdevice context does not match its ingressevents.context_contributedevents.record_last_seen_client_ipevents.last_seen_client_ipevents.latest_location_observed_afterwhere e.ingest_id = $1 limit 1 for update of ewhere e.event_id = $1 limit 1insert into ingest.data_source_events (
+           ingest_id, producer_id, source, origin, processing_lane,
+           received_at_text, received_at_unix_ms, payload,
+           payload_representation, payload_sha256, status, received_at
+         ) values (
+           $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
+           to_timestamp($7::double precision / 1000.0)
+         )
+         on conflict (ingest_id) do nothing
+         returning event_idwhere e.ingest_id = $1 limit 1update ingest.data_source_events
+         set presentation_locale = coalesce(presentation_locale, $2)
+         where ingest_id = $1 and status = 'pending'
+         returning presentation_localeselect media_id from media.items where media_id = $1 for key shareinsert into device.nodes (node_id, node_kind, last_seen_at)
+         values ($1, 'device', now())
+         on conflict (node_id) do update set
+           node_kind = excluded.node_kind,
+           last_seen_at = excluded.last_seen_atselect pg_advisory_xact_lock(
+           hashtext('device.media_upload_batches'),
+           hashtext($1)
+         )select exists (
+           select 1
+           from ingest.data_source_events
+           where ingest_id = $1
+         )select pg_advisory_xact_lock(
+           hashtext('device_syncs.chat_location_observation'),
+           hashtext($1)
+         )select pg_advisory_xact_lock(4841544348435458)insert into context.ingest_attempts
+        (id, source_id, contributor_key, recorded_at, outcome,
+         submitted, inserted, duplicates, event_ids, error_code)
+        values ($1,$2,$3,clock_timestamp(),$4,$5,$6,$7,$8,$9)select last_append_position from context.sources where id = $1 for updateupdate context.sources set last_append_position = $2 where id = $1select id, (group_key is not distinct from $3
+            and payload_kind = $4
+            and occurred_at is not distinct from $5::timestamptz
+            and payload = $6 and content_hints = $7
+            and ttl_seconds is not distinct from $8) as matches
+         from context.events where source_id = $1 and dedupe_key = $2 for sharematchesidinsert into context.events
+        (id, source_id, append_position, dedupe_key, group_key, payload_kind,
+         occurred_at, ingested_at, payload, content_hints, ttl_seconds, expires_at, group_id)
+        values ($1,$2,$3,$4,$5,$6,$7,statement_timestamp(),$8,$9,$10,
+            statement_timestamp() + $10::integer * interval '1 second',$11)delete from context.ingest_attempts where id in
+    (select id from context.ingest_attempts where recorded_at < now() - interval '7 days'
+     order by recorded_at, id limit 100)select pg_notify($1, '')hatch_context_committedinsert into context.sources
+    (id, source_domain, source_key, display_name, created_at, last_append_position)
+    values ($1, $2, $3, $4, clock_timestamp(), 0)
+    on conflict (source_domain, source_key) do nothingselect id, source_domain, source_key as key, display_name, created_at::text as created_at
+     from context.sources where source_domain = $1 and source_key = $2database write admission gate closedadmission_timeoutcalled `Result::unwrap()` on an `Err` valuechat_location_mirrorlocation_get_mirrorchat location observationlocation.get observationchat_streamlocation_getevents.insert_chat_location_observationevents.insert_location_get_observationglobal_seqsync_iddevice_idprocessing_lanereceived_atsync_modepayload_jsonpayload_representationpayload_sha256statepresentation_localeprocessed_atprocessed_at_unix_mshandoff_message_idsummary_previewfailure_codefailure_messagedata-source event identity conflicts with its normalized payload digestdata-source event identity conflicts with its stored producer/source/origin/representationdevice sync presentation_locale must be normalized text of 1 to 128 bytes{"redacted":true,"redaction_reason":"notification and sms payloads are not stored raw"}BUG: inner connection already taken!a Display implementation returned an error unexpectedlyError

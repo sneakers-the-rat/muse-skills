@@ -1,0 +1,1 @@
+web_artifacts.finalize_plan can only be called from a web artifact builder subagent with a slug in spawn metadata

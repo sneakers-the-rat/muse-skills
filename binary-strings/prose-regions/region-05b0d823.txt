@@ -1,0 +1,73 @@
+
+select count(*)::bigint
+from runtime.browser_tasks
+where admission_seq is not null
+  and status in ('starting', 'running', 'user_controlled')
+  and (
+    status in ('starting', 'running')
+    or deadline_at > now()
+    or (
+      status = 'user_controlled'
+      and outcome_status is not null
+      and outcome_at + ($1::bigint * interval '1 second') > now()
+    )
+  )
+select exists(select 1 from runtime.browser_tasks
+                 where root_session_id = $1 and parent_agent_id = $2
+                 and status in ('queued', 'starting', 'running', 'user_controlled'))select task_id from runtime.browser_tasks
+                 where parent_agent_id = any($1)
+                 and status in ('queued', 'starting', 'running', 'user_controlled')
+                 order by task_id
+select task_id
+from (
+  select task_id, admission_seq
+  from runtime.browser_tasks
+  where admission_seq is not null
+    and status = 'queued'
+    and root_session_id = $1
+    and owner_kind is distinct from 'research'
+  union all
+  select task_id, admission_seq
+  from runtime.browser_tasks
+  where admission_seq is not null
+    and status in ('starting', 'running')
+    and root_session_id = $1
+    and owner_kind is distinct from 'research'
+) execution
+order by admission_seq
+
+select task_id
+from (
+  select task_id, admission_seq
+  from runtime.browser_tasks
+  where admission_seq is not null
+    and status = 'queued'
+    and owner_kind is distinct from 'research'
+  union all
+  select task_id, admission_seq
+  from runtime.browser_tasks
+  where admission_seq is not null
+    and status in ('starting', 'running')
+    and owner_kind is distinct from 'research'
+) execution
+order by admission_seq
+select exists(select 1 from runtime.browser_tasks
+                 where parent_agent_id = any($1)
+                 and ((completed_at is null and status in ('starting', 'running')
+                       and coalesce(last_progress_at, updated_at)
+                           > now() - ($2::bigint * interval '1 second'))
+                      or completed_at > now() - ($2::bigint * interval '1 second')))select exists(select 1 from runtime.browser_tasks
+                 where root_session_id = $1 and parent_agent_id = $2
+                 and (status in ('queued', 'starting', 'running', 'user_controlled')
+                      or terminal_user_update_due_at is not null))select task_id from runtime.browser_tasks where admission_seq is not null and status in ('queued', 'starting') order by admission_seqretained browser outcome has an invalid durable statusqueued browser task is missing its initial instructionbrowser_tasks.has_outstanding_workagent_statuscompleted_atseen_atbrowser_tasks.is_relocated_predecessorbrowser_tasks.node_relocation_candidatesbrowser_tasks.hold_relocationbrowser task relocation hold must be in the futurebrowser_tasks.begin_relocationinvalid browser task relocation targetbrowser_tasks.clear_relocationrelocation target node name does not match its targetbrowser_tasks.requeue_relocatedrelocating browser task is missing its request trace contextonly a relocating browser task can requeue on its targetbrowser_tasks.client_activebrowser_tasks.park_client_leasebrowser_tasks.reserve_client_leasebrowser_tasks.park_outcomebrowser cancellation confirmation requires a Needs User outcomebrowser outcome demotion requires outcome-origin user controlbrowser outcome conclusion requires a retained outcomebrowser_tasks.conclude_retained_outcomebrowser environment refresh releases only passive outcomesbrowser outcome queue eviction requires an evictable passive outcomebrowser_tasks.recover_user_controlled_as_needs_useruser-control recovery requires an outcome-free user_controlled rowbrowser_tasks.claim_terminal_user_updatebrowser_tasks.clear_terminal_user_updatebrowser_tasks.terminal_user_update_ownershipbrowser_tasks.claim_due_terminal_user_updatesruntime.browser_tasks.request_trace_context_jsonruntime.browser_tasks.chat_context_jsonruntime.browser_tasks.request_mode_jsonruntime.browser_tasks.max_training_tier_jsonbrowser_tasks.enqueuebrowser_tasks.mark_runningbrowser_tasks.mark_startingbrowser_tasks.advance_queued_revisionpre-dispatch browser task terminalization must fail or supersedebrowser_tasks.terminalize_pre_dispatchinstruction
+
+[Additional delegating-agent instruction]
+browser_tasks.append_queued_instructionbrowser_tasks.terminalizebrowser task terminal reason must be non-emptydirect browser task terminalization requires completed, failed, or supersededbrowser_tasks.record_route_attributionbrowser_tasks.record_navigation_attemptbrowser_tasks.terminalize_active_user_stopbrowser_tasks.realign_after_takeover_precommit_abortbrowser_tasks.transition_to_user_controlled_for_takeovernext_stream_owner_message_idbrowser_tasks.accept_running_inputsuccessor_owner_agent_idsuccessor_stream_owner_message_idbrowser_tasks.reserve_user_controlled_successorbrowser task successor reservation requires outcome-free user controlacquired connection, but time to acquire exceeded slow thresholdacquired connectionbrowser_tasks.retain_outcome_under_user_controlbrowser_tasks.terminalize_running_needs_userNeeds User retention fallback requires a terminal reasonNeeds User retention fallback requires an outcome-free running taskbrowser_task_id
+update runtime.stripe_link_spend_requests
+set cancellation_confirmation_task_state_revision = $3,
+    cancellation_confirmation_response_message_id = null
+where wallet_provider = $1
+  and owner_browser_task_id = $2
+  and lifecycle_state in ('ready', 'assigned')
+  and expires_at > now()
+only queued or running cold browser work can requeuebrowser_tasks.reserve_agent_window€

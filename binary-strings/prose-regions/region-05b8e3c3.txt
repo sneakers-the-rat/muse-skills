@@ -1,0 +1,231 @@
+UPDATE chat_private.peer_conversations SET requester_chat_id = NULL
+         WHERE conversation_id = $1 AND requester_revision = $2
+           AND requester_chat_id = $3 AND NOT requester_unavailable
+           AND chat_id = $5
+           AND EXISTS (SELECT 1 FROM agent.agents
+                       WHERE id = $4 AND session_id = $3)peer handoff disagrees with its asking-chat claimpeer handoff requester changed before admission
+SELECT json_build_object(
+         'accepted_ordinal', accepted_ordinal,
+         'state', state,
+         'checkpoint_custody', checkpoint_custody,
+         'submission_json', submission_json
+       )::text
+FROM agent.message_mailbox
+WHERE agent_id = $1
+  AND state IN ('accepted', 'attached')
+ORDER BY accepted_ordinal, submission_id
+FOR UPDATE
+SELECT payload_json FROM runtime_restart_checkpoints WHERE agent_id = $1
+UPDATE agent.message_mailbox
+SET checkpoint_custody = CASE
+      WHEN checkpoint_custody = 'executing' THEN checkpoint_custody
+      ELSE 'queued'
+    END
+WHERE submission_id = $1
+  AND agent_id = $2
+  AND state = 'attached'
+  AND stream_owner_message_id = $3
+
+UPDATE agent.message_mailbox
+SET state = CASE WHEN $4 THEN 'completed' ELSE 'aborted' END,
+    checkpoint_custody = coalesce(checkpoint_custody, 'executing'),
+    terminalized_at = now()
+WHERE agent_id = $1
+  AND stream_owner_message_id = $2
+  AND submission_id = ANY($3)
+  AND state = 'attached'
+
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = 'executing',
+    stream_owner_message_id = $2,
+    attached_at = coalesce(attached_at, now())
+WHERE agent_id = $1
+  AND submission_id = ANY($3)
+  AND (
+    (state = 'accepted' AND stream_owner_message_id IS NULL)
+    OR (state = 'attached' AND stream_owner_message_id = $2)
+  )
+
+UPDATE agent.message_mailbox
+SET checkpoint_custody = 'queued'
+WHERE agent_id = $1
+  AND stream_owner_message_id = $2
+  AND submission_id = ANY($3)
+  AND state = 'attached'
+
+UPDATE agent.message_mailbox
+SET state = CASE
+      WHEN state = 'attached' AND $2 THEN 'completed'
+      ELSE 'aborted'
+    END,
+    terminalized_at = now()
+WHERE agent_id = $1
+  AND state IN ('accepted', 'attached')
+
+UPDATE agent.message_mailbox
+SET state = CASE WHEN $2 THEN 'completed' ELSE 'aborted' END,
+    terminalized_at = now()
+WHERE agent_id = $1
+  AND state = 'attached'
+SELECT session_id, COALESCE(prompt_floor_seq, -1) AS prompt_floor_seq,
+                kind = 'root' AND parent_agent_id IS NULL
+                AND ephemeral IS DISTINCT FROM TRUE
+                AND status NOT IN ('shutdown', 'not_found') AS eligible
+         FROM agent.agents WHERE agent_id = $1 FOR UPDATEstartup_root_changedSELECT submission_id, submission_json FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' FOR UPDATEstartup mailbox submission id disagrees with its durable payloadSELECT EXISTS(SELECT 1 FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND accepted_ordinal < $2)startup mailbox promotion cannot overtake an earlier accepted inputselect submission_id, submission_json from agent.message_mailbox
+                 where agent_id = $1 and state in ('completed', 'aborted', 'invalid')
+                   and (submission_id = $2 or strpos(submission_json, $3) > 0)
+                 for updateselect submission_id, submission_json from agent.message_mailbox
+                 where agent_id = $1 and submission_id = $2
+                   and state in ('completed', 'aborted', 'invalid') for updateupdate agent.message_mailbox m set submission_json = cleared.payload
+             from unnest($2::text[], $3::text[]) as cleared(submission_id, payload)
+             where m.agent_id = $1 and m.submission_id = cleared.submission_id
+SELECT payload_json
+FROM agent.runtime_restart_checkpoints
+WHERE agent_id = $1
+FOR UPDATE
+
+SELECT EXISTS (
+  SELECT 1
+  FROM agent.message_mailbox
+  WHERE agent_id = $1
+    AND state = 'accepted'
+    AND accepted_ordinal < $2
+    AND (NOT $3 OR submission_kind <> 'internal_handoff')
+)
+message mailbox attachment cannot overtake an older priority peer
+INSERT INTO agent.runtime_restart_checkpoints (
+  agent_id, mode, recovery_class, recovery_owner_id, execution_config_json,
+  payload_json, created_at, updated_at
+) SELECT $1, $2, $3, $4, $5, $6, $7, $7
+WHERE EXISTS (
+  SELECT 1
+  FROM agent.agents
+  WHERE agent_id = $1
+    AND status NOT IN ('shutdown', 'not_found')
+)
+ON CONFLICT (agent_id) DO NOTHING
+SELECT EXISTS (SELECT 1 FROM agent.agents WHERE agent_id = $1 AND status NOT IN ('shutdown', 'not_found'))conversation epoch
+INSERT INTO agent.message_mailbox (
+  submission_id, agent_id, conversation_epoch, submission_kind,
+  routing_scope, state, checkpoint_custody, stream_owner_message_id,
+  submission_json, transcript_event_seq, attached_at
+) VALUES (
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+  CASE WHEN $6 = 'attached' THEN now() ELSE NULL END
+)
+ON CONFLICT (submission_id) DO NOTHING
+RETURNING accepted_ordinal, accepted_at
+startup mailbox promotion requires its previously accepted input
+SELECT agent_id, conversation_epoch, submission_kind, routing_scope,
+       state, stream_owner_message_id, submission_json,
+       transcript_event_seq, accepted_ordinal, accepted_at
+FROM agent.message_mailbox
+WHERE submission_id = $1
+FOR UPDATE
+update chat.message_bindings set admitted_at = coalesce(admitted_at, now())
+                    where jarvis_message_id = $1 and chat_id = $2 and binding_epoch = $3 and transport = $4binding epochtranscript_event_seqconversation_epochsubmission_kindrouting_scope
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = $5,
+    stream_owner_message_id = $2,
+    submission_json = $3,
+    transcript_event_seq = coalesce($4, transcript_event_seq),
+    attached_at = now()
+WHERE submission_id = $1
+  AND state = 'accepted'
+  AND stream_owner_message_id IS NULL
+select a.account_id from chat_private.accounts a
+             join chat_private.binding_authorizations b on b.provider = a.provider and b.account_id = a.account_id
+             where b.provider = $1 and b.binding_id = $2
+               and a.connection_id = $3 and not a.revoked for share of adirect input has no captured binding epochaccount_retiredselect connection_id, generation, transport_json, delivery_target
+             from chat_private.binding_authorizations
+             where provider = $1 and binding_id = $2 and chat_id = $3
+               and account_id = $4 and external_kind = 'direct' and participation = 'active'
+             for shareaccount_authorization_retiredtransport_jsontransport_authorization_absentconnection_idselect epoch from chat_private.bindings
+         where chat_id = $1 and provider = $2 and not revoked for sharetransport_authorization_changedbinding_retiredSELECT child_agent_id, agent_type, created_at, completed_at, metadata_json FROM subagent_spawns WHERE parent_agent_id = $1 AND child_agent_id > $2 ORDER BY child_agent_id LIMIT $3select input_json::jsonb->'origin' from agent.mail_inputs where submission_id=$1insert into runtime.mail_processing_activity(run_id,environment_id,mailbox_id,message_id,origin,
+            source_processing_id,run_status,report_outcome,report_summary,actions_json,started_at,finished_at,updated_at,
+            agent_id,worker_generation,execute_message_id,handoff_message_id,root_session_id,handoff_submission_id)
+            values($1,$2,$3,$4,'owner_email',$5,$6,$7,$8,$9,to_timestamp($10::double precision/1000),now(),now(),$11,$12,$13,$14,$15,$14)
+            on conflict(run_id) do nothingnotify_pendingselect * from runtime.execute_resolve_runs where run_id = $1 for updatemail intake requires an email receiptmailbox_idmessagethread_idselect exists(select 1 from agent.mail_inputs
+         where conversation_id = $1 and source_id = $2
+           and submission_id = $3 and generation = $4)mail intake owner or input does not match its runmail intake has no accepted conversation inputupdate runtime.execute_resolve_runs
+         set status = 'completed_noop', terminal_decision = 'nothing_to_do',
+             last_error_stage = null, last_error_message = null, updated_at = now()
+         where run_id = $1mail intake already has a different outcomeinsert into agent.mail_turn_results(conversation_id,generation,submission_id,result_json,
+            notification_id,notified,notification_settled,requires_terminal,created_at_ms)
+         values($1,$2,$3,$4,$3,false,false,false,$5) on conflict(submission_id) do nothing-- Candidate events of one voice call, through migration 0407's index. Repeats
+-- its predicate and key expression exactly; the index is only a superset, so
+-- the caller rechecks every row. $1 is the call id, $2 the same id with `"`
+-- written as `&quot;`, the form call start and end widgets carry.
+SELECT event_seq, event_name, message_id, agent_id, parent_agent_id, request_id,
+       visibility::text, payload_json, chat_context_json
+FROM runtime.events
+WHERE (chat_context_json LIKE '%"voice_call_id"%'
+       OR (event_name = 'delta.presentation'
+           AND (payload_json LIKE '%data-call-id=%' OR payload_json LIKE '%"callId"%')))
+  AND md5(runtime.voice_call_event_key_v1(event_name, chat_context_json, payload_json))::uuid
+      IN (md5($1)::uuid, md5($2)::uuid)
+SELECT event_seq, message_id, agent_id, parent_agent_id, request_id, visibility::text, payload_json FROM runtime.events WHERE message_id = ANY($1) OR parent_message_id = ANY($1)SELECT agent_id, spawn_metadata_json::jsonb #>> '{tool_llm,root_session_id}' AS root, false AS voice, NULL::text AS seed_bound, NULL::bigint AS created_at FROM agent.agents WHERE agent_type = 'tool_llm' AND spawn_metadata_json::jsonb #>> '{tool_llm,attachment_kind}' = 'http_call' AND spawn_metadata_json::jsonb #>> '{tool_llm,attachment_id}' = $1 UNION ALL SELECT agent_id, spawn_metadata_json::jsonb #>> '{realtime_voice,root_session_id}' AS root, true AS voice, spawn_metadata_json::jsonb #>> '{realtime_voice,root_seed_context_seq}' AS seed_bound, created_at FROM agent.agents WHERE agent_type = 'realtime_voice' AND spawn_metadata_json::jsonb #>> '{realtime_voice,call_id}' = $1/metadata/companion_full_message_ids/metadata/context_seqSELECT DISTINCT COALESCE(agent.presentation_root_session_id, candidate.agent_id) FROM unnest($1::text[]) AS candidate(agent_id) LEFT JOIN agent.agents AS agent ON agent.agent_id = candidate.agent_idvoiceseed_boundSELECT agent_id, CASE WHEN pg_input_is_valid(spawn_metadata_json, 'jsonb') THEN spawn_metadata_json::jsonb #>> '{realtime_voice,root_seed_context_seq}' END AS seed_bound FROM agent.agents WHERE agent_type = 'realtime_voice' AND presentation_root_session_id = $1voice call metadata refers to multiple conversationsSELECT e.agent_id, t.call_id FROM runtime.tool_calls t JOIN runtime.events e ON e.event_seq = t.event_seq JOIN agent.agents a ON a.agent_id = e.agent_id WHERE t.event_seq = ANY($1) AND a.agent_type = 'companion:voice'SELECT p.agent_id, p.seq FROM unnest($1::text[]) AS candidate(agent_id) CROSS JOIN unnest($2::text[]) AS wanted(message_id) CROSS JOIN LATERAL ( SELECT seen.agent_id, seen.seq FROM agent.context_item_resume_projection seen WHERE seen.agent_id = candidate.agent_id AND seen.provenance_json IS NOT NULL AND md5(agent.resume_projection_message_id_v1(seen.provenance_json))::uuid BETWEEN md5(wanted.message_id)::uuid AND md5(wanted.message_id)::uuid AND agent.resume_projection_message_id_v1(seen.provenance_json) = wanted.message_id OFFSET 0 ) p UNION SELECT agent_id, seq FROM agent.context_item_resume_projection WHERE agent_id = $6 AND seq >= $8 AND client_context_json::jsonb #>> '{chat_context,voice_call_id}' = $3 UNION SELECT agent_id, seq FROM agent.context_item_resume_projection WHERE agent_id = ANY($7) AND client_context_json::jsonb #>> '{chat_context,voice_call_id}' = $3 UNION SELECT agent_id, seq FROM agent.context_items WHERE agent_id = ANY($4) UNION SELECT agent_id, seq FROM agent.context_items WHERE message_id = ANY($2) UNION SELECT ci.agent_id, ci.seq FROM agent.context_items ci JOIN runtime.tool_calls t ON t.tool_call_id = ci.tool_call_id WHERE t.event_seq = ANY($5) UNION SELECT ci.agent_id, ci.seq FROM agent.context_items ci JOIN runtime.tool_outputs t ON t.tool_output_id = ci.tool_output_id WHERE t.event_seq = ANY($5) UNION SELECT agent_id, seq FROM agent.context_items WHERE agent_id = ANY($9) AND item_kind = 'tool_call' AND call_id IS NOT NULL AND call_id IN (SELECT call_id FROM runtime.tool_calls WHERE event_seq = ANY($5)) UNION SELECT agent_id, seq FROM agent.context_items WHERE agent_id = ANY($9) AND item_kind = 'tool_output' AND call_id IS NOT NULL AND call_id IN (SELECT call_id FROM runtime.tool_calls WHERE event_seq = ANY($5)) UNION SELECT agent_id, seq FROM agent.context_items WHERE agent_id = $6 AND call_id = ANY($10) AND item_kind IN ('tool_call', 'tool_output')SELECT i.root_agent_id AS agent_id, i.root_seq AS seq FROM agent.companion_trace_imports i JOIN unnest($1::text[], $2::bigint[]) AS selected(agent_id, seq) ON i.producer_agent_id = selected.agent_id AND i.producer_seq = selected.seqSELECT agent_id, prompt_floor_seq, checkpoint_seq, variant_json FROM agent.volatile_context_pins WHERE agent_id = ANY($1) AND variant_hash = $2handoff_policy
+INSERT INTO agent.volatile_context_pins
+  (agent_id, variant_hash, variant_json, prompt_floor_seq, checkpoint_seq, body)
+SELECT source.agent_id, $2, source.variant_json, -1, -1, NULL
+FROM unnest($1::text[], $3::text[]) AS source(agent_id, variant_json)
+JOIN agent.agents AS owner ON owner.id = source.agent_id
+ON CONFLICT (agent_id, variant_hash) DO UPDATE SET
+  variant_json = excluded.variant_json,
+  prompt_floor_seq = excluded.prompt_floor_seq,
+  checkpoint_seq = excluded.checkpoint_seq,
+  created_at = now()
+INSERT INTO agent.volatile_context_pin_bodies (body_hash, body) VALUES ($1, $2) ON CONFLICT (body_hash) DO NOTHINGSELECT convert_to(body, 'UTF8') = $2 FROM agent.volatile_context_pin_bodies WHERE body_hash = $1volatile context pin body digest mismatchselect transcript_event_seq, submission_json from agent.message_mailbox
+                     where agent_id = $1 and submission_id = $2foreground report fallback requires its exact public submissionselect e.parent_agent_id as agent_id, e.event_seq, e.message_id, e.created_at,
+                    coalesce(f.text_value, f.scalar_value) as context_seq
+     from runtime.events e
+     left join runtime.event_payload_fields f on f.event_seq = e.event_seq
+       and f.field_path = '/metadata/context_seq'
+     where e.parent_agent_id = $1 and e.event_seq = $2
+       and e.event_name in ('message.user', 'message.internal')
+     order by e.event_seq limit 2select e.parent_agent_id as agent_id, e.event_seq, e.message_id, e.created_at,
+                    coalesce(f.text_value, f.scalar_value) as context_seq
+     from runtime.events e
+     left join runtime.event_payload_fields f on f.event_seq = e.event_seq
+       and f.field_path = '/metadata/context_seq'
+     where e.parent_agent_id = $1 and e.message_id = $2
+       and e.event_name = 'message.user' and e.role = 'user'
+     order by e.event_seq limit 2
+
+
+
+[Delivery outcome unknown. Do not send again.]
+
+[The business ended this conversation.]
+
+[Conversation stopped: The other party requested a transfer. No further reply was provided.][The business returned no message.]insert into agent.group_inputs(group_id,external_message_id,submission_id,input_json,disposition)
+        values($1,$2,$2,$3,'pending') on conflict(group_id,external_message_id) do nothingupdate agent.group_inputs set disposition='cancelled' where group_id=$1 and disposition='pending'update agent.group_replies set enqueued=true where group_id=$1 and not enqueuedupdate chat_private.deliveries set state='failed',last_error='external task authority retired',terminal_at_utc=$2,updated_at_utc=$2
+        where chat_id=$1 and state='pending'database write admission gate closedadmission_timeoutSELECT submission_json, octet_length(submission_json)::bigint AS serialized_bytes
+         FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND submission_id <> $2startup_queue_fullcalled `Result::unwrap()` on an `Err` valueforeground_rootpeer_chat_rootgroup_chat_rootexternal_party_chat_rootmail_conversationdelegate_main_requestworkflow_subagentspaces_builderspaces_builder_litespaces_builder_editspaces_builder_python_editbrowser_taskdeep_researchideas_builderspace_taskself_improvement_stepflight_tracking_steppeer_sync_stepfeed_workflow_stepephemeral_agent_stepscheduler_cron_executescheduler_cron_resolveexecute_resolve_workersystem_cron_productvoice_delegaterealtime_voicecompanionsystemdeveloperassistantinternal_wakemanualthresholdsp.parent_agent_id = $1JOIN agent_ancestors AS ca
+  ON ca.descendant_id = sp.parent_agent_idca.ancestor_id = $1sp.completed_at IS NULLsp.completed_at IS NOT NULL
+  AND sp.seen_at IS NULL
+LIMIT $3JOIN agent_ancestors AS ca
+    ON ca.descendant_id = sp.parent_agent_id
+      AND sp.seen_at IS NULLdeferred_terminal_statusroot_request_originfinal_responsepromptrequester_chat_context_jsonafter_inferenceawaiting_approvalafter_tool_dispatchinput_tokensoutput_tokensdisplay_text_updated_at_msidempotency_keypending_initinterruptederroredwaitingpausedsendingtransferredprovider_endedoutcome_unknown
+)
+SELECT
+  e.event_seq AS seq,
+  (extract(epoch from e.created_at) * 1000)::bigint AS occurred_at_ms,
+  e.created_at::text AS occurred_at_utc,
+  e.request_id,
+  e.event_name,
+  coalesce(e.role::text, m.role::text, 'system') AS role,
+  e.source,
+  e.transcript_surface::text AS transcript_surface,
+  coalesce(e.message_id, m.message_id, '') AS message_id,
+  e.agent_id,
+  e.parent_agent_id,
+  m.body AS display_text
+FROM selected_events e
+LEFT JOIN messages m ON m.event_seq = e.event_seq
+ORDER BY e.event_seq ASCBUG: inner connection already taken!ConfigurationInvalidArgumentIoTlsRowNotFoundTypeNotFoundtype_nameColumnIndexOutOfBoundsindexlenColumnNotFoundColumnDecodeEncodeDecodeAnyDriverErrorPoolTimedOutPoolClosedWorkerCrashedMigrateInvalidSavePointStatementBeginFaileda Display implementation returned an error unexpectedlyErroroverflow when adding durationsÏ=üÿÖ=üÿÀÙ(

@@ -1,0 +1,66 @@
+update device.nodes
+         set last_seen_at_text = $1, last_seen_at = $2
+         where node_id = $3coalesce(case
+    when json_typeof(coalesce(nullif(commands_json, ''), '{}')::json) = 'object'
+    then array(select json_object_keys(coalesce(nullif(commands_json, ''), '{}')::json))
+    end, '{}')coalesce(case
+    when json_typeof(coalesce(nullif(data_sources_json, ''), '{}')::json) = 'object'
+    then array(select json_object_keys(coalesce(nullif(data_sources_json, ''), '{}')::json))
+    end, '{}')(
+    (
+        json_typeof(coalesce(nullif(commands_json, ''), '{}')::json) = 'object'
+        and exists (
+            select 1 from json_object_keys(coalesce(nullif(commands_json, ''), '{}')::json) k
+            where k <> 'ping'
+        )
+    )
+    or (
+        json_typeof(coalesce(nullif(data_sources_json, ''), '{}')::json) = 'object'
+        and exists (
+            select 1 from json_object_keys(coalesce(nullif(data_sources_json, ''), '{}')::json)
+        )
+    )
+    or contacts_last_synced_at is not null
+    or contacts_contact_count > 0
+    or coalesce(contacts_last_sync_status, 'never') <> 'never'
+)update device.nodes set status = 'disconnected' where node_id = $1
+    select
+        node_id,
+        coalesce(display_name, node_id) as display_name,
+        platform,
+        device_family,
+        commands_json,
+        data_sources_json,
+        is_wakeup_supported,
+        status,
+        coalesce(last_seen_at_text, last_seen_at::text, created_at::text) as last_seen_at,
+        contacts_last_synced_at,
+        contacts_last_sync_status,
+        contacts_contact_count
+    from device.nodes
+
+        update device.nodes
+        set health_last_received_at = $1,
+            health_last_sync_status = 'failed',
+            health_last_sync_error = $2
+        where node_id = $3
+        
+    update device.nodes
+    set health_last_received_at = $1,
+        health_last_sync_status = 'success',
+        health_last_sync_error = null
+    where node_id = $2
+    select data_source, next_full_sync_at, current_full_sync_id,
+            current_full_sync_requester_root_session_id,
+            current_full_sync_requester_presentation_locale,
+            current_full_sync_expires_at, current_full_sync_range_start,
+            current_full_sync_range_end, changed_during_full_sync,
+            last_full_sync_at, last_full_sync_range_start, last_full_sync_range_end
+     from device.data_sync_stateupdate device.data_sync_state
+             set current_full_sync_expires_at = $4
+             where node_id = $1 and data_source = $2
+               and current_full_sync_id = $3select node_id, route_kind, request_id, datatype, sync_mode,
+                chunk_count, status, updated_at_text, expires_at
+         from device.upload_sessions
+         where upload_session_id = $1
+         for updatedatabase write admission gate closedadmission_timeoutcalled `Result::unwrap()` on an `Err` valuehealthcomms_announcementsevent hatch-engine/crates/hatch-db-devices/src/devices.rs:136hatch_db_devices::devicesmessagehatch-engine/crates/hatch-db-devices/src/devices.rsevent hatch-engine/crates/hatch-db-devices/src/devices.rs:209operationevent hatch-engine/crates/hatch-db-devices/src/devices.rs:215BUG: inner connection already taken!ConfigurationInvalidArgumentIoTlsRowNotFoundTypeNotFoundtype_nameColumnIndexOutOfBoundsindexlenColumnNotFoundColumnDecodesourceEncodeDecodeAnyDriverErrorPoolTimedOutPoolClosedWorkerCrashedMigrateInvalidSavePointStatementBeginFailed`DateTime + TimeDelta` overflowed

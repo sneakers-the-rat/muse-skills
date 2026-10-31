@@ -1,0 +1,237 @@
+reconcile orphaned approval RuntimeWork during startupfailed to terminalize orphaned approval RuntimeWork at startupapproval wait lost its exact restart checkpoint during daemon restartcomplimentary plan-name lookup failedskipping goal suggestion with missing ideacommitted goal maintenance planning failedfailed to serialize goal detail for goal.updated websocket eventfailed to load goal detail for goal.updated websocket eventfailed to serialize localized goal.updated websocket eventbroadcast goal.updated websocket eventfailed to hydrate goal Space associations from Spaces catalogvoice_restart_record_readvoice_restart_record_blocking_queueresume_directory_unsetvoice call restart record reader panickedvoice_restart_offerrecord_absentoutside_windowdiscardedarmedvoice call restart record readcall_idvoice_call_restart_rejoin_armedrecord_unreadablediscarded an unreadable voice call restart recordvoice call restart record writer panickedfailed to record the live voice call for the next daemonrecorded the live voice call for a rejoin after restartvoice_call_restart_rejoin_recordedvoice end-call queued as a session stop on the call's realtime streamonepasswordfailed to load idea quality rows for HTTP feed selectionfailed to read active feed for rotation; selecting without itfailed to load persisted idea bandit state for HTTP feed selectionfailed to read idea memory affinity; ranking without the affinity termfailed to fetch ideas explore policy for HTTP feed selectiondevice node_idfull_sync_idreconciliation.finalizeHealth source snapshot belongs to another devicereconciliation.ingest_source_changereconciliation.delete_all_source_dataselect data_source, next_full_sync_at, current_full_sync_id,
+            current_full_sync_requester_root_session_id,
+            current_full_sync_requester_presentation_locale,
+            current_full_sync_expires_at, current_full_sync_range_start,
+            current_full_sync_range_end, changed_during_full_sync,
+            last_full_sync_at, last_full_sync_range_start, last_full_sync_range_end
+     from device.data_sync_stateselect pairing_status, data_sources_json
+         from device.nodes where node_id = $1 for updatepairing_statusdata_sources_jsonupdate device.data_sync_state
+         set next_full_sync_at = $4, search_trigger_pending = false,
+             current_full_sync_id = null,
+             current_full_sync_requester_root_session_id = null,
+             current_full_sync_requester_presentation_locale = null,
+             current_full_sync_expires_at = null,
+             current_full_sync_range_start = null,
+             current_full_sync_range_end = null,
+             changed_during_full_sync = false
+         where node_id = $1 and data_source = $2 and current_full_sync_id = $3update device.data_sync_state
+         set next_full_sync_at = null, last_full_sync_at = $4,
+             last_full_sync_range_start = current_full_sync_range_start,
+             last_full_sync_range_end = current_full_sync_range_end,
+             current_full_sync_id = null,
+             current_full_sync_requester_root_session_id = null,
+             current_full_sync_requester_presentation_locale = null,
+             current_full_sync_expires_at = null,
+             current_full_sync_range_start = null,
+             current_full_sync_range_end = null,
+             changed_during_full_sync = false
+         where node_id = $1 and data_source = $2 and current_full_sync_id = $3update device.data_sync_state set changed_during_full_sync = true
+         where node_id = $1 and data_source = $2
+           and current_full_sync_id is not nullupdate device.data_sync_state
+         set next_full_sync_at = null, current_full_sync_id = null,
+             current_full_sync_requester_root_session_id = null,
+             current_full_sync_requester_presentation_locale = null,
+             current_full_sync_expires_at = null,
+             current_full_sync_range_start = null,
+             current_full_sync_range_end = null,
+             changed_during_full_sync = false
+         where node_id = $1 and data_source = $2 and current_full_sync_id = $3insert into device.data_sync_state (node_id, data_source)
+         values ($1, $2) on conflict (node_id, data_source) do nothinginsert into device.comms_announcements as stored (
+           producer_id, received_at_unix_ms, first_received_at_unix_ms,
+           announcing_device_id, event_id,
+           provider, kind, occurred_at_unix_ms, announced_at_unix_ms,
+           outcome, reason, producer, announced_ms_ago
+         )
+         select $1, $2, $2, rows.* from unnest(
+           $3::text[], $4::text[], $5::text[], $6::text[],
+           $7::bigint[], $8::bigint[], $9::text[], $10::text[],
+           $11::text[], $12::bigint[]
+         ) as rows
+         on conflict (producer_id, announcing_device_id, event_id) do update set
+           provider = excluded.provider, kind = excluded.kind,
+           occurred_at_unix_ms = excluded.occurred_at_unix_ms,
+           announced_at_unix_ms = excluded.announced_at_unix_ms,
+           outcome = excluded.outcome, reason = excluded.reason,
+           producer = excluded.producer,
+           announced_ms_ago = excluded.announced_ms_ago,
+           -- `first_received_at_unix_ms` is deliberately NOT in this list. It
+           -- is the retention clock, and refreshing it on replay is what let a
+           -- republished event outlive retention forever: the producer
+           -- naturally re-delivers the same event id minutes apart, each
+           -- delivery moving the only expiry anchor forward, so an
+           -- announcement from hours ago could still be sitting in the table.
+           -- The row ages from when Hatch FIRST saw it, which no later publish
+           -- can change.
+           -- Refreshed with `announced_ms_ago`, never without it. The anchor is
+           -- `received_at_unix_ms - announced_ms_ago`, so the two halves have to
+           -- come from the SAME publish: a producer measures the duration
+           -- relative to the delivery that carries it. Leaving the receipt at
+           -- the first delivery while refreshing the duration anchors a replay
+           -- roughly one replay-gap too far into the past, which then reads as
+           -- an aged-out referent. Re-deliveries of the same event id about
+           -- eleven minutes apart were observed on device, so this is the
+           -- ordinary path rather than a rare one.
+           received_at_unix_ms = excluded.received_at_unix_ms
+         where row(
+           stored.provider, stored.kind, stored.occurred_at_unix_ms,
+           stored.announced_at_unix_ms, stored.outcome, stored.reason,
+           stored.producer, stored.announced_ms_ago
+         ) is distinct from row(
+           excluded.provider, excluded.kind, excluded.occurred_at_unix_ms,
+           excluded.announced_at_unix_ms, excluded.outcome, excluded.reason,
+           excluded.producer, excluded.announced_ms_ago
+         )
+         returning (xmax = 0) as inserted, announcing_device_id, event_idannouncing_device_idselect count(*)::bigint as received_chunks,
+                max(c.chunk_index) as max_chunk_index,
+                coalesce(sum(octet_length(c.payload)), 0)::bigint as total_bytes
+         from device.upload_chunks c
+         where c.upload_session_id = $1max_chunk_indexreceived_chunkstotal_bytesselect node_id, route_kind, request_id, datatype, sync_mode,
+                chunk_count, status, updated_at_text, expires_at
+         from device.upload_sessions
+         where upload_session_id = $1
+         for updatedelete from device.upload_sessions
+         where upload_session_id = $1
+           and route_kind = 'data_source_reconciliation'conflicting reconciliation upload session identityreconciliation upload phase conflicts with finalizationreconciliation upload is missing during finalizationreconciliation upload no longer has its exact sealed chunk setdelete from device.calendar_events
+         where node_id = $1 and start_at < $3 and end_at > $2
+           and not (external_event_id = any($4::text[]))delete from device.calendar_events
+             where node_id = $1 and start_at < $2 and end_at <= $2insert into device.calendar_events as stored (
+           node_id, external_event_id, title, start_at, end_at, is_all_day,
+           external_calendar_id, calendar_name, availability, location, notes,
+           time_zone, start_local_date, end_local_date, is_recurring, url,
+           event_status, calendar_color
+         )
+         select $1, rows.* from unnest(
+           $2::text[], $3::text[], $4::timestamptz[], $5::timestamptz[],
+           $6::boolean[], $7::text[], $8::text[], $9::text[], $10::text[],
+           $11::text[], $12::text[], $13::date[], $14::date[], $15::boolean[],
+           $16::text[], $17::text[], $18::text[]
+         ) as rows
+         on conflict (node_id, external_event_id) do update set
+           title = excluded.title, start_at = excluded.start_at,
+           end_at = excluded.end_at, is_all_day = excluded.is_all_day,
+           external_calendar_id = excluded.external_calendar_id,
+           calendar_name = excluded.calendar_name,
+           availability = excluded.availability, location = excluded.location,
+           notes = excluded.notes, time_zone = excluded.time_zone,
+           start_local_date = excluded.start_local_date,
+           end_local_date = excluded.end_local_date,
+           is_recurring = excluded.is_recurring, url = excluded.url,
+           event_status = excluded.event_status,
+           calendar_color = excluded.calendar_color
+         where row(
+           stored.title,
+           stored.start_at,
+           stored.end_at,
+           stored.is_all_day,
+           stored.external_calendar_id,
+           stored.calendar_name,
+           stored.availability,
+           stored.location,
+           stored.notes,
+           stored.time_zone,
+           stored.start_local_date,
+           stored.end_local_date,
+           stored.is_recurring,
+           stored.url,
+           stored.event_status,
+           stored.calendar_color
+         ) is distinct from row(
+           excluded.title,
+           excluded.start_at,
+           excluded.end_at,
+           excluded.is_all_day,
+           excluded.external_calendar_id,
+           excluded.calendar_name,
+           excluded.availability,
+           excluded.location,
+           excluded.notes,
+           excluded.time_zone,
+           excluded.start_local_date,
+           excluded.end_local_date,
+           excluded.is_recurring,
+           excluded.url,
+           excluded.event_status,
+           excluded.calendar_color
+         )
+         returning (xmax = 0) as inserteddelete from device.calendar_events
+         where node_id = $1 and external_event_id = any($2::text[])insert into device.call_log as stored (
+           producer_id, external_id, phone_number, contact_name,
+           call_type, occurred_at_unix_ms, duration_seconds, platform
+         )
+         select $1, rows.*, $8 from unnest(
+           $2::text[], $3::text[], $4::text[], $5::text[],
+           $6::bigint[], $7::bigint[]
+         ) as rows
+         on conflict (producer_id, external_id) do update set
+           phone_number = excluded.phone_number, contact_name = excluded.contact_name,
+           call_type = excluded.call_type,
+           occurred_at_unix_ms = excluded.occurred_at_unix_ms,
+           duration_seconds = excluded.duration_seconds, platform = excluded.platform
+         where row(
+           stored.phone_number, stored.contact_name, stored.call_type,
+           stored.occurred_at_unix_ms, stored.duration_seconds, stored.platform
+         ) is distinct from row(
+           excluded.phone_number, excluded.contact_name, excluded.call_type,
+           excluded.occurred_at_unix_ms, excluded.duration_seconds, excluded.platform
+         )
+         returning (xmax = 0) as insertedcall_log upsert into device.call_loginsert into device.contact_emails (contact_id, label, email)
+             select * from unnest($1::bigint[], $2::text[], $3::text[])insert into device.contact_phones (contact_id, label, phone_raw, phone_e164)
+             select * from unnest($1::bigint[], $2::text[], $3::text[], $4::text[])insert into device.contact_addresses (
+               contact_id, label, street, city, state, postal_code, country
+             )
+             select * from unnest(
+               $1::bigint[], $2::text[], $3::text[], $4::text[],
+               $5::text[], $6::text[], $7::text[]
+             )update device.contacts
+         set deleted_at = now(), updated_at = now()
+         where node_id = $1 and deleted_at is null
+           and not (external_contact_id = any($2::text[]))insert into device.contacts (
+           node_id, platform, external_contact_id, display_name, organization,
+           job_title, birthday_text, note, thumbnail,
+           synced_at_text, deleted_at, updated_at
+         )
+         select $1, $2, rows.*, $9, null, now()
+         from unnest(
+           $3::text[], $4::text[], $5::text[], $6::text[], $7::text[],
+           $8::text[], $10::text[]
+         ) as rows
+         on conflict (node_id, external_contact_id) do update set
+           platform = excluded.platform,
+           display_name = excluded.display_name,
+           organization = excluded.organization,
+           job_title = excluded.job_title,
+           birthday_text = excluded.birthday_text,
+           note = excluded.note,
+           thumbnail = excluded.thumbnail,
+           synced_at_text = excluded.synced_at_text,
+           deleted_at = null,
+           updated_at = excluded.updated_at
+         returning contact_id, external_contact_id, (xmax = 0) as inserteddelete from device.contact_phones where contact_id = any($1)external_contact_idcontact_iddelete from device.contact_emails where contact_id = any($1)delete from device.contact_addresses where contact_id = any($1)
+        update device.nodes
+        set platform = $1,
+            contacts_last_synced_at = $2,
+            contacts_last_received_at = $3,
+            contacts_last_sync_status = 'success',
+            contacts_last_sync_error = null,
+            contacts_contact_count = $4,
+            contacts_content_sha256 = $5
+        where node_id = $6
+        device node disappeared while recording contacts snapshot metadataupdate device.contacts
+             set deleted_at = now(), updated_at = now()
+             where node_id = $1 and deleted_at is null
+               and external_contact_id = any($2::text[])update device.nodes n
+         set platform = $1,
+             contacts_last_synced_at = $2,
+             contacts_last_received_at = $3,
+             contacts_last_sync_status = 'success',
+             contacts_last_sync_error = null,
+             contacts_contact_count = (
+               select count(*)
+               from device.contacts c
+               where c.node_id = $4 and c.deleted_at is null
+             ),
+             contacts_content_sha256 = case
+               when $5 then null
+               else contacts_content_sha256
+             end
+         where n.node_id = $4device node disappeared while recording contacts mutation metadatagoal_slugNo research directory is available for this mission; put the full detail in your `finish_research` summary.&Your research directory is intact at `À,` with these files from before the restart: À€“

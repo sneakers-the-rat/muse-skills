@@ -1,0 +1,37 @@
+errorsuccesswrite_admissionwritepostgres write completed slowlypostgres write failedretrying idempotent postgres writeone-shot postgres write invoked more than oncebrowser task card rollover tombstone identity already existsbrowser task successor card identity already existsbrowser task card generation overflow
+select status,
+       state_revision,
+       owner_agent_id,
+       stream_owner_message_id,
+       card_generation,
+       is_task_card_visible,
+       presentation_root_session_id
+from runtime.browser_tasks
+where task_id = $1
+  and admission_seq is not null
+for update
+statusstate_revisionowner_agent_idstream_owner_message_idcard_generationis_task_card_visiblepresentation_root_session_id
+update runtime.browser_tasks
+set card_generation = $2
+where task_id = $1
+  and admission_seq is not null
+  and status = 'running'
+  and state_revision = $3
+  and owner_agent_id = $4
+  and stream_owner_message_id = $5
+  and card_generation = $6
+  and is_task_card_visible
+  and presentation_root_session_id = $7
+
+update runtime.browser_tasks
+set title = $2,
+    step_count = $3,
+    chat_context_json = $4,
+    latest_action_id = $5,
+    latest_tab_json = $6,
+    latest_screenshot_json = $7
+where task_id = $1
+  and status = $8
+  and state_revision = $9
+  and owner_agent_id is not distinct from $10
+  and stream_owner_message_id = $11

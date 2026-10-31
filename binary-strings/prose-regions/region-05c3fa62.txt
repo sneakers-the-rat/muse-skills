@@ -1,0 +1,27 @@
+delete from peer.sas_confirmations where confirm_request_id in ( select confirm_request_id from peer.sas_confirmations where superseded_at_ms is not null and request_expires_at_ms <= $1 order by request_expires_at_ms, confirm_request_id limit $2 for update skip locked)outbox.envelope_id, outbox.peer_muse, outbox.conversation_id, outbox.requester_chat_id, outbox.kind, outbox.payload, outbox.created_at_ms, outbox.not_before_ms, outbox.attempts, outbox.claim_id, outbox.claim_expires_at_ms, outbox.state, outbox.delivered_at_ms, outbox.expires_at_ms, outbox.last_error_class
+update peer.outbox
+set state = case when expires_at_ms <= $5 then 'failed' else 'pending' end,
+    not_before_ms = case when expires_at_ms <= $5 then not_before_ms else $3 end,
+    claim_id = null,
+    claim_expires_at_ms = null,
+    last_error_class = $4
+where envelope_id = $1 and claim_id = $2 and peer_muse = $6 and state = 'dispatching'
+returning state
+
+with overdue as (
+  select envelope_id
+  from peer.outbox
+  where state = 'pending' and expires_at_ms <= $1
+  order by expires_at_ms, envelope_id
+  limit $2
+  for update skip locked
+)
+update peer.outbox
+set state = 'failed', last_error_class = coalesce(last_error_class, 'expired')
+from overdue
+where outbox.envelope_id = overdue.envelope_id
+returning outbox.peer_muse, outbox.kind, outbox.conversation_id
+envelope_id, peer_muse, conversation_id, requester_chat_id, kind, payload, created_at_ms, not_before_ms, attempts, claim_id, claim_expires_at_ms, state, delivered_at_ms, expires_at_ms, last_error_classselect count(*) from peer.outbox where peer_muse = $1 and state in ('pending', 'dispatching')update chat_private.peer_conversations
+                            set requester_chat_id = $2, requester_unavailable = false,
+                              requester_revision = requester_revision + 1
+                            where conversation_id = $1 and archived_at_ms is null€Î

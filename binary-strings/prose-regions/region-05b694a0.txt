@@ -1,0 +1,1331 @@
+deleted
+SELECT
+  agents.id AS root_agent_id,
+  metadata.chat_id AS session_id,
+  metadata.status,
+  transport.provider AS channel,
+  transport.conversation_key AS transport_conversation_id,
+  transport.delivery_target AS chat_delivery_target
+FROM chat.chats AS metadata
+JOIN chat_private.bindings AS transport USING(chat_id)
+JOIN agents
+  ON agents.session_id = metadata.chat_id
+ AND agents.kind = 'root'
+ AND agents.parent_agent_id IS NULL
+ AND agents.ephemeral IS DISTINCT FROM TRUE
+WHERE transport.provider = $1
+  AND transport.conversation_key = $2
+ORDER BY agents.created_at DESC, agents.id DESC
+LIMIT 1
+provider side chat row is missing its transport bindingSELECT EXISTS(SELECT 1 FROM chat_private.retired_chat_ids WHERE chat_id = $1)SELECT 1 FROM agents WHERE id = $1SELECT id, kind, parent_id, depth::bigint AS depth, model, status, agent_type, presentation_root_session_id, spawn_metadata_json, originating_location_context_json FROM agents WHERE id = $1
+SELECT root_id
+FROM (
+  SELECT ancestors.ancestor_id AS root_id, 0 AS priority, ancestors.distance AS distance
+  FROM agent_ancestors AS ancestors
+  JOIN agents AS roots ON roots.id = ancestors.ancestor_id
+  WHERE ancestors.descendant_id = $1
+    AND roots.kind = 'root'
+  UNION ALL
+  SELECT agents.id AS root_id, 1 AS priority, 0 AS distance
+  FROM agents AS agents
+  WHERE agents.id = $1
+    AND agents.kind = 'root'
+)
+ORDER BY priority ASC, distance ASC, root_id ASC
+LIMIT 1
+SELECT created_at, updated_at FROM agents WHERE id = $1SELECT NULLIF(trim(session_id), '') FROM agents WHERE kind = 'root' AND id = $1 LIMIT 1
+WITH origins AS (
+    SELECT spawn_metadata_json::jsonb #> '{realtime_voice,root_session_id}' AS root_session_id,
+           spawn_metadata_json::jsonb #> '{realtime_voice,prompt_floor_seq}' AS prompt_floor_seq
+    FROM agents
+    WHERE kind = 'root'
+      AND agent_type = 'realtime_voice'
+      AND ($3::text IS NULL OR id = $3)
+      AND presentation_root_session_id = $1
+      AND spawn_metadata_json IS NOT NULL
+      AND spawn_metadata_json::jsonb @> jsonb_build_object(
+          'realtime_voice', jsonb_build_object('call_id', $2::text)
+      )
+)
+SELECT EXISTS (SELECT 1 FROM origins)
+   AND NOT EXISTS (
+       SELECT 1 FROM origins
+       WHERE origins.root_session_id IS DISTINCT FROM to_jsonb($1::text)
+          OR origins.prompt_floor_seq IS DISTINCT FROM to_jsonb(COALESCE(root.prompt_floor_seq, -1))
+   )
+FROM agents AS root
+WHERE root.id = $1
+SELECT id FROM agents WHERE kind = 'root' AND parent_agent_id IS NULL AND session_id = $1 LIMIT 1SELECT id FROM agents WHERE kind = 'root' AND id IS NOT NULL AND spawn_metadata_json IS NOT NULL AND spawn_metadata_json::jsonb @> jsonb_build_object($1, $2::text) ORDER BY created_at DESC, agent_id DESC LIMIT 1SELECT status, last_assistant_message FROM agents WHERE id = $1UPDATE agents SET seen_at_ms = $1 WHERE id = $2companion_trace_importsDELETE FROM agent.companion_trace_importscompanion_trace_sourcesDELETE FROM agent.companion_trace_sourcescontext_itemsDELETE FROM context_itemsagent_compactionsDELETE FROM agent_compactionsvolatile_context_pinsDELETE FROM volatile_context_pinssubagent_spawnsDELETE FROM subagent_spawnssubagent_progress_tool_eventsDELETE FROM subagent_progress_tool_eventsDELETE FROM subagent_progress_message_eventsskill_invalidation_receiptsDELETE FROM runtime.skill_invalidation_receiptsDELETE FROM session_memory_capture_deadlinesbackground_exec_obligationsDELETE FROM agent.background_exec_obligationsruntime_restart_checkpointsDELETE FROM runtime_restart_checkpointsUPDATE agents SET updated_at = $1, last_assistant_message = NULL, prompt_floor_seq = NULLchat.event_transportsDELETE FROM chat.event_transportsresourcesDELETE FROM resourcesevent_search_documentsDELETE FROM search_documents WHERE owner_table = 'runtime.events'widgetsDELETE FROM widgetssummariesDELETE FROM summariesUPDATE agents
+SET updated_at = $1, status = $2, last_assistant_message = $3
+WHERE id = $4
+  AND NOT (
+    ($5 = 'interrupted' AND status IN ('completed', 'errored', 'shutdown'))
+    OR (kind = 'subagent' AND status IN ('shutdown', 'not_found'))
+    OR (
+      $6 IN ('pending_init', 'running', 'interrupted')
+      AND kind = 'subagent'
+      AND status IN ('completed', 'errored')
+    )
+  )
+  AND (status IS DISTINCT FROM $2 OR last_assistant_message IS DISTINCT FROM $3)SELECT seen_at_ms FROM agents WHERE id = $1UPDATE agents SET last_assistant_resources = $1 WHERE id = $2INSERT INTO agents (agent_id, id, session_id, kind, parent_id, parent_agent_id, root_session_id, depth, created_at, updated_at, model, status, last_assistant_message)
+             VALUES ($1, $1, NULL, $2, $3, $3, NULL, $4, $5, $5, $6, $7, NULL)
+             ON CONFLICT (agent_id) DO NOTHINGSELECT kind, parent_id, parent_agent_id, depth FROM agents WHERE agent_id = $1 LIMIT 1
+INSERT INTO agent_ancestors (descendant_id, ancestor_id, distance)
+VALUES ($1, $1, 0)
+ON CONFLICT (descendant_id, ancestor_id) DO NOTHING
+
+INSERT INTO agent_ancestors (descendant_id, ancestor_id, distance)
+SELECT $1, ancestor_id, distance + 1
+FROM agent_ancestors
+WHERE descendant_id = $2
+ON CONFLICT (descendant_id, ancestor_id) DO NOTHING
+
+INSERT INTO agent_ancestors (descendant_id, ancestor_id, distance)
+VALUES ($1, $2, 1)
+ON CONFLICT (descendant_id, ancestor_id) DO NOTHING
+INSERT INTO agents (agent_id, id, session_id, kind, parent_id, parent_agent_id, root_session_id, depth, created_at, updated_at, model, status, last_assistant_message, ephemeral, agent_type, presentation_root_session_id, spawn_metadata_json, originating_location_context_json)
+             VALUES ($1, $1, $2, $3, $4, $4, $5, $6, $7, $8, $9, $10, NULL, $11, $12, $13, $14, $15)freshroot_agent_idcompactionscontext_item_resume_projectionruntime_statetoken_usageagent_message_token_usageconversation_idagent_identityagent_todo_snapshotschild_agent_idcoordinator_agent_idsubagent_monitor_decisionssubagent_progressdescendant_idancestor_idagent_ancestorsagentsroot_session_idconversation_shareability_reviewsDELETE FROM runtime.skill_invalidation_receipts WHERE session_id = $1DELETE FROM chat.chats WHERE chat_id = $1SELECT kind, NULLIF(trim(session_id), '') AS session_id FROM agents WHERE id = $1 LIMIT 1
+WITH agent_scope(agent_id, distance) AS (
+  SELECT $1 AS agent_id, 0 AS distance
+  UNION
+  SELECT descendant_id, distance
+  FROM agent_ancestors
+  WHERE ancestor_id = $1
+)
+SELECT agent_id
+FROM agent_scope
+ORDER BY distance ASC, agent_id ASC
+
+WITH RECURSIVE agent_scope(agent_id) AS (
+  SELECT $1
+  WHERE EXISTS (
+    SELECT 1
+    FROM event_transcript_rows
+    WHERE agent_id = $1
+       OR parent_agent_id = $1
+  )
+  UNION
+  SELECT e.agent_id
+  FROM event_transcript_rows AS e
+  JOIN agent_scope AS scope
+    ON e.parent_agent_id = scope.agent_id
+  WHERE e.agent_id IS NOT NULL
+    AND TRIM(e.agent_id) != ''
+)
+SELECT agent_id
+FROM agent_scope
+ORDER BY agent_id ASC
+
+SELECT a.id FROM agents a
+WHERE a.kind = 'root'
+  AND a.parent_agent_id IS NULL
+  AND a.id != $3
+  AND a.status IN ('shutdown', 'completed', 'errored')
+  AND a.updated_at < $1
+  AND a.ephemeral = true
+  AND ((a.agent_type IS DISTINCT FROM 'realtime_voice'
+        AND a.agent_type IS DISTINCT FROM 'companion:voice') OR NOT EXISTS (
+    SELECT 1 FROM agents public_root
+    WHERE public_root.id = a.presentation_root_session_id
+      AND public_root.kind = 'root'
+      AND NULLIF(TRIM(public_root.session_id), '') IS NOT NULL
+  ))
+LIMIT $2
+
+SELECT submission_id, accepted_ordinal, state, checkpoint_custody,
+       stream_owner_message_id, submission_json
+FROM agent.message_mailbox
+WHERE agent_id = $1
+  AND state IN ('accepted', 'attached')
+ORDER BY accepted_ordinal, submission_id
+SELECT submission_json FROM agent.message_mailbox WHERE agent_id = $1 AND submission_id = $2select exists (select 1 from agent.message_mailbox
+                where agent_id = $1 and submission_id = $2
+                  and state in ('completed', 'aborted', 'invalid'))select stream_owner_message_id from agent.message_mailbox where agent_id = $1 and submission_id = $2select s.child_agent_id, s.completed_at, m.submission_id, m.state, (extract(epoch from m.accepted_at) * 1000)::bigint, m.submission_json from agent.subagent_spawns as s join agent.message_mailbox as m on m.agent_id = $1 where s.child_agent_id = any($2) and s.completed_at is not nullselect accepted_at from agent.message_mailbox where agent_id = $1 and submission_id = $2select agent_id from agent.message_mailbox where submission_id = $1select coalesce(submission_json::jsonb #>> '{client_context,presentation_locale}', 'en-US'), nullif(submission_json::jsonb -> 'admission', 'null'::jsonb) from agent.message_mailbox where submission_id = $1 and agent_id = $2
+WITH anchor AS (
+  SELECT conversation_epoch, routing_scope, accepted_ordinal
+  FROM agent.message_mailbox
+  WHERE agent_id = $1 AND submission_id = $2
+)
+SELECT m.submission_json
+FROM agent.message_mailbox m, anchor
+WHERE m.agent_id = $1
+  AND m.conversation_epoch = anchor.conversation_epoch
+  AND m.routing_scope = anchor.routing_scope
+  AND m.accepted_ordinal < anchor.accepted_ordinal
+  AND m.submission_kind = 'user'
+  AND m.state IN ('attached', 'completed')
+  AND jsonb_array_length(coalesce(m.submission_json::jsonb->'authenticated_user_inputs', '[]'::jsonb)) > 0
+  AND (m.submission_json::jsonb->'follow_up_handoff' IS NULL OR m.submission_json::jsonb->'follow_up_handoff' = 'null'::jsonb)
+ORDER BY m.accepted_ordinal DESC
+LIMIT $3
+select m.submission_json from agent.message_mailbox m
+                join agent.message_mailbox a on a.agent_id=m.agent_id and a.conversation_epoch=m.conversation_epoch
+                    and a.routing_scope=m.routing_scope
+                where a.agent_id=$1 and a.submission_id=$2 and m.submission_id=any($3)
+                    and m.accepted_ordinal<a.accepted_ordinal and m.submission_kind='user'
+                    and m.state in ('attached','completed') order by m.accepted_ordinalselected mail source is not authenticated user inputselected mail sources are missing, duplicated, out of scope, or too large
+select generation, terminal_status
+from agent.recovery_owners
+where recovery_class = $1
+  and owner_id = $2
+  and agent_id = $3
+  and message_id = $4
+for update
+terminal_status
+update agent.recovery_owners
+set terminal_at = coalesce(terminal_at, now()),
+    terminal_status = coalesce(terminal_status, $5)
+where recovery_class = $1
+  and owner_id = $2
+  and agent_id = $3
+  and message_id = $4
+
+insert into agent.recovery_owner_terminal_events (
+  recovery_class, owner_id, generation, event_type
+)
+values ($1, $2, $3, $4)
+on conflict do nothing
+
+update agent.recovery_owners
+set terminal_at = now(), terminal_status = $6
+where recovery_class = $1
+  and owner_id = $2
+  and generation = $3
+  and agent_id = $4
+  and message_id = $5
+  and terminal_at is null
+
+select *
+from agent.recovery_owners
+where recovery_class = $1
+  and owner_id = $2
+
+select *
+from agent.recovery_owners
+where recovery_class = $1
+  and owner_id = $2
+  and agent_id = $3
+  and terminal_at is null
+
+select *
+from agent.recovery_owners
+where terminal_at is null
+  and (
+    $1::timestamptz is null
+    or (active_at, recovery_class, owner_id) > ($1, $2, $3)
+  )
+order by active_at, recovery_class, owner_id
+limit $4
+select * from agent.mail_tasks
+                where authorization_json::jsonb->'handoff_context'->>'from_task_id' = $1select * from agent.mail_tasks where task_id = $1select exists(select 1 from agent.mail_actions where task_id=$1 and step_id=any($2))mail checkpoint is not from the active turnselect exists(select 1 from agent.mail_actions where task_id=$1 and (state='running' or ($2 and state='uncertain')))a completed step that ran a prepared action must list that action's exec call_id in action_call_idsselect * from agent.mail_tasks
+                where task_id = $1 and conversation_id = $2 and generation = $3 for updatemail task still has a running actionupdated_by_submission_idupdated_by_call_idupdate agent.mail_tasks set revision = revision + 1,
+                status = $2, checkpoint_json = $3, updated_by_submission_id = $4,
+                updated_by_call_id = $5, updated_at_ms = $6 where task_id = $1 returning *mail task revision changed; read the current taskmail checkpoint call was replayed differentlyselect t.task_id,t.source_id,t.revision,t.status from agent.mail_tasks t
+                where t.conversation_id=$1 and t.generation=$2 and t.status in ('active','waiting') and t.task_id>$3
+                  and exists(select 1 from agent.mail_inputs i where i.conversation_id=t.conversation_id
+                    and i.source_id=t.source_id and (i.disposition='admitted' or i.submission_id=$4))
+                order by t.task_id limit 64select t.* from agent.mail_tasks t
+                where task_id = $1 and conversation_id = $2 and generation = $3
+                  and status in ('active', 'waiting')
+                  and exists (select 1 from agent.mail_inputs i
+                    where i.conversation_id = t.conversation_id and i.source_id = t.source_id
+                      and (i.disposition = 'admitted' or i.submission_id = $4)) for share of tmail task selection is not from the active turnupdate agent.mail_conversations set active_task_id = $2,
+                updated_at_ms = $3 where conversation_id = $1mail answer source was reused differentlyselect exists(select 1 from agent.mail_tasks
+                    where authorization_json::jsonb->'handoff_context'->>'from_task_id' = $1)update agent.mail_tasks set authorization_updates_json = $2, updated_at_ms = $3 where task_id = $1mail task reopened by the user's answerupdate agent.mail_tasks set authorization_updates_json = $2, status = 'active',
+                    checkpoint_json = $3, revision = revision + 1, updated_at_ms = $4 where task_id = $1mail answer must wait for the active turn to finishselect * from agent.mail_tasks
+                where conversation_id = $1 and generation = $2 and status in ('active', 'waiting')
+                order by created_at_ms, task_id limit 129mail conversation has too many unfinished tasksselect i.submission_id from agent.mail_tasks t
+                join agent.mail_inputs i on i.conversation_id = t.conversation_id
+                    and i.generation = t.generation and i.source_id = t.source_id
+                where t.authorization_json::jsonb->'handoff_context'->>'from_task_id' = $1
+                order by t.created_at_ms desc limit 1update agent.mail_turn_results set notified = true, notification_settled = true
+                where submission_id = $1 and not notified returning *update runtime.mail_processing_activity set run_status = 'completed_notified',
+                updated_at = now() where handoff_submission_id = $1 and run_id like 'mail-turn:%'select * from agent.mail_turn_results where submission_id = $1select exists (
+                select 1 from agent.message_mailbox m join agent.mail_turn_results r
+                    on r.submission_id = m.submission_id
+                where m.agent_id = $1 and m.submission_id = $2 and m.state in ('completed', 'aborted', 'invalid')
+                  and r.conversation_id = $3 and r.generation = $4)update agent.mail_actions a set state='uncertain',may_have_sent=true from agent.mail_tasks t
+                        where a.task_id=t.task_id and t.conversation_id=$1 and a.submission_id=$2 and a.state='running'update agent.mail_conversations set active_submission_id = null,
+                    active_started_at_ms = null, active_task_id = null, updated_at_ms = $2
+                    where conversation_id = $1select result_json, conversation_id, generation, notification_id
+                from agent.mail_turn_results where submission_id = $1result_jsonnotification_idmail turn completion was replayed differentlyselect exists(select 1 from agent.mail_actions a join agent.mail_tasks t using(task_id)
+                    where t.conversation_id=$1 and a.submission_id=$2 and a.state='running')mail completion is not from the active turnselect exists(select 1 from agent.mail_actions a join agent.mail_tasks t using(task_id)
+                    where t.conversation_id=$1 and a.submission_id=$2 and a.state in ('succeeded','uncertain'))mail turn still has a running actioninsert into agent.mail_turn_results
+                (conversation_id, generation, submission_id, result_json,
+                 notification_id, notified, notification_settled, requires_terminal, created_at_ms)
+                values ($1, $2, $3, $4, $5, $6, $6, true, $7)mail action results require a durable notificationupdate runtime.mail_processing_activity set run_status=$3,assistant_message_id=$2,updated_at=now()
+                where handoff_submission_id=$1 and run_id like 'mail-turn:%'completed_noopcompleted_notifiedupdate agent.mail_turn_results set notification_settled=true where notification_id=$1 and notifiedselect r.*, c.thread_id as conversation_thread_id
+                from agent.mail_turn_results r
+                join agent.mail_conversations c using (conversation_id)
+                where c.main_agent_id = $1 and ($2::text is null or c.thread_id = $2)
+                order by r.created_at_ms desc, r.submission_id desc limit $3update agent.mail_turn_results r set notified = true
+                from agent.mail_conversations c
+                where r.notification_id = $1 and c.conversation_id = r.conversation_id
+                  and exists (select 1 from agent.message_mailbox m
+                              where m.submission_id = r.notification_id and m.agent_id = $2)mail result has no admission receipt in its chatselect * from agent.mail_turn_results where notified and not notification_settled
+                order by created_at_ms,submission_id limit 128select r.* from agent.mail_turn_results r
+                join agent.mail_conversations c using (conversation_id)
+                where r.notified = false and (not r.requires_terminal or exists (select 1 from agent.message_mailbox m
+                    where m.agent_id = c.agent_id and m.submission_id = r.submission_id
+                      and m.state in ('completed', 'aborted', 'invalid')))
+                order by r.created_at_ms, r.submission_id limit 128insert into agent.mail_inputs
+                (conversation_id, generation, source_id, submission_id, input_json, disposition)
+                values ($1, $2, $3, $4, $5, 'pending')
+                on conflict (conversation_id, source_id) do nothingselect * from agent.mail_inputs
+                where conversation_id = $1 and source_id = $2input_jsonmail input identity was reused with different contentselect count(*) filter (where disposition = 'admitted'),
+                        count(*) filter (where disposition = 'held'),
+                        exists(select 1 from agent.mail_inputs
+                            where conversation_id = $1 and sequence > $2 and disposition = 'admitted'
+                              and input_json::jsonb->'origin'->>'kind' in ('chat', 'owner_email'))
+                from agent.mail_inputs
+                where conversation_id = $1 and sequence < $2
+                  and input_json::jsonb->'origin'->>'kind' = 'participant'
+                  and sequence > coalesce((select max(sequence) from agent.mail_inputs
+                      where conversation_id = $1 and sequence < $2
+                        and input_json::jsonb->'origin'->>'kind' in ('chat', 'owner_email')), 0)update agent.mail_inputs set disposition = 'held'
+                where conversation_id = $1 and sequence = $2 and disposition = 'pending'select input_json from agent.mail_inputs
+                where conversation_id = $1 and generation = $2 and submission_id = $3select i.input_json::jsonb->'origin'
+                from agent.mail_inputs i join agent.mail_conversations c using(conversation_id)
+                where c.agent_id=$1 and c.active_submission_id=$2 and c.status='active'
+                    and i.submission_id=$2 and i.generation=c.generationselect exists(select 1 from agent.mail_inputs
+                where conversation_id = $1 and source_id = $2)select submission_id from agent.mail_inputs
+                where conversation_id = $1 and disposition = 'pending'
+                order by sequence limit 1mail conversation already has an active turnupdate agent.mail_conversations set active_submission_id = $2,
+                active_started_at_ms = coalesce(active_started_at_ms, $3),
+                updated_at_ms = $3 where conversation_id = $1mail turn is not the next accepted inputselect * from agent.mail_inputs
+                where conversation_id = $1 and source_id = $2 and generation = $3 for updateselect exists(select 1 from agent.message_mailbox where agent_id=$1 and submission_id=$2)mail input cannot join another active turnmail input has no canonical Session custody receiptupdate agent.mail_inputs set disposition = 'admitted', stream_owner_id = $3
+                where conversation_id = $1 and source_id = $2mail input already has different custodyupdate agent.mail_inputs set disposition = 'pending'
+                    where conversation_id = $1 and generation = $2 and sequence < $3
+                      and disposition = 'held'select i.* from agent.mail_inputs i
+                join agent.mail_conversations c using (conversation_id)
+                where i.conversation_id = $1 and i.generation = $2
+                  and c.generation = $2 and c.status = 'active'
+                  and i.disposition = 'pending' order by i.sequence limit 128select exists(select 1 from agent.mail_turn_results where submission_id=$1)mail action turn changedselect exists(select 1 from agent.mail_actions a
+                join agent.mail_tasks t using(task_id) where t.conversation_id=$1
+                and a.action_id<>$2 and a.plan_json::jsonb->>'kind'='mail_send'
+                and a.state in ('running','uncertain','succeeded'))this mail turn already finished; no action can start after mail_task.finish_turnselect plan_json::jsonb->>'kind'='mail_send' from agent.mail_actions where action_id=$1select exists(select 1 from agent.mail_actions a join agent.mail_tasks t using(task_id)
+                where t.conversation_id=$1 and a.call_id=$2 and a.action_id<>$3)this conversation already started its correspondence; use a reply or hand off to a new conversationupdate agent.mail_actions set state='running',call_id=$3,submission_id=$4
+                where action_id=$1 and task_id=$2 and exists(select 1 from agent.mail_tasks t where t.task_id=$2 and t.status in ('active','waiting')) and (state in ('prepared','failed','uncertain') or
+                    (state='running' and call_id=$3 and submission_id=$4))mail action call identity was reusedmail action is already running or completed; inspect its receiptselect * from agent.mail_actions where task_id=$1 order by created_at_ms,step_idupdate agent.mail_actions a
+                set state=case when $3='failed' and a.may_have_sent then 'uncertain' else $3 end,
+                    receipt_json=$4,may_have_sent=a.may_have_sent or $3='uncertain'
+                from agent.mail_tasks t,agent.mail_conversations c
+                where a.task_id=t.task_id and t.conversation_id=c.conversation_id and c.agent_id=$1
+                  and a.call_id=$2 and a.state='running'select checkpoint_json from agent.mail_tasks
+                where task_id=$1 and conversation_id=$2 and generation=$3
+                  and status in ('active','waiting') for updatemail action requires the selected task in the active turnselect * from agent.mail_actions where task_id=$1 and step_id=$2may_have_sentplan_jsonupdate agent.mail_actions set plan_json=$2,state='prepared',call_id=null,submission_id=null,receipt_json=null
+                        where action_id=$1 and state in ('prepared','failed') returning *select count(*) from agent.mail_actions where task_id=$1insert into agent.mail_actions (action_id,task_id,step_id,plan_json,state,created_at_ms)
+                    values ($1,$2,$3,$4,'prepared',$5) returning *mail task has too many actionsthis step_id already has a prepared command; run that exact command again, or give a different email a new step_idselect a.* from agent.mail_actions a join agent.mail_tasks t using(task_id)
+                join agent.mail_conversations c using(conversation_id) where c.agent_id=$1 and a.call_id=$2select exists(select 1 from agent.mail_conversations c join agent.mail_tasks t using(conversation_id)
+                join agent.mail_actions a using(task_id) where c.environment_id=$1 and c.mailbox_id=$2 and c.connection_epoch=$3
+                and c.status='active' and c.thread_id is null and a.state in ('running','uncertain') and a.plan_json::jsonb->>'kind'='mail_send'
+                and a.created_at_ms>$4)select * from agent.mail_actions where task_id=$1 and (plan_json::jsonb->>'command'=$2 or plan_json::jsonb->>'reconcile_command'=$2)select a.call_id from agent.mail_actions a join agent.mail_tasks t using(task_id)
+                     where t.conversation_id=$1 and t.generation=$2 and a.submission_id=$3
+                     and a.state in ('succeeded','uncertain') order by a.action_idupdate agent.mail_actions a set state='uncertain',may_have_sent=true from agent.mail_tasks t
+                where a.task_id=t.task_id and t.conversation_id=$1 and a.submission_id=$2 and a.state='running'
+                and exists(select 1 from agent.message_mailbox m where m.agent_id=$3 and m.submission_id=$2
+                    and m.state in ('completed','aborted','invalid'))update agent.mail_actions set flagged_reviews=flagged_reviews+1
+                where task_id=$1 and plan_json::jsonb->>'command'=$2 returning flagged_reviews-1select * from agent.mail_conversations where conversation_id = $1select authorization_json from agent.mail_tasks where task_id=$1mail task transfer is not from its active turnmail transfer was replayed differentlyselect exists(select 1 from agent.mail_actions where task_id=$1 and state in ('running','uncertain'))update agent.mail_tasks set status='completed',revision=revision+1,updated_at_ms=$3
+                where task_id=$1 and revision=$2 and status in ('active','waiting')reconcile the task's uncertain actions before transferring itinsert into agent.mail_tasks(task_id,conversation_id,generation,source_id,authorization_json,
+                authorization_updates_json,revision,status,checkpoint_json,created_at_ms,updated_at_ms) values($1,$2,$3,$4,$5,$6,0,'active',$7,$8,$8)mail task changed during transferinsert into agent.mail_inputs(conversation_id,generation,source_id,submission_id,input_json,disposition)
+                values($1,$2,$3,$4,$5,'pending')select distinct c.conversation_id,t.authorization_json::jsonb->'origin'->'owner_grant' as owner_grant
+                from agent.mail_tasks t join agent.mail_conversations c using(conversation_id)
+                where c.environment_id=$1 and c.mailbox_id=$2 and c.status='active' and t.generation=c.generation
+                  and t.status in ('active','waiting') and t.authorization_json::jsonb->'origin'->>'kind'='owner_email'
+                limit 256insert into agent.mail_conversations
+                 (conversation_id, environment_id, mailbox_id, account_id,
+                  connection_epoch, thread_id, agent_id, main_agent_id, generation, status, created_at_ms, updated_at_ms)
+                 values ($1, $2, $3, $4, $5, $6, $7, $8, 1, 'active', $9, $9)
+                 on conflict (conversation_id) do nothingmail conversation identity was reusedupdate agent.mail_conversations set status='active',updated_at_ms=$4
+                where conversation_id=$1 and generation=$2 and agent_id=$3 and status='archived'select * from agent.mail_conversations where conversation_id=$1mail conversation changed before revivalupdate agent.mail_conversations set status = 'revoked',
+                updated_at_ms = $2 where conversation_id = $1update agent.mail_inputs set disposition = 'cancelled'
+                where conversation_id = $1 and disposition = 'pending'update agent.mail_tasks set status = 'cancelled',
+                revision = revision + 1, updated_at_ms = $2
+                where conversation_id = $1 and status in ('active', 'waiting')select conversation_id from agent.mail_conversations
+                where environment_id=$1 and mailbox_id=$2 and status='active'
+                  and (account_id<>$3 or connection_epoch<>$4) limit 256select * from agent.mail_conversations
+                where status = 'active' and main_agent_id = $1
+                  and ($2::text is null or thread_id = $2)
+                order by updated_at_ms desc, conversation_id limit $3select task_id,authorization_json::jsonb->'origin'->'owner_grant' as owner_grant
+                from agent.mail_tasks where conversation_id=$1 and generation=$2 and status in ('active','waiting')
+                    and authorization_json::jsonb->'origin'->>'kind'='owner_email' and task_id>$3 order by task_id limit 64update agent.mail_tasks set status='cancelled',revision=revision+1,updated_at_ms=$5
+                where task_id=$1 and conversation_id=$2 and generation=$3 and status in ('active','waiting')
+                    and authorization_json::jsonb->'origin'->'owner_grant'=$4update agent.mail_inputs i set disposition='cancelled' where conversation_id=$1 and generation=$2 and disposition='pending'
+                    and submission_id is distinct from $4
+                    and (source_id=(select source_id from agent.mail_tasks where task_id=$3) or input_json::jsonb->'authorization_update'->>'task_id'=$3)select * from agent.mail_conversations
+                where environment_id = $1 and mailbox_id = $2 and connection_epoch = $3 and thread_id = $4update agent.mail_conversations set thread_id = $2, updated_at_ms = $3
+                where conversation_id = $1mail conversation already has another threadupdate agent.mail_conversations c set status='archived',updated_at_ms=$2
+                where conversation_id=$1 and not exists(select 1 from agent.mail_tasks t where t.conversation_id=c.conversation_id and t.status in ('active','waiting'))
+                and not exists(select 1 from agent.mail_inputs i where i.conversation_id=c.conversation_id and i.disposition='pending')select c.conversation_id from agent.mail_conversations c
+                where c.status = 'active' and c.conversation_id > $1
+                  and (c.active_submission_id is not null
+                    or exists (select 1 from agent.mail_inputs i
+                               where i.conversation_id = c.conversation_id
+                                 and i.disposition = 'pending')
+                    or exists (select 1 from agent.mail_turn_results r
+                               where r.conversation_id = c.conversation_id
+                                 and not r.notified))
+                order by c.conversation_id limit $2BEGIN READ ONLY; SET LOCAL statement_timeout = '250ms'; SET LOCAL lock_timeout = '50ms'SELECT pin.variant_json, pin.body AS inline_body, pin.body_hash, shared.body AS shared_body FROM agent.volatile_context_pins pin LEFT JOIN agent.volatile_context_pin_bodies shared ON shared.body_hash = pin.body_hash WHERE pin.agent_id = $1 AND pin.prompt_floor_seq = $2 AND pin.checkpoint_seq = $3 AND pin.variant_hash <> 'handoff_policy'
+SELECT EXISTS (
+  SELECT 1
+  FROM runtime_restart_checkpoints
+  WHERE agent_id = $1
+)
+
+SELECT agent_id
+FROM runtime_restart_checkpoints
+ORDER BY updated_at ASC, agent_id ASC
+
+SELECT payload_json
+FROM runtime_restart_checkpoints
+WHERE agent_id = $1 AND mode = $2
+UPDATE agent.message_mailbox SET state = 'aborted', terminalized_at = now()
+                         WHERE agent_id = $1 AND state IN ('accepted', 'attached')
+                           AND NOT (submission_id = ANY($2))DELETE FROM runtime_restart_checkpoints WHERE agent_id = $1
+SELECT payload_json
+FROM runtime_restart_checkpoints
+WHERE agent_id = $1
+FOR UPDATE
+
+UPDATE agent.message_mailbox
+SET state = $2, terminalized_at = now()
+WHERE agent_id = $1
+  AND state = 'attached'
+  AND stream_owner_message_id = $3
+
+UPDATE agent.message_mailbox
+SET state = 'aborted', terminalized_at = now()
+WHERE agent_id = $1
+  AND state IN ('accepted', 'attached')
+
+UPDATE agent.message_mailbox
+SET state = 'invalid', terminalized_at = now()
+WHERE agent_id = $1
+  AND state IN ('accepted', 'attached')
+external delivery route changedselect e.*,q.instruction,w.agent_id,w.generation,w.active
+                from chat_private.external_party_conversations e
+                join agent.chat_worker_requests q on q.request_id=e.approved_request_id
+                join agent.chat_workers w on w.group_id=e.chat_id
+                join agent.side_chat_discretion p on p.chat_id=e.chat_id
+                where e.chat_id=$1 for update of e,pinstructionphaseexchange_countexchange_limitupdate chat_private.deliveries
+                set state='dispatching',dispatch_boot_generation=$2,attempt_count=attempt_count+1,updated_at_utc=$3
+                where delivery_key=$1 and chat_id=$4 and state='pending' and attempt_count=$5
+                  and payload_json=$6 and next_attempt_at_utc <= $3
+                  and not exists(select 1 from chat_private.deliveries prior
+                    where prior.chat_id=deliveries.chat_id and prior.sequence<deliveries.sequence
+                    and prior.state in ('pending','dispatching')) returning attempt_countupdate chat_private.external_party_conversations set phase='paused',state_version=state_version+1,updated_at_ms=$2 where chat_id=$1update chat_private.external_party_conversations
+                set phase='sending',last_delivery_key=$2,exchange_count=exchange_count+1,
+                    state_version=state_version+1,updated_at_ms=$3 where chat_id=$1provider_stateselect e.*,q.instruction,w.conversation_json
+                from chat_private.external_party_conversations e
+                join agent.chat_worker_requests q on q.request_id=e.approved_request_id
+                join agent.chat_workers w on w.group_id=e.chat_id
+                where e.chat_id=$1 for update of elast_delivery_keyselect state,updated_at_utc from chat_private.deliveries
+                where delivery_key=$1 and chat_id=$2 and dispatch_boot_generation=$3 and attempt_count=$4 for updateexternal receipt owner changedupdated_at_utcupdate chat_private.deliveries set state=$2,result_json=$3,last_error=$4,terminal_at_utc=$5,updated_at_utc=$5 where delivery_key=$1update agent.group_replies set enqueued=true where group_id=$1 and delivery_key=$2update chat_private.external_party_conversations
+                set provider_state=coalesce($2,provider_state),phase=$3,state_version=state_version+1,updated_at_ms=$4 where chat_id=$1conversation_jsonupdate agent.chat_worker_requests q
+                set state='running',result_json=null,result_submission_id=null
+                from agent.group_replies r
+                where q.request_id=$1 and q.state in ('reported','completed')
+                  and r.group_id=q.chat_id and r.delivery_key=$2
+                  and (r.submission_id=q.result_submission_id
+                    or starts_with(r.delivery_key,
+                      'group:' || q.chat_id || ':' || q.result_submission_id || ':'))insert into agent.chat_workers
+                (group_id,conversation_json,agent_id,generation,active,created_at_ms)
+                values($1,$2,$3,$4,true,$5) on conflict(group_id) do nothingselect * from agent.chat_workers where group_id=$1 for updateselect instruction,origin_json from agent.chat_worker_requests where request_id=$1origin_jsonexternal approval operation collisionexternal worker is no longer activeselect exists(select 1 from chat_private.external_party_conversations where chat_id=$1)insert into chat.chats(chat_id,origin,lifecycle,status,created_at,updated_at)
+                values($1,'group','persistent','active',$2,$2) on conflict(chat_id) do nothingexternal conversation requires initial approvalinitial external approval cannot be replacedinsert into agent.side_chat_discretion(chat_id,revision,content,last_operation_id,created_at_ms,updated_at_ms)
+                values($1,1,$2,$3,$4,$4)insert into chat_private.external_party_conversations
+                (chat_id,transport,business,approved_request_id,phase,provider_state,state_version,last_delivery_key,exchange_count,exchange_limit,created_at_ms,updated_at_ms)
+                values($1,'sierra',$2,$3,'active',null,1,null,0,60,$4,$4)insert into agent.chat_worker_requests
+                (request_id,chat_id,generation,worker_agent_id,owner_chat_id,owner_agent_id,origin_json,instruction,state,created_at_ms)
+                values($1,$2,$3,$4,$5,$6,$7,$8,'pending',$9)select chat_id from chat_private.external_party_conversations where chat_id=$1 for updateselect exchange_count>=exchange_limit from chat_private.external_party_conversations where chat_id=$1invalid external lifecycle transitionexternal conversation version changedexternal exchange budget exhaustedunfinished external result cannot be deliveredexternal result is awaiting a provider receiptupdate chat_private.external_party_conversations set phase=$2,state_version=state_version+1,updated_at_ms=$3 where chat_id=$1update agent.chat_worker_requests set result_json=$2,
+                state=case when $3 then 'delivered' when $4 then 'completed' else state end where request_id=$1select message_id from runtime.events
+                 where parent_agent_id=$1 and reply_to_message_id=$2
+                   and event_name='message.assistant' and visibility='public'
+                   and role='assistant' and source='runtime' and not display_text_ready
+                 order by event_seq limit 64SELECT submission_id, accepted_ordinal, state, checkpoint_custody,
+                                stream_owner_message_id, submission_json
+                         FROM agent.message_mailbox
+                         WHERE agent_id = $1 AND state = 'accepted'
+                           AND ($2::bigint IS NULL OR accepted_ordinal > $2)
+                         ORDER BY accepted_ordinal, submission_id LIMIT $3SELECT accepted_ordinal, accepted_at, state,
+                                stream_owner_message_id, submission_json
+                         FROM agent.message_mailbox WHERE agent_id = $1 AND submission_id = $2accepted_atstream_owner_message_idmailbox stream ownerstartup_submission_changedSELECT submission_id, accepted_ordinal, state, checkpoint_custody,
+                            stream_owner_message_id, submission_json
+                     FROM agent.message_mailbox WHERE agent_id = $1 AND state = 'accepted'
+                     ORDER BY accepted_ordinal, submission_id FOR UPDATEstartup cancellation cohort exceeds admission boundstartup cohort input identity changed
+SELECT mode, recovery_class, recovery_owner_id, payload_json
+FROM runtime_restart_checkpoints
+WHERE agent_id = $1
+FOR UPDATE
+ordered mailbox admission conflicts with an existing checkpointrecovery_classrecovery_owner_id
+INSERT INTO runtime_restart_checkpoints (
+  agent_id, mode, recovery_class, recovery_owner_id, execution_config_json,
+  payload_json, created_at, updated_at
+) SELECT $1, $2, $3, $4, $5, $6, $7, $8
+WHERE EXISTS (
+  SELECT 1
+  FROM agents
+  WHERE id = $1
+    AND status NOT IN ('shutdown', 'not_found')
+)
+ON CONFLICT(agent_id) DO UPDATE SET
+  mode = excluded.mode,
+  recovery_class = excluded.recovery_class,
+  recovery_owner_id = excluded.recovery_owner_id,
+  execution_config_json = excluded.execution_config_json,
+  payload_json = excluded.payload_json,
+  updated_at = excluded.updated_at
+SELECT spawn.child_agent_id, spawn.parent_agent_id, spawn.agent_type, spawn.created_at, spawn.status, spawn.deferred_terminal_status, agent.status AS agent_status, spawn.metadata_json FROM subagent_spawns AS spawn LEFT JOIN agents AS agent ON agent.id = spawn.child_agent_id WHERE spawn.agent_type = ANY($1) AND spawn.completed_at IS NULL ORDER BY spawn.created_at DESC, spawn.child_agent_id DESCSELECT metadata_json FROM subagent_spawns WHERE parent_agent_id = $1 AND child_agent_id <> $2 AND agent_type = ANY($3)completion_resultselect count(*)::bigint from runtime.conversation_shareability_reviews where root_session_id = $1
+select root_session_id, head_message_id, visible_projection_sha256,
+       provenance_sha256, policy_version, status, decision, provenance_status,
+       provenance_scope, projection_review_ordinal, judge_reached, attempt_count,
+       error_kind, created_at_ms, checked_at_ms, updated_at_ms
+from runtime.conversation_shareability_reviews
+where root_session_id = $1
+order by created_at_ms asc, visible_projection_sha256 asc
+limit $2
+
+select root_session_id, head_message_id, visible_projection_sha256, provenance_sha256,
+       policy_version, status, decision, provenance_status, provenance_scope,
+       projection_review_ordinal, judge_reached, attempt_count, error_kind,
+       created_at_ms, checked_at_ms, updated_at_ms
+from runtime.conversation_shareability_reviews
+where root_session_id = $1
+  and visible_projection_sha256 = $2
+  and policy_version = $3
+order by projection_review_ordinal desc, created_at_ms desc, provenance_sha256 desc
+limit 1
+
+SELECT agent_id, payload_json
+FROM runtime_restart_checkpoints
+WHERE mode = 'before_inference'
+  AND payload_json IS NOT NULL
+ORDER BY agent_id
+
+SELECT submission_id, accepted_ordinal, state, checkpoint_custody,
+       stream_owner_message_id, submission_json
+FROM agent.message_mailbox
+WHERE agent_id = $1
+  AND state IN ('accepted', 'attached')
+ORDER BY accepted_ordinal, submission_id
+FOR UPDATE
+
+SELECT mode, payload_json
+FROM runtime_restart_checkpoints
+WHERE agent_id = $1
+FOR UPDATE
+
+UPDATE agent.message_mailbox
+SET state = 'aborted',
+    checkpoint_custody = coalesce(checkpoint_custody, 'executing'),
+    terminalized_at = now()
+WHERE agent_id = $1
+  AND stream_owner_message_id = $2
+  AND submission_id = ANY($3)
+  AND state = 'attached'
+
+UPDATE agent.message_mailbox
+SET state = 'invalid', terminalized_at = now()
+WHERE agent_id = $1
+  AND stream_owner_message_id = $2
+  AND submission_id = ANY($3)
+  AND state = 'attached'
+  AND checkpoint_custody IS NULL
+
+DELETE FROM runtime_restart_checkpoints
+WHERE agent_id = $1
+  AND mode = 'before_inference'
+  AND payload_json = $2
+
+UPDATE runtime_restart_checkpoints
+SET payload_json = $3, updated_at = $4
+WHERE agent_id = $1
+  AND mode = 'before_inference'
+  AND payload_json = $2
+
+INSERT INTO widgets (
+  widget_id, kind, data_json, display_text, created_at_ms, updated_at_ms
+)
+VALUES ($1, $2, $3, $4, $5, $5)
+ON CONFLICT(widget_id) DO UPDATE SET
+  kind = excluded.kind,
+  data_json = excluded.data_json,
+  display_text = excluded.display_text,
+  updated_at_ms = excluded.updated_at_ms
+WHERE $6
+
+SELECT widget_id, kind, data_json, display_text, state_bundle_json, state_version
+FROM widgets
+WHERE kind = $1
+ORDER BY created_at_ms, widget_id
+
+SELECT state_bundle_json, state_version
+FROM widgets
+WHERE widget_id = $1
+FOR UPDATE
+state_bundle_jsonstate_versionruntime.widgets.state_bundle_json
+UPDATE widgets
+SET state_bundle_json = $2,
+    state_version = $3,
+    state_updated_at_ms = $4,
+    updated_at_ms = $4
+WHERE widget_id = $1
+widget state bundle must be a JSON objectselect * from agent.chat_workers where group_id = $1select * from agent.group_inputs where group_id = $1 and external_message_id = $2insert into agent.group_inputs
+                (group_id, external_message_id, submission_id, input_json, disposition)
+                select $1, $2, $3, $4, 'pending' from agent.chat_workers
+                where group_id = $1 and active = true
+                on conflict(group_id, external_message_id) do nothingselect * from agent.group_inputs
+                where group_id = $1 and external_message_id = $2group message id was reused with different inputselect * from agent.chat_workers where active = true order by group_idinsert into agent.chat_workers
+                (group_id, conversation_json, agent_id, generation, active, created_at_ms)
+                values ($1, $2, $3, 1, true, $4) on conflict(group_id) do nothinggroup binding identity or route changedinsert into chat.chats(chat_id, origin, lifecycle, status, created_at, updated_at)
+                     select group_id, 'group', 'persistent',
+                            case when active then 'active' else 'archived' end,
+                            created_at_ms / 1000, created_at_ms / 1000
+                       from agent.chat_workers where group_id = $1
+                     on conflict(chat_id) do nothingselect exists(select 1 from chat.chats where chat_id = $1 and origin = 'peer')peer worker root identity changedpeer worker requires its existing public chatinsert into agent.group_replies
+                (group_id, submission_id, assistant_message_id, text_content, delivery_key, request_trace_json)
+                values ($1, $2, $3, $4, $5, $6) on conflict(group_id, submission_id) do nothingselect * from agent.group_replies where group_id = $1 and submission_id = $2assistant_message_idtext_contentdelivery_keygroup reply conflicts with settled executionselect * from agent.group_inputs where group_id = $1 order by sequence desc limit 1update agent.group_inputs set disposition = $2, stream_owner_id = $3
+                where sequence = $1 and disposition = 'pending'select * from agent.group_inputs where group_id = $1
+                and disposition = 'pending' order by sequence limit 128update agent.chat_workers set active = false where agent_id = $1select exists(select 1 from agent.group_sent_messages s join agent.chat_workers g using(group_id, generation) where s.group_id = $1 and s.external_message_id = $2)select * from agent.group_replies where group_id = $1 and enqueued = falseselect * from agent.chat_workers where group_id = $1 for updateupdate agent.chat_workers set conversation_json = $2, generation = generation + 1, active = true where group_id = $1peer worker identity changedupdate agent.group_replies set enqueued = true where group_id = $1 and submission_id = $2select i.* from agent.chat_workers g
+                join agent.group_inputs i on i.group_id = g.group_id
+                where g.conversation_json::jsonb->>'provider' = $1
+                and g.conversation_json::jsonb->>'account_id' = $2
+                and g.conversation_json::jsonb->'binding'->>'connection_id' = $3
+                and g.conversation_json::jsonb->>'conversation_id' = $4
+                and i.external_message_id = $5 limit 2ambiguous native group custodyselect * from agent.group_inputs where group_id = $1 and submission_id = $2select i.* from agent.chat_workers w cross join lateral (select * from agent.group_inputs g where g.group_id = w.group_id order by g.sequence desc limit 1) i where w.active = trueupdate agent.group_inputs set disposition = 'cancelled' where group_id = $1 and disposition in ('pending', 'unread', 'unread_quiet')select * from agent.chat_workers where active = true and conversation_json::jsonb->>'provider' = $1 order by group_id
+insert into agent.recovery_owners (
+  recovery_class, owner_id, generation, agent_id, message_id,
+  active_at, terminal_at, terminal_status
+)
+values ($1, $2, 1, $3, $4, now(), null, null)
+on conflict (recovery_class, owner_id) do nothing
+returning *
+
+select *
+from agent.recovery_owners
+where recovery_class = $1 and owner_id = $2
+
+update agent.recovery_owners
+set terminal_at = now(), terminal_status = $5
+where recovery_class = $1
+  and owner_id = $2
+  and agent_id = $3
+  and message_id = $4
+  and terminal_at is null
+returning generation
+
+select terminal_status
+from agent.recovery_owners
+where recovery_class = $1
+  and owner_id = $2
+  and agent_id = $3
+  and message_id = $4
+  and terminal_at is not null
+
+select terminal_status
+from agent.recovery_owners
+where recovery_class = $1
+  and owner_id = $2
+  and agent_id = $3
+  and message_id = $4
+for update
+
+update agent.recovery_owners
+set terminal_at = now(), terminal_status = $5
+where recovery_class = $1
+  and owner_id = $2
+  and agent_id = $3
+  and message_id = $4
+  and terminal_at is null
+
+with expired as (
+  select owners.recovery_class, owners.owner_id
+  from agent.recovery_owners owners
+  where owners.terminal_at < $1
+    and owners.terminal_status <> $3
+    and not exists (
+      select 1
+      from agent.agents agents
+      where agents.agent_id = owners.agent_id
+        and agents.status in ('pending_init', 'running')
+    )
+  order by owners.terminal_at, owners.recovery_class, owners.owner_id
+  for update skip locked
+  limit $2
+), deleted as (
+  delete from agent.recovery_owners owners
+  using expired
+  where owners.recovery_class = expired.recovery_class
+    and owners.owner_id = expired.owner_id
+  returning 1
+)
+select count(*)::bigint from deleted
+restart_after_output_unrecoverable
+with candidates as (
+  select owners.recovery_class, owners.owner_id, agents.status
+  from agent.recovery_owners owners
+  join agent.agents agents on agents.agent_id = owners.agent_id
+  where owners.terminal_at is null
+    and owners.recovery_class in ('space_task', 'system_cron_product')
+    and agents.status not in ('pending_init', 'running')
+  order by owners.active_at, owners.recovery_class, owners.owner_id
+  for update of owners skip locked
+  limit $1
+), reconciled as (
+  update agent.recovery_owners owners
+  set terminal_at = now(), terminal_status = candidates.status
+  from candidates
+  where owners.recovery_class = candidates.recovery_class
+    and owners.owner_id = candidates.owner_id
+    and owners.terminal_at is null
+  returning 1
+)
+select count(*)::bigint from reconciled
+
+with candidates as (
+  select agents.agent_id
+  from agent.recovery_owners owners
+  join agent.agents agents on agents.agent_id = owners.agent_id
+  where owners.terminal_status = $1
+    and owners.terminal_at is not null
+    and agents.status in ('pending_init', 'running')
+  order by owners.terminal_at, owners.recovery_class, owners.owner_id
+  for update of agents skip locked
+  limit $2
+), repaired as (
+  update agent.agents agents
+  set status = 'shutdown',
+      updated_at = extract(epoch from now())::bigint
+  from candidates
+  where agents.agent_id = candidates.agent_id
+    and agents.status in ('pending_init', 'running')
+  returning 1
+)
+select count(*)::bigint from repaired
+SELECT status FROM agents WHERE id = $1 FOR UPDATEcompletion_result_context_seq
+UPDATE subagent_spawns
+SET completed_at = $1,
+    status = 'completed',
+    deferred_terminal_status = NULL,
+    final_response = COALESCE(final_response, $2),
+    metadata_json = COALESCE($3, metadata_json)
+WHERE child_agent_id = $4
+  AND completed_at IS NULL
+
+UPDATE agents
+SET updated_at = $1,
+    status = 'shutdown'
+WHERE id = $2
+
+SELECT EXISTS (
+  WITH RECURSIVE scoped(child_agent_id) AS (
+    SELECT current.child_agent_id
+    FROM subagent_spawns AS current
+    WHERE current.child_agent_id = $1
+      AND current.completed_at IS NULL
+    UNION
+    SELECT child.child_agent_id
+    FROM subagent_spawns AS child
+    JOIN scoped
+      ON child.parent_agent_id = scoped.child_agent_id
+    WHERE child.completed_at IS NULL
+  )
+  SELECT 1
+  FROM scoped
+  JOIN subagent_spawns AS current
+    ON current.child_agent_id = scoped.child_agent_id
+   AND current.completed_at IS NULL
+  JOIN agents AS current_agent
+    ON current_agent.id = current.child_agent_id
+  WHERE COALESCE(current.deferred_terminal_status, current_agent.status)
+        IN ('completed', 'errored', 'shutdown', 'interrupted')
+  LIMIT 1
+)
+SELECT child_agent_id, prompt FROM subagent_spawns WHERE child_agent_id = ANY($1)SELECT parent_agent_id, spawn_call_id FROM agent.subagent_spawns WHERE child_agent_id = $1 AND spawn_call_id IS NOT NULL AND agent_type IS DISTINCT FROM 'browser_task'
+UPDATE subagent_spawns
+SET prompt = $1
+WHERE child_agent_id = $2
+
+SELECT child_agent_id
+FROM subagent_spawns
+WHERE spawn_call_id = $1
+ORDER BY created_at DESC, child_agent_id DESC
+LIMIT 1
+select owner_agent_id from runtime.browser_tasks
+                        where task_id=$1 and status='running' for updatebrowser report owner changedsubagent build metadata owner changed
+SELECT metadata_json FROM subagent_spawns
+WHERE child_agent_id = $1 AND final_response IS NULL
+FOR UPDATE
+final_response_context_seq
+UPDATE subagent_spawns
+SET metadata_json = CASE
+      WHEN final_response IS NULL THEN $3
+      ELSE metadata_json
+    END,
+    final_response = COALESCE(final_response, $1)
+WHERE child_agent_id = $2
+
+SELECT 1::bigint
+FROM subagent_spawns AS current
+WHERE child_agent_id = $1
+  AND NOT EXISTS (
+    SELECT 1
+    FROM subagent_spawns AS child
+    WHERE child.parent_agent_id = $1
+      AND child.completed_at IS NULL
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM subagent_spawns AS child
+    WHERE child.parent_agent_id = $1
+      AND child.completed_at IS NOT NULL
+      AND child.seen_at IS NULL
+  )
+LIMIT 1
+
+UPDATE subagent_spawns AS current
+SET completed_at = COALESCE(completed_at, $1),
+    status = CASE
+      WHEN status = 'shutdown' AND $2 = 'completed' THEN 'completed'
+      WHEN status = 'shutdown' THEN status
+      ELSE $2
+    END,
+    deferred_terminal_status = NULL
+WHERE child_agent_id = $3
+  AND NOT EXISTS (
+    SELECT 1
+    FROM subagent_spawns AS child
+    WHERE child.parent_agent_id = current.child_agent_id
+      AND child.completed_at IS NULL
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM subagent_spawns AS child
+    WHERE child.parent_agent_id = current.child_agent_id
+      AND child.completed_at IS NOT NULL
+      AND child.seen_at IS NULL
+  )
+RETURNING status
+
+UPDATE agents
+SET updated_at = $1,
+    status = CASE
+      WHEN $2 = 'interrupted' AND status IN ('completed', 'errored', 'shutdown') THEN status
+      WHEN status = 'shutdown' THEN status
+      ELSE $2
+    END
+WHERE id = $3
+
+SELECT metadata_json
+FROM subagent_spawns
+WHERE child_agent_id = $1
+  AND $2 = 'running'
+  AND completed_at IS NULL
+  AND deferred_terminal_status IS NOT NULL
+FOR UPDATE
+
+UPDATE subagent_spawns
+SET status = CASE
+    WHEN completed_at IS NOT NULL THEN status
+    ELSE $1
+END,
+    final_response = CASE
+      WHEN $1 = 'running'
+        AND completed_at IS NULL
+        AND deferred_terminal_status IS NOT NULL THEN NULL
+      ELSE final_response
+    END,
+    metadata_json = CASE
+      WHEN $1 = 'running'
+        AND completed_at IS NULL
+        AND deferred_terminal_status IS NOT NULL THEN $3
+      ELSE metadata_json
+    END,
+    deferred_terminal_status = NULL
+WHERE child_agent_id = $2
+
+SELECT sp.parent_message_id AS parent_message_id,
+       sp.parent_request_id AS parent_request_id,
+       sp.root_request_id AS root_request_id,
+       sp.root_message_execution_id AS root_message_execution_id,
+       sp.parent_agent_id AS parent_agent_id,
+       sp.child_agent_id AS agent_id,
+       sp.child_depth::bigint AS depth,
+       sp.created_at AS created_at,
+       sp.completed_at AS completed_at,
+       sp.seen_at AS seen_at,
+       sp.status AS status,
+       sp.deferred_terminal_status AS deferred_terminal_status,
+       sp.requester_source AS requester_source,
+       sp.agent_type AS agent_type
+FROM subagent_spawns AS sp
+WHERE sp.parent_agent_id = $1
+  AND sp.child_agent_id = $2
+ORDER BY sp.created_at DESC, sp.child_agent_id DESC
+LIMIT 1
+
+UPDATE subagent_spawns AS spawn
+SET status = 'running'
+WHERE spawn.child_agent_id = $1
+  AND spawn.completed_at IS NULL
+  AND spawn.deferred_terminal_status IS NULL
+  AND EXISTS (
+    SELECT 1
+    FROM agents AS agent
+    WHERE agent.id = spawn.child_agent_id
+      AND agent.status IN ('pending_init', 'running')
+  )
+RETURNING spawn.child_agent_id
+
+UPDATE agents
+SET updated_at = $1, status = 'running'
+WHERE id = $2
+  AND status IN ('pending_init', 'running')
+
+UPDATE agents
+SET updated_at = $1,
+    status = 'running',
+    last_assistant_message = NULL
+WHERE id = $2
+  AND status NOT IN ('shutdown', 'not_found')
+UPDATE subagent_spawns
+SET completed_at = COALESCE(completed_at, $1),
+    status = $2,
+    deferred_terminal_status = NULL,
+    seen_at = CASE WHEN $2 = 'interrupted' THEN COALESCE(seen_at, $1) ELSE seen_at END
+WHERE child_agent_id = ANY($3)
+    AND EXISTS (
+      SELECT 1 FROM agents
+      WHERE agents.id = subagent_spawns.child_agent_id
+        AND agents.status NOT IN ('shutdown', 'not_found')
+    )UPDATE agents
+SET updated_at = $1,
+    status = $2
+WHERE id = ANY($3)
+  AND status NOT IN ('shutdown', 'not_found')
+SELECT metadata_json
+FROM subagent_spawns
+WHERE child_agent_id = $1
+FOR UPDATE
+
+UPDATE subagent_spawns
+SET completed_at = $1,
+    status = 'errored',
+    deferred_terminal_status = NULL,
+    final_response = COALESCE(final_response, $2)
+WHERE child_agent_id = $3
+  AND completed_at IS NULL
+  AND EXISTS (
+    SELECT 1
+    FROM agents AS agent
+    WHERE agent.id = subagent_spawns.child_agent_id
+      AND agent.status IN ('pending_init', 'running')
+  )
+RETURNING child_agent_id
+
+UPDATE subagent_spawns AS spawn
+SET completed_at = $1,
+    status = CASE
+      WHEN agent.status = 'shutdown' THEN 'completed'
+      ELSE agent.status
+    END,
+    deferred_terminal_status = NULL,
+    seen_at = CASE
+      WHEN agent.status = 'interrupted' THEN COALESCE(spawn.seen_at, $1)
+      ELSE spawn.seen_at
+    END
+FROM agents AS agent
+WHERE spawn.child_agent_id = $2
+  AND spawn.completed_at IS NULL
+  AND agent.id = spawn.child_agent_id
+  AND agent.status IN ('completed', 'errored', 'shutdown', 'interrupted', 'not_found')
+RETURNING spawn.status
+SELECT EXISTS(SELECT 1 FROM subagent_spawns WHERE child_agent_id = $1)
+UPDATE agents
+SET updated_at = $1, status = 'errored', last_assistant_message = $2
+WHERE id = $3
+  AND status IN ('pending_init', 'running')
+
+SELECT metadata_json
+FROM subagent_spawns
+WHERE child_agent_id = $1
+  AND completed_at IS NULL
+  AND $2::text IS NOT NULL AND TRIM($2) <> ''
+FOR UPDATE
+
+UPDATE subagent_spawns AS spawn
+SET status = 'running',
+    deferred_terminal_status = $1,
+    metadata_json = CASE
+      WHEN $2 IS NOT NULL AND TRIM($2) <> '' THEN $4
+      ELSE metadata_json
+    END,
+    final_response = CASE
+      WHEN $2 IS NOT NULL AND TRIM($2) <> '' THEN $2
+      ELSE final_response
+    END
+WHERE spawn.child_agent_id = $3
+  AND spawn.completed_at IS NULL
+  AND EXISTS (
+    SELECT 1
+    FROM agents AS agent
+    WHERE agent.id = spawn.child_agent_id
+      AND agent.status IN ('pending_init', 'running')
+  )
+RETURNING spawn.child_agent_id
+
+UPDATE agents
+SET updated_at = $1,
+    status = 'running',
+    last_assistant_message = $2
+WHERE id = $3
+  AND status IN ('pending_init', 'running')
+
+SELECT agent_id
+FROM runtime_restart_checkpoints
+WHERE agent_id = $1
+FOR UPDATE
+
+UPDATE agents
+SET updated_at = $1,
+    status = 'running',
+    last_assistant_message = NULL
+WHERE id = $2
+  AND status = 'shutdown'
+
+-- The writer's row first; else the history owner's imported copy, which holds
+-- the same provenance verbatim and outlives a finished call agent's rows.
+WITH original AS (
+  (SELECT p.provenance_json, 0 AS rank
+   FROM runtime.events e
+   JOIN agent.context_item_resume_projection p
+     ON p.agent_id = COALESCE(NULLIF(e.agent_id, ''), e.parent_agent_id)
+   JOIN runtime.event_payload_fields context_seq
+     ON context_seq.event_seq = e.event_seq
+    AND context_seq.field_path = '/metadata/context_seq'
+    AND p.seq::text = COALESCE(context_seq.text_value, context_seq.scalar_value)
+   WHERE e.message_id = $3 AND p.provenance_json IS NOT NULL
+   LIMIT 1)
+  UNION ALL
+  (SELECT held.provenance_json, 1
+   FROM agent.agents owner
+   JOIN agent.context_item_resume_projection held
+     ON held.agent_id = owner.presentation_root_session_id
+   WHERE owner.id = $1
+     AND held.provenance_json IS NOT NULL
+     AND md5(agent.resume_projection_message_id_v1(held.provenance_json))::uuid
+         BETWEEN md5($3)::uuid AND md5($3)::uuid
+     AND agent.resume_projection_message_id_v1(held.provenance_json) = $3
+   LIMIT 1)
+), chosen AS (
+  SELECT provenance_json FROM original ORDER BY rank LIMIT 1
+)
+UPDATE agent.context_item_resume_projection target
+SET provenance_json = chosen.provenance_json, provenance_projected = true
+FROM chosen
+WHERE target.agent_id = $1 AND target.seq = $2
+RETURNING target.provenance_json
+imported context provenance has an unexpected message IDSELECT EXISTS (SELECT 1 FROM agent.message_mailbox WHERE submission_json::jsonb #>> '{chat_context,voice_call_id}' = $1 AND state IN ('accepted', 'attached'))SELECT payload_json FROM agent.runtime_restart_checkpoints WHERE agent_id = ANY($1) AND payload_json IS NOT NULLDELETE FROM agent.message_mailbox WHERE submission_json::jsonb #>> '{chat_context,voice_call_id}' = $1DELETE FROM agent.message_mailbox WHERE state IN ('completed', 'aborted', 'invalid') AND terminalized_at >= to_timestamp($2) - interval '10 minutes' AND submission_json::jsonb #>> '{chat_context,voice_call_id}' = $1DELETE FROM agent.compactions WHERE agent_id = $1DELETE FROM agent.agent_compactions WHERE agent_id = $1DELETE FROM agent.compactions WHERE agent_id = $1 AND cardinality($2::bigint[]) > 0 AND ( checkpoint_context_item_id IS NULL OR checkpoint_context_item_id IN (SELECT context_item_id FROM agent.context_items WHERE agent_id = $1 AND seq >= (SELECT MIN(value) FROM unnest($2::bigint[]) AS deleted(value))) OR replacement_history_last_seq >= (SELECT MIN(value) FROM unnest($2::bigint[]) AS deleted(value)))DELETE FROM agent.context_item_resume_projection WHERE agent_id = $1 AND seq = ANY($2)DELETE FROM agent.context_items WHERE agent_id = $1 AND seq = ANY($2)DELETE FROM agent.agent_compactions WHERE agent_id = $1 AND (checkpoint_seq IS NULL OR checkpoint_seq >= $2)SELECT id, details_json FROM agent.agent_compactions WHERE agent_id = $1 AND created_at >= $2DELETE FROM agent.agent_compactions WHERE id = ANY($1)SELECT event_seq FROM runtime.events WHERE event_seq = ANY($1) UNION SELECT event_seq FROM runtime.events WHERE message_id = ANY($2)DELETE FROM runtime.widgets w USING runtime.events e WHERE e.event_seq = ANY($1) AND e.event_name = 'delta.presentation' AND w.widget_id = e.payload_json::jsonb ->> 'id'UPDATE agent.runtime_state SET last_event_seq = NULL WHERE last_event_seq = ANY($1)DELETE FROM agent.subagent_progress WHERE event_seq = ANY($1)DELETE FROM runtime.search_documents WHERE owner_table = 'runtime.events' AND owner_key = ANY($1)SELECT EXISTS (SELECT 1 FROM agent.message_mailbox WHERE state = 'completed' AND submission_json::jsonb #>> '{chat_context,voice_call_id}' IS NOT NULL)select sequence, submission_id, input_json,
+                    disposition <> 'read' as unread,
+                    coalesce(disposition = 'read' and stream_owner_id = $2, false)
+                        as read_by_reader
+                from agent.group_inputs
+                where group_id = $1 and sequence < $3
+                and (disposition in ('unread', 'unread_quiet')
+                    or (disposition = 'read' and (not $4 or stream_owner_id = $2)))
+                order by sequence desc limit $5select sequence, submission_id, input_json from agent.group_inputs
+                where group_id = $1 and disposition in ('unread', 'unread_quiet', 'read')
+                order by sequence desc limit $2select min(sequence) filter (where disposition = 'unread') as oldest,
+                    max(sequence) filter (where disposition = 'unread') as newest,
+                    count(*) filter (where disposition = 'unread') as unread,
+                    count(*) as total
+                from agent.group_inputs
+                where group_id = $1 and disposition in ('unread', 'unread_quiet')unreadnewestselect input_json from agent.group_inputs where sequence = $1oldestselect d.sequence, r.submission_id, r.text_content, d.created_at_utc
+                from agent.group_replies r join chat_private.deliveries d using(delivery_key)
+                where r.group_id = $1 and d.state <> 'failed' and d.sequence < $2
+                order by d.sequence desc limit $3select active from agent.chat_workers where group_id = $1 for shareupdate agent.group_inputs set disposition = 'read', stream_owner_id = $3
+                    where group_id = $1 and sequence = any($2)
+                    and disposition in ('unread', 'unread_quiet')
+                    returning sequencechat worker is inactiveselect count(*) from agent.group_inputs
+                where group_id = $1 and disposition in ('unread', 'unread_quiet')select sequence, submission_id, input_json from agent.group_inputs
+                where group_id = $1 and disposition = 'read'
+                and starts_with(stream_owner_id, $2)
+                order by sequence limit 64insert into agent.group_inputs
+                (group_id, external_message_id, submission_id, input_json, disposition)
+                select $1, $2, $3, $4, $5 from agent.chat_workers
+                where group_id = $1 and active = true
+                on conflict(group_id, external_message_id) do nothingunread_quietselect exists(select 1 from agent.group_inputs
+                     where group_id = $1 and external_message_id = $2)select * from agent.group_replies
+                where group_id = $1 and starts_with(delivery_key, $2) limit 16
+SELECT final_response
+FROM subagent_spawns
+WHERE child_agent_id = $1
+LIMIT 1
+UPDATE subagent_spawns SET seen_at =  WHERE completed_at IS NOT NULL AND seen_at IS NULL AND child_agent_id IN (
+SELECT COUNT(*)
+FROM (
+  SELECT id AS child_agent_id
+  FROM agents
+  WHERE kind = 'subagent'
+    AND (
+      status IS NULL
+      OR status NOT IN ('completed', 'errored', 'shutdown', 'interrupted', 'not_found')
+    )
+  UNION
+  SELECT child_agent_id
+  FROM subagent_spawns
+  WHERE completed_at IS NOT NULL
+    AND seen_at IS NULL
+) AS liveness_blockers
+
+SELECT parent_message_id AS parent_message_id
+FROM subagent_spawns
+WHERE child_agent_id = $1
+LIMIT 1
+
+SELECT EXISTS(
+  SELECT 1
+  FROM subagent_spawns
+  WHERE completed_at IS NULL
+    AND agent_type = $1
+    AND COALESCE(deferred_terminal_status, status, 'running') IN ('pending_init', 'running')
+  LIMIT 1
+)
+
+SELECT child_agent_id AS agent_id
+FROM subagent_spawns
+WHERE parent_message_id = $1
+ORDER BY created_at DESC, child_agent_id DESC
+
+WITH candidates AS (
+  SELECT sp.child_agent_id,
+         sp.requester_source,
+         COALESCE(child.status, sp.status) AS child_status,
+         parent.status AS parent_status,
+         sp.completed_at,
+         CASE
+           WHEN sp.requester_source = 'scheduler.cron'
+             THEN 'scheduler_cron_stale_root'
+           ELSE 'old_terminal_non_cron_root'
+         END AS prune_reason
+  FROM subagent_spawns AS sp
+  JOIN agents AS parent
+    ON parent.id = sp.parent_agent_id
+  LEFT JOIN agents AS child
+    ON child.id = sp.child_agent_id
+  WHERE sp.completed_at IS NOT NULL
+    AND sp.seen_at IS NULL
+    AND parent.kind = 'root'
+    AND (
+      (
+        sp.requester_source = 'scheduler.cron'
+        AND sp.created_at <= $1
+        AND sp.completed_at <= $1
+        AND (
+          parent.updated_at < sp.completed_at
+          OR parent.status IN ('completed', 'errored', 'shutdown', 'not_found')
+        )
+      )
+      OR (
+        sp.requester_source IN ('runtime', 'runtime.browser_monitor')
+        AND sp.created_at <= $2
+        AND sp.completed_at <= $2
+        AND COALESCE(child.status, sp.status) IN ('shutdown', 'interrupted', 'errored')
+      )
+    )
+    AND NOT EXISTS (
+      SELECT 1
+      FROM subagent_spawns AS descendant
+      WHERE descendant.parent_agent_id = sp.child_agent_id
+        AND descendant.completed_at IS NULL
+    )
+    AND NOT EXISTS (
+      SELECT 1
+      FROM subagent_spawns AS sibling
+      WHERE sibling.parent_agent_id = sp.parent_agent_id
+        AND sibling.completed_at IS NULL
+    )
+    AND NOT EXISTS (
+      SELECT 1
+      FROM subagent_progress_tool_events AS tool_event
+      WHERE tool_event.child_agent_id = sp.child_agent_id
+        AND tool_event.delivered_at IS NULL
+    )
+    AND NOT EXISTS (
+      SELECT 1
+      FROM subagent_progress_message_events AS message_event
+      WHERE message_event.child_agent_id = sp.child_agent_id
+        AND message_event.delivered_at IS NULL
+    )
+    AND NOT EXISTS (
+      SELECT 1
+      FROM subagent_monitor_decisions AS decision
+      WHERE decision.child_agent_id = sp.child_agent_id
+        AND decision.created_at >= $3
+    )
+  ORDER BY sp.created_at ASC, sp.child_agent_id ASC
+  LIMIT $4
+  FOR UPDATE OF sp SKIP LOCKED
+),
+updated AS (
+  UPDATE subagent_spawns AS sp
+  SET seen_at = $5
+  FROM candidates AS c
+  WHERE sp.child_agent_id = c.child_agent_id
+    AND sp.completed_at IS NOT NULL
+    AND sp.seen_at IS NULL
+  RETURNING c.requester_source,
+            c.child_status,
+            c.parent_status,
+            c.completed_at,
+            c.prune_reason
+)
+SELECT requester_source,
+       child_status,
+       parent_status,
+       completed_at,
+       prune_reason
+FROM updated
+
+SELECT sp.child_agent_id AS child_agent_id
+FROM subagent_spawns AS sp
+WHERE sp.completed_at IS NOT NULL
+  AND sp.seen_at IS NULL
+ORDER BY sp.created_at ASC, sp.child_agent_id ASC
+LIMIT $1
+
+SELECT EXISTS (
+  SELECT 1
+  FROM subagent_spawns AS sp
+  JOIN agents AS parent
+    ON parent.id = sp.parent_agent_id
+  LEFT JOIN agents AS child
+    ON child.id = sp.child_agent_id
+  WHERE sp.completed_at IS NOT NULL
+    AND sp.seen_at IS NULL
+    AND parent.kind = 'root'
+    AND (
+      (
+        sp.requester_source = 'scheduler.cron'
+        AND sp.created_at <= $1
+        AND sp.completed_at <= $1
+        AND (
+          parent.updated_at < sp.completed_at
+          OR parent.status IN ('completed', 'errored', 'shutdown', 'not_found')
+        )
+      )
+      OR (
+        sp.requester_source IN ('runtime', 'runtime.browser_monitor')
+        AND sp.created_at <= $2
+        AND sp.completed_at <= $2
+        AND COALESCE(child.status, sp.status) IN ('shutdown', 'interrupted', 'errored')
+      )
+    )
+  LIMIT 1
+)
+
+SELECT recovery_class, recovery_owner_id, payload_json
+FROM runtime_restart_checkpoints
+WHERE agent_id = $1
+FOR UPDATE
+
+UPDATE runtime_restart_checkpoints
+SET mode = 'before_inference', payload_json = $2, updated_at = $3
+WHERE agent_id = $1
+
+SELECT submission_id
+FROM agent.message_mailbox
+WHERE submission_id = $1
+FOR UPDATE
+
+SELECT mode, recovery_class, recovery_owner_id, payload_json,
+       CURRENT_TIMESTAMP AS accepted_at
+FROM runtime_restart_checkpoints
+WHERE agent_id = $1
+FOR UPDATE
+checkpoint admission timestamp unavailable for telemetry
+UPDATE runtime_restart_checkpoints
+SET payload_json = $2, updated_at = $3
+WHERE agent_id = $1
+
+JOIN LATERAL (
+  SELECT MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/kind') AS kind,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/action') AS action,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/handoff_message_id') AS handoff_message_id,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/handoff_source') AS handoff_source,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/submission_message_id') AS submission_message_id,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/submission_source') AS submission_source
+  FROM runtime.event_payload_fields AS f
+  WHERE f.event_seq = e.event_seq AND f.field_path IN (
+    '/metadata/kind', '/metadata/action', '/metadata/handoff_message_id',
+    '/metadata/handoff_source', '/metadata/submission_message_id', '/metadata/submission_source'
+  )
+) AS metadata ON true
+follow_up_settlementroot follow-up settlement has a different ownerunknown root follow-up settlement actionunit_id, run_id, prompt_id, edition_kind, edition_local_date, edition_generated_at_ms, position, manual_order, kicker, title, body_md, attachment_kind, header_image_path, video_media_path, image_urls, carousel_clip_paths, widget_html, social_embed_url, social_thumbnail_url, social_thumbnail_aspect_ratio, social_attribution_text, social_post_username, category, connector_attribution, stats, source_post_url, source_idea_id, why_did_i_see_this, emoji, icon_key, reaction, reaction_updated_at_ms, seen_at_ms, share_count, discuss_count, origin, source_fleet_origin_id, source_url_keys, activity_tier, beat, reader_response, stake_type, act_by, share_instructions, share_artifact_generated_at_ms, share_artifact_stale, created_at_ms, updated_at_msgoal_id, source, attention_kind, attention_updated_at::text as attention_updated_at, next_due_at::text as next_due_at, escalation, slug, title, summary, description, momentum, momentum_status, emoji, image_relpath, icon_generation_status, status, created_at, updated_at, last_activity_at, pushable, parent_goal_id, sort_order, fixed_position, category, goal_kind, value_alignment, review_cadence, completed_atreaction_emojimessage.useragent.agent_compactions.details_jsonitems_jsonupdated_at_msboundary_seqchat history anchor has a negative sequenceresources_jsonclient_timezonenegative chat event sequencesubjectchat history before_seqoriginlifecyclepinnedpinned_ordersession_titlesource_session_idsource_prompt_seq_upper_boundsource_message_id_boundaryupdated_atmailbox input payload does not match its admitted submission identityinvalid mail task revisionmailbox admission requires a checkpoint queuefile_artifact_buildinvalid group chat idagent_recovery_owners.has_active_ownercompleted_atspawn_call_idpublication has no chat ownerinvalid publication tracepublication owner does not match its transcript/metadata/message_kindpublication has no execution ownerinvalid publication authorityruntime.resources.metadata_jsonagent_statusseen_atlast_errorinvalid external exchange counttool_call_idtool_namerequestresulttool_idattached mailbox input has no stream ownerstagedexecutinginput chat is absentinvalid input binding epochConversationTransportStatelink_idneeds_reconciliationpending_cancellationinput provider is absentinvalid mail report outcomeforeground report has no durable submissionforeground report submission has no persisted input identityforeground report input event is missinginvalid external provider inputstartup input size exceeds i64startup queue size exceeds i64startup media size overflowchats.defer_reactionchats.finish_reactionchats.next_reactionchats.pending_reactionschats.defer_publicationchats.finish_publicationchats.publication_contextchats.next_publicationchats.publication_progresschats.pending_publicationschats.adopt_publicationchats.predecessor_publicationchats.defer_publication_for_originchats.publication_delivery_evidencechats.uncertain_publication_effectacquired connection, but time to acquire exceeded slow thresholdacquired connectionchats.native_message_ownerchats.input_receiptchats.reserve_inbound_messageinbound message requires native identitychats.resolve_native_referencechats.resolve_transport_referenceelatest_public_runtime_user_message_routelatest_visible_main_chat_user_message_atload_turn_developer_contextscapture_turn_developer_contextsduplicate turn developer context sequenceload_inherited_turn_developer_contextsrecent context item scan limitload_items_recentprobe_agent_state_readupsert_itemdelete_items_in_seq_rangerecent tool call scan limitfind_function_call_recentfunction_call_context_seqtool call has multiple context sequenceshas_pending_summarizationpersist_summarized_outputmark_summarization_checkedload_item_created_at_by_seqobject_removal_drain_cursorartifact provenance recovery limitload_artifact_provenance_recovery_snapshottool_outputs_for_summarizationset_object_removal_drain_cursorrecent tool output scan limitfind_function_call_evidence_exactexact tool output lookup requires non-empty call idshas_pending_message_summarizationpersist_message_summarized_outputrewrite_items_with_seq_and_sourcedelete_context_items_for_tool_callmark_message_summarization_checkedcontext_items_pending_summarization_checksrewrite_items_with_seq_source_and_projectioncontext_items_pending_message_deletion_checksreserve_and_insert_items_batch
+SELECT NULLIF(COALESCE(context_seq_field.text_value, context_seq_field.scalar_value), '')::bigint
+FROM runtime.events AS e
+LEFT JOIN runtime.event_payload_fields AS context_seq_field
+  ON context_seq_field.event_seq = e.event_seq
+ AND context_seq_field.field_path = '/metadata/context_seq'
+WHERE e.parent_agent_id = $1
+  AND e.message_id = $2
+  AND e.event_name = 'message.user'
+ORDER BY e.event_seq DESC
+LIMIT 1
+
+INSERT INTO agent_compactions (
+  agent_id, summary, first_kept_seq, checkpoint_seq,
+  tokens_before, tokens_after, details_json, has_replacement_history, trigger, will_retry, created_at
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+
+INSERT INTO events (
+  event_kind, event_name, transcript_surface, visibility, source, role,
+  chat_kind, stream_lane, message_id, reply_to_message_id, reply_target_message_id,
+  parent_agent_id, idempotency_key, payload_json, display_text_ready, created_at
+)
+VALUES (
+  'message'::runtime.event_kind, $1, 'subagent'::runtime.transcript_surface,
+  'internal'::runtime.visibility, $2, $3::runtime.message_role,
+  'direct', 'subagent', $4, $5, $6, $7, $8, $9, $10,
+  to_timestamp($11::double precision / 1000.0)
+)
+ON CONFLICT (idempotency_key) WHERE idempotency_key IS NOT NULL DO NOTHING
+RETURNING event_seq
+select event_seq from events where idempotency_key = $1runtime.messages.body
+INSERT INTO messages (message_id, event_seq, role, body, created_at)
+VALUES ($1, $2, $3::runtime.message_role, $4, to_timestamp($5::double precision / 1000.0))
+ON CONFLICT (message_id) DO NOTHING
+fork_prompt_metadataworkflow-terminalfork_root_conversation_load_source_rootfork_root_conversation_excluded_context_seqfork_root_conversation_effective_prompt_seedfork_root_conversation_source_transcript_metadatafork_root_conversation_transcriptfork_root_conversation_agent_stateprimary_root_agent_stateget_active_root_startup_stateactive_root_idensure_active_root_update_modelensure_active_root_insert_preferencesload_chat_command_settingsverboseusage_modesave_chat_command_settingschat_preferences row missing while saving chat command settingsmark_active_root_cleared_for_agentclear_active_root_cleared_marker_for_visible_user_turntranscript_chat_identitiesdelete_compaction_checkpoints_for_agentupdate_latest_compaction_checkpoint_detailsinvalid delegate terminal statedelegate_requests.settleload_agent_todo_snapshotrecord_agent_todo_reminderreplace_agent_todo_snapshotprepare_agent_todo_continuationspace_build_spawn_metadatachat_worker.request_loadchat_worker.awaits_ownerinvalid initial worker request statechat_worker.requestchat_worker.result_readychat_worker.cancel_requestschat_worker.resultchat_worker.requestsrunninginvalid worker request statechat_worker.request_statechat_worker.result_publicationchat_worker.discretion_requestsimport_public_voice_historyinvalid public voice import context boundaryexempt_public_voice_import_non_producer_rowsside_chat_discretion.loadside_chat_discretion.listside_chat_discretion.commitside_chat_discretion.deleteside_chat_discretion.ensureside_chat_discretion.check_clearanceside_chat_discretion.clearreconcile_unowned_tool_outputsignoring unrecognized subagent root request origin
+sp.parent_message_id AS parent_message_id,
+       sp.parent_request_id AS parent_request_id,
+       sp.root_request_id AS root_request_id,
+       (
+         SELECT root_request.request_origin
+         FROM runtime.requests AS root_request
+         WHERE root_request.request_id = sp.root_request_id
+       ) AS root_request_origin,
+       sp.root_message_execution_id AS root_message_execution_id,
+       sp.parent_agent_id AS parent_agent_id,
+       sp.child_agent_id AS agent_id,
+       sp.child_depth::bigint AS depth,
+       sp.created_at AS created_at,
+       sp.completed_at AS completed_at,
+       sp.seen_at AS seen_at,
+       sp.status AS status,
+       sp.deferred_terminal_status AS deferred_terminal_status,
+       sp.requester_source AS requester_source,
+       sp.final_response AS final_response,
+       sp.prompt AS prompt,
+       sp.requester_chat_context_json AS requester_chat_context_json,
+       sp.agent_type AS agent_type,
+       sp.metadata_json AS metadata_json,
+       (
+         SELECT child.originating_location_context_json
+         FROM agents AS child
+         WHERE child.id = sp.child_agent_id
+       ) AS originating_location_context_json

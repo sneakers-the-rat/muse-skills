@@ -1,0 +1,715 @@
+completedfaileddb_readstream did not contain valid UTF-8internal error: entered unreachable codeMessageExecutionAdmissionaccepted_atroot_request_idrequest_originassistant_message_idpublication_terminalConversationTransportStatelink_idneeds_reconciliationpending_cancellationcontext_typeowner_agent_idowner_chat_idconversation_idworker_agent_idgenerationauthoritybriefoperation_idoriginfactsconstraintspermitted_actionsExternalPartyMessagespeakertimestamp_msExternalPartyMessageDeliveryunknownmanualthresholdAcceptanceHandoffsourcemessage_idparent_message_idsubagent_completion_child_agent_idsproducer_agent_idAcceptanceTracerequest_idparent_request_idroot_request_originmessage_senderbinding_epochgroup_routeGroupReferenceOwneremail_sentmessage_sentfile_createdfile_updatedreminder_setweb_searchtask_runningpeer_conversationsuccesserrorpendingblockedstoppedactivepausedsendingtransferredprovider_endedcancelledoutcome_unknownvariant index 0 <= i < 3SuccessErrorPendingBlockedStoppedEmailSentMessageSentFileCreatedFileUpdatedReminderSetWebSearchTaskRunningidtitlestatuscreated_atstring or mapselect t.activity_thread_id as owner_id, a.action_id, a.activity_thread_id,
+                a.action_index, a.agent_id, a.agent_depth, a.icon, a.title,
+                a.subtitle, a.report, a.status, a.created_at
+         from activity.activity_monitor_threads t
+         left join activity.activity_monitor_thread_actions a
+           on a.activity_thread_id = t.activity_thread_id
+         where t.activity_thread_id = any($1)
+         order by t.activity_thread_id, a.action_index, a.action_seqaction_idselect t.activity_thread_id as owner_id, c.action_count,
+                a.action_id, a.activity_thread_id, a.action_index, a.agent_id,
+                a.agent_depth, a.icon, a.title, a.subtitle, ''::text as report,
+                a.has_report, a.status, a.created_at
+         from activity.activity_monitor_threads t
+         cross join lateral (
+           select count(*) as action_count
+           from activity.activity_monitor_thread_actions
+           where activity_thread_id = t.activity_thread_id
+         ) c
+         left join lateral (
+           select action_id, activity_thread_id, action_index, action_seq,
+                  agent_id, agent_depth, icon, title, subtitle,
+                  octet_length(report) > 0 as has_report, status, created_at
+           from activity.activity_monitor_thread_actions
+           where activity_thread_id = t.activity_thread_id
+           order by action_index desc, action_seq desc limit $2
+         ) a on true
+         where t.activity_thread_id = any($1)
+         order by t.activity_thread_id, a.action_index, a.action_seqaction_counthas_report
+INSERT INTO activity.feed_entries (
+  activity_key,
+  activity_type,
+  is_goal,
+  message_id,
+  title,
+  status_title,
+  subtitle,
+  details_json,
+  status,
+  task_label,
+  created_at_ms,
+  updated_at_ms,
+  finished_at_ms
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+ON CONFLICT(activity_key) DO UPDATE SET
+  created_at_ms = LEAST(activity.feed_entries.created_at_ms, excluded.created_at_ms),
+  updated_at_ms = GREATEST(activity.feed_entries.updated_at_ms, excluded.updated_at_ms),
+  finished_at_ms = CASE
+    WHEN activity.feed_entries.finished_at_ms IS NULL THEN excluded.finished_at_ms
+    WHEN excluded.finished_at_ms IS NULL THEN activity.feed_entries.finished_at_ms
+    ELSE GREATEST(activity.feed_entries.finished_at_ms, excluded.finished_at_ms)
+  END,
+  activity_type = CASE
+    WHEN excluded.updated_at_ms > activity.feed_entries.updated_at_ms
+      OR (
+        excluded.updated_at_ms = activity.feed_entries.updated_at_ms
+        AND NOT (
+          activity.feed_entries.finished_at_ms IS NOT NULL
+          AND excluded.finished_at_ms IS NULL
+        )
+      ) THEN excluded.activity_type
+    ELSE activity.feed_entries.activity_type
+  END,
+  is_goal = CASE
+    WHEN excluded.updated_at_ms > activity.feed_entries.updated_at_ms
+      OR (
+        excluded.updated_at_ms = activity.feed_entries.updated_at_ms
+        AND NOT (
+          activity.feed_entries.finished_at_ms IS NOT NULL
+          AND excluded.finished_at_ms IS NULL
+        )
+      ) THEN excluded.is_goal
+    ELSE activity.feed_entries.is_goal
+  END,
+  message_id = COALESCE(activity.feed_entries.message_id, excluded.message_id),
+  title = CASE
+    WHEN excluded.updated_at_ms > activity.feed_entries.updated_at_ms
+      OR (
+        excluded.updated_at_ms = activity.feed_entries.updated_at_ms
+        AND NOT (
+          activity.feed_entries.finished_at_ms IS NOT NULL
+          AND excluded.finished_at_ms IS NULL
+        )
+      ) THEN excluded.title
+    ELSE activity.feed_entries.title
+  END,
+  status_title = CASE
+    WHEN excluded.updated_at_ms > activity.feed_entries.updated_at_ms
+      OR (
+        excluded.updated_at_ms = activity.feed_entries.updated_at_ms
+        AND NOT (
+          activity.feed_entries.finished_at_ms IS NOT NULL
+          AND excluded.finished_at_ms IS NULL
+        )
+      ) THEN excluded.status_title
+    ELSE activity.feed_entries.status_title
+  END,
+  subtitle = CASE
+    WHEN excluded.updated_at_ms > activity.feed_entries.updated_at_ms
+      OR (
+        excluded.updated_at_ms = activity.feed_entries.updated_at_ms
+        AND NOT (
+          activity.feed_entries.finished_at_ms IS NOT NULL
+          AND excluded.finished_at_ms IS NULL
+        )
+      ) THEN excluded.subtitle
+    ELSE activity.feed_entries.subtitle
+  END,
+  -- Same winner as every sibling column, but only when the payload actually
+  -- differs: excluded.details_json is a fresh parameter datum, so storing it
+  -- re-TOASTs the whole lz4 value and orphans the old chunks even when the bytes
+  -- match, while feeding the stored datum back reuses its TOAST pointer. Value
+  -- identical either way; this changes physical churn, not merge semantics.
+  details_json = CASE
+    WHEN (
+      excluded.updated_at_ms > activity.feed_entries.updated_at_ms
+      OR (
+        excluded.updated_at_ms = activity.feed_entries.updated_at_ms
+        AND NOT (
+          activity.feed_entries.finished_at_ms IS NOT NULL
+          AND excluded.finished_at_ms IS NULL
+        )
+      )
+    )
+    AND excluded.details_json IS DISTINCT FROM activity.feed_entries.details_json
+      THEN excluded.details_json
+    ELSE activity.feed_entries.details_json
+  END,
+  status = CASE
+    WHEN excluded.updated_at_ms > activity.feed_entries.updated_at_ms
+      OR (
+        excluded.updated_at_ms = activity.feed_entries.updated_at_ms
+        AND NOT (
+          activity.feed_entries.finished_at_ms IS NOT NULL
+          AND excluded.finished_at_ms IS NULL
+        )
+      ) THEN excluded.status
+    ELSE activity.feed_entries.status
+  END,
+  task_label = CASE
+    WHEN excluded.updated_at_ms > activity.feed_entries.updated_at_ms
+      OR (
+        excluded.updated_at_ms = activity.feed_entries.updated_at_ms
+        AND NOT (
+          activity.feed_entries.finished_at_ms IS NOT NULL
+          AND excluded.finished_at_ms IS NULL
+        )
+      ) THEN excluded.task_label
+    ELSE activity.feed_entries.task_label
+  END
+write_admissionwritepostgres write completed slowlypostgres write failedretrying idempotent postgres writeone-shot postgres write invoked more than onceread activity feed actionread activity action previewactivity.feed_entries.details_jsonchat delivery attempt count is negativeinvalid chat identityinvalid chat delivery payloaddelivery has no captured binding epochdelivery has no publication ownerselect * from chat_private.binding_authorizations
+                where provider = $1 and account_id = $2 and connection_id = $3
+                order by binding_idinsert into chat_private.accounts
+                (provider, account_id, connection_id, revoked)
+                values ($1, $2, $3, false) on conflict do nothingselect b.*, coalesce(a.revoked, true) as account_revoked
+                from chat_private.binding_authorizations b
+                left join chat_private.accounts a using(provider, account_id)
+                where b.provider = $1
+                order by b.binding_idupdate chat_private.deliveries
+                set state = $6, result_json = $5, terminal_at_utc = $4,
+                    updated_at_utc = $4, last_error = $7
+                where delivery_key = $1 and state = 'dispatching'
+                  and dispatch_boot_generation = $2 and attempt_count = $3
+                returning chat_id, surface, payload_jsonchat_idsurfacepayload_jsondelivery receipt retained with unavailable or conflicting native references excludedinsert into agent.group_sent_messages(group_id, generation, external_message_id)
+                    select g.group_id, $2, id from agent.chat_workers g cross join unnest($3::text[]) id
+                    where g.group_id = $1 on conflict do nothinggroup receipt owner mismatchselect epoch from chat_private.bindings where chat_id = $1
+                         and provider = $2 and not revoked for shareupdate chat_private.deliveries
+                        set state = 'dispatching', dispatch_boot_generation = $2,
+                            attempt_count = attempt_count + 1, updated_at_utc = $3
+                      where delivery_key = $1 and state = 'pending'
+                        and attempt_count = $4 and next_attempt_at_utc <= $3
+                        and (not publication_terminal or not exists (
+                          select 1 from chat_private.publications p
+                          where p.message_id = deliveries.publication_message_id and p.state in ('writing', 'pending')))
+                        and not exists (
+                          select 1 from chat_private.deliveries prior
+                           where prior.chat_id = deliveries.chat_id
+                             and prior.sequence < deliveries.sequence
+                             and prior.state in ('pending', 'dispatching'))
+                    returning attempt_countselect approved_request_id from chat_private.external_party_conversations
+                     where chat_id=$1 and business=$2 and phase='active' for updateupdate chat_private.deliveries
+                        set state = 'failed', last_error = $4,
+                            terminal_at_utc = $3, updated_at_utc = $3
+                      where delivery_key = $1 and state = 'pending'
+                        and attempt_count = $2update chat_private.external_party_conversations
+                        set phase='paused',state_version=state_version+1,updated_at_ms=$2 where chat_id=$1The outgoing message was not sent because its current approval or exact-message review could not be verified. Review the approved scope before continuing.update agent.chat_worker_requests set result_json=$2 where request_id=$1update chat_private.deliveries
+                        set state = 'uncertain', last_error = $5,
+                            terminal_at_utc = $4, updated_at_utc = $4
+                      where delivery_key = $1 and state = 'dispatching'
+                        and dispatch_boot_generation = $2 and attempt_count = $3select chat_id, publication_message_id, publication_terminal, delivery_kind, state
+                 from chat_private.deliveries where delivery_key = $1
+                   and dispatch_boot_generation = $2 and attempt_count = $3statedelivery_kindpublication_message_idselect message_id from runtime.messages where message_id = $1 for key shareselect state from chat_private.deliveries where delivery_key = $1
+                   and dispatch_boot_generation = $2 and attempt_count = $3 for updateupdate chat_private.deliveries
+                 set next_attempt_at_utc = case when state = 'dispatching' and $6 = 'pending' then $5 else next_attempt_at_utc end,
+                     state = $6, last_error = $7,
+                     terminal_at_utc = case when $6 = 'failed' then $4 else null end, updated_at_utc = $4
+                 where delivery_key = $1 and dispatch_boot_generation = $2 and attempt_count = $3
+                   and result_json is null and (state = 'dispatching' or
+                     (state = 'pending' and last_error = 'provider_preparation_unavailable'))
+                 returning statedelivery owner deleted before retryupdate chat_private.deliveries
+                            set state = $5, attempt_count = attempt_count + 1,
+                                next_attempt_at_utc = $3, last_error = $6,
+                                terminal_at_utc = case when $5 = 'failed' then $2 else null end,
+                                updated_at_utc = $2
+                          where delivery_key = $1 and state = 'pending'
+                            and attempt_count = $4
+                        returning stateupdate chat_private.deliveries
+                            set state = 'uncertain', last_error = $5,
+                                terminal_at_utc = $4, updated_at_utc = $4
+                          where delivery_key = $1 and state = 'dispatching'
+                            and dispatch_boot_generation is not distinct from $2
+                            and dispatch_boot_generation is distinct from $3
+                            and attempt_count = $6select delivery_key, chat_id, sequence, delivery_kind, surface,
+       target, payload_json, state, dispatch_boot_generation, attempt_count,
+       next_attempt_at_utc, result_json, last_error
+  from chat_private.deliveriesselect chat_id from chat.chats where chat_id = $1 for updateinsert into chat_private.deliveries
+                           (delivery_key, delivery_kind, surface, target,
+                            payload_json, state, attempt_count, next_attempt_at_utc,
+                            created_at_utc, updated_at_utc, chat_id, publication_message_id, publication_terminal)
+                         values ($1, $2, $3, $4, $5, 'pending', 0, $6, $6, $6, $7, $8, $9)
+                         on conflict (delivery_key) do nothingupdate chat_private.deliveries set next_attempt_at_utc = $2
+                     where surface = $1 and state = 'pending' and next_attempt_at_utc > $3delete from chat_private.deliveries
+                      where delivery_key in (
+                        select delivery_key from chat_private.deliveries
+                         where state in ('delivered', 'uncertain', 'failed')
+                           and terminal_at_utc < $1
+                           and not exists (
+                             select 1 from chat_private.external_party_conversations e
+                             join agent.chat_worker_requests q on q.request_id=e.approved_request_id
+                             where e.chat_id=deliveries.chat_id and q.state <> 'delivered')
+                         order by terminal_at_utc, delivery_key
+                         limit $2 for update skip locked
+                      )select next_attempt_at_utc
+                       from chat_private.deliveries
+                      where state = 'pending'
+                        and (not publication_terminal or not exists (
+                          select 1 from chat_private.publications p
+                          where p.message_id = deliveries.publication_message_id and p.state in ('writing', 'pending')))
+                        and not exists (
+                          select 1 from chat_private.deliveries prior
+                           where prior.chat_id = deliveries.chat_id
+                             and prior.sequence < deliveries.sequence
+                             and prior.state in ('pending', 'dispatching'))
+                      order by next_attempt_at_utc, sequence
+                      limit 1update chat_private.deliveries set next_attempt_at_utc = $4
+                 where delivery_key = $1 and payload_json = $2 and state = 'pending'
+                   and attempt_count = $3 and next_attempt_at_utc = $5select delivery_key,
+                                dispatch_boot_generation as predecessor_boot_generation,
+                                attempt_count
+                           from chat_private.deliveries
+                          where state = 'dispatching'
+                            and dispatch_boot_generation is distinct from $1
+                          order by dispatch_boot_generation, delivery_key
+                          limit $2select title, status_title, subtitle, status, created_at_ms, updated_at_ms, finished_at_ms, details_json
+                     from activity.feed_entries where activity_key = $1 ORDER BY delivery attempt count is too largechat delivery attempt count is too largeboundary_seqchat attempt count exceeds database boundquery activity rowsdetails_jsonactivity_thread_agent_idstatus_titlecreated_at_msupdated_at_msfinished_at_msload activity row stateupsert activity rowupsert activity rowsinvalid binding epochchat account requiredchat generation overflowcaptionsort_tsactivity_keystartup media size overflowstartup quota client context is not an objectlist_chat_bindingsensure_chat_bindinglist_provider_chat_bindingsacquired connection, but time to acquire exceeded slow thresholdacquired connectioninvalid group message epochchat_deliveries.settlechat_deliveries.claimchat_deliveries.mark_pending_failedchat_deliveries.mark_claim_uncertainchat_deliveries.defer_before_effectchat_deliveries.record_pre_dispatch_failurechat_deliveries.mark_predecessor_claim_uncertainchat_deliveries.loadchat_private.deliveries.payload_jsonchat_deliveries.ensureterminal delivery has no publication ownerchat_deliveries.prune_terminalchat_deliveries.next_pending_attemptchat_deliveries.defer_before_claimchat_deliveries.list_interrupted_dispatching_claimsfeed_entries.listfeed_entries.entry_statefeed_entries.list_recentfeed_entries.upsertfeed_entries.upsert_batchSpaces ask is missing its validated completion_resultselect connection_id, revoked from chat_private.accounts
+        where provider = $1 and account_id = $2 for updateconnection_idrevokedselect exists(select 1 from chat_private.connection_barriers where provider = $1)invalid delivery chat idselect p.message_id from chat_private.publications p
+         join chat_private.deliveries d
+           on d.publication_message_id = p.message_id and d.chat_id = p.chat_id
+         where d.delivery_key = $1 for update of pupdate chat_private.publications
+         set next_attempt_at_utc = least(next_attempt_at_utc, $2)
+         where message_id = $1 and state = 'pending'select case when pg_try_advisory_xact_lock_shared(hashtextextended($1, 0))
+         then pg_try_advisory_xact_lock_shared(hashtextextended($2, 0)) else false endselect pg_advisory_xact_lock_shared(hashtextextended($1, 0))select exists(select 1 from chat.chats where chat_id = $1)chat owner is absent or being retiredinsert into chat.message_bindings
+        (chat_id, binding_epoch, transport, transport_message_id, jarvis_message_id, created_at_ms)
+        select $1, $2, $3, id, $4, $5 from unnest($6::text[]) as id
+        on conflict on constraint message_bindings_chat_identity do update
+          set jarvis_message_id = excluded.jarvis_message_id
+          where message_bindings.jarvis_message_id = excluded.jarvis_message_idinsert into chat_private.binding_authorizations
+        (provider, binding_id, account_id, connection_id, external_kind, external_id,
+         delivery_target, participation, generation, transport_json)
+        values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+        on conflict(provider, binding_id) do update set
+          participation = excluded.participation, generation = excluded.generation,
+          transport_json = excluded.transport_jsonselect * from chat_private.binding_authorizations
+        where provider = $1 and account_id = $2 and external_kind = $3 and external_id = $4
+        for updateinvalid private chat bindingselect chat_id from chat_private.external_party_conversations
+        where last_delivery_key=$1 for updateselect updated_at_utc from chat_private.deliveries where delivery_key=$1chat_delivery_evidence:v1:update chat_private.external_party_conversations
+        set phase=case when phase='cancelled' then phase else 'outcome_unknown' end,
+            state_version=state_version+1,updated_at_ms=$2
+        where last_delivery_key=$1 and phase in ('sending','cancelled')goal_actionsmime_typebytes_len'([\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uac00-\ud7af\uf900-\ufaff\uff66-\uff9f\U00020000-\U0002fa1f])', ' \1 ', 'g'runtime.search_documents_events_bm25_v1_idxset transaction isolation level repeatable read, read onlyselect activity_key, activity_type, message_id, title, status_title, subtitle, details_json, status, task_label,  as sort_ts from activity.feed_entries fis_goal = trueis_goal = false(, activity_key) < (, ) <  order by  desc, activity_key desc limit activity_typetask_labelgoal_action_countgoal_actions_lazydatabase write admission gate closedadmission_timeoutsubagent handoff has no contenttimestamp_timezonecalled `Result::unwrap()` on an `Err` valueassertion failed: self.is_char_boundary(new_len)message_toolscheduler_crongroup_statemailbox admission has invalid telemetry metadataagent_statusdeferred_terminal_statuschild_agent_idparent_agent_idspace_build_idcompletion_resultprovider result retained; do not resendprovider rejected before dispatchrunningtool_callsubagent_finisheddispatchingdelivereduncertainresumed_from_space_ask_agent_idattempt_countdelivery_keytargetdispatch_boot_generationnext_attempt_at_utcresult_jsonlast_errorchat_private.deliveries.terminal_evidenceprovider evidence cannot rearm chat dispatchpredecessor_boot_generation/metadata/streamingwidget_id cannot be emptyruntime.widgets.state_bundle_jsonwidget state bundle must be a JSON objectwidget state base_version cannot be negativesubmission_idinput_jsondispositionstream_owner_idconversation_json
+SELECT
+  preferences.active_root_id,
+  agents.id AS agent_id,
+  agents.kind,
+  NULLIF(trim(agents.session_id), '') AS session_id,
+  agents.model
+FROM chat_preferences AS preferences
+LEFT JOIN agents AS agents
+  ON agents.id = preferences.active_root_id
+WHERE preferences.id = $1
+text_contentcreated_at_utcrequest_trace_jsonorigin_jsoninstructionresult_submission_idWITH public_root AS MATERIALIZED (
+    SELECT id, COALESCE(prompt_floor_seq, -1) AS prompt_floor_seq
+    FROM agents
+    WHERE id = $1
+),
+-- Root rows above a call agent's seed bound, each with the event that wrote it.
+late_writes AS MATERIALIZED (
+    SELECT e.event_seq, e.writer
+    FROM context_item_resume_projection late
+    CROSS JOIN LATERAL (
+        SELECT e.event_seq,
+               COALESCE(NULLIF(TRIM(e.agent_id), ''), e.parent_agent_id) AS writer
+        FROM runtime.events e
+        WHERE e.message_id = agent.resume_projection_message_id_v1(
+                late.provenance_json
+            )
+          AND e.parent_agent_id = $1
+        OFFSET 0
+    ) e
+    WHERE $4::bigint IS NOT NULL
+      AND late.agent_id = $1
+      AND late.seq > $4
+      -- Always true. With the bound above it reads as a narrow range, so a
+      -- generic plan reads a large root by key range, not through the
+      -- agent-only digest index.
+      AND late.seq <= 9223372036854775807
+      AND late.context_item_id IS NOT NULL
+      AND late.provenance_json IS NOT NULL
+      -- The root writes a call's voice S2S record itself; no call row backs it.
+      AND NOT COALESCE(starts_with(late.message_source, 'runtime.voice_s2s_record.'), false)
+),
+producers AS MATERIALIZED (
+    SELECT id, GREATEST(prompt_floor_seq, COALESCE($4::bigint, -1)) AS after_seq,
+           true AS is_public_root
+    FROM public_root
+    WHERE id <> $3
+    UNION ALL
+    -- Call agents are found from their ids, one key lookup each: a root keeps
+    -- every call agent it ever had, and no index covers
+    -- presentation_root_session_id. Only owners of pending rows and late
+    -- writers can contribute rows below.
+    SELECT producer.id, producer.after_seq, false AS is_public_root
+    FROM public_root
+    CROSS JOIN (
+        SELECT pending.agent_id
+        FROM (
+            SELECT DISTINCT p.agent_id
+            FROM context_item_resume_projection p
+            WHERE p.provenance_json IS NOT NULL
+              AND p.public_import_exempt IS NOT TRUE
+              AND p.public_import_done_provenance_md5
+                  IS DISTINCT FROM md5(p.provenance_json)::uuid
+            OFFSET 0
+        ) pending
+        UNION
+        SELECT writer FROM late_writes
+    ) candidate
+    CROSS JOIN LATERAL (
+        SELECT a.id,
+               CASE WHEN pg_input_is_valid(
+                   a.spawn_metadata_json::jsonb #>> '{realtime_voice,root_seed_context_seq}',
+                   'bigint'
+               ) THEN GREATEST(
+                   (a.spawn_metadata_json::jsonb #>> '{realtime_voice,root_seed_context_seq}')::bigint,
+                   -1
+               ) ELSE -1 END AS after_seq
+        FROM agents a
+        WHERE a.id = candidate.agent_id
+          AND a.presentation_root_session_id = public_root.id
+          AND a.id <> public_root.id AND a.id <> $3
+          AND a.kind = 'root' AND a.depth = 0
+          AND a.agent_type = 'realtime_voice'
+          AND a.spawn_metadata_json::jsonb #> '{realtime_voice,prompt_floor_seq}'
+              = to_jsonb(public_root.prompt_floor_seq)
+        OFFSET 0
+    ) producer
+),
+-- A call agent's seed holds the root only through its bound. Root rows above
+-- the bound that copy a call's message lead back to that call's row, which the
+-- root's stamp would otherwise hide from this target.
+root_late_context AS MATERIALIZED (
+    SELECT call_row.agent_id, call_row.seq, call_row.message_id
+    FROM late_writes e
+    JOIN producers
+      ON producers.id = e.writer AND NOT producers.is_public_root
+    JOIN runtime.event_payload_fields context_seq
+      ON context_seq.event_seq = e.event_seq
+     AND context_seq.field_path = '/metadata/context_seq'
+    -- One key probe per late row. As a join, a low caller estimate lets
+    -- PostgreSQL hash every call row since the last clear instead.
+    CROSS JOIN LATERAL (
+        SELECT p.agent_id, p.seq,
+               agent.resume_projection_message_id_v1(p.provenance_json) AS message_id
+        FROM context_item_resume_projection p
+        WHERE p.agent_id = producers.id
+          AND p.seq = CASE WHEN pg_input_is_valid(
+                  COALESCE(context_seq.text_value, context_seq.scalar_value), 'bigint'
+              ) THEN COALESCE(context_seq.text_value, context_seq.scalar_value)::bigint END
+          AND p.seq > producers.after_seq
+          AND p.context_item_id IS NOT NULL
+          AND p.provenance_json IS NOT NULL
+        OFFSET 0
+    ) call_row
+),
+-- Stored JSON may contain escaped NUL. Normalize active JSON escapes while
+-- preserving literal backslash sequences; keep the durable text unchanged.
+producer_context AS MATERIALIZED (
+    SELECT candidate.agent_id, candidate.seq, candidate.message_id
+    FROM producers
+    -- Fence one range probe per producer. Without the lateral boundary,
+    -- PostgreSQL can hash-join producers against a full projection-table scan.
+    CROSS JOIN LATERAL (
+        SELECT p.agent_id, p.seq,
+               agent.resume_projection_message_id_v1(
+                   p.provenance_json
+               ) AS message_id
+        FROM context_item_resume_projection p
+        WHERE producers.is_public_root
+          AND p.agent_id = producers.id
+          AND p.seq > producers.after_seq
+          -- Implied by the two lines above, but visible to the planner: a
+          -- materialized CTE hides the root id and bound, so it otherwise
+          -- assumes an average agent's few rows and can read a large root's
+          -- whole history through the agent-only digest index. The always-true
+          -- upper bound covers generic plans, as in `late_writes`.
+          AND p.agent_id = $1
+          AND p.seq > COALESCE($4::bigint, -1)
+          AND p.seq <= 9223372036854775807
+          AND p.context_item_id IS NOT NULL
+          AND p.provenance_json IS NOT NULL
+          -- A call's voice S2S record is voice-only and never imported.
+          AND NOT COALESCE(starts_with(p.message_source, 'runtime.voice_s2s_record.'), false)
+        UNION ALL
+        -- Call rows the root already holds are skipped; a call that started
+        -- before the root took one gets it from `root_late_context` below.
+        -- Keep the last three conditions identical to migration 0402's
+        -- partial index predicate.
+        SELECT p.agent_id, p.seq,
+               agent.resume_projection_message_id_v1(
+                   p.provenance_json
+               ) AS message_id
+        FROM context_item_resume_projection p
+        WHERE NOT producers.is_public_root
+          AND p.agent_id = producers.id
+          AND p.seq > producers.after_seq
+          AND p.context_item_id IS NOT NULL
+          AND p.provenance_json IS NOT NULL
+          AND p.public_import_exempt IS NOT TRUE
+          AND p.public_import_done_provenance_md5
+              IS DISTINCT FROM md5(p.provenance_json)::uuid
+        OFFSET 0
+    ) candidate
+    UNION
+    SELECT late.agent_id, late.seq, late.message_id
+    FROM root_late_context late
+),
+-- Durable provenance is typed data. Surface corruption to Rust in this same
+-- statement snapshot instead of replaying a consumed identity or silently
+-- omitting history. The target/root NULL-key probes use migration 0399's index.
+validation AS MATERIALIZED (
+    SELECT CASE
+      WHEN EXISTS (
+        SELECT 1 FROM producer_context WHERE message_id IS NULL
+      ) THEN 'producer'
+      WHEN EXISTS (SELECT 1 FROM producer_context) AND EXISTS (
+        SELECT 1
+        FROM context_item_resume_projection seen
+        WHERE seen.agent_id = $3
+          AND seen.provenance_json IS NOT NULL
+          AND md5(agent.resume_projection_message_id_v1(
+              seen.provenance_json
+          ))::uuid IS NULL
+      ) THEN 'target'
+      WHEN EXISTS (SELECT 1 FROM producer_context) AND EXISTS (
+        SELECT 1
+        FROM context_item_resume_projection seen
+        WHERE $4::bigint IS NOT NULL
+          AND seen.agent_id = $1
+          AND seen.seq <= $4
+          AND seen.provenance_json IS NOT NULL
+          AND md5(agent.resume_projection_message_id_v1(
+              seen.provenance_json
+          ))::uuid IS NULL
+      ) THEN 'root'
+    END AS invalid_scope
+),
+unseen_context AS MATERIALIZED (
+    SELECT candidate.agent_id, candidate.seq, candidate.message_id
+    FROM producer_context candidate
+    CROSS JOIN validation
+    -- Keep separate per-agent digest probes. Combining the agent IDs with OR
+    -- lets custom plans skip-scan the expression index by message ID.
+    LEFT JOIN LATERAL (
+        SELECT 1 AS hit
+        FROM context_item_resume_projection seen
+        WHERE seen.agent_id = $3
+          AND seen.provenance_json IS NOT NULL
+          -- A one-value range is an intentional custom-plan fence: equality
+          -- can prefer the agent PK and scan every consumed target identity.
+          AND md5(agent.resume_projection_message_id_v1(
+              seen.provenance_json
+          ))::uuid BETWEEN md5(candidate.message_id)::uuid
+                         AND md5(candidate.message_id)::uuid
+          AND agent.resume_projection_message_id_v1(
+              seen.provenance_json
+          ) = candidate.message_id
+        LIMIT 1
+    ) target_consumed ON true
+    LEFT JOIN LATERAL (
+        SELECT 1 AS hit
+        FROM context_item_resume_projection seen
+        WHERE $4::bigint IS NOT NULL
+          AND seen.agent_id = $1
+          AND seen.seq <= $4
+          AND seen.provenance_json IS NOT NULL
+          -- Match the target probe's expression-index plan fence.
+          AND md5(agent.resume_projection_message_id_v1(
+              seen.provenance_json
+          ))::uuid BETWEEN md5(candidate.message_id)::uuid
+                         AND md5(candidate.message_id)::uuid
+          AND agent.resume_projection_message_id_v1(
+              seen.provenance_json
+          ) = candidate.message_id
+        LIMIT 1
+    ) root_consumed ON true
+    WHERE validation.invalid_scope IS NULL
+      AND candidate.message_id IS NOT NULL
+      AND target_consumed.hit IS NULL
+      AND root_consumed.hit IS NULL
+),
+feed AS MATERIALIZED (
+SELECT context.agent_id AS producer_agent_id, context.seq AS producer_context_seq,
+       ci.item_json, (extract(epoch FROM ci.created_at))::bigint AS created_at,
+       projection.message_source, projection.client_context_json, projection.reply_prefix,
+       projection.provenance_json, projection.client_context_projected,
+       projection.reply_prefix_projected, projection.provenance_projected,
+       e.event_seq AS sort_event_seq, ci.seq AS sort_context_seq
+FROM unseen_context context
+JOIN context_item_resume_projection projection
+  ON projection.agent_id = context.agent_id AND projection.seq = context.seq
+JOIN context_items ci
+  ON ci.agent_id = context.agent_id AND ci.seq = context.seq
+ AND ci.context_item_id = projection.context_item_id
+-- Probe each unseen message by ID. OFFSET 0 keeps the planner from flattening
+-- this into a scan of every event in the public conversation.
+CROSS JOIN LATERAL (
+    SELECT e.event_seq, e.event_name, e.payload_json
+    FROM runtime.events e
+    WHERE e.message_id = context.message_id AND e.parent_agent_id = $1
+      AND COALESCE(NULLIF(TRIM(e.agent_id), ''), e.parent_agent_id) = context.agent_id
+      AND e.event_seq <= $2
+      AND e.transcript_surface = 'main_chat'
+      AND ((e.visibility = 'public' AND (
+            (e.event_name = 'message.user' AND e.role = 'user')
+            OR (e.event_name = 'message.assistant' AND e.role = 'assistant')))
+        OR (e.visibility = 'internal' AND e.event_name = 'message.internal'
+            AND e.source = 'runtime.voice_companion_context'
+            AND EXISTS (
+              SELECT 1 FROM runtime.event_payload_fields role_field
+              WHERE role_field.event_seq = e.event_seq
+                AND role_field.field_path = '/role'
+                AND role_field.scalar_type = 'string'
+                AND COALESCE(
+                  role_field.text_value, role_field.scalar_value
+                ) = 'developer'
+            )))
+    OFFSET 0
+) e
+JOIN runtime.event_payload_fields context_seq
+  ON context_seq.event_seq = e.event_seq AND context_seq.field_path = '/metadata/context_seq'
+ AND COALESCE(context_seq.text_value, context_seq.scalar_value) = context.seq::text
+LEFT JOIN runtime.event_payload_fields status
+  ON status.event_seq = e.event_seq AND status.field_path = '/status'
+LEFT JOIN runtime.event_payload_fields streaming
+  ON streaming.event_seq = e.event_seq AND streaming.field_path = '/metadata/streaming'
+LEFT JOIN runtime.event_payload_fields excluded
+  ON excluded.event_seq = e.event_seq AND excluded.field_path = '/metadata/context_exclusion/reason'
+WHERE (e.event_name <> 'message.assistant' OR COALESCE(
+      status.text_value, status.scalar_value, e.payload_json::jsonb ->> 'status'
+  ) IN ('completed', 'failed', 'interrupted'))
+  AND streaming.event_seq IS NULL AND excluded.event_seq IS NULL
+ORDER BY e.event_seq ASC, ci.seq ASC
+LIMIT 256
+)
+SELECT feed.producer_agent_id, feed.producer_context_seq, feed.item_json,
+       feed.created_at, feed.message_source, feed.client_context_json,
+       feed.reply_prefix, feed.provenance_json, feed.client_context_projected,
+       feed.reply_prefix_projected, feed.provenance_projected,
+       feed.sort_event_seq, validation.invalid_scope
+FROM validation
+LEFT JOIN feed ON validation.invalid_scope IS NULL
+WHERE validation.invalid_scope IS NOT NULL OR feed.producer_agent_id IS NOT NULL
+ORDER BY feed.sort_event_seq ASC NULLS FIRST, feed.sort_context_seq ASC NULLS FIRST
+ child_agent_id IN ()
+outputrun_idtool_nametool_statustool_result_previewmessage_textagent_createdagent_spawnedmailbox admission has no request trace for telemetrymailbox admission has invalid request trace for telemetrycommitted mailbox admission has no request trace for telemetrycommitted mailbox admission has missing request identity for telemetrysubmission_acceptedinternal_wakecommitted mailbox admission handoff telemetry could not serializecommitted mailbox admission has invalid request origin for telemetryexternal_kindparticipationaccount_idbinding_iddirectgroupexternal_iddelivery_targettransport_jsonhydrate activity feed actionsactivity_thread_idCOALESCE(finished_at_ms, created_at_ms)job_id where  and filesactivity_threademojiattachmentsmessage_idsturn deletion marker payload missing message_idschat event insert unexpectedly included a widget state transitionatomic chat-event admission returned no mailbox resultatomic chat-event admission unexpectedly included a widget transitionexternal.main_chatpublicuser_facing
+WITH matched_chat_search_events AS MATERIALIZED (
+SELECT
+  pool.seq,
+  pool.bm25 * (1 + ) AS recall_score
+FROM (
+SELECT
+  e.event_seq AS seq,
+  -() AS bm25,
+  greatest(extract(epoch from (now() - e.created_at)), 0)::float8 / 86400 AS age_days
+FROM runtime.search_documents AS sd
+JOIN runtime.events AS e
+  ON e.event_seq = sd.owner_key::bigint
+LEFT JOIN runtime.messages AS m
+  ON m.event_seq = e.event_seq
+WHERE sd.owner_table = 'runtime.events'
+  AND e.event_name IN ('message.user', 'message.assistant')
+  AND em AND  AND e.event_seq <  AND to_timestamp((extract(epoch from e.created_at) * 1000)::bigint / 1000.0) >=  AND to_timestamp((extract(epoch from e.created_at) * 1000)::bigint / 1000.0) <  LIMIT 
+) AS pool
+WHERE pool.bm25 > 0
+ORDER BY recall_score DESC, pool.seq DESC
+LIMIT 
+),
+event_transcript_rows AS (
+
+SELECT
+  e.event_seq AS seq,
+  (extract(epoch from e.created_at) * 1000)::bigint AS occurred_at_ms,
+  e.event_name,
+  e.visibility::text AS visibility,
+  coalesce(e.role::text, m.role::text, 'system') AS role,
+  e.source,
+  e.stream_lane,
+  e.transcript_surface::text AS transcript_surface,
+  e.request_id,
+  e.root_request_id,
+  e.parent_request_id,
+  coalesce(e.message_id, m.message_id, '') AS message_id,
+  e.reply_to_message_id,
+  e.reply_target_message_id,
+  e.agent_id,
+  e.parent_agent_id,
+  e.parent_message_id,
+  case
+    when derived_backlog.event_seq is not null
+    then coalesce(e.payload_json, '{}'::text)
+    else '{}'::text
+  end AS payload_json,
+  CASE
+    WHEN e.event_name = 'delta.presentation' THEN NULLIF(m.body, '')
+    ELSE m.body
+  END AS display_text,
+  case when e.display_text_ready then 1::bigint else 0::bigint end AS display_text_ready,
+  null::bigint AS display_text_updated_at_ms,
+  coalesce(e.idempotency_key, e.event_id::text) AS idempotency_key,
+  channel_ctx.chat_context_json,
+  coalesce(
+    nullif(channel_ctx.chat_context_json::jsonb ->> 'origin_provider', ''),
+    nullif(channel_ctx.chat_context_json::jsonb ->> 'provider', ''),
+    external_transport.provider
+  ) AS origin_provider,
+  e.chat_kind,
+  mr.reaction_emoji,
+  coalesce(sd.search_text, m.body) AS search_text
+
+FROM matched_chat_search_events AS matched
+JOIN events e
+  ON e.event_seq = matched.seq
+
+LEFT JOIN messages m ON m.event_seq = e.event_seq
+LEFT JOIN chat_event_derived_write_backlog derived_backlog ON derived_backlog.event_seq = e.event_seq
+LEFT JOIN message_reactions mr ON mr.message_id = coalesce(e.message_id, m.message_id)
+LEFT JOIN LATERAL (
+  SELECT coalesce(
+    (
+      SELECT coalesce(ctx_field.text_value, ctx_field.scalar_value)
+      FROM event_payload_fields ctx_field
+      WHERE ctx_field.event_seq = e.event_seq
+        AND ctx_field.field_path = '/__hatch/chat_context_json'
+      LIMIT 1
+    ),
+    e.chat_context_json,
+    nullif((e.payload_json::jsonb -> 'chat_context')::text, 'null')
+  ) AS chat_context_json
+) channel_ctx ON true
+LEFT JOIN LATERAL (
+  SELECT c.provider
+  FROM chat.event_transports c
+  WHERE c.event_seq = e.event_seq
+    AND nullif(c.provider, '') IS NOT NULL
+    AND c.provider <> 'main'
+  ORDER BY c.provider ASC
+  LIMIT 1
+) external_transport ON true
+
+LEFT JOIN search_documents sd ON sd.owner_table = 'runtime.events' AND sd.owner_key = e.event_seq::text
+
+)
+SELECT
+  e.*,
+  e.search_text AS snippet_source
+FROM event_transcript_rows AS e
+JOIN matched_chat_search_events AS matched
+  ON matched.seq = e.seq
+ORDER BY matched.recall_score DESC, e.seq DESC
+,
+matched_chat_search_events AS MATERIALIZED (
+SELECT
+  e.event_seq AS seq
+FROM matched_chat_search_documents AS sd
+JOIN runtime.events AS e
+  ON e.event_seq::text = sd.owner_key
+LEFT JOIN runtime.messages AS m
+  ON m.event_seq = e.event_seq
+WHERE 1 = 1
+ AND e.parent_agent_id =  AND e.event_name IN ('message.user', 'message.assistant') ORDER BY e.event_seq DESC LIMIT 
+)
+SELECT
+  e.*,
+  e.search_text AS snippet_source
+FROM event_transcript_rows AS e
+JOIN matched_chat_search_events AS matched
+  ON matched.seq = e.seq
+ORDER BY e.seq DESC
+
+WITH matched_chat_search_documents AS MATERIALIZED (
+SELECT
+  sd.owner_key
+FROM runtime.search_documents AS sd
+WHERE sd.owner_table = 'runtime.events'
+  AND (sd.search_vector @@ websearch_to_tsquery('simple',
+ OR sd.search_vector @@ to_tsquery('simple', )
+)À&.transcript_surface = 'main_chat' AND È

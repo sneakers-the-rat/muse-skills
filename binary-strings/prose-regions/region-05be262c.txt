@@ -1,0 +1,244 @@
+errorsuccesswrite_admissionwritepostgres write completed slowlypostgres write failedretrying idempotent postgres writewallet transfer destination is unresolvedwallet ownership transfer became stalewallet transfer source is unresolvedwallet spend request expired before assignmentassigned wallet spend has no provable exact BrowserTask ownerwallet cancellationwallet cancellation confirmation is required
+update runtime.stripe_link_spend_requests
+set lifecycle_state = 'cancel_pending',
+    cancel_attempt_id = $2
+where approval_id = $1
+  and owner_browser_task_id = $3
+  and lifecycle_state in ('ready', 'assigned')
+wallet cancellation already has a different unresolved attemptwallet spend request is not cancellablewallet cancellation lineage claim changed
+update runtime.stripe_link_spend_requests
+set lifecycle_state = 'cancel_pending',
+    cancel_attempt_id = $2
+where approval_id = $1
+  and owner_browser_task_id = $3
+  and lifecycle_state = 'ready'
+  and assigned_browser_task_id is null
+  and assigned_at is null
+wallet approval is not eligible for compensating cancellationwallet compensating cancellation lineage claim changed
+update runtime.stripe_link_spend_requests
+set lifecycle_state = $2,
+    cancel_attempt_id = null
+where approval_id = $1
+  and owner_browser_task_id = $3
+  and lifecycle_state = 'cancel_pending'
+  and cancel_attempt_id = $4
+Stripe Link cancellation release does not match its durable attemptStripe Link cancellation release lineage claim changedStripe Link cancellation release became stalewallet cancellation recoverywallet cancellation classification does not permit local closewallet cancellation is not pending
+update runtime.stripe_link_spend_requests
+set lifecycle_state = 'closed',
+    claiming_browser_task_lineage_id = case
+      when $5 then null
+      else claiming_browser_task_lineage_id
+    end,
+    cancellation_confirmation_task_state_revision = null,
+    cancellation_confirmation_response_message_id = null,
+    close_reason = $6,
+    closed_at = now()
+where approval_id = $1
+  and owner_browser_task_id = $4
+  and (lifecycle_state = 'cancel_pending'
+       or (lifecycle_state = 'closed' and close_reason = 'provider_expired'))
+  and cancel_attempt_id = $2
+  and stripe_spend_request_id = $3
+wallet cancellation result does not match its durable attemptwallet transfer destinationwallet transfer source state or revision is stale
+select exists (
+    select 1
+    from runtime.stripe_link_spend_requests
+    where claiming_browser_task_lineage_id = $1
+      and approval_id <> $2
+)
+wallet transfer authorization no longer matches the spend requestwallet spend request is not transferablewallet ownership transfer belongs to a different provider
+update runtime.stripe_link_spend_requests
+set owner_browser_task_id = $2,
+    claiming_browser_task_lineage_id = $3,
+    lifecycle_state = 'assigned',
+    assigned_browser_task_id = $2,
+    assigned_at = coalesce(assigned_at, now()),
+    cancellation_confirmation_task_state_revision = null,
+    replacement_approval_id = null,
+    replacement_task_state_revision = null,
+    cancellation_confirmation_response_message_id = null
+where approval_id = $1
+  and owner_browser_task_id = $4
+  and lifecycle_state in ('ready', 'assigned')
+  and expires_at > now()
+returning *
+wallet transfer destination lineage already has a claim
+select *
+from runtime.stripe_link_spend_requests
+where wallet_provider = $1
+  and claiming_browser_task_lineage_id = $2
+  and lifecycle_state <> 'closed'
+
+select *
+from runtime.stripe_link_spend_requests
+where wallet_provider = $1
+  and owner_browser_task_id = $2
+  and lifecycle_state <> 'closed'
+
+select exists (
+    select 1
+    from runtime.stripe_link_spend_requests
+    where wallet_provider = $1
+      and claiming_browser_task_lineage_id = $2
+)
+
+select *
+from runtime.stripe_link_spend_requests
+where wallet_provider = $1
+  and merchant_origin = $2
+  and lifecycle_state <> 'closed'
+
+select exists (
+    select 1
+    from runtime.checkout_spend_operations
+    where wallet_provider = $1
+      and (client_task_key = 'browser:' || $2
+       or client_task_key = (
+           select 'browser:' || coalesce(continuation_root_task_id, task_id)
+           from runtime.browser_tasks
+           where task_id = $2
+       ))
+)
+wallet creationwallet creator lineage changed before creationselect exists(
+                            select 1 from runtime.browser_purchase_receipts
+                            where (task_id = $1 and checkout_id = $2) or approval_id = $3)this purchase approval was already consumed
+	insert into runtime.stripe_link_spend_requests (
+	    approval_id,
+	    wallet_provider,
+	    continuation_root_task_id,
+    owner_browser_task_id,
+    claiming_browser_task_lineage_id,
+    merchant_origin,
+    checkout_metadata,
+    approved_amount_minor,
+    approved_currency,
+    lifecycle_state,
+    create_attempt_id,
+    expires_at
+	) values (
+	    $1, $2, $3, $4, $3, $5, $6, $7, $8, 'create_pending', $9,
+	    greatest(now() + ($10 * interval '1 hour'), $11 + interval '1 hour')
+)
+on conflict do nothing
+returning *
+spend_request_already_exists_for_session: this BrowserTask lineage already claims a spend request for this wallet providerspend_request_already_exists_for_merchant: this merchant already has an active spend request for this wallet providerwallet approval is already bound to different creation factswallet create recovery
+update runtime.stripe_link_spend_requests
+set lifecycle_state = 'ready',
+    stripe_spend_request_id = $3,
+    expires_at = coalesce($5, now() + ($4 * interval '1 hour'))
+where approval_id = $1
+  and lifecycle_state = 'create_pending'
+  and create_attempt_id = $2
+returning *
+wallet create result conflicts with durable statewallet create attempt owner changedwallet owner lineage changed before retrieval
+update runtime.stripe_link_spend_requests
+set lifecycle_state = 'assigned',
+    assigned_browser_task_id = $2,
+    assigned_at = now()
+where approval_id = $1
+  and owner_browser_task_id = $2
+  and lifecycle_state = 'ready'
+  and expires_at > now()
+returning *
+wallet cancellation is unresolved; delivery is closedwallet spend request is not ready for assignmentwallet payment has a different current lineage or merchant origin
+select owner_browser_task_id
+from runtime.stripe_link_spend_requests
+where approval_id = $1
+  and lifecycle_state <> 'closed'
+  and expires_at <= now()
+
+update runtime.stripe_link_spend_requests
+set lifecycle_state = 'closed',
+    cancellation_confirmation_task_state_revision = null,
+    cancellation_confirmation_response_message_id = null,
+    close_reason = 'provider_expired',
+    closed_at = now()
+where approval_id = $1
+  and owner_browser_task_id = $2
+  and lifecycle_state in ('assigned', 'cancel_pending')
+  and expires_at <= now()
+create_expired
+update runtime.stripe_link_spend_requests
+set lifecycle_state = 'closed',
+    claiming_browser_task_lineage_id = null,
+    cancellation_confirmation_task_state_revision = null,
+    cancellation_confirmation_response_message_id = null,
+    close_reason = $2,
+    closed_at = now()
+where approval_id = $1
+  and lifecycle_state <> 'closed'
+  and assigned_at is null
+  and expires_at <= now()
+wallet provider outcomewallet provider outcome cannot close this request state
+update runtime.stripe_link_spend_requests
+set lifecycle_state = 'closed',
+    claiming_browser_task_lineage_id = case
+        when $5 then null
+        else claiming_browser_task_lineage_id
+    end,
+    cancellation_confirmation_task_state_revision = null,
+    cancellation_confirmation_response_message_id = null,
+    close_reason = $4,
+    closed_at = now()
+where approval_id = $1
+  and owner_browser_task_id = $2
+  and stripe_spend_request_id = $3
+  and lifecycle_state in ('ready', 'assigned')
+wallet request was already closed for a different reasonwallet provider outcome belongs to a different requestwallet provider outcome lost its exact request fenceinvalid payment credential expirywallet BrowserTask has no durable statewallet spend request does not existacquired connection, but time to acquire exceeded slow thresholdacquired connectionstripe_link_spend.claim_cancellationstripe_link_spend.claim_compensating_cancellationstripe_link_spend.release_cancellation_without_effectstripe_spend_request_idstripe_link_spend.close_after_cancellation_confirmationstripe_link_spend.transfer_ownershipstripe_link_spend.find_active_for_claimbrowser_task_idstripe_link_spend.find_active_for_ownerstripe_link_spend.has_claim_for_lineagemerchant_originstripe_link_spend.find_active_for_originstripe_link_spend.has_legacy_browser_task_historystripe_link_spend.assign_for_retrievalapproval_idstripe_link_spend.expire_if_duestripe_link_spend.close_after_provider_outcome
+select task_id,
+       continuation_root_task_id,
+       status,
+       state_revision,
+       deadline_at,
+       completed_at,
+       outcome_status
+from runtime.browser_tasks
+where task_id = $1
+for update
+
+select *
+from runtime.stripe_link_spend_requests
+where approval_id = $1
+for update
+
+select *
+from runtime.stripe_link_spend_requests
+where wallet_provider = $1
+  and claiming_browser_task_lineage_id = $2
+  and lifecycle_state <> 'closed'
+for update
+
+select *
+from runtime.stripe_link_spend_requests
+where wallet_provider = $1
+  and merchant_origin = $2
+  and lifecycle_state <> 'closed'
+for update
+
+select pg_advisory_xact_lock(
+    hashtextextended('wallet-browser-spend-lineage:' || $1, 0)
+)
+
+select *
+from runtime.stripe_link_spend_requests
+where claiming_browser_task_lineage_id = $1
+  and wallet_provider <> $2
+for update
+
+select *
+from runtime.stripe_link_spend_requests
+where claiming_browser_task_lineage_id = $1
+for update
+
+select task_id,
+       continuation_root_task_id,
+       status,
+       state_revision,
+       deadline_at,
+       completed_at,
+       outcome_status
+from runtime.browser_tasks
+where task_id in ($1, $2)
+order by task_id
+for update
+database write admission gate closedadmission_timeoutcreate_provider_refusedcancellation_dispatchedcancellation_confirmedprovider_terminalprovider_replacement_requiredprovider_terminal_failureprovider_unsupported_statusstripe-linkmerchant-savedStripe LinkMerchant Cardreadytask_idcontinuation_root_task_idstatusstate_revisiondeadline_atcompleted_atoutcome_statusBUG: inner connection already taken!

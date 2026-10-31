@@ -1,0 +1,208 @@
+open chat delivery storagepersist immutable chat deliveryreload chat delivery after uncertain settlement raceforeground reply has no canonical message ownerpredecessor chat delivery reached normal pending-row preparationcanonical reply was deleted or its chat owner changedwidget-token strip ran on chat-egress Reply payloaddurable chat delivery has no message after widget-token stripdurable chat delivery has no message or attachments after outbound sanitizationan earlier reply effect is uncertain; refusing a replacement sendcaptured chat authorization retiredcaptured chat authorization pausedclaim pending chat deliveryrecord chat delivery pre-dispatch failureterminalize invalid durable chat deliveryopen chat delivery storage while awaiting settlementreload chat delivery while awaiting settlementconnector link card enrichment: permission mirror unavailableconnector link card enrichment: permission mirror timed out
+Cart provider missingCart widget unavailableshow_do_it_buttonhide_summaryfailed to hydrate native idea widgetwidget presentation requires a matching request and widgetembedded widget presentation belongs to a stale conversation epochfailed to persist embedded delta.presentation eventfailed to prefetch idea widget icon contexts for history hydrationattachment signing task failedwidget.present requires a widget idwidget.present requires a request idvoice_optionswidget.present complimentary subscription kind or delivery identity mismatchfailed to load persisted widgetvoice_genui_widget_subjectletter widget delivery marker skipped because briefing was not foundgoal_briefing_pushbriefing_idletter widget delivery marker could not load briefingletter widget delivery marker failedembedded widget presentation requires a widget idembedded widget presentation requires a request idfailed to load persisted widget for embedded presentationpersist_widget cannot write a system-owned complimentary subscription widgetpersist_widget requires a widget idInvalid saved hotel identitypersist_widget idea payload requires an idea_idpersist_widget flight presentation failedfailed to validate native idea widget before persistenceexpediaExpedia is unavailablefailed to store widgetshopping action requires an available bundled connector skillfailed to append peer audit eventmuse_mailinclude_signatureconnecteddynamic timezone unresolvedpersist reconciled scheduler statecancel queued runs for unresolved dynamic timezone jobsfailed to revoke stale Sentinel grants; cron reactivation remains quarantinedfailed to read next wake-eligible maintenance deadline; scheduled resume projection is incompletefailed to project authoritative side-chat cron fallback to the filesystemretired completed authoritative runonce definitionscheduler reconcile errordynamic scheduled-resume resolver returned unknown jobs; projection is incompletedynamic scheduled-resume eligibility could not be resolved; projection is incompletefailed to revoke Sentinel grants for removed cron schedulescheduler released source paths held by removed jobs so live definitions could persistreleased_source_pathsnext_effective_dispatch_at_utcdynamic_timezone_next_run_refreshed_jobsgrant_revocation_failuresinvalid_definitions
+DELETE FROM search_documents
+WHERE owner_table = 'runtime.events'
+  AND owner_key = $1
+DELETE FROM resources WHERE event_seq = $1INSERT INTO resources (event_seq, ordinal, resource_kind, resource_key, label, mime_type, size_bytes, metadata_json) VALUES /__hatch/chat_context_json/__hatch/display_text_updated_at_msSELECT field_path, scalar_type, scalar_value, text_value FROM event_payload_fields WHERE event_seq = $1 FOR UPDATEDELETE FROM event_payload_fields WHERE event_seq = $1 AND field_path = ANY($2::text[])field_pathscalar_typescalar_valuetext_valueINSERT INTO event_payload_fields (event_seq, field_path, scalar_type, scalar_value, text_value) VALUES  ON CONFLICT (event_seq, field_path) DO UPDATE SET scalar_type = excluded.scalar_type, scalar_value = excluded.scalar_value, text_value = excluded.text_valueruntime.search_documents.search_text
+INSERT INTO search_documents (owner_table, owner_key, search_text, language, search_vector)
+VALUES ('runtime.events', $1, $2, 'simple', to_tsvector('simple', $3))
+ON CONFLICT (owner_table, owner_key) DO UPDATE SET
+  search_text = excluded.search_text,
+  language = excluded.language,
+  search_vector = excluded.search_vector,
+  updated_at = now()
+WHERE search_documents.search_text IS DISTINCT FROM excluded.search_text
+   OR search_documents.language IS DISTINCT FROM excluded.language
+
+SELECT coalesce(f.text_value, f.scalar_value)
+FROM event_payload_fields f
+WHERE f.event_seq = $1
+  AND f.field_path = '/__hatch/chat_context_json'
+LIMIT 1
+
+UPDATE widgets
+SET state_bundle_json = $2,
+    state_version = $3,
+    state_updated_at_ms = $4,
+    updated_at_ms = $4
+WHERE widget_id = $1
+  AND state_version = $5
+RETURNING state_version
+
+SELECT state_bundle_json, state_version
+FROM widgets
+WHERE widget_id = $1
+state_bundle_jsonwidget state bundle must be a JSON objectstate_version
+INSERT INTO context_items (
+  agent_id, seq, item_kind, text_content, role, call_id, tool_name, success,
+  message_source, created_at, item_json,
+  data_fbids, data_message_ids, data_thread_ids, data_expires_at
+) VALUES  RETURNING context_item_id, seq::agent.context_item_kind, ::runtime.message_role, , to_timestamp(::double precision), ::bigint[], ::text[], ::timestamptz)context_item_id
+SELECT pg_advisory_xact_lock(hashtextextended(agent_id, $2))
+FROM unnest($1::text[]) AS locked(agent_id)
+ORDER BY agent_id
+
+WITH inserted AS (
+INSERT INTO chat.chats (
+  chat_id,
+  origin,
+  lifecycle,
+  status,
+  thread_title,
+  source_session_id,
+  source_prompt_seq_upper_bound,
+  source_message_id_boundary,
+  created_at,
+  updated_at
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $12, $12)
+RETURNING chat_id
+)
+INSERT INTO chat_private.bindings(chat_id, provider, conversation_key, delivery_target)
+SELECT chat_id, $9, $10, $11 FROM inserted WHERE $9::text IS NOT NULL
+persistent
+WITH producer AS MATERIALIZED (
+  SELECT target.id AS agent_id,
+    CASE WHEN a.id IS NULL THEN NULL ELSE COALESCE(
+-- Highest seq of an agent's rows that no public voice import reads, or NULL
+-- when the import never reads any of them. Reads aliases `a` (the agent) and
+-- `root` (its presentation root). exempt_non_producer_rows.sql repeats it.
+CASE WHEN a.kind = 'root' AND a.depth = 0
+          AND a.agent_type = 'realtime_voice' THEN CASE
+    WHEN NOT pg_input_is_valid(a.spawn_metadata_json, 'jsonb') THEN -1
+    WHEN root.id IS NULL
+         OR a.spawn_metadata_json::jsonb #> '{realtime_voice,prompt_floor_seq}'
+            IS DISTINCT FROM to_jsonb(COALESCE(root.prompt_floor_seq, -1))
+        THEN NULL
+    WHEN pg_input_is_valid(
+        a.spawn_metadata_json::jsonb #>> '{realtime_voice,root_seed_context_seq}',
+        'bigint'
+    ) THEN GREATEST(
+        (a.spawn_metadata_json::jsonb #>> '{realtime_voice,root_seed_context_seq}')::bigint,
+        -1
+    )
+    ELSE -1
+END END
+    , 9223372036854775807) END AS exempt_through_seq
+  FROM (SELECT ::text AS id) target
+  LEFT JOIN agents a ON a.id = target.id
+  LEFT JOIN agents root ON root.id = a.presentation_root_session_id AND root.id <> a.id
+)
+INSERT INTO context_item_resume_projection (
+  agent_id, seq, context_item_id, created_at, message_source,
+  client_context_json, client_context_projected, public_import_exempt
+)
+SELECT producer.agent_id, v.seq, v.context_item_id, v.created_at, v.message_source,
+       v.client_context_json, v.client_context_projected,
+       CASE WHEN v.seq <= producer.exempt_through_seq THEN TRUE END
+FROM (VALUES ) AS v(seq, context_item_id, created_at, message_source, client_context_json,
+          client_context_projected)
+CROSS JOIN producer
+ON CONFLICT (agent_id, seq) DO UPDATE SET
+  context_item_id = excluded.context_item_id,
+  created_at = excluded.created_at,
+  message_source = COALESCE(excluded.message_source, context_item_resume_projection.message_source),
+  client_context_json = COALESCE(
+    excluded.client_context_json,
+    context_item_resume_projection.client_context_json
+  ),
+  client_context_projected = COALESCE(
+    context_item_resume_projection.client_context_projected,
+    FALSE
+  ) OR excluded.client_context_projected,
+  public_import_exempt = COALESCE(
+    context_item_resume_projection.public_import_exempt,
+    excluded.public_import_exempt
+  ),
+  updated_at = now()
+INSERT INTO context_item_resume_projection (
+  agent_id, seq, context_item_id, created_at, message_source,
+  client_context_json, reply_prefix, provenance_json,
+  client_context_projected, reply_prefix_projected, provenance_projected,
+  public_import_exempt
+)
+SELECT producer.agent_id, v.seq, v.context_item_id, v.created_at, v.message_source,
+       v.client_context_json, v.reply_prefix, v.provenance_json,
+       v.client_context_projected, v.reply_prefix_projected, v.provenance_projected,
+       CASE WHEN v.seq <= producer.exempt_through_seq THEN TRUE END
+FROM (VALUES ) AS v(seq, context_item_id, created_at, message_source, client_context_json,
+          reply_prefix, provenance_json, client_context_projected, reply_prefix_projected,
+          provenance_projected)
+CROSS JOIN producer
+ON CONFLICT (agent_id, seq) DO UPDATE SET
+  context_item_id = excluded.context_item_id,
+  created_at = excluded.created_at,
+  message_source = COALESCE(excluded.message_source, context_item_resume_projection.message_source),
+  client_context_json = excluded.client_context_json,
+  reply_prefix = excluded.reply_prefix,
+  provenance_json = excluded.provenance_json,
+  client_context_projected = excluded.client_context_projected,
+  reply_prefix_projected = excluded.reply_prefix_projected,
+  provenance_projected = excluded.provenance_projected,
+  public_import_exempt = COALESCE(
+    context_item_resume_projection.public_import_exempt,
+    excluded.public_import_exempt
+  ),
+  updated_at = now()
+
+INSERT INTO context_item_resume_projection (
+  agent_id, seq, message_source, client_context_json, reply_prefix, provenance_json,
+  client_context_projected, reply_prefix_projected, provenance_projected
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+ON CONFLICT (agent_id, seq) DO UPDATE SET
+  message_source = COALESCE(context_item_resume_projection.message_source, excluded.message_source),
+  client_context_json = excluded.client_context_json,
+  reply_prefix = excluded.reply_prefix,
+  provenance_json = excluded.provenance_json,
+  client_context_projected = excluded.client_context_projected,
+  reply_prefix_projected = excluded.reply_prefix_projected,
+  provenance_projected = excluded.provenance_projected,
+  updated_at = now()
+SELECT s.child_agent_id, s.completed_at, s.handoff_state_json -> $2::text AS record,
+                m.agent_id AS admitted_by
+         FROM agent.subagent_spawns AS s
+         LEFT JOIN agent.message_mailbox AS m
+           ON m.submission_id = s.handoff_state_json -> $2::text ->> 'submission_id'
+         WHERE s.child_agent_id = ANY($1)
+         ORDER BY s.child_agent_id
+         FOR UPDATE OF sUPDATE agent.subagent_spawns AS s
+         SET handoff_state_json = jsonb_set(COALESCE(s.handoff_state_json, '{}'::jsonb),
+                                           ARRAY[$3]::text[], r.record::jsonb)
+         FROM unnest($1::text[], $2::text[]) AS r(child_agent_id, record)
+         WHERE s.child_agent_id = r.child_agent_idagent.subagent_spawns.handoff_state_jsonSELECT pg_advisory_xact_lock_shared(hashtextextended($1, 0))agent.volatile_context_pins.lifecycleSELECT pg_advisory_xact_lock(hashtextextended($1, 0))
+WITH owners AS MATERIALIZED (
+    SELECT DISTINCT agent_id COLLATE "C" AS agent_id
+    FROM unnest($1::text[]) AS input(agent_id)
+)
+SELECT pg_advisory_xact_lock(hashtextextended($2 || agent_id, 0))
+FROM owners ORDER BY agent_id COLLATE "C"
+agent.volatile_context_pins:SELECT agent_id FROM agent.agents WHERE agent_id = $1SELECT handoff_state_json -> $2::text AS state,
+                (extract(epoch FROM clock_timestamp()) * 1000)::bigint AS now_ms
+         FROM agent.subagent_spawns WHERE child_agent_id = $1 FOR UPDATEnow_msUPDATE agent.subagent_spawns
+         SET handoff_state_json = jsonb_set(COALESCE(handoff_state_json, '{}'::jsonb),
+                                           ARRAY[$2]::text[], $3::jsonb)
+         WHERE child_agent_id = $1insert into chat_private.publication_turns (execution_id, chat_id, disposition, phase)
+        select $1, $2, $3, $4 where pg_try_advisory_xact_lock_shared(hashtextextended($5, 0))
+        on conflict(execution_id) do nothing returning trueselect chat_id, phase, disposition from chat_private.publication_turns
+        where execution_id = $1 for updatedispositionphasepublication execution belongs to another chatavocado-5.17-v1-onboarding_shadowselect pg_advisory_xact_lock(4841544348435458)insert into context.ingest_attempts
+        (id, source_id, contributor_key, recorded_at, outcome,
+         submitted, inserted, duplicates, event_ids, error_code)
+        values ($1,$2,$3,clock_timestamp(),$4,$5,$6,$7,$8,$9)select last_append_position from context.sources where id = $1 for updateupdate context.sources set last_append_position = $2 where id = $1select id, (group_key is not distinct from $3
+            and payload_kind = $4
+            and occurred_at is not distinct from $5::timestamptz
+            and payload = $6 and content_hints = $7
+            and ttl_seconds is not distinct from $8) as matches
+         from context.events where source_id = $1 and dedupe_key = $2 for sharematchesinsert into context.events
+        (id, source_id, append_position, dedupe_key, group_key, payload_kind,
+         occurred_at, ingested_at, payload, content_hints, ttl_seconds, expires_at, group_id)
+        values ($1,$2,$3,$4,$5,$6,$7,statement_timestamp(),$8,$9,$10,
+            statement_timestamp() + $10::integer * interval '1 second',$11)delete from context.ingest_attempts where id in
+    (select id from context.ingest_attempts where recorded_at < now() - interval '7 days'
+     order by recorded_at, id limit 100)select pg_notify($1, '')hatch_context_committedinsert into context.sources
+    (id, source_domain, source_key, display_name, created_at, last_append_position)
+    values ($1, $2, $3, $4, clock_timestamp(), 0)
+    on conflict (source_domain, source_key) do nothingselect id, source_domain, source_key as key, display_name, created_at::text as created_at
+     from context.sources where source_domain = $1 and source_key = $2deleted sessions.updated events require an owner-visible deletion proofsession row unavailable for sessions.updated payloadfailed to hydrate sessions.updated payloadfailed to resolve public session id for streamed framefailed to broadcast streamed frame for root sessiondropped companion progress frame after its voice call changedfailed to resolve public session id for agent.statusagent.statusbackground job has an unsupported content localechat grant revocation failedThe conversation was cancelled before Muse finished its outcome summary. Review the recorded business replies for confirmed outcomes.The business ended the conversation before Muse wrote its outcome summary. Review the recorded business replies for confirmed outcomes.business conversation is not admittedbusiness worker authority is no longer currentsigned-in browser task does not fit the approval previewside_chat_signed_in_browserbrowser.start_signed_in_taskinvalid signed-in browser requestsigned-in browser card unavailablepeer target is missingpeer conversation is archivedpeer circle is missingpeer circle is inactivepeer contact is missingpeer relationship generation is missingsenderagentthis agent is not a chat workerthis chat worker is no longer currentthis turn is no longer activebusiness reply belongs to a retired workerworker notice has no producing traceworker notice has no producing admissionworker return route must be the current owner private chatuser input has no canonical admission receiptcanonical user input does not match its authenticated admissiononly a business conversation can be ended this way
+
+worker turn is no longer activeworker owner missinggroup provider authority or rollout awaits availabilitygroup private binding is no longer currentgroup provider authority awaits reconciliationgroup provider unavailablewhatsapp-owner-inbox-exploration-v1group worker lifecycle admission failed openavatar attachment attribution unavailableavatar attachment attribution budget elapsedcloudflared1_r2stdoutstderrspace_build_idintro_takengreeting_disabledstarter_personalocale_unavailablefailed to record a pending voice preview line requestconfidential_vmeval_killswitchbackfill_disabledinvalid_namefailed_personavoice_preview_linegeneratedfollow_up_enqueuevoice_onboarding_greeting_pregeneratedfailed to record voice preview line generation failurecadencevoice_onboarding_greetingbefore_first_callforeign delivery has no policydiscretion host unavailablediscretion edit check timed outdiscretion edit check failed; asking the owneraddingDISCRETION.md was not changed: the change is too long to show on an approval card; change fewer or shorter lines at a timeside_chat_discretionsidechat.update_discretionunexpected discretion approval responsecanonical chat publication preparation faileduncertain_provider_effectinvalid_stored_publicationpublication_chat_changedpublication_deletedunsupported_publication_transportmissing_publication_destinationmissing_publication_providerpublication_supersededpublication authorization awaits reconciliationpublication transcript unavailableunsupported_presentation_kindinvalid_reply_projectionmissing_presentation_fallbackinvalid_presentation_payloadmissing_presentation_rowunsupported_presentation_destinationterminal publication unexpectedly deferredempty_publicationchat.replytoo_many_reply_partsexternal agent delivery payload is requiredexternal agent delivery authorization refusedexternal agent delivery is waiting for local preparationheld until the provider's app connectschat delivery hold check failed; deferringprovider hold check unavailablefailed to open chat delivery storagefailed to make pending chat deliveries duechat delivery lost process task ownership after its durable provider claim; effect may have appliedopen chat delivery worker storagedurable chat delivery worker startedchat delivery concurrency must be greater than zerocould not reconcile predecessor chat claims; retaining worker ownershipcould not prepare canonical chat publicationschat delivery claim attempt failedcould not list due chat deliveriescould not prune terminal chat deliveriescould not read next chat delivery retrychat claim task stopped; settling the exact claim as uncertainparked interrupted external chat dispatch as uncertainchat delivery worker ownership ended after the provider dispatch claim; delivery outcome is permanently uncertainterminalize interrupted chat delivery claimpublication has no assistant ownercanonical assistant publication has no captured authoritypublication binding lifetime changedpublication route disagrees with its canonical owner_flight_presentationIDENTITY.mdfailed to hydrate native letter widget title because briefing path is invalidfailed to hydrate native letter widget title because briefing is too largefailed to hydrate native letter widget title metadatafailed to hydrate native letter widget titlefailed to hydrate native letter widget identity metadatafailed to hydrate native letter widget because briefing was not foundfailed to hydrate native letter widgetfailed to resolve Letter artifactartifact_slugfailed to hydrate native letter widget because self-improvement storage was unavailablefailed to hydrate native letter widget because relationship brief was not foundcomplimentary plan-name lookup failedskipping goal suggestion with missing ideaskipping goal suggestion with empty idea or goal id during idea anchor recoveryskipping goal suggestion with unrecognized status during idea anchor recoveryfailed to load goal suggestions for idea anchor recoveryfailed to batch-upsert goal suggestion idea anchorscommitted goal maintenance planning failedfailed to serialize goal detail for goal.updated websocket eventfailed to load goal detail for goal.updated websocket eventfailed to serialize localized goal.updated websocket eventbroadcast goal.updated websocket eventfailed to hydrate goal Space associations from Spaces catalogfailed to record downstream idea engagement for goalfailed to record goal briefing clickgoal_briefing_openthat invitation link is not valid or has expiredrestrictedaccess must be restricted or trustedinviter

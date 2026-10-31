@@ -1,0 +1,71 @@
+invocation_id, task_id, planner_agent_id, parent_invocation_id, caller_agent_id, caller_submission_id, call_id, agent_id, submission_id, runtime_work_id, input_digest, kind, state, input_json, context_json, result_json, wait_call_id, ordinal, tab_id, (extract(epoch from created_at) * 1000)::bigint as created_at_ms, (extract(epoch from stop_requested_at) * 1000)::bigint as stop_requested_at_ms, terminal_reason, handoff_state, (extract(epoch from finished_at) * 1000)::bigint as finished_at_msSELECT seq, item_json, message_source, extract(epoch from created_at)::bigint AS created_at FROM context_items WHERE agent_id = $1 AND seq = ANY($2) ORDER BY seq FOR UPDATESELECT id, details_json FROM agent_compactions WHERE agent_id = $1 AND has_replacement_history ORDER BY id DESC LIMIT 1 FOR UPDATEitem_jsoniddetails_jsonagent.agent_compactions.details_jsonUPDATE agent_compactions SET details_json = $1 WHERE id = $2 AND agent_id = $3SELECT item_json FROM context_items WHERE agent_id = $1 AND seq = $2 FOR UPDATEcreated_atmessage_sourcerecovery notice sequence is already occupiedwith recursive selected(goal_id) as (
+                         select goal_id
+                         from goals.goals
+                         where goal_id = $1
+                         union
+                         select child.goal_id
+                         from goals.goals child
+                         join selected parent on child.parent_goal_id = parent.goal_id
+                         where $2
+                     )
+                     select goal.goal_id, goal.parent_goal_id, goal.source, goal.title,
+                            goal.summary, goal.description, goal.pushable, goal.status,
+                            goal.completed_at
+                     from goals.goals goal
+                     join selected on selected.goal_id = goal.goal_id
+                     order by goal.goal_id
+                     for update of goalsourcetitlesummarydescriptionparent_goal_idselect source from goals.goals where goal_id = $1goal cannot be its own parentgoal_id, source, attention_kind, attention_updated_at::text as attention_updated_at, next_due_at::text as next_due_at, escalation, slug, title, summary, description, momentum, momentum_status, emoji, image_relpath, icon_generation_status, status, created_at, updated_at, last_activity_at, pushable, parent_goal_id, sort_order, fixed_position, category, goal_kind, value_alignment, review_cadence, completed_atrequested source must match the parent; detach or choose a matching parentselect coalesce(max(sort_order), -1)::double precision + 1
+                             from goals.goals
+                             where parent_goal_id is not distinct from $1
+                               and source = $2
+                               and goal_id <> $3update goals.goals set source = $2, updated_at = $3,
+                                updated_at_ts = $4 where goal_id = any($1)update goals.goals goal
+                     set title = case
+                           when goal.goal_id = $1 then coalesce($2, goal.title)
+                           else goal.title
+                         end,
+                         summary = case
+                           when goal.goal_id = $1 then coalesce($3, goal.summary)
+                           else goal.summary
+                         end,
+                         description = case
+                           when goal.goal_id = $1 then coalesce($4, goal.description)
+                           else goal.description
+                         end,
+                         pushable = case
+                           when goal.goal_id = $1 then coalesce($5, goal.pushable)
+                           else goal.pushable
+                         end,
+                         parent_goal_id = case
+                           when goal.goal_id = $1 and $6 then $7
+                           else goal.parent_goal_id
+                         end,
+                         sort_order = case
+                           when goal.goal_id = $1 then coalesce($8, goal.sort_order)
+                           else goal.sort_order
+                         end,
+                         fixed_position = case
+                           when goal.goal_id = $1 and $15 then $16
+                           else goal.fixed_position
+                         end,
+                         status = mutation.status,
+                         completed_at = mutation.completed_at,
+                         completed_at_ts = mutation.completed_at_ts,
+                         updated_at = mutation.updated_at,
+                         updated_at_ts = mutation.updated_at_ts
+                     from unnest($9::text[], $10::text[], $11::text[], $12::timestamptz[],
+                                 $13::text[], $14::timestamptz[])
+                       as mutation(goal_id, status, completed_at, completed_at_ts,
+                                   updated_at, updated_at_ts)
+                     where goal.goal_id = mutation.goal_idpool icon selection requires a build identityicon generation requires a subject
+select input_grants_json
+from runtime.browser_tasks
+where task_id = $1
+  and root_session_id = $2
+  and admission_seq is not null
+  and owner_agent_id = $3
+  and stream_owner_message_id = $4
+  and state_revision = $5
+  and status in ('starting', 'running')
+  and completed_at is null
+browser planner changedbrowser invocation identity was reused

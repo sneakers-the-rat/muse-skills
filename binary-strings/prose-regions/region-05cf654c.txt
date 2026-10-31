@@ -1,0 +1,73 @@
+core::option::Option<sqlx_core::types::json::Json<hatch_db_spaces::spaces::audit_reviews::ArtifactAuditReview>>core::option::Option<sqlx_core::types::json::Json<hatch_db_spaces::spaces::share_disclosure::ShareDisclosureReview>>core::option::Option<serde_json::value::Value>core::option::Option<alloc::string::String>core::option::Option<f64>core::option::Option<i64>sqlx_core::types::json::Json<alloc::vec::Vec<hatch_db_spaces::shell::tab_order::NavigationTab>>sqlx_core::types::json::Json<hatch_protocol_types::artifact_capabilities::ArtifactCapabilityManifest>uuid::Uuidserde_json::value::Valuehatch_db_spaces::spaces::user_state::participation::ShareParticipationStatef64errorsuccesswrite_admissionwritepostgres write completed slowlypostgres write failedretrying idempotent postgres writeone-shot postgres write invoked more than onceselect space_slug as slug, accessed_at_ms, last_opened_at_ms,
+                            frequency_score, favorite_order
+                     from spaces.user_state
+                     where space_slug = $1
+                       and (sharing_state is null or accessed_at_ms is not null
+                         or last_opened_at_ms is not null or frequency_score is not null
+                         or favorite_order is not null)update spaces.user_state
+                     set accessed_at_ms = null,
+                         last_opened_at_ms = null,
+                         frequency_score = null,
+                         last_accessed_at = null
+                     where space_slug = $1insert into spaces.user_state (space_slug, favorite_order, is_favorite)
+                     select owner.space_slug, $2, $2 is not null
+                     from (
+                       select space_slug from spaces.spaces
+                       where space_slug = $1
+                       for key share
+                     ) owner
+                     on conflict (space_slug) do update set
+                       favorite_order = excluded.favorite_order,
+                       is_favorite = excluded.is_favoriteinsert into spaces.user_state
+                     (space_slug, sharing_state, sharing_revision, sharing_updated_at_ms)
+                     values ($1, 'pending', $2, $3)
+                     on conflict (space_slug) do update set
+                       sharing_state = excluded.sharing_state,
+                       sharing_revision = excluded.sharing_revision,
+                       sharing_updated_at_ms = excluded.sharing_updated_at_ms
+                     where spaces.user_state.sharing_state is nullselect space_slug as shortcode, sharing_state as state,
+                            sharing_revision as revision,
+                            sharing_saved_shortcode as saved_shortcode,
+                            sharing_updated_at_ms as updated_at_ms
+                     from spaces.user_state
+                     where space_slug = $1 and sharing_state is not nullinsert into spaces.user_state
+                         (space_slug, sharing_state, sharing_revision,
+                          sharing_saved_shortcode, sharing_updated_at_ms)
+                         values ($1, 'accepted', $2, $3, $4)
+                         on conflict (space_slug) do update set
+                           sharing_state = excluded.sharing_state,
+                           sharing_revision = excluded.sharing_revision,
+                           sharing_saved_shortcode = excluded.sharing_saved_shortcode,
+                           sharing_updated_at_ms = excluded.sharing_updated_at_ms
+                         where spaces.user_state.sharing_state is distinct from 'accepted'update spaces.user_state
+                         set sharing_accept_reported_at_ms = $2
+                         where space_slug = $1
+                           and sharing_state = 'accepted'
+                           and sharing_accept_reported_at_ms is nullselect space_slug from spaces.user_state
+                         where sharing_state = 'accepted'
+                           and sharing_accept_reported_at_ms is null
+                         order by space_sluguser_state.deleteuser_state.initializeuser_state.getuser_state.listuser_state.remove_recentuser_state.set_favorite_orderacquired connection, but time to acquire exceeded slow thresholdacquired connectionshare_participation.presentshare_participation.getshare_participation.mark_acceptance_reportedshare_participation.pending_acceptance_reportsselect space_slug as slug, accessed_at_ms, last_opened_at_ms,
+                frequency_score, favorite_order
+         from spaces.user_state
+         where sharing_state is null or accessed_at_ms is not null
+           or last_opened_at_ms is not null or frequency_score is not null
+           or favorite_order is not nulldelete from spaces.user_state
+         where accessed_at_ms is null
+           and last_opened_at_ms is null
+           and frequency_score is null
+           and favorite_order is null
+           and sharing_state is nullupdate spaces.user_state
+         set is_favorite = false, accessed_at_ms = null, last_opened_at_ms = null,
+             frequency_score = null, favorite_order = null,
+             last_accessed_at = null, pinned_at = null
+         where space_slug = any($1)delete from spaces.user_state
+         where space_slug = any($1) and sharing_state is nullselect exists(select 1 from spaces.user_state
+         where sharing_state is null or accessed_at_ms is not null
+           or last_opened_at_ms is not null or frequency_score is not null
+           or favorite_order is not null)insert into spaces.user_state (space_slug, favorite_order, is_favorite) values library on conflict (space_slug) do update set
+            favorite_order = excluded.favorite_order, is_favorite = true
+          where spaces.user_state.sharing_state is not null
+            and spaces.user_state.accessed_at_ms is null
+            and spaces.user_state.last_opened_at_ms is null
+            and spaces.user_state.frequency_score is null
+            and spaces.user_state.favorite_order is null, (, true)database write admission gate closedadmission_timeoutmid > lencalled `Result::unwrap()` on an `Err` valueaccessed_at_mslast_opened_at_msfrequency_scorefavorite_ordera sequenceBUG: inner connection already taken!ConfigurationInvalidArgumentIoTlsRowNotFoundTypeNotFoundtype_nameColumnIndexOutOfBoundsindexlenColumnNotFoundColumnDecodesourceEncodeDecodeAnyDriverErrorPoolTimedOutPoolClosedWorkerCrashedMigrateInvalidSavePointStatementBeginFaileddescription() is deprecated; use DisplayœC:

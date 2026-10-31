@@ -1,0 +1,231 @@
+
+        CREATE TABLE IF NOT EXISTS __drizzle_migrations (
+            id SERIAL PRIMARY KEY,
+            hash text NOT NULL,
+            created_at numeric
+        )
+        INSERT INTO __drizzle_migrations (hash, created_at) VALUES (?1, ?2)read migrationsread migration--> statement-breakpointidle_deferred_reasonqueue_claim_ownerqueue_claim_boot_ididle_gateidle_deferredidle_defer_reasonidle_deferred_lost_raceidle deferral lost queue-claim raceidle.sweepinternal.self_improvementquiet_window_secsmin_exchange_pairsrecent_exchange_pairsidle_sessionidle_session_since_utcidle_session_last_user_activity_utcidle_session_until_utcidle_runs_today_beforeceiling_remaining_afterdefcon_level_3_daily_capshopping_daily_capdaily cadence read failed; admitting signal-triggered objective cyclethrottledscheduler_grace_secondsprevious_cycle_idprevious_admitted_atsignal_admitted_runssignal_admission_limithatch_inference_defcon_level_3_enabledgatekeeperdefcon_cadencedaily cadence throttled objective cycledaily cadence read failed; admitting automatic objective cycleobjectivestartfailed to stamp boot generation on inline-triggered runproactivity_context_profileretired historical backfill state before objective runfailed to retire historical backfill state; continuing objective runrestart_checkpoint_parkeddurable_owner_retainedrestart_checkpoint_parked_agent_idrestart_checkpoint_parked_atprior_diagnosticsterminal_step_error_coderecovery staging lost current queue or objective lease ownershiprecovery admission cancelled after stagingrestart recovery staging write failed; retaining lease and retryingrecovery admission cancelledobjective execution gate wait cancelledrestart recovery admission cleanup failed; retrying atomicallyqueue_drainlease_wait_reasonlease_wait_requeued_atobjective lease claim result was ambiguous; retrying the same fenced ownerrequeue_lost_racequeued self-improvement runrecovery_pending_lease_ownerbackfill_completehistorical backfill retired; pending march marked complete
+INSERT INTO requests (
+  request_id, root_request_id, parent_request_id, request_origin,
+  transcript_surface, root_work_class
+)
+VALUES ($1, $2, $3, $4, $5::runtime.transcript_surface, $6)
+ON CONFLICT (request_id) DO UPDATE SET
+  root_request_id = COALESCE(requests.root_request_id, excluded.root_request_id),
+  parent_request_id = COALESCE(requests.parent_request_id, excluded.parent_request_id),
+  request_origin = CASE
+    WHEN requests.request_origin = 'internal.runtime_replay' THEN excluded.request_origin
+    ELSE requests.request_origin
+  END,
+  transcript_surface = excluded.transcript_surface,
+  root_work_class = CASE
+    WHEN requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing'
+      THEN excluded.root_work_class
+    ELSE requests.root_work_class
+  END
+WHERE (requests.root_request_id IS NULL AND excluded.root_request_id IS NOT NULL)
+   OR (requests.parent_request_id IS NULL AND excluded.parent_request_id IS NOT NULL)
+   OR (requests.request_origin = 'internal.runtime_replay'
+       AND excluded.request_origin <> 'internal.runtime_replay')
+   OR requests.transcript_surface IS DISTINCT FROM excluded.transcript_surface
+   OR (requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing')
+output
+INSERT INTO tool_outputs (event_seq, call_id, status, output_text, error_text, created_at)
+VALUES ($1, $2, $3, $4, $5, to_timestamp($6::double precision / 1000.0))
+ON CONFLICT (event_seq) DO UPDATE SET
+  call_id = excluded.call_id,
+  status = excluded.status,
+  output_text = excluded.output_text,
+  error_text = excluded.error_text
+arguments
+INSERT INTO tool_calls (event_seq, call_id, tool_name, status, arguments_json, created_at)
+VALUES ($1, $2, $3, 'started', $4, to_timestamp($5::double precision / 1000.0))
+ON CONFLICT (call_id) DO UPDATE SET
+  event_seq = excluded.event_seq,
+  tool_name = excluded.tool_name,
+  status = excluded.status,
+  arguments_json = excluded.arguments_json
+
+INSERT INTO chat_event_derived_write_backlog (event_seq, resources_json)
+VALUES ($1, $2)
+ON CONFLICT (event_seq) DO UPDATE SET
+  resources_json = excluded.resources_json,
+  updated_at = now()
+UPDATE chat_private.peer_conversations SET requester_chat_id = NULL
+         WHERE conversation_id = $1 AND requester_revision = $2
+           AND requester_chat_id = $3 AND NOT requester_unavailable
+           AND chat_id = $5
+           AND EXISTS (SELECT 1 FROM agent.agents
+                       WHERE id = $4 AND session_id = $3)peer handoff disagrees with its asking-chat claimpeer handoff requester changed before admission
+SELECT json_build_object(
+         'accepted_ordinal', accepted_ordinal,
+         'state', state,
+         'checkpoint_custody', checkpoint_custody,
+         'submission_json', submission_json
+       )::text
+FROM agent.message_mailbox
+WHERE agent_id = $1
+  AND state IN ('accepted', 'attached')
+ORDER BY accepted_ordinal, submission_id
+FOR UPDATE
+SELECT payload_json FROM runtime_restart_checkpoints WHERE agent_id = $1
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = 'executing',
+    stream_owner_message_id = $3,
+    attached_at = now()
+WHERE submission_id = $1
+  AND agent_id = $2
+  AND state = 'accepted'
+  AND stream_owner_message_id IS NULL
+
+SELECT agent_id, state, stream_owner_message_id, submission_json,
+       accepted_ordinal
+FROM agent.message_mailbox
+WHERE submission_id = $1
+FOR UPDATE
+
+SELECT EXISTS (
+  SELECT 1
+  FROM agent.message_mailbox
+  WHERE agent_id = $1
+    AND state = 'accepted'
+    AND accepted_ordinal < $2
+    AND (NOT $3 OR submission_kind <> 'internal_handoff')
+)
+tracked mailbox successor unexpectedly lost custodymessage mailbox successor promotion cannot overtake an older priority peer
+UPDATE agent.message_mailbox
+SET state = CASE WHEN $4 THEN 'completed' ELSE 'aborted' END,
+    checkpoint_custody = coalesce(checkpoint_custody, 'executing'),
+    terminalized_at = now()
+WHERE agent_id = $1
+  AND stream_owner_message_id = $2
+  AND submission_id = ANY($3)
+  AND state = 'attached'
+
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = 'executing',
+    stream_owner_message_id = $2,
+    attached_at = coalesce(attached_at, now())
+WHERE agent_id = $1
+  AND submission_id = ANY($3)
+  AND (
+    (state = 'accepted' AND stream_owner_message_id IS NULL)
+    OR (state = 'attached' AND stream_owner_message_id = $2)
+  )
+
+UPDATE agent.message_mailbox
+SET checkpoint_custody = 'queued'
+WHERE agent_id = $1
+  AND stream_owner_message_id = $2
+  AND submission_id = ANY($3)
+  AND state = 'attached'
+
+UPDATE agent.message_mailbox
+SET state = CASE
+      WHEN state = 'attached' AND $2 THEN 'completed'
+      ELSE 'aborted'
+    END,
+    terminalized_at = now()
+WHERE agent_id = $1
+  AND state IN ('accepted', 'attached')
+SELECT session_id, COALESCE(prompt_floor_seq, -1) AS prompt_floor_seq,
+                kind = 'root' AND parent_agent_id IS NULL
+                AND ephemeral IS DISTINCT FROM TRUE
+                AND status NOT IN ('shutdown', 'not_found') AS eligible
+         FROM agent.agents WHERE agent_id = $1 FOR UPDATEstartup_root_changedSELECT EXISTS(SELECT 1 FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND accepted_ordinal < $2)startup mailbox promotion cannot overtake an earlier accepted input
+SELECT payload_json
+FROM agent.runtime_restart_checkpoints
+WHERE agent_id = $1
+FOR UPDATE
+message mailbox attachment cannot overtake an older priority peer
+INSERT INTO agent.runtime_restart_checkpoints (
+  agent_id, mode, recovery_class, recovery_owner_id, execution_config_json,
+  payload_json, created_at, updated_at
+) SELECT $1, $2, $3, $4, $5, $6, $7, $7
+WHERE EXISTS (
+  SELECT 1
+  FROM agent.agents
+  WHERE agent_id = $1
+    AND status NOT IN ('shutdown', 'not_found')
+)
+ON CONFLICT (agent_id) DO NOTHING
+SELECT EXISTS (SELECT 1 FROM agent.agents WHERE agent_id = $1 AND status NOT IN ('shutdown', 'not_found'))conversation epoch
+INSERT INTO agent.message_mailbox (
+  submission_id, agent_id, conversation_epoch, submission_kind,
+  routing_scope, state, checkpoint_custody, stream_owner_message_id,
+  submission_json, transcript_event_seq, attached_at
+) VALUES (
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+  CASE WHEN $6 = 'attached' THEN now() ELSE NULL END
+)
+ON CONFLICT (submission_id) DO NOTHING
+RETURNING accepted_ordinal, accepted_at
+startup mailbox promotion requires its previously accepted input
+SELECT agent_id, conversation_epoch, submission_kind, routing_scope,
+       state, stream_owner_message_id, submission_json,
+       transcript_event_seq, accepted_ordinal, accepted_at
+FROM agent.message_mailbox
+WHERE submission_id = $1
+FOR UPDATE
+update chat.message_bindings set admitted_at = coalesce(admitted_at, now())
+                    where jarvis_message_id = $1 and chat_id = $2 and binding_epoch = $3 and transport = $4binding epochconversation_epochsubmission_kindrouting_scope
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = $5,
+    stream_owner_message_id = $2,
+    submission_json = $3,
+    transcript_event_seq = coalesce($4, transcript_event_seq),
+    attached_at = now()
+WHERE submission_id = $1
+  AND state = 'accepted'
+  AND stream_owner_message_id IS NULL
+mailbox stream ownerselect a.account_id from chat_private.accounts a
+             join chat_private.binding_authorizations b on b.provider = a.provider and b.account_id = a.account_id
+             where b.provider = $1 and b.binding_id = $2
+               and a.connection_id = $3 and not a.revoked for share of adirect input has no captured binding epochaccount_retiredselect connection_id, generation, transport_json, delivery_target
+             from chat_private.binding_authorizations
+             where provider = $1 and binding_id = $2 and chat_id = $3
+               and account_id = $4 and external_kind = 'direct' and participation = 'active'
+             for shareaccount_authorization_retiredtransport_jsontransport_authorization_absentconnection_idgenerationdelivery_targetselect epoch from chat_private.bindings
+         where chat_id = $1 and provider = $2 and not revoked for sharetransport_authorization_changedbinding_retiredSELECT pg_advisory_xact_lock(hashtextextended('activity-monitor-root-carrier:' || $1, 0))
+WITH lineage(message_id) AS (
+    SELECT $1::text
+    UNION
+    SELECT user_message_id
+    FROM activity_monitor_carrier_user_messages
+    WHERE carrier_message_id = $1
+      AND (root_agent_id IS NULL OR root_agent_id = $2)
+    UNION
+    SELECT $3::text
+    WHERE $3 IS NOT NULL AND $4
+)
+INSERT INTO activity_monitor_message_threads (
+    message_id, activity_thread_id, created_at, updated_at
+)
+SELECT message_id, $5, $6, $6
+FROM lineage
+ON CONFLICT(message_id) DO UPDATE SET
+    activity_thread_id = excluded.activity_thread_id,
+    updated_at = excluded.updated_at
+WHERE activity_monitor_message_threads.activity_thread_id
+    IS DISTINCT FROM excluded.activity_thread_id
+activity_monitor_bind_carrier
+SELECT activity_thread_id
+FROM activity_monitor_message_threads
+WHERE message_id = $1
+LIMIT 1
+activity_monitor_assign_agentactivity_monitor_current_agent_threadactivity_monitor_list_assigned_agentsactivity_monitor_upsert_activity_thread_actionactivity_monitor_next_action_indexactivity_monitor_delete_thread_actionactivity_monitor_list_thread_actionsactivity_monitor_action_by_idactivity_monitor_count_thread_actionsactivity_monitor_latest_action_thread_for_agentactivity_monitor_list_recent_thread_actionsactivity_monitor_running_actions_for_agentactivity_monitor_running_action_agentsactivity_monitor_record_carrieractivity_monitor_carrier_user_messagesactivity_monitor_bind_messageactivity_monitor_carrier_lifecycle_snapshotfailed to read activity monitor carrier lifecycle snapshotactivity_monitor_bind_message_any_statusactivity_monitor_message_thread_lookupactivity_monitor_redirect_root_carrier_lineageactivity_monitor_delete_runtime_work_bindingactivity_monitor_delete_stale_runtime_work_bindingsactivity_monitor_bind_runtime_workactivity_monitor_runtime_work_ids_for_threadactivity_monitor_runtime_work_thread_lookupactivity_monitor_update_nameactivity_monitor_read_threadactivity_monitor_list_active_threadsactivity_monitor_finish_activity_threadactivity_monitor_create_activity_threadactivity_monitor_update_finished_subtitlerecently finished activity threadsactivity_monitor_recent_finished_threadsinvalid activity thread query limitactivity_monitor_set_finished_thread_finish_messageactivity_monitor_reactivate_finished_threadfailed to reactivate finished activity threadactivity_monitor_settle_finish_verdictexpected_current_reason is requireddatabase write admission gate closedadmission_timeoutassert_table_existstable_presence.queryinvitespeer_conversationspeer_remote_conversationscirclescircle_membersheld_grantsaction_auditpeer_user_stateingestdata_source_eventsmedia_upload_eventsmedia_upload_batchesbackground_workersturnscontextsourcesingest_attemptssubscriptionssubscription_sourcesgroup_cursorsdeliverieswebhook_custodywebhook_custody_lockwebhook_fetch_workwebhook_eventsidea_execution_pendingcontext_snapshotscontext_itemsrecovery_ownersdelivery_outboxassert_required_tablesstream_lanesearch_vectorsearch_textwork_idsnapshot_kindstate_jsondelivery_keynext_attempt_at_utcskill_namepending_invalidation_hashlast_seen_version_idlast_seen_badge_versiontext_contentrecovery_classjob_idrun_idretired_chat_ids_pkeyruntime_search_documents_events_fts_idxruntime_search_documents_media_fts_idxruntime_search_documents_memory_fts_idxruntime_events_main_history_seq_desc_idxruntime_events_main_history_parent_kind_seq_idxruntime_events_public_runtime_user_seq_idxruntime_work_items_active_idxruntime_work_items_terminalized_idxdeliveries_retry_idxdeliveries_terminal_retention_idxruntime_chat_event_derived_write_backlog_created_idxruntime_chat_event_derived_write_backlog_ready_idxagent_subagent_progress_message_child_pending_idxagent_subagent_spawns_open_global_created_idxagent_agents_spawn_metadata_gin_idxagent_agents_active_subagent_liveness_idxagent_context_item_derived_write_backlog_created_idxagent_context_item_derived_write_backlog_ready_idxagent_runtime_restart_checkpoints_updated_idxagent_recovery_owners_active_scan_idxagent_recovery_owners_terminal_retention_idxagent_recovery_owners_terminal_status_idxscheduler_jobs_due_idxscheduler_runs_status_scheduled_utc_idxscheduler_delivery_outbox_retry_idxscheduler_delivery_outbox_retention_idxself_improvement_runs_queue_idle_gated_idxself_improvement_runs_queue_non_idle_gated_idxmedia_items_description_retry_idxmedia_items_ready_media_idxmedia_locations_geocode_retry_idxmessage_roledeveloperassistantevent_kindmessagetool_starttool_donetask_statuscontext_item_kindmessage_texttext_segmentstool_calltool_outputrun_statustimeoutapplied_migration_max_versioncredential_resolutionshared_pool_mutexresolve_database_urlshared_pool_reuse_checkpool_connectshared_pool_reusedHATCH_DATABASE_URLenvironment_overridecredential_task_queuecredential_decodeagent_status broadcast presence statusfailed to resolve root session for runtime-work activity-thread presenceagent_status ignored voice Companion activity-thread presence with ambiguous root sessionsfailed to resolve runtime-work bindings for activity-thread presenceagent_status ignored runtime-work activity-thread presence with ambiguous root sessionsfailed to resolve root session candidate for activity-thread presence updateagent_status cleared activity-thread presenceagent_status ignored blocked activity-thread fallback for non-waiting threadagent_status ignored blocked activity-thread activity for unloaded root sessionagent_status blocked activity-thread fallback did not changeagent_status accepted blocked activity-thread fallbackagent_status ignored runtime-work activity-thread activity for unloaded root sessionagent_status runtime-work activity-thread status did not changeagent_status accepted runtime-work activity-thread statusagent_status accepted voice Companion activity-thread statusagent_status ignored retained forwarded activity-thread presence with ambiguous root sessionsagent_status accepted retained forwarded activity-thread statusstandaloneroot admission cancellation signaled without a resultfailed to register space runtime egress context; falling back to runtime.unknowndelivery_modechunkedfinalization_fencedreconciliation_storage_failedfinalization_failedclaim reconciliation finalizationfinalization_ignored_staleinvalid_stream_uploadfinalization_fence_failedfence invalid reconciliation uploadinvalid_source_snapshotsettle invalid device reconciliation for retrydevice_sync_stateHealth reconciliation applied but device-sync worker wake failedfinalize device reconciliationclient rendering snapshot read failed; keeping lifts inline this turncould not load cron worker lease for browser gracecould not load cron worker allowance for browser graceOnly Internal announcements accept fallback copyInternal announcement requires public fallback copyinternal_fallback_messageInternal fallback exceeds message limitWWW messages require agent-written deliveryInternal announcement requires delivery instructionsInternalWorker priority is reserved for worker owner noticesInternal priority is reserved for code-owned main-chat deliveriesfollow-up metadata must be a JSON objectfollow-up must expire after it becomes deliverablefollow-up message must not be emptyfollow-up key must not be emptyfollow-up producer must not be emptyhardcoded product campaign producer is retiredpresentation_localeenqueue follow-upfollow_up_queue_deliveryfollow-up enqueued but the delivery worker could not be kickedfailed to read user time file for proactive delivery timezonespace_preview_repairspace preview repair: handler not registeredspace preview repair: handler registry unavailablespace_preview_missingspace preview repair: runtime work store unavailablequeued Space preview repairspace preview repair: seeding failedspace preview repair: catalog read failed on viewproactivity_admittedcheck browser task terminal update mailbox receiptopen browser task queue for completion relay ownershipload browser task relocation predecessorload browser task terminal-update ownershipparse browser task execution root for completion relay ownershiponboarding_starterbundled Ideas localization catalog is unavailablefailed to load bundled Ideas localization provenancefailed to load bundled Ideas dogfood provenanceIdea catalog sharing context read failedIdea share variant projection read failedIdea share revision projection read failedIdea direct sharing read failedIdea publication hold read failedauth status row concurrency limiter closedauth status row task failedfailed to load paired devices for healthkit skill statusUnable to load paired device permissionsfailed to persist skill statuses to user configideas_null_state_relevanceideas null-state relevancehatch-engine/crates/hatch-server/prompts/self_improvement/ideas_null_state_relevance.mdself_improvement/ideas_null_state_relevance.md{{CANDIDATE_CARDS_JSON}}ideas null-state relevance payload failed; treating all relevance as 0ideas null-state relevance attempt failed; retrying with a fresh turnideas null-state relevance declined; treating all relevance as 0failed to read idea build statuses for Ideas tab cardsexplore_defaultfailed to read idea card item selectionsself_improvement.ideasgenerated_cardidea_cards.recent_rowsfailed to hydrate idea card tag iconsbundled_new_user.null_stateidea cards feed assembling category rowspreserving pinned eval-fixture Ideas feed; skipping rematerializeskipping Ideas feed rematerialize while limited feed is activefailed to hydrate idea card item badgesfailed to hydrate idea card source metadataapi.idea_cards_materialized_fallback_tailskipping maintenance Ideas feed rematerialize while limited feed is activeIdeas feed already composed for this run; skipping rematerializeidea_cards.snapshot_publishidea cards snapshot publish skipped cards without feed-eligible backing rowsidea cards snapshot publish skipped incomplete row sectionsideas feed composer payload failed; rendering deterministic feedideas feed composer plan acceptedideas feed composer plan decode failed; rendering deterministic feedvector_count_mismatchfailed to load idea grounding facts for diversityclusteredclustered_partialexact_onlyexact_only_partialskipped_unavailableideas semantic fact clusteringrejecting malformed restart replay fence transitionfailed to persist replay fence before successor activationfailed to persist restart replay fencereplay-forbidden checkpoint had no durable payload fingerprintrejecting malformed replay-forbidden checkpointfailed to reconcile durable cancellation handoff before checkpoint replayfailed to read durable cancellation handoff evidencereplay-forbidden checkpoint changed before successor activationrestart checkpoint changed before successor activationfailed to persist replay-forbidden checkpoint successorfailed to persist restart checkpoint successorrejecting restart checkpoint with contradictory tool output evidencefailed to reconcile checkpoint tool outputs with the durable transcriptfailed to read durable tool output evidencefailed to terminalize invalid restart checkpoint ownerfailed to check for a live session before closing a refused browser checkpointbrowser_input_unsupported_kindbrowser_input_classification_failedbrowser_input_refusedclosing browser restart checkpoint refused by browser input admissionrestart checkpoint payload was invalidfailed to decode runtime restart checkpoint payloadpayload_decode_failedruntime restart checkpoint payload was missingpayload_missingrestart checkpoint payload version was invalidunsupported runtime restart checkpoint version was invalidunsupported_payload_versionruntime restart checkpoint required the retired voice executorlegacy_voice_execution_unsupportedruntime restart execution config was invalidexecution_config_invalidexplicit restart recovery identity had no execution configexplicit_execution_config_missingruntime restart approval correlation was invalidapproval_wait_invalidremoving invalid runtime restart checkpoint without executing itprimary_root_checkpoint_owner_terminalizationprimary_root_checkpoint_closefailed to terminalize owner of invalid restart checkpointprimary_root_checkpoint_metadata_readprimary_root_checkpoint_envelope_validationvalidprimary_root_checkpoint_terminal_cleanupterminal restart checkpoint classification lacked conversation metadataprimary_root_checkpoint_owner_validationprimary_root_checkpoint_invalid_cleanupfailed to load conversation meta before restart envelope validationfailed to resolve restart recovery policy inputsfailed to terminalize owner of terminal restart checkpointclosing legacy checkpoint without an exact execution configprimary_root_checkpoint_legacy_cleanupprimary_root_checkpoint_replay_preparationclosing runtime restart checkpoint without resume: recovery class has no proven live owner workprimary_root_checkpoint_owner_cleanupprimary_root_checkpoint_deferred_marker_storeprimary_root_checkpoint_agent_resumefailed to resume agent for runtime restart checkpointprimary_root_checkpoint_active_message_readvalidated restart checkpoint is missing its durable payload tokenprimary_root_checkpoint_message_activationcheckpoint agent is running a different message; leaving row unresolvedfailed to inspect active message during checkpoint rehydrateprimary_root_checkpoint_deletefailed to resume message from runtime restart checkpointfailed to delete runtime restart checkpoint after successful rehydratevideo FileRef MIME type cannot be canonicalized; preserving original referencevideo FileRef could not be materialized; preserving original referencevideo FileRef store task failed; preserving original referenceinsert into runtime.browser_task_tabs (task_id, tab_id, alias)
+         select $1, $2, 't' || (coalesce(max(substring(alias from 2)::integer), 0) + 1)
+         from runtime.browser_task_tabs where task_id = $1
+         on conflict (task_id, tab_id) do nothingupdate runtime.browser_task_tabs set actor_invocation_id = $3, actor_agent_id = $4
+             where task_id = $1 and tab_id = $2 and holder_invocation_id is not nullupdate runtime.browser_task_tabs set holder_invocation_id = null,
+                 actor_invocation_id = null, actor_agent_id = null, held_at = null
+                 where task_id = $1 and tab_id = $2update runtime.browser_task_tabs set holder_invocation_id = $3,
+                 actor_invocation_id = $4, actor_agent_id = $5, held_at = now()
+                 where task_id = $1 and tab_id = $2 and holder_invocation_id is nullbrowser tab hold changedtab_id, alias, holder_invocation_id, actor_invocation_id, actor_agent_id, (select holder.kind from runtime.browser_invocations holder where holder.invocation_id = browser_task_tabs.holder_invocation_id) as holder_kindupdate runtime.browser_task_tabs set holder_invocation_id = null,
+             actor_invocation_id = null, actor_agent_id = null, held_at = null
+             where task_id = $1 and tab_id = any($2)update runtime.browser_task_tabs set actor_invocation_id = $3, actor_agent_id = $4
+             where task_id = $1 and tab_id = any($2) and holder_invocation_id is not nullopen wallet spend storageopen BrowserTask storage for wallet checkoutload authoritative BrowserTask for wallet checkoutwallet checkout requires the exact BrowserTask to be runningthis browser checkout has payment state from before provider-qualified wallet storage; its outcome may be ambiguous, so automatic retry is disabledcheckout origin has no hostcompensating wallet cancellation is limited to Shop Pay application rollbackBrowserTask has no active wallet spend requestwallet deciding client is available only during spend creationwallet spend request belongs to a different approvalStripe Link begin unexpectedly resolved a pending creation retrybrowser wallet merchant origin changed before durable creationcheckout has no owned fundingcheckout funding changedmerchant checkout lookup authorization timed outresolve merchant checkout lookup authorizationunexpected merchant checkout lookup authorization responseread existing merchant payment setup for cancellationOpenTable approved terms lookup timed outunexpected OpenTable approved terms responseOpenTable checkout has no original requestOpenTable checkout lookup identity changedOpenTable modification approval is missingOpenTable modification approval has the wrong resourceOpenTable modification requires an approved modification operationOpenTable predecessor belongs to another reservationOpenTable predecessor approval is missingOpenTable checkout has no original approvalOpenTable booking permission recheck timed outunexpected OpenTable booking permission responseread existing merchant checkoutread OpenTable approved termsdecode checkout spend terminal resultapproved pending checkout spend operation has no approval ownercheckout approval lookup returned a different approval ownerdevice sync worker conversation bootstrap failed; continuing without guaranteed trajectory persistencefailed to load root transcript for device sync worker; continuing with event-only contextfailed to refresh latest public runtime user timezone for device sync promptfailed to read home timezone for device sync promptno device sync model was availabledevice_sync_workersaved arrival context unavailableproactive_sync_workerfailed to load prior device sync decisions; continuing without prior-decision contextephemeral payload handle changed during fetchnotification payload release is temporarily unavailablegeofence registry unavailable; the crossing stays an ordinary device-sync eventrequested Health backfill completion is missing its requested rangethe Health backfill requester conversation no longer existsrequester_root_missing[HEALTH BACKFILL COMPLETE]The requested Health backfill completed. Use `health-cli` to answer against the updated data.requested_rangeHealth backfill completed.device_sync.observeddevice_syncreceived_at_unix_mspayload/device_sync/payloadfailed to load recent media upload transcript context; continuing with batch-only contextfailed to load latest user client timezone for media upload promptmedia_upload_workerno media upload model was availableruntime_media_uploadx-request-idAction request exceeds 12 MiBCloudflare actions share has no stored share keyCloudflare actions URL does not match its share origininclude_recipient_identities/hatch/mint_cloudflare_spaces_viewer_tokenCloudflare viewer assertion response was emptysaved versions of artifacts are not available here yetartifact version restored; projection retry scheduledrestored version: could not read the automatic update preferencerestored version has no publication manifest; the shared link keeps the previous onerestored version: could not read the artifact rowrestored version: the shared link was not updatedscheduled action has no exact occurrence ownerscheduler.cron.space_actionshared_artifact_vm_capability_unavailableruntime.space_action_invokerread deciding client context response bodydecode deciding client context response envelopeSentinel refused the deciding client context readcheckpointed work lost its restart checkpoint owner during daemon restartskipping checkpointed RuntimeWork retirement: retained checkpoint evidence is incompletereconciled checkpointed RuntimeWork at startupretrying checkpointed RuntimeWork orphan retirementstartup ideas seed failedresume_epoch_installresume_verdict_reportingresume_maintainer_scheduleresume epoch installedcore_loop_runtime.orchestrator_startup.required_pre_readyrequired orchestrator startup work failedfailed to migrate legacy goal association into goal workspaceinspect goal workspace migration markergoal workspace consolidation already completed; skipping legacy migrationlist goals for workspace reconciliationstage legacy goal rootsinspect legacy goal cron associations for shared schedules%migrate legacy associations for goal À

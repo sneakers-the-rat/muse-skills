@@ -1,0 +1,190 @@
+internal error: entered unreachable codeerrorsuccessselect a.announcement_id, a.producer_id, a.announcing_device_id, a.event_id,
+                a.provider, a.kind,
+                a.occurred_at_unix_ms, a.announced_at_unix_ms, a.announced_ms_ago,
+                a.outcome, a.reason,
+                a.producer, a.received_at_unix_ms
+         from device.comms_announcements a
+         join device.nodes n on n.node_id = a.producer_id
+         where n.pairing_status = 'ok'
+           and a.received_at_unix_ms >= $1
+           and ($2::text is null or a.announcing_device_id = $2)
+           and ($3::text is null or a.outcome = $3)
+           and a.provider <> $5
+           and a.kind = 'message'
+         order by coalesce(a.announced_at_unix_ms, a.received_at_unix_ms) desc,
+                  a.announcement_id desc
+         limit $4hatchwith candidates as (
+           select announcement_id
+           from device.comms_announcements
+           where first_received_at_unix_ms < $1
+           order by first_received_at_unix_ms asc
+           limit $2
+         ),
+         removed as (
+           delete from device.comms_announcements a
+           using candidates c
+           where a.announcement_id = c.announcement_id
+             -- Recheck the cutoff against the LIVE row, not just the candidate
+             -- snapshot. The CTE selects, then the delete waits on any
+             -- concurrent upsert holding that row; by the time the lock is
+             -- granted, the row it is about to remove is whatever that upsert
+             -- left behind, so deleting by id alone trusts a read that is
+             -- already stale. `first_received_at_unix_ms` is immutable, which
+             -- makes this a cheap assertion today rather than a second race --
+             -- and keeps the sweep correct if that ever changes.
+             and a.first_received_at_unix_ms < $1
+           returning 1
+         )
+         select count(*)::bigint from removedwrite_admissionwritepostgres write completed slowlypostgres write failedretrying idempotent postgres writeone-shot postgres write invoked more than onceselect exists(select 1 from device.comms_announcements)select exists (
+                               select 1 from device.data_sync_state
+                               where next_full_sync_at is not null
+                                  or current_full_sync_id is not null
+                             ) or exists (
+                               select 1 from device.upload_sessions
+                               where route_kind = 'data_source_reconciliation'
+                             )active reconciliation state is missing its acceptance expiryinvalid chunked reconciliation deliveryupdate device.data_sync_state
+                     set next_full_sync_at = $4,
+                         search_trigger_pending = false,
+                         current_full_sync_id = null,
+                         current_full_sync_requester_root_session_id = null,
+                         current_full_sync_requester_presentation_locale = null,
+                         current_full_sync_expires_at = null,
+                         current_full_sync_range_start = null,
+                         current_full_sync_range_end = null,
+                         changed_during_full_sync = false
+                     where node_id = $1 and data_source = $2
+                       and current_full_sync_id = $3
+                       and current_full_sync_expires_at <= $5update device.data_sync_state
+                     set next_full_sync_at = null,
+                         search_trigger_pending = false,
+                         current_full_sync_id = $3,
+                         current_full_sync_requester_root_session_id = null,
+                         current_full_sync_requester_presentation_locale = null,
+                         current_full_sync_expires_at = $4,
+                         current_full_sync_range_start = $5,
+                         current_full_sync_range_end = $6,
+                         changed_during_full_sync = false
+                     where node_id = $1 and data_source = $2select node_id, data_source, next_full_sync_at
+                     from device.data_sync_state
+                     where next_full_sync_at is not null
+                       and next_full_sync_at <= now()
+                       and current_full_sync_id is null
+                     order by next_full_sync_at, node_id, data_source
+                     limit $1update device.data_sync_state
+                     set next_full_sync_at = null,
+                         search_trigger_pending = false,
+                         current_full_sync_id = $3,
+                         current_full_sync_requester_root_session_id = $4,
+                         current_full_sync_requester_presentation_locale = $8,
+                         current_full_sync_expires_at = $5,
+                         current_full_sync_range_start = $6,
+                         current_full_sync_range_end = $7,
+                         changed_during_full_sync = false
+                     where node_id = $1 and data_source = $2select state.node_id, state.data_source,
+                            state.current_full_sync_id,
+                            state.current_full_sync_expires_at
+                     from device.data_sync_state state
+                     left join device.upload_sessions upload
+                       on upload.upload_session_id = state.current_full_sync_id
+                      and upload.route_kind = 'data_source_reconciliation'
+                     left join lateral (
+                       select count(*)::bigint = upload.chunk_count::bigint as complete
+                       from device.upload_chunks chunk
+                       where chunk.upload_session_id = upload.upload_session_id
+                     ) staged on upload.upload_session_id is not null
+                     where state.current_full_sync_expires_at is not null
+                       and (
+                         state.current_full_sync_expires_at <= $1
+                         or (
+                           upload.status in ('sealed', 'finalizing')
+                           and staged.complete
+                         )
+                       )
+                     order by
+                       case
+                         when state.current_full_sync_expires_at <= $1 then 0
+                         when upload.status = 'sealed' then 1
+                         else 2
+                       end,
+                       state.current_full_sync_expires_at,
+                       state.node_id,
+                       state.data_source
+                     limit $2update device.data_sync_state
+                         set next_full_sync_at = $3,
+                             search_trigger_pending = false,
+                             current_full_sync_id = null,
+                             current_full_sync_requester_root_session_id = null,
+                             current_full_sync_requester_presentation_locale = null,
+                             current_full_sync_expires_at = null,
+                             current_full_sync_range_start = null,
+                             current_full_sync_range_end = null,
+                             changed_during_full_sync = false
+                         where node_id = $1 and data_source = $2
+                         returning next_full_sync_atcomms_announcements.retention_pendingreconciliation.has_outstanding_workreconciliation upload session disappearedcreated device data-sync state row disappearedpairing_statusreconciliation chunk_index exceeds PostgreSQL integer rangereconciliation chunk_count exceeds PostgreSQL integer rangestored reconciliation chunk index is negativereconciliation received chunk count is invaliddevice node_idfull_sync_iddata_sync_state.settle_retryreconciliation.admit_ackreconciliation.stage_pagereconciliation_idreconciliation.load_chunkscomms_announcements.recentdata_sync_state.settle_retry_by_idreconciliation.claim_finalizationcomms_announcements.retention_deletereconciliation.fence_uploadreconciliation.cleanup_expiredacquired connection, but time to acquire exceeded slow thresholdacquired connectiondata_sync_state.expiredata_sync_state.claim_duedevice full-sync expiry must be after claim timedata_sync_state.list_pendingrequester_presentation_localedata_sync_state.claim_requestedrequested full-sync presentation locale exceeds 128 bytesdata_sync_state.settle_terminaldata_sync_state.list_actionabledata_sync_state.request_after_live_searchexpired reconciliation ACKconflicting reconciliation ACKexpired reconciliation finalizationreconciliation state is missing its acceptance expiryinvalid reconciliation upload at finalization claiminsert into device.upload_sessions (
+           upload_session_id, node_id, route_kind, request_id, datatype,
+           sync_mode, chunk_count, status, response,
+           created_at_text, updated_at_text, expires_at_text, expires_at
+         ) values (
+           $1, $2, $3, null, $4, null, 0, $5, null, $6, $6, $7, $8
+         ) on conflict (upload_session_id) do nothingdata_source_reconciliationreceivingactive reconciliation changed while its staging was lockedfenced invalid device reconciliation attemptupdated_at_textupdate device.upload_sessions
+         set status = $2, updated_at_text = $3
+         where upload_session_id = $1finalizingselect pairing_status from device.nodes where node_id = $1 for updateselect data_source, next_full_sync_at, current_full_sync_id,
+            current_full_sync_requester_root_session_id,
+            current_full_sync_requester_presentation_locale,
+            current_full_sync_expires_at, current_full_sync_range_start,
+            current_full_sync_range_end, changed_during_full_sync,
+            last_full_sync_at, last_full_sync_range_start, last_full_sync_range_end
+     from device.data_sync_stateselect pairing_status, data_sources_json
+         from device.nodes where node_id = $1 for updatedata_sources_jsonupdate device.data_sync_state
+         set next_full_sync_at = $4, search_trigger_pending = false,
+             current_full_sync_id = null,
+             current_full_sync_requester_root_session_id = null,
+             current_full_sync_requester_presentation_locale = null,
+             current_full_sync_expires_at = null,
+             current_full_sync_range_start = null,
+             current_full_sync_range_end = null,
+             changed_during_full_sync = false
+         where node_id = $1 and data_source = $2 and current_full_sync_id = $3update device.data_sync_state
+         set next_full_sync_at = null, search_trigger_pending = false
+         where node_id = $1 and data_source = $2
+           and current_full_sync_id is nullupdate device.data_sync_state
+         set next_full_sync_at = null, current_full_sync_id = null,
+             current_full_sync_requester_root_session_id = null,
+             current_full_sync_requester_presentation_locale = null,
+             current_full_sync_expires_at = null,
+             current_full_sync_range_start = null,
+             current_full_sync_range_end = null,
+             changed_during_full_sync = false
+         where node_id = $1 and data_source = $2 and current_full_sync_id = $3insert into device.data_sync_state (node_id, data_source)
+         values ($1, $2) on conflict (node_id, data_source) do nothingselect pairing_status, status
+         from device.nodes where node_id = $1 for updatestatusexpired reconciliation pagereconciliation page source conflicts with active attemptreconciliation page source conflicts with its active attemptinvalid reconciliation pageselect c.payload_digest, c.payload as payload_json
+         from device.upload_chunks c
+         where c.upload_session_id = $1 and c.chunk_index = $2reconciliation final page changed its chunk countreconciliation page arrived before its accepted ACKpayload_digestpayload_jsonreconciliation chunk index was retried with different contentdevice.upload_chunks.payloadinsert into device.upload_chunks (
+               upload_session_id, chunk_index, payload,
+               payload_digest, created_at_text
+             ) values ($1, $2, $3, $4, $5)update device.upload_sessions
+             set chunk_count = $2, status = $3, updated_at_text = $4
+             where upload_session_id = $1sealedselect c.chunk_index, c.payload as payload_json
+         from device.upload_chunks c
+         join device.upload_sessions s
+           on s.upload_session_id = c.upload_session_id
+          and s.route_kind = 'data_source_reconciliation'
+         where c.upload_session_id = $1
+         order by c.chunk_indexselect upload_session_id
+         from device.upload_sessions
+         where route_kind = 'data_source_reconciliation' and expires_at <= $1
+         order by expires_at, upload_session_id
+         limit $2
+         for update skip lockeddelete from device.upload_sessions
+         where upload_session_id = any($1::text[])
+           and route_kind = 'data_source_reconciliation'select count(*)::bigint as received_chunks,
+                max(c.chunk_index) as max_chunk_index,
+                coalesce(sum(octet_length(c.payload)), 0)::bigint as total_bytes
+         from device.upload_chunks c
+         where c.upload_session_id = $1max_chunk_indexreceived_chunkstotal_bytesselect node_id, route_kind, request_id, datatype, sync_mode,
+                chunk_count, status, updated_at_text, expires_at
+         from device.upload_sessions
+         where upload_session_id = $1
+         for updatedelete from device.upload_sessions
+         where upload_session_id = $1
+           and route_kind = 'data_source_reconciliation'database write admission gate closedadmission_timeouthealthcomms_announcementsBUG: inner connection already taken!a Display implementation returned an error unexpectedlyError`DateTime + TimeDelta` overflowed

@@ -1,0 +1,293 @@
+delete from health.samples
+                 where provider = $1
+                   and node_id is not distinct from $2
+                   and start_at <= $4
+                   and coalesce(end_at, start_at) >= $3internal error: entered unreachable code: bundle-specific clear always includes a sample typedelete from health.samples
+                 where provider = $1
+                   and node_id is not distinct from $2
+                   and sample_type = $3
+                   and bundle_id is null
+                   and start_at <= $5
+                   and coalesce(end_at, start_at) >= $4delete from health.samples
+                 where provider = $1
+                   and node_id is not distinct from $2
+                   and sample_type = $3
+                   and bundle_id is not distinct from $4
+                   and start_at <= $6
+                   and coalesce(end_at, start_at) >= $5delete from health.sample_values where sample_id = any($1)insert into health.events (
+                   provider, node_id, bundle_id, timezone, event_type, event_at, event_end_at
+                 )
+                 values ($1, $2, $3, $4, $5, $6, $7)
+                 returning health_event_idinsert into health.events (
+                   provider, node_id, external_event_id, bundle_id, timezone, event_type,
+                   event_at, event_end_at
+                 )
+                 values ($1, $2, $3, $4, $5, $6, $7, $8)
+                 returning health_event_idstart_epoch_secend_epoch_secbundle_idevent_typehealth.eventsinsert into health.sample_values (
+               sample_id, value_name, unit, numeric_value, text_value
+             )  on conflict (sample_id, value_name)
+              do update set
+                unit = excluded.unit,
+                numeric_value = excluded.numeric_value,
+                text_value = excluded.text_valuesleep_awake_duration_secsleep_core_duration_secsleep_deep_duration_secsleep_rem_duration_secsleep_asleep_unspecified_duration_secinsert into health.sleep_sessions (
+               provider, node_id, external_sleep_id, bundle_id, timezone, start_at, end_at,
+               quality_score, awake_seconds, core_seconds, deep_seconds, rem_seconds,
+               asleep_unspecified_seconds, asleep_seconds, in_bed_seconds
+             )
+             values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+             returning sleep_session_idquality_scoresleep_in_bed_duration_sechealth.sleep_sessionsaggregatesinsert into health.samples (
+               provider, node_id, external_sample_id, bundle_id, timezone, sample_type,
+               start_at, end_at, unit, numeric_value, text_value
+             )  returning sample_iddelete from health.record_values where record_table = $1 and record_id = $2insert into health.record_values (
+               record_table, record_id, value_name, unit, numeric_value, text_value
+             )  on conflict (record_table, record_id, value_name)
+              do update set
+                unit = excluded.unit,
+                numeric_value = excluded.numeric_value,
+                text_value = excluded.text_valueinsert into health.workouts (
+               provider, node_id, external_workout_id, bundle_id, timezone, workout_type,
+               start_at, end_at, active_seconds, energy_kcal, distance_meters,
+               hr_max_bpm, hr_average_bpm
+             )
+             values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+             returning workout_idactive_duration_secsenergy_burned_kcaldistance_metershr_max_bpmhr_average_bpmworkout_typehealth.workoutsinsert into health.aggregates (
+               provider, node_id, timezone, aggregate_type, period_start, period_end,
+               numeric_value, unit
+             ) with ns as (
+             select tstzrange($4::timestamptz, $5::timestamptz) as s
+         ),
+         matched as (
+             delete from health.synced_ranges
+             where provider = $1
+               and node_id is not distinct from $2::text
+               and category = $3
+               and (span && (select s from ns) or span -|- (select s from ns))
+             returning lower(span) as lo, upper(span) as hi
+         ),
+         bounds as (
+             select min(lo) as lo, max(hi) as hi from matched
+         )
+         insert into health.synced_ranges (provider, node_id, category, span)
+         select $1, $2::text, $3, tstzrange(
+             least(lower(ns.s), coalesce((select lo from bounds), lower(ns.s))),
+             greatest(upper(ns.s), coalesce((select hi from bounds), upper(ns.s)))
+         )
+         from nsselect pg_advisory_xact_lock_shared(hashtext($1))health.records.writedelete from health.samples
+         where node_id = $1
+           and start_at <= $3
+           and coalesce(end_at, start_at) >= $2select distinct provider from health.synced_ranges where node_id = $1delete from health.samples
+         where provider = $1
+           and node_id is not distinct from $2
+           and sample_type = $3
+           and start_at <= $5
+           and coalesce(end_at, start_at) >= $4active reconciliation changed while its staging was lockedfenced invalid device reconciliation attempt
+    select
+        node_id,
+        coalesce(display_name, node_id) as display_name,
+        platform,
+        enabled_permissions_json,
+        commands_json,
+        data_sources_json,
+        version,
+        device_family,
+        model_id,
+        metadata_json,
+        is_wakeup_supported,
+        delivery_app,
+        invoke_protocol,
+        coalesce(paired_at_text, created_at::text) as paired_at,
+        coalesce(last_seen_at_text, last_seen_at::text, created_at::text) as last_seen_at,
+        status,
+        pairing_status
+    from device.nodes
+pairing_status <> 'revoked'
+    update device.nodes
+    set health_last_received_at = $1,
+        health_last_sync_status = 'success',
+        health_last_sync_error = null
+    where node_id = $2
+    screenshot.pnggenerator failed to produce screenshottitle.tmpfailed to persist title sidecargmconvert-resize-stripthumbnail: graphicsmagick conversion failedthumbnail: graphicsmagick not availablethumbnail: graphicsmagick timed outthumbnail: graphicsmagick produced empty outputthumbnail: still over budget after all quality steps; dropping thumbnailgoal guide path is not a regular filegoal workspace path is not a real directorynon_user_submissionsubmission_inputscompleted_output_classificationspecialist_turn_inputsspecialist_handoff_shapespecialist_handoff_missingspecialist_handoff_inputscurrentThis subtask stopped during a restart and did not report a result. Its work may be partly or fully done: check what it already produced before redoing anything, then redo or redelegate only what is actually missing.Closed during restart recovery without reporting a result.failed to persist terminal state for closed checkpointed subagentfailed to persist terminal status for closed checkpointed agentclosed Spaces builder checkpoint has no parent identityclosed Spaces builder checkpoint has no storage rootfailed to load closed Spaces builder generationfailed to delete runtime restart checkpoint for closed agentpartial_recovery_descriptormissing_conversationinvalid_structural_owner_identityrecovery_identity_mismatchinvalid_recovery_descriptorinvalid_durable_owner_identityinvalid_inherited_execution_authorityinsert into runtime.browser_task_requests (request_id, input_digest, root_session_id, task_id, state_revision)
+         values ($1, $2, $3, $4, $5) on conflict (request_id) do nothing returning request_idbrowser request does not own the taskselect exists(select 1 from runtime.browser_task_requests
+             where request_id = $1 and input_digest = $2 and root_session_id = $3
+             and task_id = $4 and state_revision = $5)browser request was already admittedwith recursive chain as (
+        select invocation_id, parent_invocation_id from runtime.browser_invocations
+        where invocation_id = $1
+        union all select p.invocation_id, p.parent_invocation_id
+        from runtime.browser_invocations p join chain c on c.parent_invocation_id = p.invocation_id)
+    select invocation_id from chain where parent_invocation_id is nulllast_auditlast_buildselect exists(select 1 from spaces.user_state
+         where sharing_state is null or accessed_at_ms is not null
+           or last_opened_at_ms is not null or frequency_score is not null
+           or favorite_order is not null)insert into spaces.user_state (space_slug, favorite_order, is_favorite) values library on conflict (space_slug) do update set
+            favorite_order = excluded.favorite_order, is_favorite = true
+          where spaces.user_state.sharing_state is not null
+            and spaces.user_state.accessed_at_ms is null
+            and spaces.user_state.last_opened_at_ms is null
+            and spaces.user_state.frequency_score is null
+            and spaces.user_state.favorite_order is null, true)serialize upload requestbroker returned an invalid upload descriptor handshakefile transfer document changedresolve browser upload controlsreceiver_urlcontrol_probe_shapebrowser upload probe omitted the receiving URLcontrol_probe_failedbrowser omitted this control from its probe resultjoin local upload source verificationno_verified_filesnone of this control's files matched their authorized input grantstransfer approved files to the browser environment
+DELETE FROM search_documents
+WHERE owner_table = 'runtime.events'
+  AND owner_key = $1
+DELETE FROM resources WHERE event_seq = $1INSERT INTO resources (event_seq, ordinal, resource_kind, resource_key, label, mime_type, size_bytes, metadata_json) VALUES /__hatch/chat_context_jsonstring/__hatch/display_text_updated_at_msSELECT field_path, scalar_type, scalar_value, text_value FROM event_payload_fields WHERE event_seq = $1 FOR UPDATEDELETE FROM event_payload_fields WHERE event_seq = $1 AND field_path = ANY($2::text[])field_pathscalar_typescalar_valuetext_valueINSERT INTO event_payload_fields (event_seq, field_path, scalar_type, scalar_value, text_value) VALUES  ON CONFLICT (event_seq, field_path) DO UPDATE SET scalar_type = excluded.scalar_type, scalar_value = excluded.scalar_value, text_value = excluded.text_valueruntime.search_documents.search_text
+INSERT INTO search_documents (owner_table, owner_key, search_text, language, search_vector)
+VALUES ('runtime.events', $1, $2, 'simple', to_tsvector('simple', $3))
+ON CONFLICT (owner_table, owner_key) DO UPDATE SET
+  search_text = excluded.search_text,
+  language = excluded.language,
+  search_vector = excluded.search_vector,
+  updated_at = now()
+WHERE search_documents.search_text IS DISTINCT FROM excluded.search_text
+   OR search_documents.language IS DISTINCT FROM excluded.language
+
+SELECT coalesce(f.text_value, f.scalar_value)
+FROM event_payload_fields f
+WHERE f.event_seq = $1
+  AND f.field_path = '/__hatch/chat_context_json'
+LIMIT 1
+
+SELECT
+  e.event_name,
+  e.transcript_surface::text AS transcript_surface,
+  e.visibility::text AS visibility,
+  COALESCE(e.role::text, m.role::text, 'system') AS role,
+  e.source
+FROM events e
+LEFT JOIN messages m
+  ON m.event_seq = e.event_seq
+WHERE e.event_seq = $1
+
+UPDATE widgets
+SET state_bundle_json = $2,
+    state_version = $3,
+    state_updated_at_ms = $4,
+    updated_at_ms = $4
+WHERE widget_id = $1
+  AND state_version = $5
+RETURNING state_version
+
+SELECT state_bundle_json, state_version
+FROM widgets
+WHERE widget_id = $1
+state_bundle_jsonwidget state bundle must be a JSON objectstate_version
+INSERT INTO context_items (
+  agent_id, seq, item_kind, text_content, role, call_id, tool_name, success,
+  message_source, created_at, item_json,
+  data_fbids, data_message_ids, data_thread_ids, data_expires_at
+) VALUES  RETURNING context_item_id, seq::agent.context_item_kind, ::runtime.message_role, , to_timestamp(::double precision), ::bigint[], ::text[], ::timestamptz)context_item_id
+SELECT pg_advisory_xact_lock(hashtextextended(agent_id, $2))
+FROM unnest($1::text[]) AS locked(agent_id)
+ORDER BY agent_id
+SELECT metadata_json FROM subagent_spawns WHERE child_agent_id = $1 FOR UPDATEUPDATE subagent_spawns SET metadata_json = $1 WHERE child_agent_id = $2
+WITH producer AS MATERIALIZED (
+  SELECT target.id AS agent_id,
+    CASE WHEN a.id IS NULL THEN NULL ELSE COALESCE(
+-- Highest seq of an agent's rows that no public voice import reads, or NULL
+-- when the import never reads any of them. Reads aliases `a` (the agent) and
+-- `root` (its presentation root). exempt_non_producer_rows.sql repeats it.
+CASE WHEN a.kind = 'root' AND a.depth = 0
+          AND a.agent_type = 'realtime_voice' THEN CASE
+    WHEN NOT pg_input_is_valid(a.spawn_metadata_json, 'jsonb') THEN -1
+    WHEN root.id IS NULL
+         OR a.spawn_metadata_json::jsonb #> '{realtime_voice,prompt_floor_seq}'
+            IS DISTINCT FROM to_jsonb(COALESCE(root.prompt_floor_seq, -1))
+        THEN NULL
+    WHEN pg_input_is_valid(
+        a.spawn_metadata_json::jsonb #>> '{realtime_voice,root_seed_context_seq}',
+        'bigint'
+    ) THEN GREATEST(
+        (a.spawn_metadata_json::jsonb #>> '{realtime_voice,root_seed_context_seq}')::bigint,
+        -1
+    )
+    ELSE -1
+END END
+    , 9223372036854775807) END AS exempt_through_seq
+  FROM (SELECT ::text AS id) target
+  LEFT JOIN agents a ON a.id = target.id
+  LEFT JOIN agents root ON root.id = a.presentation_root_session_id AND root.id <> a.id
+)
+INSERT INTO context_item_resume_projection (
+  agent_id, seq, context_item_id, created_at, message_source,
+  client_context_json, client_context_projected, public_import_exempt
+)
+SELECT producer.agent_id, v.seq, v.context_item_id, v.created_at, v.message_source,
+       v.client_context_json, v.client_context_projected,
+       CASE WHEN v.seq <= producer.exempt_through_seq THEN TRUE END
+FROM (VALUES ) AS v(seq, context_item_id, created_at, message_source, client_context_json,
+          client_context_projected)
+CROSS JOIN producer
+ON CONFLICT (agent_id, seq) DO UPDATE SET
+  context_item_id = excluded.context_item_id,
+  created_at = excluded.created_at,
+  message_source = COALESCE(excluded.message_source, context_item_resume_projection.message_source),
+  client_context_json = COALESCE(
+    excluded.client_context_json,
+    context_item_resume_projection.client_context_json
+  ),
+  client_context_projected = COALESCE(
+    context_item_resume_projection.client_context_projected,
+    FALSE
+  ) OR excluded.client_context_projected,
+  public_import_exempt = COALESCE(
+    context_item_resume_projection.public_import_exempt,
+    excluded.public_import_exempt
+  ),
+  updated_at = now()
+INSERT INTO context_item_resume_projection (
+  agent_id, seq, context_item_id, created_at, message_source,
+  client_context_json, reply_prefix, provenance_json,
+  client_context_projected, reply_prefix_projected, provenance_projected,
+  public_import_exempt
+)
+SELECT producer.agent_id, v.seq, v.context_item_id, v.created_at, v.message_source,
+       v.client_context_json, v.reply_prefix, v.provenance_json,
+       v.client_context_projected, v.reply_prefix_projected, v.provenance_projected,
+       CASE WHEN v.seq <= producer.exempt_through_seq THEN TRUE END
+FROM (VALUES ) AS v(seq, context_item_id, created_at, message_source, client_context_json,
+          reply_prefix, provenance_json, client_context_projected, reply_prefix_projected,
+          provenance_projected)
+CROSS JOIN producer
+ON CONFLICT (agent_id, seq) DO UPDATE SET
+  context_item_id = excluded.context_item_id,
+  created_at = excluded.created_at,
+  message_source = COALESCE(excluded.message_source, context_item_resume_projection.message_source),
+  client_context_json = excluded.client_context_json,
+  reply_prefix = excluded.reply_prefix,
+  provenance_json = excluded.provenance_json,
+  client_context_projected = excluded.client_context_projected,
+  reply_prefix_projected = excluded.reply_prefix_projected,
+  provenance_projected = excluded.provenance_projected,
+  public_import_exempt = COALESCE(
+    context_item_resume_projection.public_import_exempt,
+    excluded.public_import_exempt
+  ),
+  updated_at = now()
+
+INSERT INTO context_item_resume_projection (
+  agent_id, seq, message_source, client_context_json, reply_prefix, provenance_json,
+  client_context_projected, reply_prefix_projected, provenance_projected
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+ON CONFLICT (agent_id, seq) DO UPDATE SET
+  message_source = COALESCE(context_item_resume_projection.message_source, excluded.message_source),
+  client_context_json = excluded.client_context_json,
+  reply_prefix = excluded.reply_prefix,
+  provenance_json = excluded.provenance_json,
+  client_context_projected = excluded.client_context_projected,
+  reply_prefix_projected = excluded.reply_prefix_projected,
+  provenance_projected = excluded.provenance_projected,
+  updated_at = now()
+SELECT pg_advisory_xact_lock_shared(hashtextextended($1, 0))agent.volatile_context_pins.lifecycleSELECT pg_advisory_xact_lock(hashtextextended($1, 0))
+WITH owners AS MATERIALIZED (
+    SELECT DISTINCT agent_id COLLATE "C" AS agent_id
+    FROM unnest($1::text[]) AS input(agent_id)
+)
+SELECT pg_advisory_xact_lock(hashtextextended($2 || agent_id, 0))
+FROM owners ORDER BY agent_id COLLATE "C"
+agent.volatile_context_pins:SELECT agent_id FROM agent.agents WHERE agent_id = $1SELECT handoff_state_json -> $2::text AS state,
+                (extract(epoch FROM clock_timestamp()) * 1000)::bigint AS now_ms
+         FROM agent.subagent_spawns WHERE child_agent_id = $1 FOR UPDATEnow_msagent.subagent_spawns.handoff_state_jsonUPDATE agent.subagent_spawns
+         SET handoff_state_json = jsonb_set(COALESCE(handoff_state_json, '{}'::jsonb),
+                                           ARRAY[$2]::text[], $3::jsonb)
+         WHERE child_agent_id = $1insert into chat_private.publication_turns (execution_id, chat_id, disposition, phase)
+        select $1, $2, $3, $4 where pg_try_advisory_xact_lock_shared(hashtextextended($5, 0))
+        on conflict(execution_id) do nothing returning trueselect chat_id, phase, disposition from chat_private.publication_turns
+        where execution_id = $1 for updatechat_idphasepublication execution belongs to another chatavocado-5.17-v1-onboarding_shadowrefusing to publish a chat frame without an owning chatfailed to resolve public session id for streamed framedropped companion progress frame after its voice call changedfailed to resolve public session id for agent.statusagent.statususer input has no canonical admission receiptcanonical user input does not match its authenticated admissiongroup provider authority awaits reconciliationgroup provider unavailablewhatsapp-owner-inbox-exploration-v1<none>client.data_source.publish ingest attemptclient.data_source.publishclient.data_source.publish rejected invalid payload_jsoninvalid_jsonclient.data_source.publish acceptedclient.data_source.publish rejectedcannot resolve stream chatgroup attachment approval has no discretion policyThe attachment approval cannot review embedded widgets. Remove the widgets and keep the attachment in the revised reply.group attachment approval has no active bindingThe attachment descriptors exceed review capacity even without message text. Reply without the attachments or approval details.The attachment reply is too long for complete review. Shorten the message text while retaining the attachments. Do not include approval details.group attachment approval is only supported for WhatsAppgroup attachment approval has no frozen attachmentsThe attachment approval request was not approved. Do not ask your owner about this attachment again. Reply briefly without the attachment or any approval details.group attachment binding disappeared while approval was pendinggroup attachment authority changed while approval was pendingruntime.group_attachment_sendgroup_attachment_sendgroup attachment approvalinvalid group attachment approval contractrequest group attachment approvalunexpected group attachment approval responsecall_log delivery_app lookup failed; routing to raw lane (not persisting a typed row)call_log persist-gate decisionrawreconcileddevice_idstorage_backedsync_statussynced_atreceived_contact_countcache_updateprocessedevent_id is required for proactive contacts deltasupserted_contact_countremoved_contact_countupserted_countpersist Health source changedata source publish succeeded but worker wake failed

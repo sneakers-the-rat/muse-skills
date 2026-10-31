@@ -1,0 +1,1 @@
+Do not spawn another Ideas build subagent from an Ideas build subagent. Finish this accepted Idea build yourself, or report the blocker through ideas_build_hand_off.

@@ -1,0 +1,126 @@
+errorsuccesswrite_admissionwritepostgres write completed slowlypostgres write failedretrying idempotent postgres writeone-shot postgres write invoked more than oncecursorconnector observation evidence is not an objectproactive delivery metadata is not an objecttitlerun_idstarted_atadmitted_runsadmission_limitrequeued stalled run has no typed requeue reasonstatefinished_atcreated_atinput_fingerprintstatusoutput_jsonplacescandidatesgenerationdelete from self_improvement.connector_sync_observations where event_id in
+                (select event_id from self_improvement.connector_sync_observations
+                 where connector = $1 and expires_at <= $2 order by expires_at limit 256)delete from self_improvement.connector_mailbox_state
+                    where (connector, account_id, generation, source_id) in
+                    (select connector, account_id, generation, source_id
+                     from self_improvement.connector_mailbox_state
+                     where connector = $1 and expires_at <= $2 order by expires_at limit 256)select generation from self_improvement.connector_sync_accounts
+                where connector = $1 and account_id = $2 and generation = $3 for updateupdate self_improvement.connector_sync_observations
+                set state = 'processed',
+                    evidence = evidence - '_hatch_tracking_ingest_failures'
+                        - '_hatch_tracking_ingest_retry_after'
+                where event_id = $1 and generation = $2
+                and state in ('pending', 'deferred', 'deferred_flight') and expires_at > $3insert into self_improvement.connector_sync_accounts
+                (connector, account_id, generation, cursor, revision, updated_at)
+                values ($1, $2, $3, $4, 0, now()) on conflict do nothingselect generation, cursor, revision from
+                self_improvement.connector_sync_accounts where connector = $1 and account_id = $2select cursor from self_improvement.connector_sync_accounts
+                    where connector = $1select event_id, source_id, source_at, evidence, expires_at, generation
+                from self_improvement.connector_sync_observations where connector = $1 and account_id = $2
+                and generation = $3 and (state = 'pending' or ($5 and state = 'deferred')
+                    or ($6 and state = 'deferred_flight'))
+                and expires_at > $4 and evidence->>'discovery' is distinct from 'flight_backfill'
+                and (evidence->>'_hatch_tracking_ingest_retry_after' is null
+                    or (evidence->>'_hatch_tracking_ingest_retry_after')::timestamptz <= $4)
+                order by observed_at, event_id limit $7delete from self_improvement.connector_sync_accounts
+                where connector = $1 and not (account_id = any($2))
+                and account_id not like 'debug:connector:%' returning account_id, generationaccount_iddelete from self_improvement.connector_sync_observations where connector = $1 and account_id = $2delete from self_improvement.connector_mailbox_state where connector = $1 and account_id = $2select cursor, revision from self_improvement.connector_sync_accounts
+                    where connector = $1 and account_id = $2 and generation = $3select o.event_id, o.connector, o.evidence
+                from self_improvement.connector_sync_observations o
+                join self_improvement.connector_sync_accounts a on a.connector = o.connector
+                  and a.account_id = o.account_id and a.generation = o.generation
+                where o.event_id = any($1) and o.state = any($3) and o.expires_at > $2pendingprocesseddeferred_flightautomation_failedselect r.suggestion_id as event_id, r.connector, e.payload->'evidence' as evidence
+                from self_improvement.connector_context_records r join context.events e on e.id = r.event_id
+                join self_improvement.connector_sync_accounts a on a.connector = r.connector
+                  and a.account_id = r.account_id and a.generation = r.generation
+                where r.suggestion_id = any($1) and r.current
+                  and (e.expires_at is null or e.expires_at > statement_timestamp())
+                  and coalesce(e.occurred_at,e.ingested_at) + interval '48 hours' > $2connectorselect r.source_id, r.group_id, r.append_position,
+                       exists(select 1 from context.events e where e.id = r.event_id
+                         and (e.expires_at is null or e.expires_at > statement_timestamp())) as available,
+                       (coalesce(ss.start_position >= r.append_position, false)
+                         or coalesce(g.acknowledged_position >= r.append_position, false)) as settled
+                     from self_improvement.connector_context_records r
+                     left join context.subscriptions s on s.subscription_key = $2
+                     left join context.subscription_sources ss
+                       on ss.subscription_id = s.id and ss.source_id = r.source_id
+                     left join context.group_cursors g
+                       on g.subscription_id = s.id and g.source_id = r.source_id
+                         and g.group_id = r.group_id
+                     where r.suggestion_id = $1 and r.currentavailablesource_idappend_positionsettledselect evidence, state from self_improvement.connector_sync_observations
+                    where event_id = $1 and connector = $2 and account_id = $3
+                    and generation = $4 and state in ('pending', 'deferred', 'deferred_flight')
+                    and expires_at > $5 for update_hatch_tracking_ingest_failures_hatch_tracking_ingest_retry_afterupdate self_improvement.connector_sync_observations
+                    set evidence = $1, state = $2 where event_id = $3 and generation = $4select pg_advisory_xact_lock(
+                       hashtext('self_improvement.occurrence:' || $1), hashtext($2))select * from self_improvement.runs
+                     where objective_id = $1 and diagnostics ->> 'coalesce_key' = $2
+                     order by queued_at desc, run_id desc limit 1insert into self_improvement.runs
+                             (run_id, objective_id, state, request_id, request_origin, run_clock,
+                              phase, subphase, diagnostics, started_at)
+                             values ($1, $2, $3, $4, $5, $6, $7, $8, $9,
+                                     case when $3 = 'running' then now() else null end)
+                             returning *update self_improvement.follow_up_queue
+                set state = 'pending', not_before = $2, claimed_at = null,
+                    delivery_submission_id = null, updated_at = now(),
+                    metadata_json = jsonb_set(metadata_json, '{delivery_attempt}',
+                        to_jsonb(coalesce((metadata_json->>'delivery_attempt')::bigint, 0)
+                            + case when $3 then 1 else 0 end))
+                where follow_up_id = $1 and producer = 'internal'
+                    and state in ('pending', 'delivering')
+                    and delivery_submission_id is not distinct from $4
+                    and (not $3 or state = 'delivering')update self_improvement.follow_up_queue
+                set state = 'cancelled', terminal_at = now(), updated_at = now(),
+                    disposition_reason = 'internal_message_cancelled'
+                where follow_up_id = $1 and producer = 'internal' and state = 'pending'update self_improvement.internal_proactive_inbox
+                     set payload = jsonb_set(payload, '{changes}', (
+                         select coalesce(jsonb_agg(change order by ordinal), '[]'::jsonb)
+                         from jsonb_array_elements(payload->'changes')
+                              with ordinality as items(change, ordinal)
+                         where not (change->>'id' = $1 and change->'message' <> 'null'::jsonb)
+                     ))
+                     where rejection_reason is null
+                       and payload @> jsonb_build_object('changes',
+                           jsonb_build_array(jsonb_build_object('id', $1::text)))update self_improvement.follow_up_queue
+                set state = 'expired', terminal_at = $2, updated_at = $2,
+                    disposition_reason = 'relevance_window_closed'
+                where follow_up_id = $1 and producer = 'internal'
+                    and state in ('pending', 'delivering')select cursor from self_improvement.internal_proactive_cursor where feed = 'internal'insert into self_improvement.internal_proactive_cursor (feed, cursor)
+                values ('internal', 0) on conflict do nothingselect cursor from self_improvement.internal_proactive_cursor
+                 where feed = 'internal' for updateinsert into self_improvement.internal_proactive_inbox (batch_id, payload)
+                values ($1, $2) on conflict (batch_id) do nothinginternal proactive receipt cursor changed concurrentlyupdate self_improvement.internal_proactive_cursor set cursor = $1
+                where feed = 'internal'delete from self_improvement.internal_proactive_inbox where batch_id = $1update self_improvement.internal_proactive_inbox
+                set rejection_reason = $2 where batch_id = $1select batch_id, payload from self_improvement.internal_proactive_inbox
+                        where batch_id = $1 and rejection_reason is nullselect batch_id, payload from self_improvement.internal_proactive_inbox
+                        where rejection_reason is null order by received_at limit 32update self_improvement.follow_up_queue
+                 set state = 'cancelled', terminal_at = now(), updated_at = now(),
+                     disposition_reason = 'internal_catalog_removed'
+                 where producer = 'internal' and state = 'pending'
+                   and follow_up_id like 'internal:catalog:%'
+                   and not (follow_up_id = any($1))select metadata_json, expires_at from self_improvement.follow_up_queue
+                 where follow_up_id=$1 and delivery_submission_id=$2
+                   and producer='proactive_notifier' and state='delivering'
+                 for updatemetadata_jsonexpires_atselect metadata_json, expires_at from self_improvement.follow_up_queue
+                 where follow_up_id=$1 and delivery_submission_id=$2
+                   and producer='proactive_notifier' and state='delivering'
+                   and metadata_json->'selected_item_ids'='[]'::jsonb
+                 for updateproactivity_admittedselected_item_idsdelivery_continuationsdelivery_recovery_attemptsproactivity_changesattention_deadlinedelivery_decisionsupdate self_improvement.follow_up_queue
+                 set state='pending', not_before=$3, claimed_at=null,
+                     delivery_submission_id=null, metadata_json=$4, updated_at=now(),
+                     disposition_reason='proactivity_delivery_deferred'
+                 where follow_up_id=$1 and delivery_submission_id=$2select metadata_json from self_improvement.follow_up_queue
+                 where follow_up_id=$1 and producer='proactive_notifier'
+                   and state='delivering' and delivery_submission_id=$2
+                 for updatesubmission_idchange_idsselect count(*) from self_improvement.proactivity_changes
+                         where change_id=any($1) and claimed_follow_up_id=$2
+                           and claimed_submission_id=$3 and delivered_at is nullproactive delivery changed before ledger handoffadmitted proactive change appendix lost its delivery ownerselect c.change_id from self_improvement.proactivity_changes c
+                     where c.delivered_at is null and not exists (
+                         select 1 from self_improvement.follow_up_queue owner
+                         where owner.follow_up_id=c.claimed_follow_up_id
+                           and owner.delivery_submission_id=c.claimed_submission_id
+                           and owner.state in ('delivering','delivered'))
+                     order by c.recorded_at,c.change_id
+                     limit $1 for update of c skip lockedupdate self_improvement.proactivity_changes
+                     set claimed_follow_up_id=$1,claimed_submission_id=$2
+                     where change_id=any($3)update self_improvement.follow_up_queue
+                     set metadata_json=jsonb_set(metadata_json,'{proactivity_changes}',$3)
+                     where follow_up_id=$1 and delivery_submission_id=$2change_id,research_turn_id,agent_id,message_id,request_id,
+    recording_call_id,summary,recorded_at

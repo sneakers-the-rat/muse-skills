@@ -1,0 +1,33 @@
+
+SELECT metadata_json FROM subagent_spawns WHERE child_agent_id = $1
+completion_resultcompletion_result_context_seqagent.subagent_spawns.metadata_json
+UPDATE subagent_spawns
+SET metadata_json = $1
+WHERE child_agent_id = $2
+  AND EXISTS (
+    SELECT 1 FROM agents
+    WHERE agents.id = subagent_spawns.child_agent_id
+      AND agents.status NOT IN ('shutdown', 'not_found')
+  )
+
+UPDATE agents
+SET updated_at = $1,
+    status = $2
+WHERE id = $3
+  AND status NOT IN ('shutdown', 'not_found')
+select exists(select 1 from runtime.browser_tasks t
+                join runtime.browser_executions e on e.task_id = t.task_id and e.planner_agent_id = t.owner_agent_id
+                where t.task_id = $1 and t.status = 'user_controlled' and t.outcome_status is null
+                  and e.control_revision = t.state_revision)
+SELECT mode, recovery_class, recovery_owner_id, payload_json
+FROM runtime_restart_checkpoints
+WHERE agent_id = $1
+FOR UPDATE
+
+UPDATE runtime_restart_checkpoints
+SET mode = $2, payload_json = $3, updated_at = $4
+WHERE agent_id = $1
+c.operation_id,c.task_id,c.agent_id,c.invocation_id,
+    c.request_digest,c.command_json as request_json,c.result_json as answer_json,
+    t.owner_agent_id as planner_agent_id,coalesce(t.parent_agent_id,t.root_session_id) as recipient_agent_id,t.root_session_id,
+    (extract(epoch from c.created_at) * 1000)::bigint as asked_at_ms

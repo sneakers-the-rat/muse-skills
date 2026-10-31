@@ -1,0 +1,86 @@
+internal error: entered unreachable codeerrorsuccesswrite_admissionwritepostgres write completed slowlypostgres write failedretrying idempotent postgres writeshareability review inference failed transiently; retrying onceunknowninternal error: entered unreachable code: the bounded review loop always returnsone-shot postgres write invoked more than onceattempt_countprojection_review_ordinal
+update runtime.conversation_shareability_reviews
+set status = $5,
+    decision = $6,
+    provenance_status = $7,
+    provenance_scope = $8,
+    judge_reached = $9,
+    attempt_count = $10,
+    error_kind = $11,
+    checked_at_ms = $12,
+    updated_at_ms = $12
+where root_session_id = $1
+  and visible_projection_sha256 = $2
+  and provenance_sha256 = $3
+  and policy_version = $4
+  and status = 'pending'
+  and updated_at_ms = $13
+select 1 from agent.agents where agent_id = $1 for key share
+select coalesce(max(projection_review_ordinal), -1) + 1
+from runtime.conversation_shareability_reviews
+where root_session_id = $1
+  and visible_projection_sha256 = $2
+  and policy_version = $3
+
+insert into runtime.conversation_shareability_reviews (
+  root_session_id, head_message_id, visible_projection_sha256, provenance_sha256,
+  policy_version, status, decision, provenance_status, provenance_scope,
+  projection_review_ordinal, judge_reached, attempt_count, error_kind,
+  created_at_ms, checked_at_ms, updated_at_ms
+) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $14)
+on conflict (
+  root_session_id, visible_projection_sha256, provenance_sha256, policy_version
+) do nothing
+returning projection_review_ordinal
+
+update runtime.conversation_shareability_reviews
+set status = 'pending',
+    decision = null,
+    judge_reached = false,
+    attempt_count = attempt_count + 1,
+    error_kind = null,
+    checked_at_ms = null,
+    updated_at_ms = $9
+where root_session_id = $1
+  and visible_projection_sha256 = $2
+  and provenance_sha256 = $3
+  and policy_version = $4
+  and attempt_count < $8
+  and (
+    (status = 'pending' and updated_at_ms <= $5)
+    or (
+      status = 'error'
+      and updated_at_ms <= $6
+      and error_kind = any($7::text[])
+    )
+  )
+returning attempt_count, projection_review_ordinal
+inference-proxy returned an invalid model selection routeGatekeeper response omitted requested gate; using defaulteval-injected invalid conversation review outputinvalid conversation review outputconversation shareability review returned invalid output; retrying onceconversation_share_reviewruntime config state retains the completion senderUDS HTTP request path must start with '/'acquired connection, but time to acquire exceeded slow thresholdacquired connectionfinish_conversation_shareability_reviewfinish_conversation_shareability_review cannot persist pendinginsert_conversation_shareability_reviewreclaim_retryable_conversation_shareability_reviewinternal error: entered unreachable code: unexpected stageoptional model fallback setup timed out; using primary routeJARVIS_META_SOCIAL_SHARE_REVIEW_OVERRIDE/v1/model/getmodel.get returned an empty selectionx-hatch-gk-assignment-confirmedhttp://localhost/hatch/check_gatekeepersGatekeeper response was invalid; using defaultGatekeeper check failed; using default
+with ranked as (
+  select visible_projection_sha256,
+         provenance_sha256,
+         policy_version,
+         row_number() over (
+           order by
+             case
+               when visible_projection_sha256 = $2
+                 and provenance_sha256 = $3
+                 and policy_version = $4 then 0
+               else 1
+             end,
+             updated_at_ms desc,
+             visible_projection_sha256,
+             provenance_sha256,
+             policy_version
+         ) as retention_rank
+  from runtime.conversation_shareability_reviews
+  where root_session_id = $1
+)
+delete from runtime.conversation_shareability_reviews as reviews
+using ranked
+where reviews.root_session_id = $1
+  and reviews.visible_projection_sha256 = ranked.visible_projection_sha256
+  and reviews.provenance_sha256 = ranked.provenance_sha256
+  and reviews.policy_version = ranked.policy_version
+  and ranked.retention_rank > $5
+select pg_advisory_xact_lock(hashtextextended($1, 0))avocado-5.17-v1-onboarding_shadowdatabase write admission gate closedadmission_timeoutconversation shareability provenance capture failedcapture_failedmessage provenance has more subagents than the review budget"omitted_entries"root_and_subagentconversation provenance evidence exceeds review budgetconversation_share_review.provenanceskipping message shareability review for empty projectiondurable context sequenceroot execution identityassistant message has no share-review provenance boundaryconversation shareability projection unavailableinput_too_largemodel_unavailableinvalid_outputevidence_unavailablelease_lostconversation shareability review completedshadowactiveconversation shareability review ended without a decisionconversation shareability review lost its pending-row leaseon-demand message shareability review failedsource-aware conversation shadow failedshadow_review_failedshadow_shutdownall branches are disabled and there is no else branchpublish_share_provenance_legacypublish_share_provenancepublish/share provenance skipped: digest tool catalog unavailablepublish/share provenance skipped: review model unavailablepublish/share provenance skipped: digest decision was invalidpublish/share provenance inference failed; retrying onceinternal error: entered unreachable code: the bounded provenance inference loop always returnspublish/share provenance skipped: digest inference failed after retrymessage share provenance digest builtpublic web page (HTML)not_requiredpendingcompletedabsentfailedno_conversationno_evidenceinference_unavailablesource_limit_exceededevidence_incompleteroot_evidence_unreadablenot_informativebuilder_capture_pendingbuilder_capture_failedbuilder_evidence_unreadableallowblocktool_catalog_unavailablemessage-share-v5-legacy-metamessage-share-v5-meta-socialmessage-share-v5-legacy-meta-enforcedmessage-share-v5-meta-social-enforcedlegacy_root_and_subagentlegacy_rootBUG: inner connection already taken!RecvErrora Display implementation returned an error unexpectedlyErrorBackgroundAgentBrowserAgentBrowserMainCronWorkerCompactionBackgroundCompactionMemoryFlushAlignmentReflectionDiscoveryPoolPersonalizationAvatarPromptBuilderVoiceDesignRewriteVoiceOptionPlannerActivityMonitorActivityThreadSubtitleTrackingGoalLifecycleGoalActivityStateGoalAttentionGoalSubgoalRollupSubagentMonitorUserSentimentUserPromptLanguageMissedChatNotificationPlannerSessionTitleGoalPromptSafetyReviewPublishShareReviewArtifactShareDisclosureSentinelEgressSentinelApprovalExplanationVerificationCodeScanSpaceActionFileArtifactBuildHtmlArtifactBuildArtifactBuildArtifactIconSelectionArtifactBriefCheckVoiceApprovalClassifierVoiceEndCallClassifierVoiceLibraryClassifierBrowserVisualGestureBrowserTaskTaggingBrowserTaskTerminalSummaryPhoneBoostedKeywordsCronResolveSelfImprovementStepFlightClassificationFeedEditorFeedPulsePickFeedIconSelectionFeedWireTasteCheckFeedSignalLabel

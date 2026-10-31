@@ -1,0 +1,39 @@
+select exists(
+                       select 1 from self_improvement.attention_ledger
+                       where lane = $1 and candidate_key = $2)proactivity queue owner retiredinsert into self_improvement.follow_up_queue
+                       (follow_up_id, producer, message, source_root_agent_id, priority,
+                        not_before, expires_at, delivery_instructions, allowed_tools,
+                        metadata_json, conversation_derived, allocation, chat_id, chat_binding_epoch)
+                     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+                     on conflict (follow_up_id) do update
+                     set message = excluded.message,
+                         priority = greatest(follow_up_queue.priority, excluded.priority),
+                         not_before = least(follow_up_queue.not_before, excluded.not_before),
+                         expires_at = greatest(follow_up_queue.expires_at, excluded.expires_at),
+                         delivery_instructions = excluded.delivery_instructions,
+                         allowed_tools = excluded.allowed_tools,
+                         metadata_json = case
+                             when follow_up_queue.producer = 'proactive_notifier' then
+                                 (excluded.metadata_json - 'owner_run_id' - 'presentation_locale' - 'proactivity_flow')
+                                 || case when follow_up_queue.metadata_json ? 'proactivity_flow'
+                                     then jsonb_build_object('proactivity_flow', follow_up_queue.metadata_json -> 'proactivity_flow')
+                                     else '{}'::jsonb end
+                                 || case when follow_up_queue.metadata_json ? 'owner_run_id'
+                                     then jsonb_build_object('owner_run_id', follow_up_queue.metadata_json -> 'owner_run_id')
+                                     else '{}'::jsonb end
+                                 || case when follow_up_queue.metadata_json ? 'presentation_locale'
+                                     then jsonb_build_object('presentation_locale', follow_up_queue.metadata_json -> 'presentation_locale')
+                                     else '{}'::jsonb end
+                             when follow_up_queue.producer in ('referral_invitation', 'confidential_vm_upsell') then
+                                 (excluded.metadata_json - 'presentation_locale')
+                                 || case when follow_up_queue.metadata_json ? 'presentation_locale'
+                                     then jsonb_build_object('presentation_locale', follow_up_queue.metadata_json -> 'presentation_locale')
+                                     else '{}'::jsonb end
+                             else excluded.metadata_json
+                         end,
+                         conversation_derived = follow_up_queue.conversation_derived
+                             or excluded.conversation_derived,
+                         updated_at = now()
+                     where follow_up_queue.state = 'pending'
+                       and follow_up_queue.chat_id = excluded.chat_id
+                       and follow_up_queue.producer <> 'internal'follow-up identity belongs to another chat

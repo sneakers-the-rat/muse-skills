@@ -1,0 +1,178 @@
+
+update agent.recovery_owners
+set generation = generation + 1,
+    agent_id = $6,
+    message_id = $7,
+    active_at = now(),
+    terminal_at = null,
+    terminal_status = null
+where recovery_class = $1
+  and owner_id = $2
+  and agent_id = $3
+  and message_id = $4
+  and terminal_at is not null
+  and terminal_status = $5
+returning *
+select 1 from runtime.browser_tasks where task_id = $1 for updateselect owner_agent_id,
+                stream_owner_message_id, state_revision, status from runtime.browser_tasks
+                where task_id = $1 and owner_agent_id is not null
+                  and outcome_status is null and completed_at is null for updateselect exists(select 1 from runtime.browser_executions
+                where task_id = $1 and planner_agent_id = $2 and control_revision = $3)update runtime.browser_tasks set status = 'running', state_revision = $2,
+                deadline_at = null, last_progress_at = now(), updated_at = now() where task_id = $1update runtime.browser_executions set epoch = epoch + 1 where task_id = $1update runtime.browser_invocations set
+                state = suspended_state, suspended_state = null,
+                updated_at = now() where task_id = $1 and planner_agent_id = $2 and state = 'waiting_control'
+                returning invocation_idselect exists(select 1 from runtime.browser_tasks t
+                join runtime.browser_executions e on e.task_id = t.task_id and e.planner_agent_id = t.owner_agent_id
+                where t.task_id = $1 and t.status = 'user_controlled' and t.outcome_status is null
+                  and e.control_revision = t.state_revision)space inference connection failedretailer_namespaceavatar milestone subject_id is required for recurring milestonesfailed to resolve owning root session from chat event recordFeed run has an invalid background locale revisionskipping link welcome: onboarding sends the first messageapproval_type
+SELECT a.agent_id
+FROM activity_monitor_agent_threads a
+JOIN activity_monitor_threads g ON g.activity_thread_id = a.activity_thread_id
+WHERE a.activity_thread_id = $1
+  AND g.status = $2
+ORDER BY a.created_at ASC, a.agent_id ASC
+SELECT activity_thread_id, action_index FROM activity_monitor_thread_actions WHERE action_id = $1 LIMIT 1
+SELECT status, finish_status
+FROM activity_monitor_threads
+WHERE activity_thread_id = $1
+LIMIT 1
+FOR UPDATE
+
+SELECT a.activity_thread_id
+FROM activity_monitor_agent_threads a
+JOIN activity_monitor_threads g ON g.activity_thread_id = a.activity_thread_id
+WHERE a.agent_id = $1
+  AND g.status = $2
+LIMIT 1
+FOR UPDATE OF g
+
+UPDATE activity_monitor_threads
+SET status = $2,
+    finished_at = NULL,
+    finish_message = NULL,
+    finish_status = NULL,
+    finish_status_reason = NULL
+WHERE activity_thread_id = $1
+
+SELECT COALESCE(MAX(action_index), 0) + 1
+FROM activity_monitor_thread_actions
+WHERE activity_thread_id = $1
+activity_thread_id is required when no current activity_thread is set
+INSERT INTO activity_monitor_thread_actions (
+    action_id, activity_thread_id, action_index, agent_id, agent_depth, icon, title, subtitle, report, status, created_at
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+ON CONFLICT(action_id) DO UPDATE SET
+    activity_thread_id = excluded.activity_thread_id,
+    action_index = excluded.action_index,
+    agent_id = excluded.agent_id,
+    agent_depth = COALESCE(excluded.agent_depth, activity_monitor_thread_actions.agent_depth),
+    icon = excluded.icon,
+    title = excluded.title,
+    subtitle = excluded.subtitle,
+    report = excluded.report,
+    status = excluded.status,
+    created_at = LEAST(activity_monitor_thread_actions.created_at, excluded.created_at)
+RETURNING action_index, action_seq, action_id, activity_thread_id, agent_id, agent_depth, icon, title, subtitle, report, status, created_at, nextval(pg_get_serial_sequence('activity.activity_monitor_thread_actions', 'action_seq'))::bigint AS write_ordinal
+action_seqwrite_ordinal
+SELECT action_index, action_seq, action_id, activity_thread_id, agent_id, agent_depth, icon, title, subtitle, report, status, created_at
+FROM activity_monitor_thread_actions
+WHERE activity_thread_id = $1
+ORDER BY action_index ASC, action_seq ASC
+
+SELECT action_index, action_id, activity_thread_id, agent_id, agent_depth, icon, title, subtitle, report, status, created_at
+FROM activity_monitor_thread_actions
+WHERE action_id = $1
+LIMIT 1
+
+SELECT action_index, action_id, activity_thread_id, agent_id, agent_depth, icon, title, subtitle, report, status, created_at
+FROM (
+    SELECT
+        action_index,
+        action_id,
+        activity_thread_id,
+        agent_id,
+        agent_depth,
+        icon,
+        title,
+        subtitle,
+        report,
+        status,
+        created_at,
+        action_seq AS insertion_order
+    FROM activity_monitor_thread_actions
+    WHERE activity_thread_id = $1
+    ORDER BY action_index DESC, insertion_order DESC
+    LIMIT $2
+)
+ORDER BY action_index ASC, insertion_order ASC
+
+SELECT user_message_id
+FROM activity_monitor_carrier_user_messages
+WHERE carrier_message_id = $1
+  AND ($2::text IS NULL OR root_agent_id IS NULL OR root_agent_id = $2)
+ORDER BY link_seq ASC
+
+SELECT b.activity_thread_id
+FROM activity_monitor_message_threads b
+WHERE b.message_id = $1
+
+SELECT b.activity_thread_id
+FROM activity_monitor_message_threads b
+JOIN activity_monitor_threads g ON g.activity_thread_id = b.activity_thread_id
+WHERE b.message_id = $1
+  AND g.status = $2
+
+SELECT work_id
+FROM activity_monitor_runtime_work_threads
+WHERE activity_thread_id = $1
+ORDER BY created_at ASC, work_id ASC
+
+SELECT activity_thread_id, name, subtitle, icon, emoji, status, created_at, finished_at, finish_message,
+       finish_status, finish_status_reason, activity_thread_kind, space_slug, status_title,
+       expected_finish_description
+FROM activity_monitor_threads
+WHERE activity_thread_id = $1
+
+UPDATE activity_monitor_threads
+SET status = $2,
+    finished_at = COALESCE(finished_at, $3),
+    finish_message = CASE
+      WHEN $4 IS NULL OR TRIM($4) = '' THEN finish_message
+      ELSE $4
+    END,
+    subtitle = CASE
+      WHEN $5 IS NULL OR TRIM($5) = '' THEN subtitle
+      ELSE $5
+    END,
+    status_title = CASE
+      WHEN $6 IS NULL OR TRIM($6) = '' THEN status_title
+      ELSE $6
+    END,
+    finish_status = COALESCE($7, finish_status),
+    finish_status_reason = COALESCE($8, finish_status_reason)
+WHERE activity_thread_id = $1
+SELECT 1::bigint FROM activity_monitor_threads WHERE activity_thread_id = $1 LIMIT 1
+DELETE FROM activity_monitor_message_threads mt
+WHERE mt.activity_thread_id = $1
+  AND NOT EXISTS (
+    SELECT 1
+    FROM activity_monitor_carrier_user_messages c
+    WHERE c.carrier_message_id = mt.message_id
+  )
+DELETE FROM activity_monitor_agent_threads WHERE activity_thread_id = $1
+SELECT g.activity_thread_id, g.name, g.subtitle, g.icon, g.emoji, g.status, g.created_at, g.finished_at,
+       g.finish_message, g.finish_status, g.finish_status_reason, g.activity_thread_kind, g.space_slug,
+       g.status_title, g.expected_finish_description
+FROM activity_monitor_agent_threads a
+JOIN activity_monitor_threads g ON g.activity_thread_id = a.activity_thread_id
+WHERE a.agent_id = $1
+  AND g.status = $2
+
+SELECT status, finish_status
+FROM activity_monitor_threads
+WHERE activity_thread_id = $1
+LIMIT 1
+render browser task terminal summary schemavoice_hitl_approval_classifierYou are a strict JSON classifier for Muse voice approval decisions. Return only JSON.background_sync_disabledinvalid message deletion epochpath not foundresolve pathpath escapes mount rootforbiddenpath already existsalready_existscreate parent directoryinvalid group deletion epochdefaulttimed out while writing egress approval mirror requesttimed out while reading egress approval mirror responsehatch-runtimeexplicit chat event seqruntime_chatpeerd mirror status read timed out/mirror/statusbusiness dispatch stoppedfailed to serialize localized activity.updated payload; falling back to canonical frameinternal_errorcompleted startup quota rejection has no eventnegative startup quota rejection event sequencecompleted startup quota rejection event is absentrealtime provider writer is closedinput failure lockinference-proxy returned an invalid model selection routeverify activity feed tablebrowser control revision overflowavatar-state: authoritative DB row missing`DateTime + TimeDelta` overflowednegative cancellation event sequencecontext item sequence space is exhaustedcommitted cancellation has no context sequencestartup quota rejection payload is not an objectstartup quota rejection metadata is not an objectcheck goal slug collisionjpgpublication has no chat ownerinvalid publication tracepublication owner does not match its transcript/metadata/message_kindpublication has no execution ownerinvalid publication authorityview ideaview canonical idearesolve canonical on not-foundlist ideas by idsview idea by sourcespawn find for fs query scanfind stderr pipe unavailableread find stdout for fs query scanwait for fs query scanread find stderr for fs query scanfind stdout pipe unavailableread directory entrystat directorytimed outbrowser inventory timed outshopping_results_v2navigationnavigation.scheduled_tasknode_card.notification_opt_inGatekeeper response omitted requested gate; using defaultconnection_goneno active client accepted the ui_control commandconversation worker preview unavailablegroup completion wake failedconversation worker preview settlement unavailable1passwordhatchgoogleappleamazon{}idea activation origin has no providerLet's do it!User-visible message submitted when the user starts executing an Idea cardfailed to serialize idea for reply_to_target hydrationtimed out while reading space inference requestread file artifact stateread artifact placementread saved artifact stateread share linkread saved artifactmcu_wearabledisplayless_glassesbefore_plannerbefore_dispatchdevice_familydelivery_appstream owner has no chatsummaryEmojiTaglineadmission requires a durable chat ownergreenyellowred browser task not foundretained browser slot remained present after releasecomplimentary_subscriptionepoch-scoped nutrition presentation could not load its root sessionnutrition presentation belongs to a stale conversation epochmain_chatfailed to persist delta.presentation eventruntime widget has no captured chat contextruntime widget destination is no longer currentpersist_widget shopping_results payload requires productsstefi_proxy_unavailableJARVIS_STEFI_PROXY_SOCK is not set; listing_details requires the Stefi proxystefi_product_details_request_failedstefi_product_details_response_read_failedJARVIS_STEFI_PROXY_SOCK is not set; product_details requires the Stefi proxystartup root arbiter is unavailablestartup root arbiter staging response closedattachment storage unavailable; retry Sendcould not share attachments; finish uploading and retry Sendroot turn arbiter response channel closedinvalid attachment pathstefi_listing_details_request_failedshopping presentation requires meaningful fallback textsource-aware shadow content hash failedshadow_hash_failedsource-aware shadow review failedshadow_review_failedbatch still present
+videoavatar gallery requires a video gallery widgetensure goal workspaceinsert goalcompute sort_orderload goal by idlist goal suggestionslist goal briefingslist goal updateslist goalsload goal session mapping by root goal idresolve root goal parentmark goal briefing openedgoal guide path has no parentread authoritative cron definitionfailed to resolve avatar video start framescannot resolve the active avatar image pathruntime.resources.metadata_jsonfailed to serialize delta.marker payloadstat filestat fs.find scan segmentctacontent_localecontent_locale_revisionpeer hand-back provenance unavailable; the turn is unboundpeer hand-back access level unavailablechat_idmessageimagehttpssubagent_inference_completeroot_public_streamroot_follow_upbackground_workerphone_call_monitorcompanion_origin_lookup_failedcompletion_resultstatusverification_statusdelivery_note: The builder attested that verification FAILED: the page did not load in the check, or it could not be verified. Tell the user plainly that the artifact has not been fully checked and some parts may not work yet. Do not say the content was verified or that nothing is placeholder.delivery_note: This build ended asking the user for input. Put its question to the user in this reply, keeping its substance. When it names fixed choices and this is a main-chat turn, present them with an `option` widget (`muse.create_options`), each option a complete reply; on a channel side chat, present them as plain numbered text whose entries are complete replies. Do not answer the question yourself or start a replacement build. When the user responds, continue the build with `artifact.edit` on the same artifact and their reply as `verbatim_request`, whether it answers the question or changes direction.Never include sensitive credentials, OTPs, verification codes or raw technical values from the handoff in the visible reply.
+If you reply to the user, speak directly to them in your established voice, following **Writing Style**. Bring the useful result into the conversation, preserving its facts, limitations and required links or attachments. Follow any requirement to deliver particular text unchanged. Keep the reply no longer than the user needs. The handoff was written for you by a background agent, not for the user: never repeat its addressing (such as "parent agent"), internal terms, or instructions to you, and speak about its results as your own.
+cron.scheduler.worker.execute/phone_call_monitor/judge_contextwebhook_fetchSpace task lost terminal-owner replacement CASSpace task lost pre-admission successor CASSpace task lost expired-dedupe successor CASSpace task callback data binding disagrees with its isolated action workspaceSpace task action workspace database path is not valid UTF-8Space task action workspace blob path is not valid UTF-8expected_return_action_missingvoice turn did not settle in time; its reply pushes as beforefailed to persist terminal voice design statedecode artifact sharingread artifact sharingdiscretion_edit_reviewsaved_spaceexternal agent delivery payload is requiredstartup admission response closedstartup admission completion stopped with durable custody retainedstartup admission continuation retained durable custodysuspended browser worker has no valid agent idlost browser viewer did not drain; retry releaseletternotification_metadata_eventtimed out while reading approval lifecycle eventavatar image is outside the home directoryload the conversationload grantspngworkspace/trustedremote SAS confirmation deadline elapsedreasonunknown contactpeer_inbounddeniedmalformed header signaturemalformed envelope idseed missing preset grantsreload grantsload circle membersload contactrecheck DM relationshipensure DM conversationclaim inbound enveloperesolve peer workerattach peer workerresolve contact trusthold shared filesreceive shared filesaccept peer mailbox messagecommit complete hosted fanoutpublish received peer messagemark inbound enqueued

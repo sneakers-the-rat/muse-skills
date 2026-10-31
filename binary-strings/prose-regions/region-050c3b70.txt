@@ -1,0 +1,36 @@
+select epoch, context_json from runtime.browser_contexts where task_id = $1 and agent_id = $2insert into runtime.browser_contexts (task_id, agent_id, epoch, context_json)
+                select $1, $2, $3, $4 from runtime.browser_tasks t
+                left join runtime.browser_executions e on e.task_id = t.task_id and e.planner_agent_id = t.owner_agent_id
+                where t.task_id = $1 and t.status = 'running'
+                  and coalesce(e.epoch, 0) = $3
+                  and (t.owner_agent_id = $2 or exists(select 1 from runtime.browser_invocations i
+                    where i.task_id = t.task_id and i.planner_agent_id = t.owner_agent_id
+                      and i.agent_id = $2 and i.result_json is null))
+                on conflict (task_id, agent_id) do update set epoch = excluded.epoch, context_json = excluded.context_jsonbrowser planner changedbrowser seat changed before context publicationwith recursive chain as (
+                       select invocation_id, parent_invocation_id, ordinal, input_json, 0 as depth
+                       from runtime.browser_invocations where invocation_id = $1 and task_id = $2
+                       union all
+                       select p.invocation_id, p.parent_invocation_id, p.ordinal, p.input_json, c.depth + 1
+                       from runtime.browser_invocations p
+                       join chain c on c.parent_invocation_id = p.invocation_id
+                       where p.task_id = $2)
+                     select ordinal, input_json from chain where depth > 0 order by depth desc
+SELECT f.event_seq, f.field_path, f.scalar_type, f.scalar_value, f.text_value
+FROM event_payload_fields AS f
+WHERE f.event_seq IN (
+, ) ORDER BY f.event_seq ASC, length(f.field_path) ASC, f.field_path ASCevent_seqfield_pathscalar_typescalar_valuetext_value
+SELECT event_seq, ordinal, resource_kind AS kind, resource_key AS uri, label, mime_type, size_bytes, metadata_json
+FROM resources
+WHERE event_seq IN (
+) ORDER BY event_seq ASC, ordinal ASCurilabelsize_bytesmetadata_jsonworker deadline expired while waiting for resultstab_id, alias, holder_invocation_id, actor_invocation_id, actor_agent_id, (select holder.kind from runtime.browser_invocations holder where holder.invocation_id = browser_task_tabs.holder_invocation_id) as holder_kindselect 1 from runtime.browser_tasks where task_id = $1 for updatet.task_id, t.root_session_id, t.owner_agent_id as planner_agent_idselect s.detail_json from runtime.browser_seat_inputs s
+                     join runtime.browser_task_requests r on r.request_id = s.source_id
+                       and r.task_id = s.task_id
+                     where s.task_id = $1 and s.invocation_id is null and s.kind = 'task_update'
+                     order by r.state_revision, s.created_at, s.input_idinput_id, task_id, invocation_id, revision, kind, source_id, site, detail_json, (extract(epoch from created_at) * 1000)::bigint as created_at_ms, (extract(epoch from shown_at) * 1000)::bigint as shown_at_msupdate runtime.browser_seat_inputs set shown_at=now()
+                 where input_id=$1 and task_id=$2 and invocation_id is not distinct from $3
+                   and kind <> 'interrupt_wait' and shown_at is nullselect i.invocation_id, i.kind, i.sign_in_site
+    from runtime.browser_invocations i
+    join runtime.browser_tasks t on t.task_id = i.task_id
+    where i.task_id = $1 and i.result_json is null
+      and i.planner_agent_id = t.owner_agent_id
+    order by i.ordinal

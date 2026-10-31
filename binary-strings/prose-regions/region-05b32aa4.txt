@@ -1,0 +1,116 @@
+update self_improvement.follow_up_queue
+                     set not_before = greatest(not_before, $2), updated_at = now()
+                     where follow_up_id = $1 and state = 'pending'select
+                       (select min(not_before)
+                        from self_improvement.follow_up_queue
+                        where state = 'delivering' and ($2 or priority in ($3, $6)))
+                         as earliest_recovery_not_before,
+                       min(not_before) as earliest_not_before,
+                       min(not_before) filter (where (priority >= $1 and priority <> $3)
+                                                 or priority = $6 or producer = 'internal'
+                                                 or metadata_json->>'after_main_turn' = 'true')
+                         as earliest_prioritized_not_before,
+                       min(greatest(not_before, expires_at - $4 * interval '1 second'))
+                         filter (where priority in ($3, $6)) as earliest_internal_deadline
+                     from self_improvement.follow_up_queue
+                     where state = 'pending' and ($2 or priority in ($3, $6))
+                       and ($5 or producer <> 'proactive_notifier')earliest_not_beforeearliest_recovery_not_beforeearliest_prioritized_not_beforeearliest_internal_deadlineupdate self_improvement.follow_up_queue
+                     set state = 'pending', not_before = $3, claimed_at = null,
+                         disposition_reason = $4,
+                         delivery_submission_id = null, updated_at = now(),
+                         metadata_json = jsonb_set(metadata_json, '{delivery_attempt}',
+                             to_jsonb(coalesce((metadata_json->>'delivery_attempt')::bigint, 0) + 1))
+                     where follow_up_id = $1
+                       and producer in ('referral_invitation', 'onboarding_connect_offer')
+                       and state = 'delivering' and delivery_submission_id = $2update self_improvement.follow_up_queue
+                     set state = 'pending', not_before = $3, claimed_at = null,
+                         disposition_reason = 'worker_authority_deferred', updated_at = now()
+                     where follow_up_id = $1 and producer = 'peer'
+                       and state = 'delivering' and delivery_submission_id = $2select exists(
+                       select 1 from self_improvement.follow_up_queue where state = 'pending'
+                     ) or exists(
+                       select 1 from self_improvement.follow_up_queue where state = 'delivering'
+                     )select research_processed_through from self_improvement.proactivity_operations
+                 where operation_id=$1 and research=$2 and generation=$3 for updateresearch checkpoint belongs to a retired flowselect exists(select 1 from background_workers.turns
+                 where turn_id=$1 and attempt=$2 and agent_id=$3 and message_id=$4
+                   and worker='proactivity' and kind='research' and state='submitted'
+                   and context_json->'packet'->>'run_id'=$5)research result is not durably submittedresearch subscription lease was lostupdate self_improvement.proactivity_operations
+                    set research_processed_through=$2 where operation_id=$1select jsonb_build_object('candidates', t.context_json#>'{packet,inputs,gather,research_candidates}',
+                    'places', t.context_json#>'{packet,inputs,gather,place_state_key}')
+                 from background_workers.turns t
+                 where t.worker='proactivity' and t.kind='research' and t.state='submitted'
+                   and t.context_json->>'proactivity_profile'='prepared_research'
+                   and exists (select 1 from self_improvement.proactivity_operations o
+                     where o.operation_id=t.context_json#>>'{packet,run_id}'
+                       and o.research=$1 and o.generation=$2
+                       and o.research_processed_through is not null)
+                 order by t.created_at desc limit 1update self_improvement.follow_up_queue
+                set metadata_json=jsonb_set(metadata_json,'{proactivity_admitted}',to_jsonb($2::text))
+                where follow_up_id=$1 and delivery_submission_id=$2
+                  and producer='proactive_notifier' and state='delivering'
+                  and ((metadata_json->>'proactivity_admitted')=$2
+                    or ($3 and coalesce(metadata_json->'proactivity_flow',
+                      '{"research":false,"generation":0}'::jsonb)=$4))update self_improvement.runs r
+                 set diagnostics = coalesce(r.diagnostics, '{}'::jsonb) || jsonb_build_object(
+                     'proactivity_context_profile', coalesce(r.diagnostics->>'proactivity_context_profile',
+                         (select behavior_profile from self_improvement.proactivity_operations o where o.operation_id=r.run_id),
+                         case when exists (
+                             select 1 from self_improvement.run_steps s where s.run_id=r.run_id
+                         ) then 'rollout_compatibility'
+                         else 'prepared_research' end),
+                     'proactivity_flow', coalesce(r.diagnostics->'proactivity_flow',
+                         (select jsonb_build_object('research',o.research,'generation',o.generation)
+                          from self_improvement.proactivity_operations o where o.operation_id=r.run_id),
+                         $2::jsonb))
+                 where r.run_id=$1 and r.state='running'
+                 returning jsonb_build_object(
+                     'proactivity_context_profile',diagnostics->'proactivity_context_profile',
+                     'proactivity_flow',diagnostics->'proactivity_flow')insert into self_improvement.proactivity_operations
+                (operation_id,research,generation,behavior_profile) values ($1,$2,$3,$4)
+                on conflict (operation_id) do nothingproactivity_context_profilerollout_compatibilityselect research,generation
+                from self_improvement.proactivity_operations where operation_id=$1select research, generation from self_improvement.proactivity_flow
+                where singleton = true for updateupdate self_improvement.proactivity_flow
+                    set research=$1, generation=$2, changed_at=now() where singleton=trueupdate self_improvement.follow_up_queue
+                    set state='cancelled', disposition_reason='proactivity_flow_changed',
+                        terminal_at=now(), updated_at=now()
+                    where producer='proactive_notifier' and state in ('pending','delivering')
+                      and not coalesce(state='delivering' and
+                        metadata_json->>'proactivity_admitted'=delivery_submission_id,false)update self_improvement.proactive_editions e
+                    set state='dropped', skip_reason='proactivity_flow_changed', updated_at=now()
+                    where state='pending_delivery' and not exists (
+                      select 1 from self_improvement.follow_up_queue q
+                      where (q.follow_up_id='proactive_notifier:' || e.edition_id
+                          or starts_with(q.follow_up_id,
+                            'proactive_notifier:' || e.edition_id || ':deferred:'))
+                        and q.state='delivering'
+                        and q.metadata_json->>'proactivity_admitted'=q.delivery_submission_id)update self_improvement.attention_ledger a
+                    set state='dropped', updated_at=now() where a.state='pending_delivery' and not exists (
+                      select 1 from self_improvement.follow_up_queue q
+                      where q.producer='proactive_notifier' and q.state='delivering'
+                        and q.metadata_json->>'proactivity_admitted'=q.delivery_submission_id
+                        and (q.follow_up_id='proactive_notifier:' || a.edition_id
+                          or starts_with(q.follow_up_id,
+                            'proactive_notifier:' || a.edition_id || ':deferred:')
+                          or q.metadata_json->>'decision_id'=a.decision_id))select max(research_processed_through)
+                from self_improvement.proactivity_operations where research_processed_through is not nullselect research=$2 and generation=$3
+                from self_improvement.proactivity_operations where operation_id=$1delete from self_improvement.proactivity_operations where operation_id in (
+                select o.operation_id from self_improvement.proactivity_operations o
+                where o.created_at < now() - interval '7 days'
+                  and not exists (select 1 from self_improvement.runs r where r.run_id=o.operation_id)
+                  and not exists (select 1 from self_improvement.classified_context_groups c where c.run_id=o.operation_id)
+                  and not exists (select 1 from background_workers.turns t
+                    where t.turn_id in (o.operation_id, o.operation_id || ':research', o.operation_id || ':compose', o.operation_id || ':classify_dates',
+                        o.operation_id || ':research:files', o.operation_id || ':compose:files'))
+                order by o.created_at limit 100)select research_processed_through is not null
+                     from self_improvement.proactivity_operations where operation_id=$1select research_processed_through from self_improvement.proactivity_operations
+                 where operation_id=$1 and research=$2 and generation=$3
+                   and behavior_profile='prepared_research' for updateheld_for_researchselect behavior_profile from self_improvement.proactivity_operations where operation_id=$1edition_id, slot, local_date, timezone, state, lead, items, presentation, item_count, skip_reason, handoff_message_id, composed_at, surfaced_at, outcome_score, scored_at, run_id, presentation_locale, allocation, research_flow, flow_generationproactivity edition belongs to a retired flowupdate self_improvement.proactive_editions
+                     set state = 'dropped', updated_at = $2
+                     where edition_id = $1 and state = 'pending_delivery'update self_improvement.proactive_editions
+                     set state = 'surfaced',
+                         surfaced_at = $3,
+                         handoff_message_id = coalesce(handoff_message_id, $2),
+                         updated_at = $3
+                     where edition_id = $1 and state = 'pending_delivery'update self_improvement.proactive_editions
+                     set outcome_score = $2, scored_at = $3, updated_at = $3
+                     where edition_id = $1 and scored_at is null

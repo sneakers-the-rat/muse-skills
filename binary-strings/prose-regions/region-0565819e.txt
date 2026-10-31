@@ -1,0 +1,360 @@
+connector_call_reasonJARVIS_TRACE_CONTEXTJARVIS_HOMEJARVIS_VAR_LIB_DIRCREDENTIALS_DIRECTORYJARVIS_RUNTIME_CONTEXT_TOKENskill command runtime context registration faileddevice node_idfull_sync_idreconciliation.finalizeHealth source snapshot belongs to another devicereconciliation.ingest_source_changeselect data_source, next_full_sync_at, current_full_sync_id,
+            current_full_sync_requester_root_session_id,
+            current_full_sync_requester_presentation_locale,
+            current_full_sync_expires_at, current_full_sync_range_start,
+            current_full_sync_range_end, changed_during_full_sync,
+            last_full_sync_at, last_full_sync_range_start, last_full_sync_range_end
+     from device.data_sync_stateselect pairing_status, data_sources_json
+         from device.nodes where node_id = $1 for updatepairing_statusdata_sources_jsonupdate device.data_sync_state
+         set next_full_sync_at = $4, search_trigger_pending = false,
+             current_full_sync_id = null,
+             current_full_sync_requester_root_session_id = null,
+             current_full_sync_requester_presentation_locale = null,
+             current_full_sync_expires_at = null,
+             current_full_sync_range_start = null,
+             current_full_sync_range_end = null,
+             changed_during_full_sync = false
+         where node_id = $1 and data_source = $2 and current_full_sync_id = $3update device.data_sync_state
+         set next_full_sync_at = null, last_full_sync_at = $4,
+             last_full_sync_range_start = current_full_sync_range_start,
+             last_full_sync_range_end = current_full_sync_range_end,
+             current_full_sync_id = null,
+             current_full_sync_requester_root_session_id = null,
+             current_full_sync_requester_presentation_locale = null,
+             current_full_sync_expires_at = null,
+             current_full_sync_range_start = null,
+             current_full_sync_range_end = null,
+             changed_during_full_sync = false
+         where node_id = $1 and data_source = $2 and current_full_sync_id = $3update device.data_sync_state set changed_during_full_sync = true
+         where node_id = $1 and data_source = $2
+           and current_full_sync_id is not nullupdate device.data_sync_state
+         set next_full_sync_at = null, current_full_sync_id = null,
+             current_full_sync_requester_root_session_id = null,
+             current_full_sync_requester_presentation_locale = null,
+             current_full_sync_expires_at = null,
+             current_full_sync_range_start = null,
+             current_full_sync_range_end = null,
+             changed_during_full_sync = false
+         where node_id = $1 and data_source = $2 and current_full_sync_id = $3insert into device.data_sync_state (node_id, data_source)
+         values ($1, $2) on conflict (node_id, data_source) do nothinginsert into device.comms_announcements as stored (
+           producer_id, received_at_unix_ms, first_received_at_unix_ms,
+           announcing_device_id, event_id,
+           provider, kind, occurred_at_unix_ms, announced_at_unix_ms,
+           outcome, reason, producer, announced_ms_ago
+         )
+         select $1, $2, $2, rows.* from unnest(
+           $3::text[], $4::text[], $5::text[], $6::text[],
+           $7::bigint[], $8::bigint[], $9::text[], $10::text[],
+           $11::text[], $12::bigint[]
+         ) as rows
+         on conflict (producer_id, announcing_device_id, event_id) do update set
+           provider = excluded.provider, kind = excluded.kind,
+           occurred_at_unix_ms = excluded.occurred_at_unix_ms,
+           announced_at_unix_ms = excluded.announced_at_unix_ms,
+           outcome = excluded.outcome, reason = excluded.reason,
+           producer = excluded.producer,
+           announced_ms_ago = excluded.announced_ms_ago,
+           -- `first_received_at_unix_ms` is deliberately NOT in this list. It
+           -- is the retention clock, and refreshing it on replay is what let a
+           -- republished event outlive retention forever: the producer
+           -- naturally re-delivers the same event id minutes apart, each
+           -- delivery moving the only expiry anchor forward, so an
+           -- announcement from hours ago could still be sitting in the table.
+           -- The row ages from when Hatch FIRST saw it, which no later publish
+           -- can change.
+           -- Refreshed with `announced_ms_ago`, never without it. The anchor is
+           -- `received_at_unix_ms - announced_ms_ago`, so the two halves have to
+           -- come from the SAME publish: a producer measures the duration
+           -- relative to the delivery that carries it. Leaving the receipt at
+           -- the first delivery while refreshing the duration anchors a replay
+           -- roughly one replay-gap too far into the past, which then reads as
+           -- an aged-out referent. Re-deliveries of the same event id about
+           -- eleven minutes apart were observed on device, so this is the
+           -- ordinary path rather than a rare one.
+           received_at_unix_ms = excluded.received_at_unix_ms
+         where row(
+           stored.provider, stored.kind, stored.occurred_at_unix_ms,
+           stored.announced_at_unix_ms, stored.outcome, stored.reason,
+           stored.producer, stored.announced_ms_ago
+         ) is distinct from row(
+           excluded.provider, excluded.kind, excluded.occurred_at_unix_ms,
+           excluded.announced_at_unix_ms, excluded.outcome, excluded.reason,
+           excluded.producer, excluded.announced_ms_ago
+         )
+         returning (xmax = 0) as inserted, announcing_device_id, event_idannouncing_device_idselect count(*)::bigint as received_chunks,
+                max(c.chunk_index) as max_chunk_index,
+                coalesce(sum(octet_length(c.payload)), 0)::bigint as total_bytes
+         from device.upload_chunks c
+         where c.upload_session_id = $1max_chunk_indexreceived_chunkstotal_bytesselect node_id, route_kind, request_id, datatype, sync_mode,
+                chunk_count, status, updated_at_text, expires_at
+         from device.upload_sessions
+         where upload_session_id = $1
+         for updatedelete from device.upload_sessions
+         where upload_session_id = $1
+           and route_kind = 'data_source_reconciliation'conflicting reconciliation upload session identityreconciliation upload phase conflicts with finalizationreconciliation upload is missing during finalizationreconciliation upload no longer has its exact sealed chunk setdelete from device.calendar_events
+         where node_id = $1 and start_at < $3 and end_at > $2
+           and not (external_event_id = any($4::text[]))delete from device.calendar_events
+             where node_id = $1 and start_at < $2 and end_at <= $2insert into device.calendar_events as stored (
+           node_id, external_event_id, title, start_at, end_at, is_all_day,
+           external_calendar_id, calendar_name, availability, location, notes,
+           time_zone, start_local_date, end_local_date, is_recurring, url,
+           event_status, calendar_color
+         )
+         select $1, rows.* from unnest(
+           $2::text[], $3::text[], $4::timestamptz[], $5::timestamptz[],
+           $6::boolean[], $7::text[], $8::text[], $9::text[], $10::text[],
+           $11::text[], $12::text[], $13::date[], $14::date[], $15::boolean[],
+           $16::text[], $17::text[], $18::text[]
+         ) as rows
+         on conflict (node_id, external_event_id) do update set
+           title = excluded.title, start_at = excluded.start_at,
+           end_at = excluded.end_at, is_all_day = excluded.is_all_day,
+           external_calendar_id = excluded.external_calendar_id,
+           calendar_name = excluded.calendar_name,
+           availability = excluded.availability, location = excluded.location,
+           notes = excluded.notes, time_zone = excluded.time_zone,
+           start_local_date = excluded.start_local_date,
+           end_local_date = excluded.end_local_date,
+           is_recurring = excluded.is_recurring, url = excluded.url,
+           event_status = excluded.event_status,
+           calendar_color = excluded.calendar_color
+         where row(
+           stored.title,
+           stored.start_at,
+           stored.end_at,
+           stored.is_all_day,
+           stored.external_calendar_id,
+           stored.calendar_name,
+           stored.availability,
+           stored.location,
+           stored.notes,
+           stored.time_zone,
+           stored.start_local_date,
+           stored.end_local_date,
+           stored.is_recurring,
+           stored.url,
+           stored.event_status,
+           stored.calendar_color
+         ) is distinct from row(
+           excluded.title,
+           excluded.start_at,
+           excluded.end_at,
+           excluded.is_all_day,
+           excluded.external_calendar_id,
+           excluded.calendar_name,
+           excluded.availability,
+           excluded.location,
+           excluded.notes,
+           excluded.time_zone,
+           excluded.start_local_date,
+           excluded.end_local_date,
+           excluded.is_recurring,
+           excluded.url,
+           excluded.event_status,
+           excluded.calendar_color
+         )
+         returning (xmax = 0) as inserteddelete from device.calendar_events
+         where node_id = $1 and external_event_id = any($2::text[])insert into device.call_log as stored (
+           producer_id, external_id, phone_number, contact_name,
+           call_type, occurred_at_unix_ms, duration_seconds, platform
+         )
+         select $1, rows.*, $8 from unnest(
+           $2::text[], $3::text[], $4::text[], $5::text[],
+           $6::bigint[], $7::bigint[]
+         ) as rows
+         on conflict (producer_id, external_id) do update set
+           phone_number = excluded.phone_number, contact_name = excluded.contact_name,
+           call_type = excluded.call_type,
+           occurred_at_unix_ms = excluded.occurred_at_unix_ms,
+           duration_seconds = excluded.duration_seconds, platform = excluded.platform
+         where row(
+           stored.phone_number, stored.contact_name, stored.call_type,
+           stored.occurred_at_unix_ms, stored.duration_seconds, stored.platform
+         ) is distinct from row(
+           excluded.phone_number, excluded.contact_name, excluded.call_type,
+           excluded.occurred_at_unix_ms, excluded.duration_seconds, excluded.platform
+         )
+         returning (xmax = 0) as insertedcall_log upsert into device.call_loginsert into device.contact_emails (contact_id, label, email)
+             select * from unnest($1::bigint[], $2::text[], $3::text[])insert into device.contact_phones (contact_id, label, phone_raw, phone_e164)
+             select * from unnest($1::bigint[], $2::text[], $3::text[], $4::text[])insert into device.contact_addresses (
+               contact_id, label, street, city, state, postal_code, country
+             )
+             select * from unnest(
+               $1::bigint[], $2::text[], $3::text[], $4::text[],
+               $5::text[], $6::text[], $7::text[]
+             )update device.contacts
+         set deleted_at = now(), updated_at = now()
+         where node_id = $1 and deleted_at is null
+           and not (external_contact_id = any($2::text[]))insert into device.contacts (
+           node_id, platform, external_contact_id, display_name, organization,
+           job_title, birthday_text, note, thumbnail,
+           synced_at_text, deleted_at, updated_at
+         )
+         select $1, $2, rows.*, $9, null, now()
+         from unnest(
+           $3::text[], $4::text[], $5::text[], $6::text[], $7::text[],
+           $8::text[], $10::text[]
+         ) as rows
+         on conflict (node_id, external_contact_id) do update set
+           platform = excluded.platform,
+           display_name = excluded.display_name,
+           organization = excluded.organization,
+           job_title = excluded.job_title,
+           birthday_text = excluded.birthday_text,
+           note = excluded.note,
+           thumbnail = excluded.thumbnail,
+           synced_at_text = excluded.synced_at_text,
+           deleted_at = null,
+           updated_at = excluded.updated_at
+         returning contact_id, external_contact_id, (xmax = 0) as inserteddelete from device.contact_phones where contact_id = any($1)external_contact_idcontact_iddelete from device.contact_emails where contact_id = any($1)delete from device.contact_addresses where contact_id = any($1)
+        update device.nodes
+        set platform = $1,
+            contacts_last_synced_at = $2,
+            contacts_last_received_at = $3,
+            contacts_last_sync_status = 'success',
+            contacts_last_sync_error = null,
+            contacts_contact_count = $4,
+            contacts_content_sha256 = $5
+        where node_id = $6
+        device node disappeared while recording contacts snapshot metadataupdate device.contacts
+             set deleted_at = now(), updated_at = now()
+             where node_id = $1 and deleted_at is null
+               and external_contact_id = any($2::text[])update device.nodes n
+         set platform = $1,
+             contacts_last_synced_at = $2,
+             contacts_last_received_at = $3,
+             contacts_last_sync_status = 'success',
+             contacts_last_sync_error = null,
+             contacts_contact_count = (
+               select count(*)
+               from device.contacts c
+               where c.node_id = $4 and c.deleted_at is null
+             ),
+             contacts_content_sha256 = case
+               when $5 then null
+               else contacts_content_sha256
+             end
+         where n.node_id = $4device node disappeared while recording contacts mutation metadata
+INSERT INTO requests (
+  request_id, root_request_id, parent_request_id, request_origin,
+  transcript_surface, root_work_class
+)
+VALUES ($1, $2, $3, $4, $5::runtime.transcript_surface, $6)
+ON CONFLICT (request_id) DO UPDATE SET
+  root_request_id = COALESCE(requests.root_request_id, excluded.root_request_id),
+  parent_request_id = COALESCE(requests.parent_request_id, excluded.parent_request_id),
+  request_origin = CASE
+    WHEN requests.request_origin = 'internal.runtime_replay' THEN excluded.request_origin
+    ELSE requests.request_origin
+  END,
+  transcript_surface = excluded.transcript_surface,
+  root_work_class = CASE
+    WHEN requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing'
+      THEN excluded.root_work_class
+    ELSE requests.root_work_class
+  END
+WHERE (requests.root_request_id IS NULL AND excluded.root_request_id IS NOT NULL)
+   OR (requests.parent_request_id IS NULL AND excluded.parent_request_id IS NOT NULL)
+   OR (requests.request_origin = 'internal.runtime_replay'
+       AND excluded.request_origin <> 'internal.runtime_replay')
+   OR requests.transcript_surface IS DISTINCT FROM excluded.transcript_surface
+   OR (requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing')
+call_idoutput
+INSERT INTO tool_outputs (event_seq, call_id, status, output_text, error_text, created_at)
+VALUES ($1, $2, $3, $4, $5, to_timestamp($6::double precision / 1000.0))
+ON CONFLICT (event_seq) DO UPDATE SET
+  call_id = excluded.call_id,
+  status = excluded.status,
+  output_text = excluded.output_text,
+  error_text = excluded.error_text
+arguments
+INSERT INTO tool_calls (event_seq, call_id, tool_name, status, arguments_json, created_at)
+VALUES ($1, $2, $3, 'started', $4, to_timestamp($5::double precision / 1000.0))
+ON CONFLICT (call_id) DO UPDATE SET
+  event_seq = excluded.event_seq,
+  tool_name = excluded.tool_name,
+  status = excluded.status,
+  arguments_json = excluded.arguments_json
+
+INSERT INTO chat_event_derived_write_backlog (event_seq, resources_json)
+VALUES ($1, $2)
+ON CONFLICT (event_seq) DO UPDATE SET
+  resources_json = excluded.resources_json,
+  updated_at = now()
+UPDATE chat_private.peer_conversations SET requester_chat_id = NULL
+         WHERE conversation_id = $1 AND requester_revision = $2
+           AND requester_chat_id = $3 AND NOT requester_unavailable
+           AND chat_id = $5
+           AND EXISTS (SELECT 1 FROM agent.agents
+                       WHERE id = $4 AND session_id = $3)peer handoff disagrees with its asking-chat claimpeer handoff requester changed before admissionSELECT session_id, COALESCE(prompt_floor_seq, -1) AS prompt_floor_seq,
+                kind = 'root' AND parent_agent_id IS NULL
+                AND ephemeral IS DISTINCT FROM TRUE
+                AND status NOT IN ('shutdown', 'not_found') AS eligible
+         FROM agent.agents WHERE agent_id = $1 FOR UPDATEstartup_root_changedSELECT EXISTS(SELECT 1 FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND accepted_ordinal < $2)startup mailbox promotion cannot overtake an earlier accepted input
+SELECT payload_json
+FROM agent.runtime_restart_checkpoints
+WHERE agent_id = $1
+FOR UPDATE
+
+SELECT EXISTS (
+  SELECT 1
+  FROM agent.message_mailbox
+  WHERE agent_id = $1
+    AND state = 'accepted'
+    AND accepted_ordinal < $2
+    AND (NOT $3 OR submission_kind <> 'internal_handoff')
+)
+message mailbox attachment cannot overtake an older priority peer
+INSERT INTO agent.runtime_restart_checkpoints (
+  agent_id, mode, recovery_class, recovery_owner_id, execution_config_json,
+  payload_json, created_at, updated_at
+) SELECT $1, $2, $3, $4, $5, $6, $7, $7
+WHERE EXISTS (
+  SELECT 1
+  FROM agent.agents
+  WHERE agent_id = $1
+    AND status NOT IN ('shutdown', 'not_found')
+)
+ON CONFLICT (agent_id) DO NOTHING
+SELECT EXISTS (SELECT 1 FROM agent.agents WHERE agent_id = $1 AND status NOT IN ('shutdown', 'not_found'))conversation epoch
+INSERT INTO agent.message_mailbox (
+  submission_id, agent_id, conversation_epoch, submission_kind,
+  routing_scope, state, checkpoint_custody, stream_owner_message_id,
+  submission_json, transcript_event_seq, attached_at
+) VALUES (
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+  CASE WHEN $6 = 'attached' THEN now() ELSE NULL END
+)
+ON CONFLICT (submission_id) DO NOTHING
+RETURNING accepted_ordinal, accepted_at
+startup mailbox promotion requires its previously accepted input
+SELECT agent_id, conversation_epoch, submission_kind, routing_scope,
+       state, stream_owner_message_id, submission_json,
+       transcript_event_seq, accepted_ordinal, accepted_at
+FROM agent.message_mailbox
+WHERE submission_id = $1
+FOR UPDATE
+update chat.message_bindings set admitted_at = coalesce(admitted_at, now())
+                    where jarvis_message_id = $1 and chat_id = $2 and binding_epoch = $3 and transport = $4binding epochconversation_epochsubmission_kindrouting_scope
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = $5,
+    stream_owner_message_id = $2,
+    submission_json = $3,
+    transcript_event_seq = coalesce($4, transcript_event_seq),
+    attached_at = now()
+WHERE submission_id = $1
+  AND state = 'accepted'
+  AND stream_owner_message_id IS NULL
+mailbox stream ownerselect a.account_id from chat_private.accounts a
+             join chat_private.binding_authorizations b on b.provider = a.provider and b.account_id = a.account_id
+             where b.provider = $1 and b.binding_id = $2
+               and a.connection_id = $3 and not a.revoked for share of adirect input has no captured binding epochaccount_retiredselect connection_id, generation, transport_json, delivery_target
+             from chat_private.binding_authorizations
+             where provider = $1 and binding_id = $2 and chat_id = $3
+               and account_id = $4 and external_kind = 'direct' and participation = 'active'
+             for shareaccount_authorization_retiredtransport_jsontransport_authorization_absentconnection_idgenerationdelivery_targetselect epoch from chat_private.bindings
+         where chat_id = $1 and provider = $2 and not revoked for sharetransport_authorization_changedbinding_retireddatabase write admission gate closedadmission_timeoutassert_table_existstable_presence.querydelivery_modechunkedfinalization_fencedreconciliation_storage_failedfinalization_failedclaim reconciliation finalizationfinalization_ignored_staleinvalid_stream_uploadfinalization_fence_failedfence invalid reconciliation uploadinvalid_source_snapshotsettle invalid device reconciliation for retrydevice_sync_stateHealth reconciliation applied but device-sync worker wake failedfinalize device reconciliationclient.register_capabilities accepted catalogclient.register_capabilities device_metadatabrowser_endpoint_removedclient rendering snapshot persist failed; cache updated, durable copy staleavatar_video_completionfailed to seed avatar video completion after device registrationOnly Internal announcements accept fallback copyInternal announcement requires public fallback copyinternal_fallback_messageInternal fallback exceeds message limitWWW messages require agent-written deliveryInternal announcement requires delivery instructionsInternalWorker priority is reserved for worker owner noticesInternal priority is reserved for code-owned main-chat deliveriesfollow-up metadata must be a JSON objectfollow-up must expire after it becomes deliverablefollow-up message must not be emptyfollow-up key must not be emptyfollow-up producer must not be emptyhardcoded product campaign producer is retiredpresentation_localeenqueue follow-upfollow_up_queue_deliveryenqueuefollow-up enqueued but the delivery worker could not be kickedbundled Ideas localization catalog is unavailablefailed to load bundled Ideas localization provenancefailed to load bundled Ideas dogfood provenanceanchor_kindanchor_idfailed to batch-read idea source metadata for downstream eventsconnector_status_cachehatch_igd_clidisconnectnot_confirmedlaunch_failedno output before the timeouttimed_outIGD daemon state wiped after the Instagram Messages disconnectIGD daemon state wipe pending after the Instagram Messages disconnectigdigd_state_wipeinstagram_messageslogoutprovider_not_connectedskill.disconnectedmessenger_companionrefresh_token_rejectedfailed to resolve local authd account status; keeping legacy statusfailed to resolve Plaid Item statusauth status row concurrency limiter closedauth status row task failedcheckmessenger-companion-auth-statusfailed to load paired devices for healthkit skill statusUnable to load paired device permissionsconnector catalog could not resolve Privacy Jurisdiction countrylisted custom connectors for skills.statusfailed to list custom connectors for skills.status; skipping synthetic rowsskills.status: hid connectors unavailable in this channel or environmentfailed to persist skill statuses to user configemail_invalid_thread_idthread id has an unexpected shapehttp://localhost/hatch/email/threadsthread readmuse_mailemail_not_enabledMuse mail is not enabled for this accounthttp://localhost/hatch/email/mailboxmailbox reademail_invalid_message_idmessage id has an unexpected shapehttp://localhost/hatch/email/messagesmessage readthread listingmessage listingattachment readclient_id is required for HTTP client invoke resultsprovider client registeredwhatsapp_client_registration_v1widgets.state.setserialize widgets.state.set payloadwidgets.state.patchconnection disconnect cleanup task failedinstagramthreadsthreads-cliuser_fbidinstagram-clifb_user_idfacebook-climeconnector_consent_requiredserialize skills.status payloadprovider must not be emptySELECT payload_json FROM runtime_restart_checkpoints WHERE agent_id = $1 FOR UPDATESELECT submission_json, octet_length(submission_json)::bigint AS serialized_bytes
+         FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND submission_id <> $2startup_queue_fullack_admittedack_ignored_staleack_fencedfailed to settle reconciliation after ambiguous ACK admission failureack_failedadmit reconciliation ACKchunk_ignored_stalechunk_stagedchunk_set_readychunk_fencedchunk_failedstage reconciliation pageinvalid_browser_replybrowser endpoint returned an invalid transport payloadstale_reconciliation_ackreconciliation ACK no longer owns the current full syncinvalid_reconciliation_resultdevice message protection exceeded its result-release budget; failed opendue-occurrence coalesce check failed; seeding immediate occurrence anywayconnector id and method must not be emptyaccount_id must be a 32-character hexadecimal idhttp://localhost/hatch/professional-consent/statusprofessional consent status timed outparse professional consent statusallowedneeds_consentprofessional consent returned an unknown statushttp://localhost/hatch/professional-consent/decisionprofessional consent context returned an invalid copy versionprofessional consent decision timed outrecord professional consent decisionparse professional consent decision responseprofessional consent decision returned an unexpected statusprofessional consent decision returned a mismatched correlation idprofessional consent context timed outread professional consent contextparse professional consent contextprofessional consent context returned a mismatched correlation idMeta Business account disclosure is unavailableread professional consent status for connectorfailed to list custom connectors; skipping custom rowstailscale_disconnect_failedtailscale node identity destroy failedtailscaleTailscale could not disconnect. Please try again.connectors.tailscale.disconnect_failedError shown when the Tailscale connector cannot leave the networkTailscale could not connect. Please try again.connectors.tailscale.connect_failedError shown when Tailscale refuses a connection or does not return an approval link

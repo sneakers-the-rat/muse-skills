@@ -1,0 +1,85 @@
+select status, output_json, submitted_at_ms
+                     from feed.run_steps
+                     where run_id = $1 and step_id = $2 and attempt = $3
+                       and agent_id is not distinct from $4select step_id, status
+                     from feed.run_steps
+                     where run_id = $1update feed.run_steps
+                     set output_json = $5,
+                         submitted_at_ms = $6,
+                         updated_at_ms = $6
+                     where run_id = $1 and step_id = $2 and attempt = $3
+                       and agent_id = $4 and status = 'running'select output_json
+                     from feed.run_steps
+                     where run_id = $1 and step_id = $2
+                       and status = 'succeeded'
+                     order by attempt desc
+                     limit 1select output_json from feed.run_steps
+                     where run_id = $1 and step_id = $2
+                     order by attempt desc
+                     limit 1select rs.finished_at_ms, rs.output_json
+                     from feed.run_steps rs
+                     join feed.runs r on r.run_id = rs.run_id
+                     where r.prompt_id = $1
+                       and r.trigger = 'fill'
+                       and (rs.step_id like 'fill:rewrite:%' or rs.step_id = 'wire:compose')
+                       and rs.status = 'succeeded'
+                       and rs.output_json is not null
+                       and rs.finished_at_ms is not null
+                     order by rs.finished_at_ms desc
+                     limit $2select exists (
+       select 1
+       from feed.run_steps steps
+       join feed.runs runs on runs.run_id = steps.run_id
+       where steps.run_id = $1
+         and steps.step_id = $2
+         and steps.attempt = $3
+         and steps.agent_id = $4
+         and steps.status = 'running'
+         and runs.status in ('queued', 'running')
+     )update feed.units
+                     set seen_at_ms = $2
+                     where unit_id = any($1) and seen_at_ms is null
+                     returning unit_idunit_idselect unit_id from feed.units
+                     where unit_id = any($1) and seen_at_ms is nullupdate feed.units u
+                     set seen_at_ms = coalesce(u.seen_at_ms, v.seen_at_ms),
+                         last_seen_at_ms = v.seen_at_ms,
+                         timespent_ms = coalesce(u.timespent_ms, 0) + v.timespent_ms
+                     from unnest($1::text[], $2::bigint[], $3::bigint[])
+                         as v(unit_id, seen_at_ms, timespent_ms)
+                     where u.unit_id = v.unit_idupdate feed.units
+                     set reaction = $2,
+                         reaction_updated_at_ms = $3,
+                         updated_at_ms = $3
+                     where unit_id = $1insert into feed.interactions
+                       (interaction_id, unit_id, kind, value, created_at_ms)
+                     values ($1, $2, $3, $4, $5)
+                     returning interaction_id, unit_id, kind, value, created_at_msselect
+                         (select count(*) from feed.units
+                          where greatest(coalesce(last_seen_at_ms, 0),
+                                         coalesce(seen_at_ms, 0)) >= $1)
+                             as viewed_units,
+                         (select count(*) from feed.interactions
+                          where kind in ('reaction_set', 'reaction_cleared')
+                            and created_at_ms >= $1) as reactions,
+                         (select count(*) from feed.interactions
+                          where kind = 'discuss'
+                            and created_at_ms >= $1) as discussionsviewed_unitsreactionsdiscussionsselect greatest(
+                         (select max(greatest(coalesce(last_seen_at_ms, 0),
+                                              coalesce(seen_at_ms, 0)))
+                          from feed.units),
+                         (select max(created_at_ms) from feed.interactions
+                          where kind in ('reaction_set', 'reaction_cleared', 'discuss')))select i.interaction_id, i.unit_id, i.kind, i.value, i.created_at_ms,
+                            u.kicker as unit_kicker,
+                            u.title as unit_title,
+                            u.category as unit_category,
+                            u.edition_local_date as unit_edition_local_date
+                     from feed.interactions i
+                     left join feed.units u on u.unit_id = i.unit_id
+                     where i.created_at_ms > $1
+                       and not (i.kind = any($3))
+                     order by i.created_at_ms asc, i.interaction_id asc
+                     limit $2select coalesce(seen_at_ms, last_seen_at_ms) as first_seen
+                     from feed.units
+                     where coalesce(seen_at_ms, last_seen_at_ms) >= $1
+                     order by first_seen asc
+                     limit 512€“

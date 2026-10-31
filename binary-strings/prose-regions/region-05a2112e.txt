@@ -1,0 +1,163 @@
+failed to read identity for profile syncworkingfailed to resolve committed idle frame for profile syncidle frame is unavailable; using current profile imagebrowser broker returned the wrong presentation-take result shapebrowser broker returned the wrong presentation-discard result shape_flight_presentationitemsflight_actionFlightActionresponse_message_prefix/data/flight_data/price/data/flight_data/response_messagefailed to hydrate native letter widget title because briefing path is invalidfailed to hydrate native letter widget title because briefing is too largefailed to hydrate native letter widget title metadatafailed to hydrate native letter widget titlefailed to hydrate native letter widget identity metadatafailed to hydrate native letter widget because briefing was not foundfailed to hydrate native letter widgetfailed to resolve Letter artifactartifact_slugfailed to hydrate native letter widget because self-improvement storage was unavailablefailed to hydrate native letter widget because relationship brief was not foundbrowser task approval presentation validation failedbrowser task approval presentation update failedfailed to enrich approval snapshot with live wallet; preserving eligible mint-time optionscomplimentary plan-name lookup failedskipping goal suggestion with missing ideacommitted goal maintenance planning failedfailed to serialize goal detail for goal.updated websocket eventfailed to load goal detail for goal.updated websocket eventfailed to serialize localized goal.updated websocket eventbroadcast goal.updated websocket eventfailed to hydrate goal Space associations from Spaces catalog`peer-file://` links are written by the runtime; link the file from your workspace insteadunsupported owner avatar formatoutsquaretriggerpeer_imagerepairvoice call-start prewarm timed outno_admission_warmupcall_or_media_activevoice_gate_offroot_sessionvoice call-start prewarm could not load the root sessionavatarcallback_credentialadmission_readspartialvoice call-start prewarm failedfailed to reconcile skills statuses with no subscribersfailed to build skills.updated payloadruntime.skillsJARVIS_HOMEJARVIS_VAR_LIB_DIRCREDENTIALS_DIRECTORYJARVIS_TRACE_CONTEXTJARVIS_RUNTIME_CONTEXT_TOKENskill command runtime context registration failedgoal_slugupdate runtime.browser_invocations set suspended_state = 'running'
+                 where invocation_id = $1 and suspended_state = 'waiting_child'error_codemedia-generation did not return valid JSON outputremove staging dircreate staging dir--media-subagent-output-type--conversation-json--orientation--output-dir--task-type
+INSERT INTO requests (
+  request_id, root_request_id, parent_request_id, request_origin,
+  transcript_surface, root_work_class
+)
+VALUES ($1, $2, $3, $4, $5::runtime.transcript_surface, $6)
+ON CONFLICT (request_id) DO UPDATE SET
+  root_request_id = COALESCE(requests.root_request_id, excluded.root_request_id),
+  parent_request_id = COALESCE(requests.parent_request_id, excluded.parent_request_id),
+  request_origin = CASE
+    WHEN requests.request_origin = 'internal.runtime_replay' THEN excluded.request_origin
+    ELSE requests.request_origin
+  END,
+  transcript_surface = excluded.transcript_surface,
+  root_work_class = CASE
+    WHEN requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing'
+      THEN excluded.root_work_class
+    ELSE requests.root_work_class
+  END
+WHERE (requests.root_request_id IS NULL AND excluded.root_request_id IS NOT NULL)
+   OR (requests.parent_request_id IS NULL AND excluded.parent_request_id IS NOT NULL)
+   OR (requests.request_origin = 'internal.runtime_replay'
+       AND excluded.request_origin <> 'internal.runtime_replay')
+   OR requests.transcript_surface IS DISTINCT FROM excluded.transcript_surface
+   OR (requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing')
+call_idoutput
+INSERT INTO tool_outputs (event_seq, call_id, status, output_text, error_text, created_at)
+VALUES ($1, $2, $3, $4, $5, to_timestamp($6::double precision / 1000.0))
+ON CONFLICT (event_seq) DO UPDATE SET
+  call_id = excluded.call_id,
+  status = excluded.status,
+  output_text = excluded.output_text,
+  error_text = excluded.error_text
+arguments
+INSERT INTO tool_calls (event_seq, call_id, tool_name, status, arguments_json, created_at)
+VALUES ($1, $2, $3, 'started', $4, to_timestamp($5::double precision / 1000.0))
+ON CONFLICT (call_id) DO UPDATE SET
+  event_seq = excluded.event_seq,
+  tool_name = excluded.tool_name,
+  status = excluded.status,
+  arguments_json = excluded.arguments_json
+
+INSERT INTO chat_event_derived_write_backlog (event_seq, resources_json)
+VALUES ($1, $2)
+ON CONFLICT (event_seq) DO UPDATE SET
+  resources_json = excluded.resources_json,
+  updated_at = now()
+
+UPDATE events
+SET display_text_ready = $2,
+    reply_target_message_id = $3,
+    payload_json = $4
+WHERE event_seq = $1
+
+INSERT INTO messages (message_id, event_seq, role, body, created_at)
+SELECT e.message_id, e.event_seq, e.role, $2, e.created_at
+FROM events e
+WHERE e.event_seq = $1
+  AND e.message_id IS NOT NULL
+  AND e.role IS NOT NULL
+ON CONFLICT (message_id) DO UPDATE SET
+  body = excluded.body
+UPDATE chat_private.peer_conversations SET requester_chat_id = NULL
+         WHERE conversation_id = $1 AND requester_revision = $2
+           AND requester_chat_id = $3 AND NOT requester_unavailable
+           AND chat_id = $5
+           AND EXISTS (SELECT 1 FROM agent.agents
+                       WHERE id = $4 AND session_id = $3)peer handoff disagrees with its asking-chat claimpeer handoff requester changed before admissionSELECT session_id, COALESCE(prompt_floor_seq, -1) AS prompt_floor_seq,
+                kind = 'root' AND parent_agent_id IS NULL
+                AND ephemeral IS DISTINCT FROM TRUE
+                AND status NOT IN ('shutdown', 'not_found') AS eligible
+         FROM agent.agents WHERE agent_id = $1 FOR UPDATEstartup_root_changedSELECT EXISTS(SELECT 1 FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND accepted_ordinal < $2)startup mailbox promotion cannot overtake an earlier accepted input
+SELECT payload_json
+FROM agent.runtime_restart_checkpoints
+WHERE agent_id = $1
+FOR UPDATE
+
+SELECT EXISTS (
+  SELECT 1
+  FROM agent.message_mailbox
+  WHERE agent_id = $1
+    AND state = 'accepted'
+    AND accepted_ordinal < $2
+    AND (NOT $3 OR submission_kind <> 'internal_handoff')
+)
+message mailbox attachment cannot overtake an older priority peer
+INSERT INTO agent.runtime_restart_checkpoints (
+  agent_id, mode, recovery_class, recovery_owner_id, execution_config_json,
+  payload_json, created_at, updated_at
+) SELECT $1, $2, $3, $4, $5, $6, $7, $7
+WHERE EXISTS (
+  SELECT 1
+  FROM agent.agents
+  WHERE agent_id = $1
+    AND status NOT IN ('shutdown', 'not_found')
+)
+ON CONFLICT (agent_id) DO NOTHING
+SELECT EXISTS (SELECT 1 FROM agent.agents WHERE agent_id = $1 AND status NOT IN ('shutdown', 'not_found'))conversation epoch
+INSERT INTO agent.message_mailbox (
+  submission_id, agent_id, conversation_epoch, submission_kind,
+  routing_scope, state, checkpoint_custody, stream_owner_message_id,
+  submission_json, transcript_event_seq, attached_at
+) VALUES (
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+  CASE WHEN $6 = 'attached' THEN now() ELSE NULL END
+)
+ON CONFLICT (submission_id) DO NOTHING
+RETURNING accepted_ordinal, accepted_at
+startup mailbox promotion requires its previously accepted input
+SELECT agent_id, conversation_epoch, submission_kind, routing_scope,
+       state, stream_owner_message_id, submission_json,
+       transcript_event_seq, accepted_ordinal, accepted_at
+FROM agent.message_mailbox
+WHERE submission_id = $1
+FOR UPDATE
+update chat.message_bindings set admitted_at = coalesce(admitted_at, now())
+                    where jarvis_message_id = $1 and chat_id = $2 and binding_epoch = $3 and transport = $4binding epochconversation_epochsubmission_kindrouting_scope
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = $5,
+    stream_owner_message_id = $2,
+    submission_json = $3,
+    transcript_event_seq = coalesce($4, transcript_event_seq),
+    attached_at = now()
+WHERE submission_id = $1
+  AND state = 'accepted'
+  AND stream_owner_message_id IS NULL
+mailbox stream ownerselect a.account_id from chat_private.accounts a
+             join chat_private.binding_authorizations b on b.provider = a.provider and b.account_id = a.account_id
+             where b.provider = $1 and b.binding_id = $2
+               and a.connection_id = $3 and not a.revoked for share of adirect input has no captured binding epochaccount_retiredselect connection_id, generation, transport_json, delivery_target
+             from chat_private.binding_authorizations
+             where provider = $1 and binding_id = $2 and chat_id = $3
+               and account_id = $4 and external_kind = 'direct' and participation = 'active'
+             for shareaccount_authorization_retiredtransport_jsontransport_authorization_absentgenerationdelivery_targetselect epoch from chat_private.bindings
+         where chat_id = $1 and provider = $2 and not revoked for sharetransport_authorization_changedbinding_retiredactivity_monitor_list_thread_actionsactivity_monitor_list_recent_thread_actionsactivity_monitor_message_thread_lookupactivity_monitor_read_threaddatabase write admission gate closedadmission_timeoutassert_table_existstable_presence.queryagent_status broadcast presence statusstandalonetoo many group attachment snapshotsinvalid group attachment MIME typeduplicate group attachment snapshot referencegroup attachment snapshots exceed limitthis group provider does not support group attachmentsgroup attachments exceed review capacitythis group provider does not support this attachment MIME typetoo many group attachmentsgroup attachment snapshot changedgroup media references changed during preparationphone call transcript is unavailabledemo_script_outcomehuman_answeredvoicemailblockednot_connecteddemo_goodbye_outcome</<\/space_preview_repairspace preview repair: handler not registeredspace preview repair: handler registry unavailablespace_preview_missingspace preview repair: runtime work store unavailablequeued Space preview repairspace preview repair: seeding failedspace preview repair: catalog read failed on viewreportreasonbrowser task request trace is missingbrowser task request trace has no workload classcheck browser task terminal update mailbox receiptopen browser task queue for completion relay ownershipload browser task relocation predecessorload browser task terminal-update ownershipparse browser task execution root for completion relay ownershipfailed to persist browser task projectiontask_missingcapture_failedexpiredtake_failedtake_timeoutstale_headpayload_validationbroker_fence_changedinventory_unavailablenot_attemptedwrittencaptured_and_presentedclient preview digest mismatchclient preview is too largeclient preview observation returned no capture decisionclient browser ended during observationclient browser changed during observation/api/computer/assets/desktop-v2.pngneeds_user【ads-failed to persist static fallback voice shortlistfailed to clear static fallback shortlist sourcefailed to persist static fallback voice selectionallow_onceallow_sessionallow_alwaysrevisenot_decisionbundled Ideas localization catalog is unavailablefailed to load bundled Ideas localization provenancefailed to load bundled Ideas dogfood provenanceIdea catalog sharing context read failedIdea share variant projection read failedIdea share revision projection read failedIdea direct sharing read failedIdea publication hold read failedresponse_statusresponse_sizehttp://localhost/hatch/viewer/profileprofile_image_hostfiles can only be shared in a direct peer conversationbytescontent_truncatedattached imagedisconnect_outcomeauthd socket not configuredauth status row concurrency limiter closedauth status row task failedfailed to load paired devices for healthkit skill statusUnable to load paired device permissionsconnector catalog could not resolve Privacy Jurisdiction countrylisted custom connectors for skills.statusfailed to list custom connectors for skills.status; skipping synthetic rowsskills.status: hid connectors unavailable in this channel or environmentfailed to persist skill statuses to user configowner-mail run no longer existsowner-mail execution ownership changed during PI reviewinsert into runtime.browser_task_tabs (task_id, tab_id, alias)
+         select $1, $2, 't' || (coalesce(max(substring(alias from 2)::integer), 0) + 1)
+         from runtime.browser_task_tabs where task_id = $1
+         on conflict (task_id, tab_id) do nothingupdate runtime.browser_task_tabs set actor_invocation_id = $3, actor_agent_id = $4
+             where task_id = $1 and tab_id = $2 and holder_invocation_id is not nullupdate runtime.browser_task_tabs set holder_invocation_id = null,
+                 actor_invocation_id = null, actor_agent_id = null, held_at = null
+                 where task_id = $1 and tab_id = $2update runtime.browser_task_tabs set holder_invocation_id = $3,
+                 actor_invocation_id = $4, actor_agent_id = $5, held_at = now()
+                 where task_id = $1 and tab_id = $2 and holder_invocation_id is nullbrowser tab hold changedtab_id, alias, holder_invocation_id, actor_invocation_id, actor_agent_id, (select holder.kind from runtime.browser_invocations holder where holder.invocation_id = browser_task_tabs.holder_invocation_id) as holder_kindupdate runtime.browser_task_tabs set holder_invocation_id = null,
+             actor_invocation_id = null, actor_agent_id = null, held_at = null
+             where task_id = $1 and tab_id = any($2)update runtime.browser_task_tabs set actor_invocation_id = $3, actor_agent_id = $4
+             where task_id = $1 and tab_id = any($2) and holder_invocation_id is not nullSELECT payload_json FROM runtime_restart_checkpoints WHERE agent_id = $1 FOR UPDATESELECT submission_json, octet_length(submission_json)::bigint AS serialized_bytes
+         FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND submission_id <> $2startup_queue_fulldue-occurrence coalesce check failed; seeding immediate occurrence anywaynot_applicableclient browser observation capacity is busybrowser task control transition is still settlingagentmaintenance_occurrencemaintenance_attemptrequest_generationgeneric_maintenancejitter_offset_secsjitter_window_secsmaintenance occurrence collided with terminalized work itemSELECT event_seq, event_name, source, role::text AS role,
+                    visibility::text AS visibility, message_id, agent_id,
+                    parent_agent_id, parent_message_id, reply_to_message_id,
+                    transcript_surface::text AS transcript_surface, payload_json,
+                    request_id, root_request_id, parent_request_id,
+                    extract(epoch from created_at)::bigint AS created_at
+             FROM runtime.events WHERE idempotency_key = $1SELECT ci.item_json, ci.message_source,
+                        extract(epoch from ci.created_at)::bigint AS created_at,
+                        p.client_context_json
+                 FROM agent.context_items ci
+                 LEFT JOIN agent.context_item_resume_projection p
+                   ON p.agent_id = ci.agent_id AND p.seq = ci.seq
+                 WHERE ci.agent_id = $1 AND ci.seq = $2active_stemenqueue_if_needed/hatch/avatar/current-referencemessage_event_stream_idleimage_genericvideo_genericicon_genericicon_spacespaces_builderideas_builderself_improvement_stepspaces_published_mediaspaces_bootstrap_iconspaces_regenerate_iconpodcast_coveravatar_imageavatar_animateavatar_uploadatlas_selectionpeer_connection_portraitspace_iconmid > lencalled `Result::unwrap()` on an `Err` valuetracing::span::activevalidationtransportforeground_rootpeer_chat_rootgroup_chat_rootexternal_party_chat_rootmail_conversationdelegate_main_requestworkflow_subagentspaces_builder_litespaces_builder_editspaces_builder_python_editbrowser_taskdeep_researchspace_taskflight_tracking_steppeer_sync_stepfeed_workflow_stepephemeral_agent_stepscheduler_cron_executescheduler_cron_resolveexecute_resolve_workersystem_cron_productvoice_delegaterealtime_voicecompaniondeveloperpdp_v1user_controlledparked_outcomeconstructinginternal_wakeafter_inferenceawaiting_approvalafter_tool_dispatchonlineout_of_creditsneeds_approvalcompactingrespondingwaiting_for_subagentsbrowseruser_goalassistant_trackingvoice_audio_expiredvoice_audio_policy_deniedvoice_audio_fetch_failedvoice_audio_integrity_failedads_entitiesassistant payload has no ads entity segmentsassistant payload has no ads segmentsassistant payload has no product entity segments/data/productsdurable shopping presentation has an unexpected kindHITL must resolve to a final discretion resultgroup delivery draft is not awaiting HITLgroup delivery draft has unresolved HITLgroup delivery draft has not been reviewedgroup delivery draft was already reviewedrefresh_budget_spentretryablerefresh_outcomeactivate_complimentaryinitialcancelledstoppedsuppressedcontact_listevent_stream_connectedinbound_dropopportunisticcomplete_when_awakeobjectiveproactive_notificationflight_trackingvoice_persistencewebhook_fetchlightlifecyclerecorded_reportassertion failed: !bucket_ptr.is_null()assertion failed: is_borrowed(bucket_ptr)assertion failed: !is_sentinel(bucket_ptr)windowprobationprotectedassertion failed: len > 0steady_phasecadence_then_splayoverdue_catchupretryimmediateassertion failed: count > 0assertion failed: old_right_len + count <= CAPACITYassertion failed: old_left_len >= countassertion failed: old_left_len + count <= CAPACITYassertion failed: old_right_len >= countclientdecodeinvalid_country_codespaces_builder_funnel_summary_repair_checkedescaped_nul_rows_omittedalready_emittedlogger_unavailableprojection_unavailablemarker_read_failedpost_rejectedpost_timed_outmarker_not_writtenmarker_write_failedpersistedchild_agent_idstagemarker_read_escaped_nulmarker_write_escaped_nulrequest_parseresolve_viewerresolve_spaceworker_actionaccess_deniedworker_infrastructurespace_action_failedspace_action_startedspace_action_deferredclient_disconnectedspace_action_cancelledspace_action_succeededempty_namemalformed_nameunrecognized_namespaced_nameInstagramThreadspreemptible_retryableinternal error: entered unreachable code: empty internal nodemain probationmain protectedotherQueuedRunningUser controlledwaitingpausedactiveproductrefused_rewrittennewupdateddeletedassertion failed: !new_ptr.is_null()assertion failed: self.buckets.len().is_power_of_two()requestedlink_busyno_linkdialeddial_failedfull_cadence_phasecapacity overflowassertion failed: edge.height == self.height - 1spacesorientationpromptprompt_lenshared_credentialsssh.operator.updatedstored user profile reference imageprofile-imagegifprofile_picprofile_pictureprofile_photopicturehdlargerefusing the deterministic profile-image branch for a definition outside system cron.d...[truncated] [...]resolutionprotocol_message_countdata_message_countinvalid args:invocation_idspaces_request_parse_failedspaces_viewer_invalid_callerspaces_viewer_authd_errorspaces_viewer_owner_missingspaces_viewer_owner_invalidspace_viewer_resolution_errorauthenticationspace source directory was not foundinvalid space pathinvalid space sluginvalid paramsactionnot foundspaces_resolve_failedspace_resolve_errorspaces_action_missingspace_action_missingspaces_validation_errorspace_validation_errorspaces_source_missingspace_source_missingshared_artifact_vm_capability_unavailableschemainvalid outputspaces_app_runtime_errorspace_app_runtime_errorspaces_appspaces_app_schema_errorspace_app_schema_errorspace_vm_capability_unavailablespaces_shared_access_deniedshared_access_deniedauthorizationpython environment is missingsupport root is missingterminated before completingdeserializespaces_worker_launch_failedworker_infrastructure_errorspaces_workerspaces_worker_protocol_errorworker_protocol_errorspaces_worker_env_missingworker_environment_missingserialization failuredeadlock detectedterminating connection due to administrator commandthe database system is starting uptoo many connectionsconnection refusedviolates unique constraintviolates foreign key constraintviolates not-null constraintviolates check constraintduplicate key valuecould not fsyncmalformedcorruptconstraintmalformed_or_corrupttransient_ioconnection_transientdb_retryabledatabase constraintdb constraintspace build was not foundattempted_build_root_existsbuild_manifest_existsspaces_build_missingspace_build_missingspaces_build_manifest_missingspace_build_manifest_missingspaces_build_root_missingspace_build_root_missingmanaged_surfaceresolution_sourcenative_source_existsspaces_managed_legacy_routespace_managed_legacy_routeregistered_space_foundspaces_unregistered_source_missingspace_unregistered_source_missingspace_registered_source_missingspaceaudit routing proof does not match the resolved Spacespace_unavailableaudit routing proof does not match the requested routeexternal_or_unknownhome_otherworkspace_otherworkspace_ts_spacessupporteddomainpoppythis share's stored key record is incomplete; it cannot be republished, and unsharing does not repair itstored share link is invalidspace.unshare_urldestroyshare_external_storage_unsupportedshare_media_blockedspace.share_urlcreateshare_operation_idexternal_storage_serviceexternal_storage_enforcedexternal_storage_preflightpublic artifact storage preflight findingshadowpublishd1_r2

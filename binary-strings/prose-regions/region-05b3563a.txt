@@ -1,0 +1,10 @@
+update self_improvement.follow_up_queue
+                     set not_before = $3, disposition_reason = $4,
+                         metadata_json = jsonb_set(metadata_json,
+                             '{delivery_recovery_attempts}', $6::jsonb),
+                         updated_at = now()
+                     where follow_up_id = $1 and state = 'delivering'
+                       and delivery_submission_id = $2
+                       and (coalesce(metadata_json->'delivery_recovery_attempts', '0'::jsonb) = $5::jsonb
+                         or (metadata_json->'delivery_recovery_attempts' = $6::jsonb
+                             and not_before = $3 and disposition_reason = $4))

@@ -1,0 +1,107 @@
+browser page audio was not transcribedbrowser revocation was not acknowledgedprimary_root_checkpoint_deferred_marker_cleanupcheckpoint carried duplicate pending tool identitiescheckpoint reused a tool call id for contradictory callscheckpoint carried an incomplete pending tool identitycheckpoint carried duplicate tool output identitiescheckpoint carried an incomplete tool identitydurable tool call disagreed with checkpoint evidencedurable tool call projection was malformeddurable tool call identity was not uniquedurable tool output existed without its function calldurable tool output projection was malformeddurable tool output identity was not uniquecheckpoint tool identity map was inconsistentpg_proof_oversizepg_proof_unreadablepg_proof_malformedpg_proof_remote_postgrespg_proof_not_cleanpg_proof_epoch_mismatchfailed to load durable checkpoint row during index reconstructionmodel_output_shape_errormemory flush inference stream timed out waiting for first model output chunkmemory flush inference stream timed out waiting for next model output chunkmemory flush inference stream ended before Done eventruntime.cancellationruntime.chat_worker_mailbox_noticeruntime.worker_requestsuspicioussensitivevoice Companion is missing its initial history boundarymediajpggoal briefing push decision failedselect owner_agent_id, root_session_id
+        from runtime.browser_tasks where task_id = $1 and status = 'running' for updateselect epoch, control_revision from runtime.browser_executions
+        where task_id = $1 and planner_agent_id = $2 for updatebrowser seat changedbrowser service authority changedbrowser invocation authority changed
+SELECT json_build_object(
+         'accepted_ordinal', accepted_ordinal,
+         'state', state,
+         'checkpoint_custody', checkpoint_custody,
+         'submission_json', submission_json
+       )::text
+FROM agent.message_mailbox
+WHERE agent_id = $1
+  AND state IN ('accepted', 'attached')
+ORDER BY accepted_ordinal, submission_id
+FOR UPDATE
+SELECT payload_json FROM runtime_restart_checkpoints WHERE agent_id = $1
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = 'executing',
+    stream_owner_message_id = $3,
+    attached_at = now()
+WHERE submission_id = $1
+  AND agent_id = $2
+  AND state = 'accepted'
+  AND stream_owner_message_id IS NULL
+
+SELECT agent_id, state, stream_owner_message_id, submission_json,
+       accepted_ordinal
+FROM agent.message_mailbox
+WHERE submission_id = $1
+FOR UPDATE
+
+SELECT EXISTS (
+  SELECT 1
+  FROM agent.message_mailbox
+  WHERE agent_id = $1
+    AND state = 'accepted'
+    AND accepted_ordinal < $2
+    AND (NOT $3 OR submission_kind <> 'internal_handoff')
+)
+tracked mailbox successor unexpectedly lost custodymessage mailbox successor promotion cannot overtake an older priority peer
+UPDATE agent.message_mailbox
+SET state = CASE WHEN $4 THEN 'completed' ELSE 'aborted' END,
+    checkpoint_custody = coalesce(checkpoint_custody, 'executing'),
+    terminalized_at = now()
+WHERE agent_id = $1
+  AND stream_owner_message_id = $2
+  AND submission_id = ANY($3)
+  AND state = 'attached'
+
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = 'executing',
+    stream_owner_message_id = $2,
+    attached_at = coalesce(attached_at, now())
+WHERE agent_id = $1
+  AND submission_id = ANY($3)
+  AND (
+    (state = 'accepted' AND stream_owner_message_id IS NULL)
+    OR (state = 'attached' AND stream_owner_message_id = $2)
+  )
+
+UPDATE agent.message_mailbox
+SET checkpoint_custody = 'queued'
+WHERE agent_id = $1
+  AND stream_owner_message_id = $2
+  AND submission_id = ANY($3)
+  AND state = 'attached'
+
+UPDATE agent.message_mailbox
+SET state = CASE
+      WHEN state = 'attached' AND $2 THEN 'completed'
+      ELSE 'aborted'
+    END,
+    terminalized_at = now()
+WHERE agent_id = $1
+  AND state IN ('accepted', 'attached')
+
+INSERT INTO agent.volatile_context_pins
+  (agent_id, variant_hash, variant_json, prompt_floor_seq, checkpoint_seq, body)
+SELECT $1, $2, $3, $4, $5, NULL
+WHERE EXISTS (SELECT 1 FROM agent.agents WHERE id = $1)
+ON CONFLICT (agent_id, variant_hash) DO UPDATE SET
+  variant_json = excluded.variant_json,
+  prompt_floor_seq = excluded.prompt_floor_seq,
+  checkpoint_seq = excluded.checkpoint_seq,
+  created_at = now()
+database write admission gate closedadmission_timeoutassert_table_existstable_presence.queryinviteschat_privatepeer_conversationspeer_remote_conversationscirclescircle_membersheld_grantsaction_auditpeer_user_statenodesupload_sessionsgeofencesdata_sync_statecalendar_eventscomms_announcementshealthsamplesingestdata_source_eventsmedia_upload_eventsmedia_upload_batchesavatar_stateavatar_selectionswork_itemsworkflow_runsworkflow_phase_runsworkflow_agent_callsbackground_workersschedulerexecute_resolve_runsevent_hook_space_ownerstransport_statesourcesingest_attemptssubscriptionssubscription_sourcesgroup_cursorsbinding_authorizationsfeed_entriesmemoryentriesdeliveriesphone_callswebhook_custodywebhook_custody_lockwebhook_fetch_workwebhook_eventsbackground_content_jobsidea_execution_pendingcontext_snapshotscontext_itemsrecovery_ownersdelivery_outboxassert_required_tablesevent_seqstream_lanepayload_jsonchat_context_jsonsearch_vectorsearch_textwork_idsnapshot_kindstate_jsondelivery_keynext_attempt_at_utcskill_namepending_invalidation_hashlast_seen_version_idlast_seen_badge_versioncontext_item_idtext_contentitem_jsonrecovery_classjob_idretired_chat_ids_pkeyruntime_search_documents_events_fts_idxruntime_search_documents_media_fts_idxruntime_search_documents_memory_fts_idxruntime_events_main_history_seq_desc_idxruntime_events_main_history_parent_kind_seq_idxruntime_events_main_public_root_message_uidxruntime_events_public_runtime_user_seq_idxruntime_work_items_active_idxruntime_work_items_terminalized_idxdeliveries_retry_idxdeliveries_terminal_retention_idxruntime_chat_event_derived_write_backlog_created_idxruntime_chat_event_derived_write_backlog_ready_idxagent_subagent_progress_message_child_pending_idxagent_subagent_spawns_open_global_created_idxagent_agents_spawn_metadata_gin_idxagent_agents_active_subagent_liveness_idxagent_context_item_derived_write_backlog_created_idxagent_context_item_derived_write_backlog_ready_idxagent_runtime_restart_checkpoints_updated_idxagent_recovery_owners_active_scan_idxagent_recovery_owners_terminal_retention_idxagent_recovery_owners_terminal_status_idxscheduler_jobs_due_idxscheduler_runs_status_scheduled_utc_idxscheduler_delivery_outbox_retry_idxscheduler_delivery_outbox_retention_idxself_improvement_runs_queue_idle_gated_idxself_improvement_runs_queue_non_idle_gated_idxmedia_items_description_retry_idxmedia_items_ready_media_idxmedia_locations_geocode_retry_idxvisibilitypublictranscript_surfacemain_chatmessage_roledeveloperassistantevent_kindtool_starttool_donetask_statuscontext_item_kindmessage_texttext_segmentstool_calltool_outputrun_statusqueuedskippedapplied_migration_max_versioncredential_resolutionshared_pool_mutexresolve_database_urlshared_pool_reuse_checkpool_connectshared_pool_reusedHATCH_DATABASE_URLenvironment_overrideJARVIS_AUTHD_SOCKcredential_task_queuecredential_decodeeffects_may_have_applied; Cyber-tool-callrejecting malformed restart replay fence transitionfailed to persist replay fence before successor activationfailed to persist restart replay fencereplay-forbidden checkpoint had no durable payload fingerprintrejecting malformed replay-forbidden checkpointfailed to reconcile durable cancellation handoff before checkpoint replayfailed to read durable cancellation handoff evidencereplay-forbidden checkpoint changed before successor activationrestart checkpoint changed before successor activationfailed to persist replay-forbidden checkpoint successorfailed to persist restart checkpoint successorrejecting restart checkpoint with contradictory tool output evidencefailed to reconcile checkpoint tool outputs with the durable transcriptfailed to read durable tool output evidencefailed to terminalize invalid restart checkpoint ownerfailed to check for a live session before closing a refused browser checkpointbrowser_input_unsupported_kindbrowser_input_classification_failedbrowser_input_refusedclosing browser restart checkpoint refused by browser input admissionrestart checkpoint payload was invalidfailed to decode runtime restart checkpoint payloadpayload_decode_failedruntime restart checkpoint payload was missingpayload_missingrestart checkpoint payload version was invalidunsupported runtime restart checkpoint version was invalidunsupported_payload_versionruntime restart checkpoint required the retired voice executorlegacy_voice_execution_unsupportedruntime restart execution config was invalidexecution_config_invalidexplicit restart recovery identity had no execution configexplicit_execution_config_missingruntime restart approval correlation was invalidapproval_wait_invalidremoving invalid runtime restart checkpoint without executing itmissingprimary_root_checkpoint_owner_terminalizationprimary_root_checkpoint_closefailed to terminalize owner of invalid restart checkpointprimary_root_checkpoint_metadata_readprimary_root_checkpoint_envelope_validationvalidprimary_root_checkpoint_terminal_cleanupterminal restart checkpoint classification lacked conversation metadataprimary_root_checkpoint_owner_validationprimary_root_checkpoint_invalid_cleanupfailed to load conversation meta before restart envelope validationfailed to resolve restart recovery policy inputsfailed to terminalize owner of terminal restart checkpointclosing legacy checkpoint without an exact execution configprimary_root_checkpoint_legacy_cleanupprimary_root_checkpoint_replay_preparationclosing runtime restart checkpoint without resume: recovery class has no proven live owner workprimary_root_checkpoint_owner_cleanupprimary_root_checkpoint_deferred_marker_storeprimary_root_checkpoint_agent_resumefailed to resume agent for runtime restart checkpointprimary_root_checkpoint_active_message_readvalidated restart checkpoint is missing its durable payload tokenprimary_root_checkpoint_message_activationcheckpoint agent is running a different message; leaving row unresolvedfailed to inspect active message during checkpoint rehydrateprimary_root_checkpoint_deletefailed to resume message from runtime restart checkpointfailed to delete runtime restart checkpoint after successful rehydrateimage/emptyclosertimed_outbrowser status read timed outproject context prompt loader task failed; omitting project contextproject context prompt loader timed out; omitting project contextreact_to_user_messagevideo FileRef MIME type cannot be canonicalized; preserving original referencevideo FileRef could not be materialized; preserving original referencevideo FileRef store task failed; preserving original referenceartifact.editinspectbytes_lenfailed to serialize assembled prompt for safety review[unavailable_prompt]tool_inputdetails_jsonbrowser_phasesdevice.invokecomputer_control_action_summaryruntime.background_execsubmission_message_idinsert into runtime.browser_task_tabs (task_id, tab_id, alias)
+         select $1, $2, 't' || (coalesce(max(substring(alias from 2)::integer), 0) + 1)
+         from runtime.browser_task_tabs where task_id = $1
+         on conflict (task_id, tab_id) do nothinginsert into runtime.browser_task_tabs (task_id, tab_id, alias)
+         select $1, listed.tab_id, 't' || (seen.highest + row_number() over (order by listed.position))
+         from unnest($2::text[]) with ordinality as listed(tab_id, position)
+         cross join (select coalesce(max(substring(alias from 2)::integer), 0) as highest
+                     from runtime.browser_task_tabs where task_id = $1) seen
+         where not exists (select 1 from runtime.browser_task_tabs known
+                           where known.task_id = $1 and known.tab_id = listed.tab_id)
+         on conflict (task_id, tab_id) do nothingupdate runtime.browser_task_tabs set actor_invocation_id = $3, actor_agent_id = $4
+             where task_id = $1 and tab_id = $2 and holder_invocation_id is not nullupdate runtime.browser_task_tabs set holder_invocation_id = null,
+                 actor_invocation_id = null, actor_agent_id = null, held_at = null
+                 where task_id = $1 and tab_id = $2update runtime.browser_task_tabs set holder_invocation_id = $3,
+                 actor_invocation_id = $4, actor_agent_id = $5, held_at = now()
+                 where task_id = $1 and tab_id = $2 and holder_invocation_id is nullbrowser tab hold changedupdate runtime.browser_task_tabs set holder_invocation_id = null,
+             actor_invocation_id = null, actor_agent_id = null, held_at = null
+             where task_id = $1 and tab_id = any($2)update runtime.browser_task_tabs set actor_invocation_id = $3, actor_agent_id = $4
+             where task_id = $1 and tab_id = any($2) and holder_invocation_id is not nulltemporal_awarenessreconstructed_historyvolatile_chat_context%Y-%m-%d %H:%M:%S %:z%Y-%m-%d %H:%M:%S UTCTimestamp unavailable--slugshareshare_invocation_tool_unavailable--project-dirsubagent_publication_prohibitedfile_pathfile_typefile_bytesmissing media directorystartup prepared user item is absentagent type does not run an audited build pathThis session has no trusted audit envelope. The daemon may have restarted, and `.harness/` files are not authority. Re-run `web_artifacts.audit`, then attest its result or use `verification_status: "FAILED"` honestly.problemmissing_session_audit_envelopeYou attested `SUCCEEDED`, but your latest `web_artifacts.audit` could not verify anything: the screenshot capture failed on platform infrastructure (the audit's local capture transport). Attest `verification_status: "FAILED"` and name the infrastructure cause in `summary` and `verification_notes`; that submit is accepted.capture_infra_failure_unverified_successYou attested `SUCCEEDED`, but the audit shows the page did not deliver: the baseline load failed, its own route did not serve 200, or its own-route requests failed. Fix the source and re-audit, or attest `verification_status: "FAILED"` and name what broke; that submit is accepted.nondelivery_floorseed_advisorythe audit's populated-without-source advisory is outstanding: the durable database ships rows with no successful external retrieval and no user-supplied file read in this session. If the rows are real, resubmit this same attestation and name their source in the notes; otherwise trace or remove the rows and re-audit, or attest `verification_status: "FAILED"` honestlyaudit_failedyour latest `web_artifacts.audit` did not come back ok; fix what it reported and re-audit, or attest `verification_status: "FAILED"` and explain what you verified and what remains
+[critique truncated; full text in the audit response]security_critique
+[security critique truncated; full text in the audit response]ÄÅ

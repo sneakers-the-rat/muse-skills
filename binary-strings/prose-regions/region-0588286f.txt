@@ -1,0 +1,142 @@
+sentinel_decisionsentinel_errorfailed to submit voice approval decision to Sentinel; not admitting new worksubmittedwrite_admissionwritepostgres write completed slowlypostgres write failedretrying idempotent postgres writehatch:db:operationen-USmain lane busyrequestassistantcommitted handoff has no context sequencenegative handoff event sequenceone-shot postgres write invoked more than onceunknownscheduler.cronvoice approval unavailable; action denied by classifier failure policyinvalid evaluation responsereaction target event sequence is too largegoal_idstatuscompletedcompleted_atevent_seqpayload_jsonevent_namemessage_idbrowser invocation is missingbrowser parent is missingselect b.*, a.connection_id as current_connection_id,
+                    a.revoked as account_revoked
+                from chat_private.binding_authorizations b
+                join chat_private.accounts a using(provider, account_id)
+                where b.provider = $1 and b.binding_id = $2account_revokedcurrent_connection_idselect distinct idea_id,
+                            metadata_json -> 'publication_hold' ->> 'fingerprint',
+                            metadata_json -> 'publication_hold' ->> 'reason'
+                       from ideas.idea_sources
+                      where idea_id = any($1::text[])
+                        and (source_namespace, source_kind) in (
+                          ('idea_share', 'pending_share'),
+                          ('user', 'http_create'),
+                          ('shared_www', 'shared_idea')
+                        )
+                        and metadata_json -> 'publication_hold' ->> 'fingerprint' is not null
+                        and metadata_json -> 'publication_hold' ->> 'reason' is not nullinvocation_id, task_id, planner_agent_id, parent_invocation_id, caller_agent_id, caller_submission_id, call_id, agent_id, submission_id, runtime_work_id, input_digest, kind, state, input_json, context_json, result_json, wait_call_id, ordinal, tab_id, (extract(epoch from created_at) * 1000)::bigint as created_at_ms, (extract(epoch from stop_requested_at) * 1000)::bigint as stop_requested_at_ms, terminal_reason, handoff_state, (extract(epoch from finished_at) * 1000)::bigint as finished_at_msSELECT e.event_seq, e.message_id FROM runtime.events AS e WHERE e.message_id =  AND e.event_seq =  AND e AND e.event_name = 'message.internal'
+                              AND e.visibility = 'internal'
+                              AND e.source = 'runtime.group_chat'
+                              AND e.agent_id IS NULL
+                              AND (e.parent_message_id IS NULL OR TRIM(e.parent_message_id) = '')
+                              AND e.parent_agent_id =  AND EXISTS (
+                                    SELECT 1 FROM agent.chat_workers g
+                                    JOIN agent.group_inputs i ON i.group_id = g.group_id
+                                    WHERE g.active AND g.agent_id = e.parent_agent_id
+                                      AND g.group_id =  AND g.generation =  AND i.submission_id = )
+SELECT reaction_emoji
+FROM runtime.message_reactions
+WHERE message_id = $1
+message not found or reaction scope is no longer valid
+INSERT INTO runtime.messages (message_id, event_seq, role, body, created_at)
+SELECT e.message_id, e.event_seq, e.role, '', e.created_at
+FROM runtime.events AS e
+WHERE e.event_seq = $1
+ON CONFLICT (message_id) DO NOTHING
+
+SELECT event_seq
+FROM runtime.messages
+WHERE message_id = $1
+
+INSERT INTO runtime.message_reactions (message_id, reaction_emoji, updated_at)
+VALUES ($1, $2, now())
+ON CONFLICT (message_id) DO UPDATE SET
+  reaction_emoji = excluded.reaction_emoji,
+  updated_at = excluded.updated_at
+reaction target message projection does not match canonical eventinsert into goals.engagement_events
+                     (event_id, goal_id, event_type, surface, value, request_id, metadata,
+                      created_at)
+                     values ($1, $2, $3, $4, $5, $6, $7, coalesce($8::timestamptz, now()))
+                     returning event_id, goal_id, event_type, surface, value, request_id, metadata,
+                               created_at::text as created_atwith recursive selected(goal_id) as (
+                         select goal_id
+                         from goals.goals
+                         where goal_id = $1
+                         union
+                         select child.goal_id
+                         from goals.goals child
+                         join selected parent on child.parent_goal_id = parent.goal_id
+                         where $2
+                     )
+                     select goal.goal_id, goal.parent_goal_id, goal.source, goal.title,
+                            goal.summary, goal.description, goal.pushable, goal.status,
+                            goal.completed_at
+                     from goals.goals goal
+                     join selected on selected.goal_id = goal.goal_id
+                     order by goal.goal_id
+                     for update of goalsourcetitlesummarydescriptionparent_goal_idselect source from goals.goals where goal_id = $1goal cannot be its own parentgoal_id, source, attention_kind, attention_updated_at::text as attention_updated_at, next_due_at::text as next_due_at, escalation, slug, title, summary, description, momentum, momentum_status, emoji, image_relpath, icon_generation_status, status, created_at, updated_at, last_activity_at, pushable, parent_goal_id, sort_order, fixed_position, category, goal_kind, value_alignment, review_cadence, completed_atrequested source must match the parent; detach or choose a matching parentselect coalesce(max(sort_order), -1)::double precision + 1
+                             from goals.goals
+                             where parent_goal_id is not distinct from $1
+                               and source = $2
+                               and goal_id <> $3update goals.goals set source = $2, updated_at = $3,
+                                updated_at_ts = $4 where goal_id = any($1)update goals.goals goal
+                     set title = case
+                           when goal.goal_id = $1 then coalesce($2, goal.title)
+                           else goal.title
+                         end,
+                         summary = case
+                           when goal.goal_id = $1 then coalesce($3, goal.summary)
+                           else goal.summary
+                         end,
+                         description = case
+                           when goal.goal_id = $1 then coalesce($4, goal.description)
+                           else goal.description
+                         end,
+                         pushable = case
+                           when goal.goal_id = $1 then coalesce($5, goal.pushable)
+                           else goal.pushable
+                         end,
+                         parent_goal_id = case
+                           when goal.goal_id = $1 and $6 then $7
+                           else goal.parent_goal_id
+                         end,
+                         sort_order = case
+                           when goal.goal_id = $1 then coalesce($8, goal.sort_order)
+                           else goal.sort_order
+                         end,
+                         fixed_position = case
+                           when goal.goal_id = $1 and $15 then $16
+                           else goal.fixed_position
+                         end,
+                         status = mutation.status,
+                         completed_at = mutation.completed_at,
+                         completed_at_ts = mutation.completed_at_ts,
+                         updated_at = mutation.updated_at,
+                         updated_at_ts = mutation.updated_at_ts
+                     from unnest($9::text[], $10::text[], $11::text[], $12::timestamptz[],
+                                 $13::text[], $14::timestamptz[])
+                       as mutation(goal_id, status, completed_at, completed_at_ts,
+                                   updated_at, updated_at_ts)
+                     where goal.goal_id = mutation.goal_id
+SELECT f.event_seq, f.field_path, f.scalar_type, f.scalar_value, f.text_value
+FROM event_payload_fields AS f
+WHERE f.event_seq IN (
+, ) ORDER BY f.event_seq ASC, length(f.field_path) ASC, f.field_path ASCfield_pathscalar_typescalar_valuetext_value
+SELECT event_seq, ordinal, resource_kind AS kind, resource_key AS uri, label, mime_type, size_bytes, metadata_json
+FROM resources
+WHERE event_seq IN (
+) ORDER BY event_seq ASC, ordinal ASCurilabelmime_typesize_bytesmetadata_jsonhandoff event sequence
+SELECT e.event_seq, e.event_name, coalesce(e.message_id, '') AS message_id,
+       e.payload_json
+FROM events e
+WHERE e.idempotency_key = $1
+  AND e.payload_json IS NOT NULL
+context event identity already belongs to another writerSELECT event_seq FROM events WHERE idempotency_key = $1runtime_events_main_public_root_message_uidxruntime.messages.body
+INSERT INTO messages (message_id, event_seq, role, body, created_at)
+VALUES ($1, $2, $3::runtime.message_role, $4, to_timestamp($5::double precision / 1000.0))
+ON CONFLICT (message_id) DO NOTHING
+
+SELECT event_seq AS seq, event_name, role::text AS role
+FROM events
+WHERE message_id = $1
+  AND transcript_surface = 'main_chat'
+  AND visibility = 'public'
+  AND event_name IN ('message.user', 'message.assistant')
+  AND (parent_message_id IS NULL OR TRIM(parent_message_id) = '')
+LIMIT 1
+seqDELETE FROM chat.event_transports WHERE event_seq = $1INSERT INTO chat.event_transports (event_seq, provider) VALUES  ON CONFLICT (provider, event_seq) DO NOTHING(
+SELECT e.event_seq, e.payload_json
+FROM events e
+WHERE e.idempotency_key = $1
+LIMIT 1
+FOR UPDATE OF e
+€ç

@@ -1,0 +1,40 @@
+select ideas.idea_id,
+                            ideas.title,
+                            ideas.summary,
+                            ideas.domain,
+                            state.feedback,
+                            state.reason,
+                            state.updated_at::text as voted_at
+                     from ideas.idea_feedback_state state
+                     join ideas.ideas ideas on ideas.idea_id = state.idea_id
+                     where coalesce(ideas.generator, '') <> 'system_health'
+                     order by state.updated_at desc, state.idea_id desc
+                     limit $1insert into ideas.idea_feedback_state
+                     (idea_id, feedback, reason, event_id, surface)
+                     values ($1, $2, $3, $4, $5)
+                     on conflict (idea_id) do update
+                       set feedback = excluded.feedback,
+                           reason = excluded.reason,
+                           event_id = excluded.event_id,
+                           surface = excluded.surface,
+                           updated_at = now()
+                     returning idea_id, feedback, reason, event_id, surface,
+                               created_at::text as created_at,
+                               updated_at::text as updated_atreasonsurfaceupdated_atpublished feed snapshot was not readableIdeas generation language was supersededideas.set_idea_embeddingideas.list_ideas_missing_embeddingideas.count_ideas_missing_embeddingideas.get_idea_share_variantideas.list_idea_share_variantsideas.upsert_idea_share_variantideas.list_visible_generated_ideas_needing_share_variantideas.list_pending_idea_www_retractionsideas.nearest_iconideas.count_icon_embeddingsideas.replace_icon_embeddingsideas.engagement_windowideas.get_feed_snapshotideas.get_idea_card_feedideas.list_feed_snapshotsideas.active_feed_idea_idsideas.publish_feed_snapshotideas.get_discovery_pool_metaideas.set_discovery_pool_metaideas.get_active_feed_snapshotideas.reset_for_null_stateideas.apply_bandit_foldideas.list_bandit_arm_stateideas.fetch_bandit_fold_stateideas.record_idea_eventideas.idea_engagement_funnelideas.list_idea_events_sinceideas.idea_engagement_funnelsideas.record_idea_events_batchideas.feed_impression_count_sinceideas.list_idea_impression_countsideas.latest_idea_event_created_atideas.purge_idea_eventsideas.list_recent_actioned_idea_idsideas.idea_engagement_funnels_by_dayideas.recent_actioned_idea_count_boundedideas.summarize_actioned_ideas_by_domainideas.list_recent_actioned_idea_summariesideas.list_recent_idea_events_with_contextideas.latest_actioned_idea_event_created_atideas.list_unfolded_idea_events_windowideas.list_unfolded_idea_events_after_cursorideas.fetch_explore_policyideas.upsert_explore_policyideas.get_idea_dedupideas.upsert_idea_dedupideas.upsert_idea_anchorideas.list_idea_ranking_eventsideas.list_idea_quality_for_idsideas.resolve_canonical_idea_idinsert into ideas.idea_anchors (idea_id, anchor_kind, anchor_id, lifecycle_status, build_status, surfaced_at, impression_count, decided_at, dismiss_reason, created_at, updated_at)  on conflict (idea_id, anchor_kind, anchor_id) do update set lifecycle_status = case when excluded.lifecycle_status = 'active' and excluded.build_status is not null and excluded.surfaced_at is null and excluded.decided_at is null and excluded.dismiss_reason is null and excluded.impression_count = 0 then ideas.idea_anchors.lifecycle_status else excluded.lifecycle_status end, build_status = coalesce(excluded.build_status, ideas.idea_anchors.build_status), surfaced_at = coalesce(excluded.surfaced_at, ideas.idea_anchors.surfaced_at), impression_count = case when excluded.impression_count = 0 then ideas.idea_anchors.impression_count else excluded.impression_count end, decided_at = coalesce(excluded.decided_at, ideas.idea_anchors.decided_at), dismiss_reason = coalesce(excluded.dismiss_reason, ideas.idea_anchors.dismiss_reason), updated_at = excluded.updated_atideas.upsert_idea_anchors_batchinsert into ideas.idea_quality (idea_id, relevance_score, novelty_score, feasibility_score, value_score, composite_score, composite_version, scorer, decision_outcome, decision_reasons, scored_at)  on conflict (idea_id) do update set relevance_score = excluded.relevance_score, novelty_score = excluded.novelty_score, feasibility_score = excluded.feasibility_score, value_score = excluded.value_score, composite_score = excluded.composite_score, composite_version = excluded.composite_version, scorer = excluded.scorer, decision_outcome = excluded.decision_outcome, decision_reasons = excluded.decision_reasons, scored_at = excluded.scored_atideas.upsert_idea_quality_batchideas.list_idea_ids_for_anchor_kindideas.get_ideaideas.create_ideaideas.idea_existsideas.update_ideaideas.expire_ideasideas.list_ideas_by_idsideas.list_recent_ideasideas.count_native_ideasideas.list_ideas_by_sourceideas.list_recent_idea_idsideas.replace_idea_contentideas.list_ideas_for_anchorideas.list_idea_items_by_idsideas.resolve_existing_idea_idsideas.search_ideas_ftsideas.list_recent_generated_ideasideas.list_generated_ideas_for_runideas.get_idea_id_by_domain_dedup_keyideas.list_canonical_idea_tags_by_idsideas.list_pending_idea_www_projectionsideas.list_recent_generated_idea_titlesideas.list_recent_generated_semantic_windowideas.list_ideas_for_downstream_anchor_id_laneideas.list_recent_generated_retirement_candidatesideas.list_previous_run_generated_ideas_for_domainideas.get_idea_sourceideas.get_idea_by_sourceideas.upsert_idea_sourceideas.get_idea_build_statusideas.get_idea_event_contextideas.list_idea_build_statusesideas.list_idea_event_contextsideas.has_any_built_idea_statusideas.list_directly_shareable_idea_idsideas.list_idea_build_status_summariesideas.list_bundled_idea_catalog_contextsideas.attach_idea_sourceideas.list_idea_source_adoption_summariesideas.idea_ids_with_source_outside_namespaceideas.list_idea_fact_keysideas.list_idea_source_kindsideas.list_idea_sources_limitedideas.list_latest_idea_source_authored_atideas.list_idea_memory_affinityideas.list_downvoted_idea_idsacquired connection, but time to acquire exceeded slow thresholdacquired connectiondelete from goals.suggestions where idea_id = any($1::text[])with removed as (
+           delete from ideas.idea_sources
+           returning idea_id, source_namespace, source_kind, source_id, metadata_json
+         ), queued as (
+           insert into ideas.www_projection_retractions (idea_id)
+           select distinct case
+             when source_namespace = 'shared_www' and source_kind = 'shared_idea'
+               then source_id
+             else idea_id
+           end
+             from removed
+            where metadata_json ->> 'www_projection_attempted_at' is not null
+               or metadata_json ->> 'www_projected_status' is not null
+           on conflict (idea_id) do nothing
+           returning idea_id
+         )
+         select count(*)::bigint from queuedselect locale_revision from runtime.background_content_jobs where job_id = $1select pg_advisory_xact_lock(hashtext('background_content_jobs.locale'), hashtext($1))database write admission gate closedadmission_timeoutcalled `Result::unwrap()` on an `Err` valueheartbeatserendipityproactive_notifierdevice_syncreferral_invitationconfidential_vm_upsellinternal_messagesquota_noticesmuse_mail_owner_verified User Replying to Idea:Interpret the following user message as referring to this idea.Speak only in plain product language about what the user gets, and keep workflows, tools, paths, filenames, parameters, subagents, and technical jargon out of user-facing text. Speak directly with "you"/"your". Never refer to the user by name, "the user", or by they/them/their/he/she/his/her.Idea reply instructions:
+clickengagementfeedback_upBUG: inner connection already taken!ConfigurationInvalidArgumentIoTlsRowNotFoundTypeNotFoundtype_nameColumnIndexOutOfBoundsindexlenColumnNotFoundColumnDecodesourceEncodeDecodeAnyDriverErrorPoolTimedOutPoolClosedWorkerCrashedMigrateInvalidSavePointStatementBeginFailed

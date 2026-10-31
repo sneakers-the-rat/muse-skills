@@ -1,0 +1,117 @@
+update runtime.browser_specialist_steers set delivered_at = now()
+                     where steer_id = $1 and delivered_at is null and undeliverable_at is nullupdate runtime.browser_seat_inputs set shown_at = now()
+                     where source_id = $1 and shown_at is null and revision is not null
+                       and invocation_id = (select invocation_id
+                         from runtime.browser_specialist_steers where steer_id = $1)update runtime.browser_specialist_steers set undeliverable_at = now()
+                     where steer_id = $1 and delivered_at is null and undeliverable_at is nullwidget data must be an objectUPDATE runtime.widgets SET data_json = $2, display_text = $3, updated_at_ms = $4 WHERE widget_id = $1 AND data_json::jsonb = $5::jsonbruntime.widgets.data_jsonSELECT event_seq FROM runtime.events WHERE idempotency_key = $1 AND message_id = $2 AND event_name = 'delta.presentation' AND visibility = 'public' AND payload_json::jsonb ->> 'id' = $3 FOR UPDATEwidget changed during presentation replacementhandoff event sequence
+SELECT e.event_seq, e.event_name, coalesce(e.message_id, '') AS message_id,
+       e.payload_json
+FROM events e
+WHERE e.idempotency_key = $1
+  AND e.payload_json IS NOT NULL
+context event identity already belongs to another writerSELECT event_seq FROM events WHERE idempotency_key = $1runtime_events_main_public_root_message_uidxruntime.messages.body
+INSERT INTO messages (message_id, event_seq, role, body, created_at)
+VALUES ($1, $2, $3::runtime.message_role, $4, to_timestamp($5::double precision / 1000.0))
+ON CONFLICT (message_id) DO NOTHING
+
+SELECT event_seq AS seq, event_name, role::text AS role
+FROM events
+WHERE message_id = $1
+  AND transcript_surface = 'main_chat'
+  AND visibility = 'public'
+  AND event_name IN ('message.user', 'message.assistant')
+  AND (parent_message_id IS NULL OR TRIM(parent_message_id) = '')
+LIMIT 1
+seqDELETE FROM chat.event_transports WHERE event_seq = $1INSERT INTO chat.event_transports (event_seq, provider) VALUES  ON CONFLICT (provider, event_seq) DO NOTHING, ()
+SELECT e.event_seq, e.payload_json
+FROM events e
+WHERE e.idempotency_key = $1
+LIMIT 1
+FOR UPDATE OF e
+
+SELECT event_seq
+FROM events
+WHERE idempotency_key = $1
+LIMIT 1
+FOR UPDATE
+
+UPDATE events
+SET display_text_ready = $2,
+    reply_target_message_id = $3,
+    payload_json = jsonb_set(
+      $4::jsonb,
+      '{metadata}',
+      CASE
+        WHEN jsonb_typeof($4::jsonb -> 'metadata') = 'object'
+          THEN $4::jsonb -> 'metadata'
+        ELSE '{}'::jsonb
+      END || jsonb_strip_nulls(jsonb_build_object(
+        'can_broadcast_share',
+          payload_json::jsonb #> '{metadata,can_broadcast_share}'
+      )),
+      true
+    )::text
+WHERE event_seq = $1
+RETURNING payload_json, event_name, parent_agent_id, agent_id
+
+INSERT INTO messages (message_id, event_seq, role, body, created_at)
+SELECT e.message_id, e.event_seq, e.role, $2, e.created_at
+FROM events e
+WHERE e.event_seq = $1
+  AND e.message_id IS NOT NULL
+  AND e.role IS NOT NULL
+ON CONFLICT (message_id) DO UPDATE SET
+  body = excluded.body
+INSERT INTO agents (agent_id, id, session_id, kind, parent_id, parent_agent_id, root_session_id, depth, created_at, updated_at, model, status, last_assistant_message, ephemeral, agent_type, presentation_root_session_id, spawn_metadata_json, originating_location_context_json)
+             VALUES ($1, $1, $2, $3, $4, $4, $5, $6, $7, $8, $9, $10, NULL, $11, $12, $13, $14, $15)
+INSERT INTO agent_ancestors (descendant_id, ancestor_id, distance)
+VALUES ($1, $1, 0)
+ON CONFLICT (descendant_id, ancestor_id) DO NOTHING
+
+INSERT INTO agent_ancestors (descendant_id, ancestor_id, distance)
+SELECT $1, ancestor_id, distance + 1
+FROM agent_ancestors
+WHERE descendant_id = $2
+ON CONFLICT (descendant_id, ancestor_id) DO NOTHING
+
+INSERT INTO agent_ancestors (descendant_id, ancestor_id, distance)
+VALUES ($1, $2, 1)
+ON CONFLICT (descendant_id, ancestor_id) DO NOTHING
+fresh
+JOIN LATERAL (
+  SELECT MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/kind') AS kind,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/action') AS action,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/handoff_message_id') AS handoff_message_id,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/handoff_source') AS handoff_source,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/submission_message_id') AS submission_message_id,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/submission_source') AS submission_source
+  FROM runtime.event_payload_fields AS f
+  WHERE f.event_seq = e.event_seq AND f.field_path IN (
+    '/metadata/kind', '/metadata/action', '/metadata/handoff_message_id',
+    '/metadata/handoff_source', '/metadata/submission_message_id', '/metadata/submission_source'
+  )
+) AS metadata ON true
+completedfailedinterruptedfollow_up_settlementnothing_to_doabortedpeer_id, muse_id, x25519_pub, key_epoch, binding, binding_expires_at_ms, fqdn, vm_id, endpoint_hints, display_name, agent_name, account_claim, relationship_generation_id, relationship_direction, relationship_started_at_ms, request_expires_at_ms, request_terminal_cause, relationship_revision, remote_confirmed_ceremony_id, remote_confirmed_at_ms, status, trust_preset, sas_confirmed_local, active_sas_ceremony_id, attested, person_slug, provenance, paired_at_ms, last_activity_ms, created_at_ms, updated_at_msupdate feed.units
+                     set discuss_count = discuss_count + 1,
+                         updated_at_ms = $2
+                     where unit_id = $1t.task_id, t.root_session_id, t.owner_agent_id as planner_agent_idupdate feed.runs
+                         set status = 'succeeded',
+                             finished_at_ms = $2,
+                             updated_at_ms = $2
+                         where run_id = $1 and status = 'running'update feed.units
+                         set manual_order = null,
+                             updated_at_ms = $3
+                         where prompt_id = $1
+                           and edition_local_date = $2
+                           and manual_order is not nulldelete from feed.promptless_unit_orders
+                         where prompt_id = $1 and local_date = $2insert into feed.null_state_seed (seeded_at_ms)
+                         values ($1)
+                         on conflict do nothing
+                         on conflict (run_id, position) where origin = 'fill' do nothing
+                         on conflict (unit_id) do nothingbroker_instance

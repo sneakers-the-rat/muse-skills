@@ -1,6 +1,6 @@
 {
   "name": "bot_challenge.assess",
-  "description": "Record the current challenge, optionally returning the guide you name.\n\nGive your assessment of the tab's current view: the status, what the page or its screenshot shows, and any stated wait. The result records this assessment and says whether the challenge is ready to attempt, still running on its own, cleared or blocked, and whether a tab moved to a fresh browser during the task. It records what you observed and changes nothing on the page or in the browser. Call `bot_challenge.assess` again whenever the page turns into a different kind of block.\n\nInclude the matching `guide` name from your instructions to read it with the result. Use `bot_challenge.guide` to read one without recording another assessment. If no guide fits or it is unavailable, work from the page and your tools.\n\nTo reload the page or move the tab to a fresh browser, request it with `bot_challenge.recover`.",
+  "description": "Advance the sign-in on the current tab: account choice, consent, filling the saved username and password, and checking the result.\n\nGive `tab`, the sign-in `status` you observe, and the field or button references the current step needs. The credential service takes the account from your sign-in context, obtains the user's consent and fills the fields without revealing them. Your sign-in context holds the account from the `account_hint` that started or followed up your work, or the one Muse chose since. The result gives the status, the account's label, anything unresolved and the page after the fill when available. Use that page to choose your next step; observe only when the view you need is missing or has changed. A result that stops short of a sign-in names the sign-in page's site.\n\nThe call waits for sign-in approval or secure entry and resumes when that input arrives. If the user declines, it asks Muse how to proceed and returns the decline with Muse's answer; read that answer before taking another step. When consent is granted and the page redrew meanwhile, it finds the same fields and provider control on the page as it is then, so the user is not asked twice; a field the site cleared, such as after a CAPTCHA, is filled again under the same approval. After a site rejected a sign-in, whether to try again is your decision; say what the page shows in `previous_attempt`. The call does not enter one-time codes, which you type with `browser.act`, and it cannot switch accounts, resend a code or get around a lockout. A purchase whose outcome is still unknown does not hold the sign-in. If the page changes, call `login.advance` again with your assessment of the new observation it returns.\n\nAfter `wait_interrupted`, read the new message in your conversation before continuing. For `credential_input_mismatch`, use the reported provider and field types to reassess the page or ask Muse for the missing choice. Treat `credentials_updated` or a runtime `credential_update` as new information under your current assignment, then reassess with `login.advance` if sign-in is still needed.",
   "input_schema": {
     "type": "object",
     "properties": {
@@ -9,17 +9,42 @@
         "minLength": 1,
         "pattern": "^[A-Za-z][A-Za-z0-9:_-]*$"
       },
-      "action": {
+      "status": {
         "type": "string",
         "enum": [
-          "reload_page",
-          "replace_environment"
+          "interactive",
+          "managed",
+          "environment_error",
+          "ip_blocked",
+          "bot_wall",
+          "rate_limited",
+          "denied",
+          "clear",
+          "unknown"
+        ]
+      },
+      "evidence": {
+        "type": "string"
+      },
+      "guide": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "description": "The name of the challenge guide to return, if one fits."
+      },
+      "retry_after": {
+        "type": [
+          "string",
+          "null"
         ]
       }
     },
     "required": [
       "tab",
-      "action"
+      "status",
+      "evidence",
+      "retry_after"
     ],
     "additionalProperties": false
   }

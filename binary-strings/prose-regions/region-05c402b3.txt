@@ -1,0 +1,18 @@
+peer reply owner is unavailableupdate peer.outbox set state = 'delivered', delivered_at_ms = $3, claim_id = null, claim_expires_at_ms = null where envelope_id = $1 and claim_id = $2 and peer_muse = $4 and state in ('dispatching', 'uncertain') returning created_at_msupdate peer.outbox set state = 'superseded', claim_id = null, claim_expires_at_ms = null, last_error_class = $4 where envelope_id = $1 and claim_id = $2 and peer_muse = $3 and state = 'dispatching'update peer.outbox set not_before_ms = $2 where peer_muse = $1 and state = 'pending' and not_before_ms > $2update peer.outbox set state = 'delivered', delivered_at_ms = $3,
+                            claim_id = null, claim_expires_at_ms = null
+                         where envelope_id = $1 and peer_muse = $2
+                           and state = 'uncertain' and claim_id is not null
+                         returning created_at_ms
+with expired as (
+  select envelope_id
+  from peer.outbox
+  where state = 'dispatching' and claim_expires_at_ms <= $1
+  order by claim_expires_at_ms, envelope_id
+  limit $2
+  for update skip locked
+)
+update peer.outbox
+set state = 'pending', claim_id = null, claim_expires_at_ms = null
+from expired
+where outbox.envelope_id = expired.envelope_id
+update peer.outbox set not_before_ms = $2 where peer_muse = $1 and state = 'pending' and not_before_ms > $2 and last_error_class in ($3, $4)no_linkdispatch_unavailableinvite_id, create_request_id, relationship_generation_id, relationship_started_at_ms, request_expires_at_ms, label, offered_preset, invite, created_at_ms, expires_at_ms, claimed_by_muse, claimed_at_ms, revoked_at_ms, contact_materialization_needed, expected_display_name, recipient_ref, delivery_idupdate peer.invites set revoked_at_ms = $2 where invite_id = $1 and claimed_at_ms is null and revoked_at_ms is nulllocked peer invitation lost revocation eligibilityselect expected_display_name, delivery_id from peer.invites where relationship_generation_id = $1select pg_advisory_xact_lock(hashtextextended('peer.invites.create', 0))peer invite replay classification was inconsistentselect count(*) from (select 1 from peer.invites where claimed_at_ms is null and revoked_at_ms is null and expires_at_ms > $1 order by expires_at_ms, invite_id limit $2) as open_invitesupdate peer.invites set delivery_id = $2 where invite_id = $1 and delivery_id is nullnew peer relationship did not require an admission slotviainvite_claimlabelinvite_claim_revivalinvite_claim_supersedepeer contact insert conflict had no existing row€²

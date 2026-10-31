@@ -1,0 +1,1 @@
+Read one user goal by id: metadata plus its activity timeline, suggestions, associations, and briefings. When you do not know the id, find it with user_goal.list or user_goal.search first.

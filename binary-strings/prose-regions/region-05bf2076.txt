@@ -1,0 +1,73 @@
+update feed.runs
+                     set status = 'running',
+                         started_at_ms = $2,
+                         updated_at_ms = $2
+                     where run_id = $1 and status = 'queued'select max(created_at_ms) from feed.runs where prompt_id = $1 and trigger <> 'fill'update feed.runs
+                         set search_query_keys = (
+                                 select array_agg(key order by ord)
+                                 from unnest(
+                                          coalesce(search_query_keys, '{}'::text[])
+                                          || $2::text[]
+                                      ) with ordinality as merged(key, ord)
+                                 where ord > greatest(
+                                     0,
+                                     cardinality(
+                                         coalesce(search_query_keys, '{}'::text[])
+                                         || $2::text[]
+                                     ) - $4
+                                 )
+                             ),
+                             updated_at_ms = $3
+                         where run_id = $1update feed.runs
+                     set prompt_snapshot = $2,
+                         updated_at_ms = $3
+                     where run_id = $1
+                       and trigger in ('fill', 'scheduled')
+                       and status in ('queued', 'running')update feed.runs
+                     set prompt_snapshot = $2,
+                         updated_at_ms = $3
+                     where run_id = $1
+                       and trigger in ('scheduled', 'adhoc_user', 'adhoc_agent', 'adhoc_visit')
+                       and status in ('queued', 'running')select exists (
+                         select 1 from feed.runs
+                         where prompt_id = $1
+                           and trigger = 'proactive_pulse'
+                           and created_at_ms >= $2)select max(finished_at_ms) from feed.runs
+     where prompt_id = $1
+       and status = 'succeeded'
+       and trigger in ('scheduled', 'adhoc_user', 'adhoc_agent', 'adhoc_visit',
+                       'proactive_pulse', 'agent_unit', 'fill')failedfeed_runs_scheduled_slot_failed_uidxcancelledselect max(finished_at_ms) from feed.runs
+     where prompt_id = $1
+       and status = 'succeeded'
+       and trigger in ('scheduled', 'adhoc_user', 'adhoc_agent', 'adhoc_visit')select search_query_keys
+                         from feed.runs
+                         where prompt_id is not null
+                           and prompt_id = (
+                               select prompt_id from feed.runs where run_id = $1
+                           )
+                           and run_id <> $1
+                         order by created_at_ms desc, run_id desc
+                         limit $2select search_query_keys
+                         from feed.runs
+                         where prompt_id is not null
+                           and prompt_id = (
+                               select prompt_id from feed.runs where run_id = $1
+                           )
+                           and run_id <> $1
+                           and local_date = $2
+                         order by created_at_ms desc, run_id desc
+                         limit $3select local_date, hour_slot from feed.runs
+                         where prompt_id = $1
+                           and trigger = 'scheduled'
+                           and status = 'succeeded'
+                         order by local_date desc,
+                                  hour_slot desc nulls last
+                         limit 1select count(*) from feed.runs
+                         where prompt_id = $1
+                           and local_date = $2
+                           and hour_slot = $3
+                           and trigger = 'scheduled'
+                           and status = 'failed'update feed.units
+                     set icon_key = $2,
+                         updated_at_ms = $3
+                     where unit_id = $1unit_id, run_id, prompt_id, edition_kind, edition_local_date, edition_generated_at_ms, position, manual_order, kicker, title, body_md, attachment_kind, header_image_path, video_media_path, image_urls, carousel_clip_paths, widget_html, social_embed_url, social_thumbnail_url, social_thumbnail_aspect_ratio, social_attribution_text, social_post_username, category, connector_attribution, stats, source_post_url, source_idea_id, why_did_i_see_this, emoji, icon_key, reaction, reaction_updated_at_ms, seen_at_ms, share_count, discuss_count, origin, source_fleet_origin_id, source_url_keys, activity_tier, beat, reader_response, stake_type, act_by, share_instructions, share_artifact_generated_at_ms, share_artifact_stale, created_at_ms, updated_at_ms

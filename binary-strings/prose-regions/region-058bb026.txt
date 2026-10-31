@@ -1,0 +1,101 @@
+ó>5ógave up waiting for a socket-activated service to answerstill waiting for a socket-activated service to answersocket-activated service answered after waitingall branches are disabled and there is no else branch
+WITH bound_carriers AS (
+    SELECT DISTINCT b.message_id
+    FROM activity_monitor_message_threads b
+    WHERE b.activity_thread_id = $1
+      AND EXISTS (
+          SELECT 1
+          FROM activity_monitor_carrier_user_messages carrier
+          WHERE carrier.carrier_message_id = b.message_id
+      )
+),
+carrier_events AS (
+    SELECT
+        bc.message_id AS carrier_message_id,
+        ev.event_seq AS user_event_seq,
+        ev.request_id AS user_request_id,
+        ev.root_request_id AS user_root_request_id,
+        ev.parent_request_id AS user_parent_request_id
+    FROM bound_carriers bc
+    JOIN activity_monitor_carrier_user_messages carrier
+      ON carrier.carrier_message_id = bc.message_id
+    JOIN runtime.events ev
+      ON ev.message_id = carrier.user_message_id
+)
+SELECT
+    bc.message_id AS message_id,
+    EXISTS (
+        SELECT 1 FROM runtime.events terminal
+        WHERE terminal.event_name IN ('message.assistant', 'message.internal')
+          AND (
+              -- Canonical message identity is authoritative across carrier sources;
+              -- keep the weaker request-lineage fallbacks runtime-only.
+              terminal.message_id = 'assistant-msg-' || bc.message_id
+              OR (
+                  terminal.source = 'runtime'
+                  AND (
+                      terminal.request_id = 'req:fallback:submission:' || bc.message_id
+                      OR EXISTS (
+                          SELECT 1
+                          FROM carrier_events ce
+                          WHERE ce.carrier_message_id = bc.message_id
+                            AND ce.user_request_id IS NOT NULL
+                            AND terminal.request_id = ce.user_request_id
+                            AND terminal.root_request_id = ce.user_root_request_id
+                            AND terminal.event_seq > ce.user_event_seq
+                      )
+                      OR EXISTS (
+                          SELECT 1
+                          FROM carrier_events ce
+                          WHERE ce.carrier_message_id = bc.message_id
+                            AND ce.user_parent_request_id IS NOT NULL
+                            AND terminal.request_id = ce.user_parent_request_id
+                            AND terminal.event_seq > ce.user_event_seq
+                      )
+                  )
+              )
+          )
+    ) OR EXISTS (
+        SELECT 1
+        FROM runtime.events settled
+        WHERE settled.event_name = 'message.internal'
+          AND EXISTS (
+              SELECT 1
+              FROM runtime.event_payload_fields f
+              WHERE f.event_seq = settled.event_seq
+                AND f.field_path = '/metadata/kind'
+                AND COALESCE(f.text_value, f.scalar_value) = 'follow_up_settlement'
+          )
+          AND EXISTS (
+              SELECT 1
+              FROM runtime.event_payload_fields f
+              WHERE f.event_seq = settled.event_seq
+                AND f.field_path = '/metadata/action'
+                AND COALESCE(f.text_value, f.scalar_value) = 'nothing_to_do'
+          )
+          AND EXISTS (
+              SELECT 1
+              FROM runtime.event_payload_fields f
+              WHERE f.event_seq = settled.event_seq
+                AND f.field_path = '/metadata/submission_message_id'
+                AND COALESCE(f.text_value, f.scalar_value) = bc.message_id
+          )
+    ) OR EXISTS (
+        -- A subagent completion is marked seen only after the relay has
+        -- deliberately consumed its handoff. This durable evidence closes the
+        -- exact carrier if the daemon restarted after marking the child seen
+        -- but before Activity Monitor observed its terminal lifecycle event.
+        SELECT 1
+        FROM activity_monitor_carrier_user_messages carrier
+        JOIN agent.subagent_spawns child
+          ON child.child_agent_id =
+             split_part(carrier.user_message_id, ':completion:', 2)
+         AND carrier.user_message_id =
+             'subagent-progress:' || child.parent_message_id
+             || ':completion:' || child.child_agent_id
+        WHERE carrier.carrier_message_id = bc.message_id
+          AND child.seen_at IS NOT NULL
+    ) AS terminal
+FROM bound_carriers bc
+ORDER BY bc.message_id ASC
+failed to persist runtime work phasefailed to persist runtime work heartbeatfailed to persist conditional runtime work phasefailed to persist runtime work model timeoutfailed to persist runtime work identity attachmentinternal error: entered unreachable code: unexpected stagetask pre-approval releasetask pre-approval release failed; pre-approvals remain until they expireactivity_monitor_carrier_lifecycle_snapshotmessage_idfailed to read activity monitor carrier lifecycle snapshotqueuedrunningwaiting_for_inferencewaiting_for_tool_dispatchwaiting_for_user_confirmationcheckpointedcancellingpreemptingterminalizingcompletedfailedcancelledinterruptedtimed_outpreemptedmergedadmissionsubmission_commitinferenceafter_inference_persistedtool_dispatchafter_tool_dispatch_persistedfollow_up_settlementterminalizationmaterialize_submissionprompt_optionsskill_snapshottool_snapshotrequest_overlayclient_context_snapshotdevice_snapshotgoals_snapshothistory_projectionsystem_prompt_composecompaction_decisionprovider_request_readyrecovery_phase_deferred

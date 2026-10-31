@@ -1,0 +1,209 @@
+
+select old_base.event_seq as old_base_event_seq,
+       old_receipt.event_seq as old_event_seq,
+       successor.event_seq as new_event_seq,
+       old_receipt.payload_json as old_payload_json,
+       successor.payload_json as new_payload_json
+from runtime.events old_base
+join runtime.events old_receipt
+  on old_receipt.idempotency_key = $2
+ and old_receipt.message_id = $2
+ and old_receipt.event_name = 'delta.presentation'
+ and old_receipt.parent_agent_id = $4
+join runtime.events successor
+  on successor.idempotency_key = $3
+ and successor.message_id = $3
+ and successor.event_name = 'delta.presentation'
+ and successor.parent_agent_id = $4
+where old_base.idempotency_key = $1
+  and old_base.message_id = $1
+  and old_base.event_name = 'delta.presentation'
+  and old_base.parent_agent_id = $4
+  and old_receipt.payload_json is not null
+  and successor.payload_json is not null
+for update of old_base, old_receipt, successor
+old_base_event_seqold_event_seqnew_event_seq
+DELETE FROM search_documents
+WHERE owner_table = 'runtime.events'
+  AND owner_key = $1
+/__hatch/chat_context_jsonstring/__hatch/display_text_updated_at_msnumberSELECT field_path, scalar_type, scalar_value, text_value FROM event_payload_fields WHERE event_seq = $1 FOR UPDATEDELETE FROM event_payload_fields WHERE event_seq = $1 AND field_path = ANY($2::text[])field_pathscalar_typescalar_valuetext_valueINSERT INTO event_payload_fields (event_seq, field_path, scalar_type, scalar_value, text_value) VALUES  ON CONFLICT (event_seq, field_path) DO UPDATE SET scalar_type = excluded.scalar_type, scalar_value = excluded.scalar_value, text_value = excluded.text_value, ()runtime.search_documents.search_text
+INSERT INTO search_documents (owner_table, owner_key, search_text, language, search_vector)
+VALUES ('runtime.events', $1, $2, 'simple', to_tsvector('simple', $3))
+ON CONFLICT (owner_table, owner_key) DO UPDATE SET
+  search_text = excluded.search_text,
+  language = excluded.language,
+  search_vector = excluded.search_vector,
+  updated_at = now()
+WHERE search_documents.search_text IS DISTINCT FROM excluded.search_text
+   OR search_documents.language IS DISTINCT FROM excluded.language
+
+SELECT coalesce(f.text_value, f.scalar_value)
+FROM event_payload_fields f
+WHERE f.event_seq = $1
+  AND f.field_path = '/__hatch/chat_context_json'
+LIMIT 1
+
+SELECT
+  e.event_name,
+  e.transcript_surface::text AS transcript_surface,
+  e.visibility::text AS visibility,
+  COALESCE(e.role::text, m.role::text, 'system') AS role,
+  e.source
+FROM events e
+LEFT JOIN messages m
+  ON m.event_seq = e.event_seq
+WHERE e.event_seq = $1
+event_nametranscript_surfacevisibilitysourcemain_chatpublicruntime.events.payload_json
+insert into runtime.events (
+  event_kind,
+  event_name,
+  request_id,
+  root_request_id,
+  parent_request_id,
+  transcript_surface,
+  visibility,
+  source,
+  role,
+  chat_kind,
+  stream_lane,
+  message_id,
+  parent_message_id,
+  reply_to_message_id,
+  reply_target_message_id,
+  parent_agent_id,
+  agent_id,
+  idempotency_key,
+  display_text_ready,
+  payload_json,
+  chat_context_json,
+  created_at
+) values (
+  'message',
+  'delta.presentation',
+  $1,
+  $2,
+  $3,
+  'main_chat',
+  'public',
+  'runtime',
+  'assistant',
+  'direct',
+  'main',
+  $4,
+  null,
+  null,
+  $5,
+  $6,
+  $6,
+  $7,
+  true,
+  $8,
+  $9,
+  to_timestamp($10::double precision / 1000.0)
+)
+on conflict (idempotency_key) where idempotency_key is not null do nothing
+returning event_seq
+insert into chat.event_transports (provider, event_seq) values ('main', $1) on conflict (provider, event_seq) do nothing
+INSERT INTO requests (
+  request_id, root_request_id, parent_request_id, request_origin,
+  transcript_surface, root_work_class
+)
+VALUES ($1, $2, $3, $4, $5::runtime.transcript_surface, $6)
+ON CONFLICT (request_id) DO UPDATE SET
+  root_request_id = COALESCE(requests.root_request_id, excluded.root_request_id),
+  parent_request_id = COALESCE(requests.parent_request_id, excluded.parent_request_id),
+  request_origin = CASE
+    WHEN requests.request_origin = 'internal.runtime_replay' THEN excluded.request_origin
+    ELSE requests.request_origin
+  END,
+  transcript_surface = excluded.transcript_surface,
+  root_work_class = CASE
+    WHEN requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing'
+      THEN excluded.root_work_class
+    ELSE requests.root_work_class
+  END
+WHERE (requests.root_request_id IS NULL AND excluded.root_request_id IS NOT NULL)
+   OR (requests.parent_request_id IS NULL AND excluded.parent_request_id IS NOT NULL)
+   OR (requests.request_origin = 'internal.runtime_replay'
+       AND excluded.request_origin <> 'internal.runtime_replay')
+   OR requests.transcript_surface IS DISTINCT FROM excluded.transcript_surface
+   OR (requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing')
+
+UPDATE events
+SET display_text_ready = $2,
+    reply_target_message_id = $3,
+    payload_json = $4
+WHERE event_seq = $1
+runtime.messages.body
+INSERT INTO messages (message_id, event_seq, role, body, created_at)
+SELECT e.message_id, e.event_seq, e.role, $2, e.created_at
+FROM events e
+WHERE e.event_seq = $1
+  AND e.message_id IS NOT NULL
+  AND e.role IS NOT NULL
+ON CONFLICT (message_id) DO UPDATE SET
+  body = excluded.body
+database write admission gate closedadmission_timeout
+task_id,
+broker_instance,
+node_id,
+node_name,
+browser_harness_kind,
+browser_harness_version,
+browser_session_id,
+root_session_id,
+owner_agent_id,
+root_message_id,
+stream_owner_message_id,
+status,
+title,
+step_count,
+chat_context_json,
+latest_action_id,
+latest_tab_json,
+latest_screenshot_json,
+admission_seq,
+presentation_root_session_id,
+parent_agent_id,
+tool_call_id,
+request_trace_context_json,
+requester_source,
+requester_transport,
+requester_model,
+requester_effective_model,
+request_mode_json,
+max_training_tier_json,
+run_presentation_locale,
+run_location_context_json,
+is_task_card_visible,
+owner_kind,
+initial_instruction,
+history_source_agent_id,
+wallet_selection_provider,
+wallet_selection_payment_method_id,
+wallet_choice_revision,
+continuation_root_task_id,
+browser_navigation_attempted,
+browser_route,
+egress_profile,
+profile_id,
+card_generation,
+run_number,
+(extract(epoch from run_started_at) * 1000)::bigint as run_started_at_ms,
+state_revision,
+(extract(epoch from deadline_at) * 1000)::bigint as deadline_at_ms,
+(extract(epoch from created_at) * 1000)::bigint as created_at_ms,
+(extract(epoch from updated_at) * 1000)::bigint as updated_at_ms,
+(extract(epoch from completed_at) * 1000)::bigint as completed_at_ms,
+(extract(epoch from terminal_user_update_due_at) * 1000)::bigint as terminal_user_update_due_at_ms,
+terminal_reason,
+terminal_interrupt_subtype,
+outcome_status,
+outcome_reason,
+(extract(epoch from outcome_at) * 1000)::bigint as outcome_at_ms,
+retention_end_reason,
+(extract(epoch from relocation_hold_until) * 1000)::bigint as relocation_hold_until_ms,
+relocating_to,
+relocated_from,
+on_shared_tab
+BUG: inner connection already taken!task_idadmission_seqevent_seqoccurred_at_mspayload_jsonretained_outcome_tombstoneճo

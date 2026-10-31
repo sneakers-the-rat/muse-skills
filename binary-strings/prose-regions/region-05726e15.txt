@@ -1,0 +1,85 @@
+falseno response info of typeaxum::json::Json<hatch_daemon_http_content::daemon::http_api::routes::spaces::v2::SpaceActionErrorResponse>bytes::bytes::Bytesalloc::vec::Vec<u8>alloc::string::Stringall branches are disabled and there is no else branchevaluation timed outbackground task failedsuccesscompile JSON schemaprovider-bound chat route could not read its transport bindingobjective lease lost during heartbeat renewalwrite_admissionwritepostgres write completed slowlypostgres write failedretrying idempotent postgres writehatch:db:operationembed_permit_closedembed_timeoutembed_errorembed_task_joinone-shot postgres write invoked more than onceinvalid_paramsinvalid evaluation responseupdate ideas.idea_sources s
+                        set metadata_json =
+                              (s.metadata_json - 'www_projection_terminal_disposition')
+                              || jsonb_build_object(
+                                   'www_projected_updated_at', $6::text,
+                                   'www_projected_status', $7::text)
+                              || case when $8::text is null then '{}'::jsonb
+                                      else jsonb_build_object(
+                                        'www_projection_terminal_disposition', $8::text)
+                                 end
+                              || case when $9::text is null then '{}'::jsonb
+                                      else jsonb_build_object('www_icon_id', $9::text)
+                                 end
+                       from ideas.ideas i
+                      where s.source_namespace = $1
+                        and s.source_kind = $2
+                        and s.source_id = $3
+                        and s.idea_id = $4
+                        and i.idea_id = s.idea_id
+                        and s.metadata_json ->> 'authored_at' is not distinct from $5::text
+                        and i.updated_at::text = $6select distinct idea_id,
+                            metadata_json -> 'publication_hold' ->> 'fingerprint',
+                            metadata_json -> 'publication_hold' ->> 'reason'
+                       from ideas.idea_sources
+                      where idea_id = any($1::text[])
+                        and (source_namespace, source_kind) in (
+                          ('idea_share', 'pending_share'),
+                          ('user', 'http_create'),
+                          ('shared_www', 'shared_idea')
+                        )
+                        and metadata_json -> 'publication_hold' ->> 'fingerprint' is not null
+                        and metadata_json -> 'publication_hold' ->> 'reason' is not nullupdate ideas.idea_sources s
+                        set metadata_json = s.metadata_json || jsonb_build_object(
+                              'www_projection_attempted_at', now()::text)
+                       from ideas.ideas i
+                      where s.source_namespace = $1
+                        and s.source_kind = $2
+                        and s.source_id = $3
+                        and s.idea_id = $4
+                        and i.idea_id = s.idea_id
+                        and s.metadata_json ->> 'authored_at' is not distinct from $5::text
+                        and i.updated_at::text = $6update ideas.idea_sources
+                        set metadata_json = metadata_json || jsonb_build_object(
+                              'publication_hold', jsonb_build_object(
+                                'fingerprint', $2::text,
+                                'reason', $3::text))
+                      where idea_id = $1
+                        and (source_namespace, source_kind) in (
+                          ('idea_share', 'pending_share'),
+                          ('user', 'http_create'),
+                          ('shared_www', 'shared_idea')
+                        )with previous as (
+                        select status
+                        from ideas.idea_build_status
+                        where source_namespace = $1
+                          and source_kind = $2
+                          and source_id = $3
+                        for update
+                     ),
+                     upserted as (
+                        insert into ideas.idea_build_status
+                        (source_namespace, source_kind, source_id, status, selected_item_ids, updated_at)
+                        values ($1, $2, $3, $4, $5::text[], now())
+                        on conflict (source_namespace, source_kind, source_id) do update set
+                           status = excluded.status,
+                           selected_item_ids = case
+                               when excluded.selected_item_ids is not null
+                                   then excluded.selected_item_ids
+                               when excluded.status = 'not_started'
+                                   then null
+                               else ideas.idea_build_status.selected_item_ids
+                           end,
+                           updated_at = now()
+                        returning source_namespace, source_kind, source_id, status,
+                                  selected_item_ids, updated_at::text as updated_at
+                     )
+                     select upserted.source_namespace,
+                            upserted.source_kind,
+                            upserted.source_id,
+                            upserted.status,
+                            upserted.selected_item_ids,
+                            upserted.updated_at,
+                            previous.status as previous_status
+                     from upserted
+                     left join previous on trueprevious_statususespaceIdea publication review timed outunexpected Idea publication review tool callinternal_errorIdeas composer owner run is missinginference-proxy returned an invalid model selection routerecord idea dedupresolve embedding near-dup candidateemit ideas_dedup_violationresolve fingerprint bandview ideaview canonical idearesolve canonical on not-foundresolve exact source tripleattach duplicate idea sourceresolve shared WWW sourceimport shared WWW idearesolve idea source before mintingrefresh superseded idea contentattach idea sourceupsert idea sourceview idea by sourcecreate ideaGatekeeper response omitted requested gate; using defaultvalidationthe Idea has no source contextmetadata readicon_namemetadata writeprojection prepareWWW publicationmark_idea_www_projected failed after WWW publishupdateinvalid `session_id`not_foundsession not foundread artifact before content reviewhash current artifact content for reviewhitread artifact after waiting for content reviewreview artifact contentskipped_transientskipped_provenancepersist guarded artifact content reviewpersist artifact content reviewcurrent build changed before content review was saveddiscarded stale content review warm-up verdictwrittenclientFilesparse published client manifestparse prebuilt cloudflare deploy manifestserialize trusted Cloudflare deploy manifestsourceStandardSha256exploreshared idea WWW response was invalidShared idea lookup returned an invalid responseshared_idea_upstream_invalidshared idea payload was invalidinvalid payloadincomplete responsesportsweatherfinancelocalobjective execution gate is closedsourceself_improvement_runinput_fingerprinttrigger_outcomeidea card not foundshare card context read failedlocal Idea publication failedIdea publication review failedIdea catalog share resolution failedIdea generalized share resolution failedIdea direct share resolution failedIdea publication hold read failedgeneralized Idea publication failedideas_locale_supersededIdeas generation was superseded by a language changediscovery_persistence_skippedwrite direct Space search request to worker stdinwait for direct Space search clientdayindexpreview_media_failure_reasonimage/pngmissing auth tokenruntime config state retains the completion senderideas.mark_idea_www_projectedideas.list_idea_publication_holdsideas.prepare_idea_www_projectionideas.record_idea_publication_holdideas.set_idea_build_statusmemoryentriesUDS HTTP request path must start with '/'ideascontent_locale_revisionIdeas composer owner is not an Ideas runwork_itemsbackground_content_jobslease_held_by_live_owneroptional model fallback setup timed out; using primary routeHalloween Idea experiment and durable fallback unavailableJARVIS_META_SOCIAL_SHARE_REVIEW_OVERRIDEinferencereport.jsonnav_statusscreenshot.png.space-buildmanifest.jsonformat/v1/model/getmodel.get returned an empty selectionx-hatch-gk-assignment-confirmedexact_source_tripleembedding_near_dupmintedideas_dedup_violationcontent_fingerprintreasonnew id requested for content that already maps to a canonical ideacannot be empty when recording a dedup violationprovenance.request_ididsource.source_kindshared Idea source metadata must be an objectshared_wwwshared_ideashared_payload_versionimported_fromsource_kindsource_idsuperseded idea row disappeared before its rewrite could landan idea card requires an explicit domaindomaindefaulthttp://localhost/hatch/check_gatekeepersGatekeeper response was invalid; using defaultGatekeeper check failed; using defaultpublication reviewthe publication review does not cover this revision of the Ideaauthored_atsource changedthe Idea changed while sharingactivethe source Idea changed while sharinghttp://localhost/hatch/muse/ideascreate`session_id` cannot be emptyreview_failedSELECT COALESCE(sql, '') AS sql FROM sqlite_master WHERE name NOT LIKE 'sqlite\_%' ESCAPE '\' ORDER BY type, nameSELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite\_%' ESCAPE '\' AND name NOT LIKE '\_\_%' ESCAPE '\' ORDER BY name || '

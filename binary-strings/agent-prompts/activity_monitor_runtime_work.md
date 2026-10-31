@@ -1,0 +1,1 @@
+The one-line user-facing state. Write one short pulse from the newest evidence that states the single most useful current or forward-looking status: a result, progress marker, specific wait, blocker, monitored condition, or scheduled event. Do not claim work is currently in progress, append a generic next step, or restate the title or description.

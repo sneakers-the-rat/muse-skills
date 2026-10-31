@@ -1,0 +1,335 @@
+has_unread_threadscount_unread_messagesmark_conversation_seenfirst_unread_message_seqreset_conversation_stateupdate_statusget_conversation_seen_at_msseen_at_ms
+SELECT (extract(epoch from e.created_at) * 1000)::bigint AS occurred_at_ms
+FROM runtime.events AS e
+JOIN chat.event_transports AS c ON c.event_seq = e.event_seq
+WHERE e.parent_agent_id = $1
+  AND e.event_name = 'message.user'
+  AND e.transcript_surface = 'main_chat'
+  AND c.provider != 'main'
+ORDER BY e.event_seq DESC
+LIMIT 1
+last_external_transport_message_at_msupdate_conversation_last_assistant_resourcesINSERT INTO agents (agent_id, id, session_id, kind, parent_id, parent_agent_id, root_session_id, depth, created_at, updated_at, model, status, last_assistant_message)
+             VALUES ($1, $1, $2, 'root', NULL, NULL, $2, 0, $3, $3, $4, $5, NULL)ensure_worker_conversationagent.agents.originating_location_context_jsoncreate_conversationdelete_root_conversationdelete_root_conversation_load_rootdelete_root_conversation_agent_scopeload_transcript_agent_scope_for_missing_rootprune_detached_agentprune_stale_detached_root_agent_scopelist_open_message_mailboxmessage_mailbox_submissionmessage_mailbox_is_terminalmessage_mailbox_stream_ownersubagent_completion_carriersmailbox submissionmessage_mailbox_accepted_atmessage_mailbox_presentation_contextearlier_authenticated_mailbox_submissionsselected_authenticated_mailbox_submissionstoo many selected mail sourcesagent_recovery_owners.terminal_eventrecovery owner terminal event claim requires owner and statusagent_recovery_owners.terminal_primary_root_idle_is_ownerless
+SELECT agents.session_id, checkpoint.execution_config_json
+FROM agent.chat_preferences preferences
+JOIN agent.agents agents ON agents.id = preferences.active_root_id
+JOIN agent.runtime_restart_checkpoints checkpoint ON checkpoint.agent_id = agents.id
+WHERE preferences.id = 1
+  AND agents.id = $1
+  AND agents.agent_id = $1
+  AND agents.kind = 'root'
+  AND agents.parent_id IS NULL
+  AND agents.parent_agent_id IS NULL
+  AND agents.depth = 0
+  AND agents.agent_type IS NULL
+  AND agents.status = 'completed'
+  AND agents.session_id IS NOT NULL
+  AND checkpoint.mode = 'idle'
+  AND checkpoint.payload_json IS NULL
+  AND checkpoint.recovery_class = 'foreground_root'
+  AND checkpoint.recovery_owner_id = $1
+  AND checkpoint.execution_config_json IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM agent.message_mailbox
+    WHERE agent_id = $1 AND state IN ('accepted', 'attached')
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM agent.mail_conversations WHERE agent_id = $1
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM agent.chat_workers WHERE agent_id = $1
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM agent.delegate_requests WHERE worker_agent_id = $1
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM agent.recovery_owners
+    WHERE agent_id = $1 AND terminal_at IS NULL
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM runtime.workflow_agent_calls calls
+    JOIN runtime.workflow_runs runs ON runs.run_id = calls.run_id
+    LEFT JOIN runtime.workflow_phase_runs phases
+      ON phases.phase_run_id = calls.phase_run_id
+    WHERE calls.child_agent_id = $1
+      AND calls.status IN ('pending', 'running')
+      AND runs.status IN ('queued', 'running', 'paused')
+      AND (calls.phase_run_id IS NULL OR phases.status IN ('pending', 'running', 'paused'))
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM self_improvement.run_steps
+    WHERE agent_id = $1 AND status = 'running'
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM background_workers.turns
+    WHERE agent_id = $1 AND state = 'running'
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM feed.run_steps
+    WHERE agent_id = $1 AND status = 'running'
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM scheduler.job_runs
+    WHERE worker_agent_id = $1 AND status IN ('queued', 'running')
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM runtime.execute_resolve_runs
+    WHERE worker_agent_id = $1 AND status IN ('pending', 'notify_pending')
+  )
+execution_config_jsonterminal primary-root checkpoint needs generic session cleanupterminal primary-root checkpoint needs generic config cleanupagent_recovery_owners.active_owner_for_agent
+select recovery_class, owner_id, generation, agent_id, message_id,
+       active_at, terminal_at, terminal_status
+from agent.recovery_owners
+where agent_id = $1
+  and terminal_at is null
+agent_recovery_owners.terminalize_exact_generationrecovery owner terminal status cannot be emptyagent_recovery_owners.owneragent_recovery_owners.active_owneragent_recovery_owners.list_activeactive agent recovery owner list limit must be positivemail_conversations.taskmail_conversations.update_taskmail checkpoint requires its tool call identitymail_conversations.task_indexmail_conversations.select_taskmail_conversations.append_authorizationmail task updates require authenticated user inputmail_conversations.unfinished_tasksmail_conversations.transfer_inputmail_conversations.claim_for_handoffmail_conversations.turn_resultmail_conversations.settle_turninvalid mail turn notificationmail_conversations.settle_notificationmail_conversations.recent_resultsmail_conversations.acknowledge_resultmail_conversations.root_completionsmail_conversations.pending_resultsmail_conversations.accept_inputinvalid mail inputmail_conversations.hold_flooded_inputmail_conversations.input_for_submissionmail_conversations.input_originmail_conversations.has_inputmail_conversations.begin_turnmail_conversations.settle_inputmail_conversations.pending_inputsmail_conversations.begin_actionmail_conversations.task_actionssucceededmail_conversations.prepare_actioninvalid mail action stepmail_conversations.action_callmail_conversations.unbound_sendmail_conversations.action_commandmail_conversations.turn_action_callsmail_conversations.recover_terminal_actionsmail_conversations.action_review_flagmail_conversations.getprevious_checkpointfrom_conversation_idmail_conversations.mailbox_owner_grantsmail_conversations.ensureinvalid new mail conversationmail_conversations.revivemail_conversations.revokemail_conversations.stale_bindingsmail_conversations.active_for_mainmail_conversations.owner_grantsmail_conversations.cancel_owner_taskmail_conversations.for_agentselect * from agent.mail_conversations where agent_id = $1mail_conversations.for_threadmail_conversations.bind_threadinvalid mail thread identitymail_conversations.archivelist_volatile_context_pins_with_shared_bodyvolatile context pin shared read failed; recovering legacy pins onlyruntime_restart_checkpoint_existsruntime_restart_checkpoint_for_agentlist_runtime_restart_checkpoint_agent_idsruntime_restart_checkpoint_token_if_fingerprintdelete_runtime_restart_checkpointdelete_runtime_restart_checkpoint_for_recoverydelete_runtime_restart_checkpoint_if_messagedelete_runtime_restart_checkpoint_by_raw_agent_idexternal_party.claimexternal_party.receiptinvalid external provider receiptexternal_party.admitinvalid external worker routeexternal_party.lifecycleroot_follow_up.pending_displaypending_message_mailbox_pagemailbox page limit must be between 1 and 64startup_message_mailbox_receiptpending_startup_message_mailbox_cohortmailbox admission payload differs from its checkpoint inputmailbox admissions disagree with the checkpoint queueruntime restart execution config is invalid or disagrees with checkpoint payloadupsert_runtime_restart_checkpointactive_space_buildersspace_build_ask_exists_for_parent_sluglatest_unresumed_space_build_ask_for_parent_slug
+select e.event_seq,
+       case
+         when coalesce(context_seq.text_value, context_seq.scalar_value, '') ~ '^[0-9]+$'
+           then coalesce(context_seq.text_value, context_seq.scalar_value)::bigint
+       end as context_seq,
+       coalesce(e.role::text, m.role::text, 'system') as role,
+       coalesce(e.message_id, m.message_id, '') as message_id,
+       coalesce(m.body, '') as display_text,
+       coalesce(
+         nullif(trim(coalesce(root_execution.text_value, root_execution.scalar_value, '')), ''),
+         case when e.message_id like 'assistant-msg-%'
+              then nullif(substring(e.message_id from char_length('assistant-msg-') + 1), '')
+         end
+       ) as root_message_execution_id,
+       (
+         nullif(trim(coalesce(root_execution.text_value, root_execution.scalar_value, '')), '')
+           is null
+         and e.message_id like 'assistant-msg-%'
+       ) as root_message_execution_id_is_legacy,
+       case
+         when eligibility.scalar_type = 'bool'
+           then eligibility.scalar_value::boolean
+       end as can_broadcast_share
+from runtime.events e
+left join runtime.messages m on m.event_seq = e.event_seq
+left join runtime.event_payload_fields eligibility
+  on eligibility.event_seq = e.event_seq
+ and eligibility.field_path = '/metadata/can_broadcast_share'
+left join runtime.event_payload_fields context_seq
+  on context_seq.event_seq = e.event_seq
+ and context_seq.field_path = '/metadata/context_seq'
+left join runtime.event_payload_fields root_execution
+  on root_execution.event_seq = e.event_seq
+ and root_execution.field_path = '/metadata/root_message_execution_id'
+where  and  and e.event_name = 'message.assistant' and e.parent_agent_id =  and e.message_id =  and e.display_text_ready order by e.event_seq desc limit 1message_shareability_projectionconversation_shareability_review_countconversation_shareability_review_historylist_poisoned_runtime_restart_checkpoint_candidatesrepair_poisoned_runtime_restart_checkpointwidget data_json must be a JSON objectupsert_widgetwidget kind cannot be emptywidget_id cannot be empty
+SELECT widget_id, kind, data_json, display_text, state_bundle_json, state_version
+FROM widgets
+WHERE widget_id IN (
+widgets_by_idswidget_iddata_jsonwidgets_by_kindpatch_widget_state_fieldwidget state field cannot be emptygroup_chats.inputgroup_chats.acceptgroup input exceeds one MiBgroup media must be materialized before acceptancegroup_chats.activegroup_chats.ensuregroup_chats.replygroup_chats.latest_inputinvalid group dispositiongroup_chats.settlegroup_chats.for_agentgroup_chats.pendinggroup_chats.deactivateselect * from agent.chat_workers where agent_id = $1group_chats.sent_messagegroup_chats.repliesgroup_chats.rebind_peeronly peer chat workers can be reboundgroup_chats.reply_enqueuedgroup_chats.connection_receiptgroup_chats.submission_inputgroup_chats.cancel_pendinggroup_chats.for_provideragent_recovery_owners.claimrecovery owner id cannot be emptyagent_recovery_owners.terminalizeagent_recovery_owners.settle_statusagent_recovery_owners.purge_terminalagent recovery owner purge limit must be positiveagent_recovery_owners.reconcile_terminalagent recovery owner reconciliation limit must be positiveagent_recovery_owners.repair_unrecoverable_conversationsunrecoverable recovery conversation repair limit must be positiveclose_subagentfinalize_scope_has_candidate
+WITH RECURSIVE ancestry(child_agent_id, parent_agent_id) AS (
+  SELECT spawn.child_agent_id, spawn.parent_agent_id
+  FROM subagent_spawns AS spawn
+  WHERE spawn.child_agent_id = ANY($1)
+  UNION
+  SELECT parent.child_agent_id, parent.parent_agent_id
+  FROM subagent_spawns AS parent
+  JOIN ancestry AS child
+    ON parent.child_agent_id = child.parent_agent_id
+)
+SELECT child_agent_id AS agent_id
+FROM ancestry
+UNION
+SELECT parent_agent_id AS agent_id
+FROM ancestry
+
+UPDATE agents
+SET updated_at = $1,
+    status = $2
+WHERE id = $3
+  AND status NOT IN ('completed', 'errored', 'shutdown')
+
+UPDATE subagent_spawns AS current
+SET completed_at = COALESCE(completed_at, $1),
+    status = $2,
+    deferred_terminal_status = NULL,
+    -- Interrupted spawns carry no deliverable result, so settle them as seen.
+    -- Without this, a now-finalized interrupted child re-pins its parent via the
+    -- "completed-but-unseen" guard below, and the unseen-completion drain would
+    -- emit a recovery follow-up for every superseded browser worker.
+    -- reopen_terminal_subagent_spawn_rows_in_tx resets seen_at on resume.
+    seen_at = CASE WHEN $2 = 'interrupted' THEN COALESCE(seen_at, $1) ELSE seen_at END
+WHERE current.child_agent_id = $3
+  AND current.completed_at IS NULL
+  AND EXISTS (
+    SELECT 1
+    FROM agents AS c
+    WHERE c.id = current.child_agent_id
+      AND COALESCE(current.deferred_terminal_status, c.status)
+          IN ('completed', 'errored', 'shutdown', 'interrupted')
+  )
+  -- A terminal error cannot incorporate a result that finishes later, so
+  -- descendant freshness must not pin it after every descendant settles.
+  AND ($2 = 'errored' OR COALESCE(
+    (
+      SELECT c.updated_at
+      FROM agents AS c
+      WHERE c.id = current.child_agent_id
+    ),
+    0
+  ) >= COALESCE(
+    (
+      -- Interrupted children carry no deliverable result, so the parent need
+      -- not have its agent row updated past their (synthetic) completion time.
+      -- Without this exclusion, settling an interrupted child (completed_at =
+      -- interruption time, typically just after an idle parent's last update)
+      -- flips the parent from G1-pinned to pinned on this freshness guard, so
+      -- it never finalizes and its monitor lane keeps the global sweep spinning.
+      -- Mirrors the interrupted seen_at handling in the SET clause above.
+      SELECT MAX(child.completed_at)
+      FROM subagent_spawns AS child
+      JOIN agents AS child_agent ON child_agent.id = child.child_agent_id
+      WHERE child.parent_agent_id = current.child_agent_id
+        AND COALESCE(child.deferred_terminal_status, child_agent.status)
+            <> 'interrupted'
+    ),
+    0
+  ))
+  AND NOT EXISTS (
+    SELECT 1
+    FROM subagent_spawns AS child
+    WHERE child.parent_agent_id = current.child_agent_id
+      AND child.completed_at IS NULL
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM subagent_spawns AS child
+    WHERE child.parent_agent_id = current.child_agent_id
+      AND child.completed_at IS NOT NULL
+      AND child.seen_at IS NULL
+  )
+RETURNING completed_at
+subagent_spawn_call
+WITH RECURSIVE scoped(child_agent_id, child_depth, created_at) AS (
+  SELECT current.child_agent_id,
+         current.child_depth::bigint AS child_depth,
+         current.created_at
+  FROM subagent_spawns AS current
+  WHERE current.child_agent_id = $1
+    AND current.completed_at IS NULL
+  UNION
+  SELECT child.child_agent_id,
+         child.child_depth::bigint AS child_depth,
+         child.created_at
+  FROM subagent_spawns AS child
+  JOIN scoped
+    ON child.parent_agent_id = scoped.child_agent_id
+  WHERE child.completed_at IS NULL
+)
+SELECT scoped.child_agent_id AS child_agent_id,
+       scoped.child_depth AS child_depth,
+       scoped.created_at AS created_at
+FROM scoped
+JOIN subagent_spawns AS current
+  ON current.child_agent_id = scoped.child_agent_id
+ AND current.completed_at IS NULL
+JOIN agents AS current_agent
+  ON current_agent.id = current.child_agent_id
+WHERE current.completed_at IS NULL
+  AND COALESCE(current.deferred_terminal_status, current_agent.status)
+      IN ('completed', 'errored', 'shutdown', 'interrupted')
+ORDER BY scoped.child_depth DESC, scoped.created_at ASC, scoped.child_agent_id ASC
+update_subagent_promptbegin_subagent_follow_up
+UPDATE subagent_spawns
+SET status = $1,
+    deferred_terminal_status = NULL,
+    final_response = NULL,
+    metadata_json = $3,
+    completed_at = NULL,
+    seen_at = NULL
+WHERE child_agent_id = $2
+
+SELECT current.child_agent_id AS child_agent_id,
+       current.created_at AS created_at
+FROM subagent_spawns AS current
+JOIN agents AS current_agent
+  ON current_agent.id = current.child_agent_id
+WHERE current.completed_at IS NULL
+  AND COALESCE(current.deferred_terminal_status, current_agent.status)
+      IN ('completed', 'errored', 'shutdown', 'interrupted')
+  AND (current.created_at, current.child_agent_id) > ()
+ORDER BY current.created_at ASC, current.child_agent_id ASC
+LIMIT get_subagent_spawn_metadata
+SELECT metadata_json FROM subagent_spawns
+WHERE child_agent_id = $1 AND completed_at IS NOT NULL
+FOR UPDATE
+
+UPDATE subagent_spawns
+SET status = $1,
+    deferred_terminal_status = NULL,
+    final_response = NULL,
+    metadata_json = $3,
+    completed_at = NULL,
+    seen_at = NULL
+WHERE child_agent_id = $2
+  AND completed_at IS NOT NULL
+child_agent_for_spawn_call_idpatch_subagent_spawn_metadatarecord_subagent_final_responseupdate_subagent_runtime_statusupdate_subagent_spawn_metadataadmit_reserved_subagent_bootstrapfinalize_terminal_subagent_spawnsprepare_subagent_parent_for_relayforce_subagent_final_response_manyappend_subagent_spawn_metadata_valuesappend_subagent_spawn_metadata_strings
+DELETE FROM runtime_restart_checkpoints AS checkpoint
+WHERE checkpoint.agent_id = $1
+  AND NOT EXISTS (
+    SELECT 1
+    FROM agent.message_mailbox AS mailbox
+    WHERE mailbox.agent_id = checkpoint.agent_id
+      AND mailbox.state IN ('accepted', 'attached')
+  )
+terminalize_subagent_bootstrap_failurerecord_deferred_subagent_terminal_transitionrestore_hard_closed_subagent_from_validated_checkpointlink_imported_context_messagesimport_context_message_provenancefind_voice_call_historydelete_voice_call_historyhas_completed_voice_call_turngroup_chats.reply_loadchat_worker_mailbox.pagechat_worker_mailbox.recentchat_worker_mailbox.unreadchat_worker_mailbox.sent_pagechat_worker_mailbox.mark_readchat_worker_mailbox.acceptmailbox message exceeds one MiBsubagent_final_responsemark_subagent_results_seensubagent_active_count_all_rootsparent_message_id_for_child_agentsubagent_live_exists_for_agent_typesubagent_agent_ids_for_parent_messagestale completed-unseen subagent prune limitprune_stale_completed_unseen_subagentschild_statusparent_statusprune_reason
+SELECT COUNT(*)
+FROM agents AS a
+WHERE a.parent_id = $1
+  AND a.kind = 'subagent'
+  AND a.status NOT IN ('completed', 'errored', 'shutdown', 'interrupted', 'not_found')
+
+SELECT COUNT(*)
+FROM agents AS a
+JOIN agent_ancestors AS ca
+  ON ca.descendant_id = a.id
+WHERE ca.ancestor_id = $1
+  AND a.id <> $1
+  AND a.kind = 'subagent'
+  AND a.status NOT IN ('completed', 'errored', 'shutdown', 'interrupted', 'not_found')
+subagent_active_count_for_parent_agent
+SELECT
+  COALESCE(SUM(CASE WHEN sp.completed_at IS NULL THEN 1 ELSE 0 END), 0) AS global_active_count,
+  COALESCE(SUM(CASE WHEN sp.parent_message_id = $2 AND sp.completed_at IS NULL THEN 1 ELSE 0 END), 0) AS task_active_count,
+  COALESCE(SUM(CASE WHEN sp.parent_message_id = $2 AND sp.completed_at IS NOT NULL THEN 1 ELSE 0 END), 0) AS task_recent_count,
+  COALESCE(SUM(CASE WHEN sp.parent_message_id = $2 AND sp.completed_at IS NOT NULL AND sp.seen_at IS NULL THEN 1 ELSE 0 END), 0) AS task_unseen_count
+FROM subagent_spawns AS sp
+WHERE sp.parent_agent_id = $1
+
+SELECT
+  COALESCE(SUM(CASE WHEN sp.completed_at IS NULL THEN 1 ELSE 0 END), 0) AS global_active_count,
+  COALESCE(SUM(CASE WHEN sp.parent_message_id = $2 AND sp.completed_at IS NULL THEN 1 ELSE 0 END), 0) AS task_active_count,
+  COALESCE(SUM(CASE WHEN sp.parent_message_id = $2 AND sp.completed_at IS NOT NULL THEN 1 ELSE 0 END), 0) AS task_recent_count,
+  COALESCE(SUM(CASE WHEN sp.parent_message_id = $2 AND sp.completed_at IS NOT NULL AND sp.seen_at IS NULL THEN 1 ELSE 0 END), 0) AS task_unseen_count
+FROM subagent_spawns AS sp
+JOIN agent_ancestors AS ca
+  ON ca.descendant_id = sp.parent_agent_id
+WHERE ca.ancestor_id = $1
+subagent_task_scope_counts_for_parent_agentglobal_active_counttask_active_counttask_recent_counttask_unseen_countunseen completed subagent limitunseen_completed_subagent_child_idsstale_completed_unseen_subagent_prune_candidates_exist  AND (metadata.status IS NULL OR metadata.status != 'archived')
+  AND metadata.status = 'archived'
+insert into agent.mail_tasks
+            (task_id, conversation_id, generation, source_id, authorization_json,
+             authorization_updates_json, revision, status, checkpoint_json, created_at_ms, updated_at_ms)
+            values ($1, $2, $3, $4, $5, '[]', 0, 'active', $6, $7, $7)
+            on conflict (conversation_id, source_id) do nothingselect task_id, generation, authorization_json from agent.mail_tasks
+            where conversation_id = $1 and source_id = $2authorization_jsontask_idmail task source was reused with different authorityforbid_runtime_restart_checkpoint_replayappend_runtime_restart_checkpoint_pending_submissionroot_follow_up_terminal_settlement_actionselect chat_id from chat.chats where chat_id > $1 order by chat_id limit 128delete from chat.chats where chat_id = any($1)select conversation_id from chat_private.peer_conversations
+         where conversation_id in (
+           select conversation_id from chat_private.peer_conversations where chat_id = any($1)
+           union select conversation_id from chat_private.peer_conversations where requester_chat_id = any($1))
+         order by conversation_id for updateupdate chat_private.peer_conversations
+         set requester_chat_id = null, requester_unavailable = true
+         where requester_chat_id = any($1)chat_private.publication_turnschat_private.publicationsupdate peer.outbox set state = case
+           when state = 'pending' and attempts = 0 then 'superseded' else 'uncertain' end,
+           last_error_class = 'chat_owner_deleted'
+         where state in ('pending', 'dispatching') and conversation_id in (
+           select conversation_id from chat_private.peer_conversations where chat_id = any($1)
+           union all select conv_id from chat_private.peer_remote_conversations where chat_id = any($1))update chat_private.deliveries set state = 'failed',
+           last_error = 'chat owner deleted before dispatch',
+           terminal_at_utc = extract(epoch from clock_timestamp())::bigint,
+           updated_at_utc = extract(epoch from clock_timestamp())::bigint
+         where chat_id = any($1) and state = 'pending'chat_private.peer_conversationschat_private.peer_remote_conversationschat_private.reactionschat_private.message_deletionschat_private.transport_projectionschat_private.bindingschat_private.binding_authorizationschat.message_bindingsstate in ('pending', 'delivering')self_improvement.conversation_follow_up_attemptsstate = 'pending'

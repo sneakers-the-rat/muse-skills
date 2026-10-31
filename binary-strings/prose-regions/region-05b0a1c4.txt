@@ -1,0 +1,54 @@
+select input_grants_json from runtime.browser_tasks where task_id = $1browser task admission replay changed card visibilitybrowser task admission replay changed owner kindselect count(*)::bigint from runtime.browser_tasks where admission_seq is not null and status = 'queued'
+with before as (
+  select run_started_at is null as run_started
+  from runtime.browser_tasks
+  where task_id = $1
+    and admission_seq is not null
+    and status = 'starting'
+    and owner_agent_id = $2
+    and stream_owner_message_id = $3
+    and state_revision = $4
+),
+transitioned as (
+  update runtime.browser_tasks
+  set status = 'running',
+      run_started_at = coalesce(run_started_at, now()),
+      last_progress_at = now(),
+      requester_source = null,
+      requester_transport = null,
+      requester_model = null,
+      requester_effective_model = null,
+      request_mode_json = null,
+      max_training_tier_json = null,
+      initial_instruction = null,
+      state_revision = state_revision + 1,
+      updated_at = now()
+  where task_id = $1
+    and admission_seq is not null
+    and status = 'starting'
+    and owner_agent_id = $2
+    and stream_owner_message_id = $3
+    and state_revision = $4
+  returning state_revision
+)
+select transitioned.state_revision, before.run_started
+from transitioned
+cross join before
+union all
+select state_revision, false
+from runtime.browser_tasks
+where task_id = $1
+  and admission_seq is not null
+  and status = 'running'
+  and owner_agent_id = $2
+  and stream_owner_message_id = $3
+  and state_revision = $5
+  and requester_source is null
+  and requester_transport is null
+  and requester_model is null
+  and requester_effective_model is null
+  and request_mode_json is null
+  and max_training_tier_json is null
+  and initial_instruction is null
+limit 1
+€æ

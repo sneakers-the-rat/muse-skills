@@ -1,0 +1,384 @@
+	failed to terminalize completed root synchronous pending children
+SELECT event_seq, event_name, source, role::text AS role, visibility::text AS visibility,
+       message_id, agent_id, parent_agent_id, parent_message_id, reply_to_message_id,
+       transcript_surface::text AS transcript_surface, payload_json,
+       (extract(epoch from created_at))::bigint AS created_at
+FROM runtime.events WHERE idempotency_key = $1
+runtime.cancellation
+SELECT ci.item_json, ci.message_source,
+       (extract(epoch from ci.created_at))::bigint AS created_at,
+       projection.client_context_json
+FROM agent.context_items AS ci
+LEFT JOIN agent.context_item_resume_projection AS projection
+  ON projection.agent_id = ci.agent_id AND projection.seq = ci.seq
+WHERE ci.agent_id = $1 AND ci.seq = $2
+cancellation retry does not match its committed identity
+SELECT
+  GREATEST(
+    (SELECT COALESCE(MAX(seq), -1) FROM context_items WHERE agent_id = $1),
+    (SELECT COALESCE(MAX(seq), -1) FROM context_item_resume_projection WHERE agent_id = $1),
+    COALESCE((SELECT handoff_context_high_water_seq FROM agent.agents WHERE agent_id = $1), -1),
+    (SELECT COALESCE(MAX(root_seq), -1) FROM agent.companion_trace_imports WHERE root_agent_id = $1),
+    (SELECT COALESCE(MAX(producer_seq), -1) FROM agent.companion_trace_imports WHERE producer_agent_id = $1),
+    COALESCE((SELECT settled_seq FROM agent.companion_trace_sources WHERE producer_agent_id = $1), -1)
+  ) AS max_item_seq,
+  COALESCE((SELECT prompt_floor_seq FROM agents WHERE id = $1), -1)
+    AS prompt_floor_seq,
+  (SELECT COALESCE(MAX(checkpoint_seq), -1)
+     FROM agent_compactions
+     WHERE agent_id = $1
+       AND checkpoint_seq IS NOT NULL
+       AND has_replacement_history)
+    AS checkpoint_seq
+max_item_seqcheckpoint_seqcontext_seqlegacy completion has no verifiable batch ownerUPDATE agent.agents SET handoff_context_high_water_seq =
+                GREATEST(COALESCE(handoff_context_high_water_seq, -1), $2)
+             WHERE agent_id = $1SELECT state, submission_json, accepted_at, transcript_event_seq,
+                    stream_owner_message_id FROM agent.message_mailbox
+             WHERE agent_id = $1 AND submission_id = $2 FOR UPDATEstartup_submission_missingsubmission_jsonreply_to_targetlegacy startup cancellation changed its replyaccepted_atinvalidinvalid startup mailbox statestartup_submission_terminalstartup_execution_ownedstartup_already_cancelledtranscript_event_seqstream_owner_message_idstartup cancellation input already has execution custodystartup_submission_changedUPDATE agent.message_mailbox SET state = 'aborted', terminalized_at = now(),
+                    transcript_event_seq = $3
+             WHERE agent_id = $1 AND submission_id = $2 AND state = 'accepted'
+               AND stream_owner_message_id IS NULL AND transcript_event_seq IS NULLstartup cancellation custody changed before commitSELECT state, submission_json, accepted_at, transcript_event_seq,
+                    stream_owner_message_id, checkpoint_custody FROM agent.message_mailbox
+             WHERE agent_id = $1 AND submission_id = $2 FOR UPDATElegacy startup quota rejection changed its replycheckpoint_custodypending startup input already has a transcript eventstartup_quota_rejectionUPDATE agent.message_mailbox SET state = 'completed', terminalized_at = now(),
+                    transcript_event_seq = $3
+             WHERE agent_id = $1 AND submission_id = $2 AND state = 'accepted'
+               AND stream_owner_message_id IS NULL AND checkpoint_custody IS NULL
+               AND transcript_event_seq IS NULLstartup quota rejection custody changed before commitproduct_admissionproduct admission continued without lifecycle trackingmissing conditional maintenance schedule statepending maintenance wake reconciliation failedmaintenance schedule-state batch check failed; seeding as first occurrencesfailed to seed maintenance occurrencemaintenance readiness cursor kept a slot that already passedmaintenance readiness planning failedinitial maintenance enrollment check failedinternal error: entered unreachable code: failed to match bind/v1/model/getmodel.get returned an empty selection/v1/credentials/user-idx-hatch-gk-assignment-confirmedruntime egress context registrationidea_execution_doctorselect b.chat_id, e.event_name, e.visibility::text AS visibility, e.payload_json, e.display_text_ready,
+        exists(select 1 from chat_private.publications p where p.event_seq = e.event_seq) as captured
+        from runtime.events e
+        join agent.agents root on root.id = coalesce(e.parent_agent_id, e.agent_id)
+        join chat_private.bindings b on b.chat_id = root.session_id
+        where e.event_seq = $1 and e.event_name in ('message.assistant', 'delta.presentation')
+          and root.kind = 'root' and root.parent_agent_id is null
+          and b.chat_id = $2 and b.provider = $3display_text_readyinsert into chat_private.publications
+        (message_id, event_seq, chat_id, context_json, request_trace_json, body, execution_id, state, content_state, display_ready)
+        select e.message_id, e.event_seq, $2, $3, $4, m.body, $5, $6, $7, $8
+        from runtime.events e join runtime.messages m using (event_seq)
+        where e.event_seq = $1 on conflict (message_id) do nothingwith content as (
+          select case when event_name = 'delta.presentation' and $3
+            then 'terminal' else $2 end as state from runtime.events where event_seq = $1
+        ) update chat_private.publications p set
+        body = m.body, content_state = content.state, display_ready = $3,
+        state = case
+          when t.disposition = 'quiet' or (t.phase = 'aborted' and (content.state <> 'terminal' or not $3))
+            or (t.phase = 'completed' and content.state = 'streaming') then 'retired'
+          when t.disposition = 'publish' and $3
+            and (content.state = 'terminal' or (t.phase = 'completed' and content.state = 'static'))
+            then case when length(trim(m.body)) = 0 then 'retired' else 'pending' end
+          else 'writing' end
+        from runtime.messages m, chat_private.publication_turns t, content
+        where p.event_seq = $1 and m.event_seq = p.event_seq
+          and t.execution_id = p.execution_id and p.state = 'writing'select case when pg_try_advisory_xact_lock_shared(hashtextextended($1, 0))
+         then pg_try_advisory_xact_lock_shared(hashtextextended($2, 0)) else false endselect exists(select 1 from chat.chats where chat_id = $1)chat owner is absent or being retiredexact_source_tripleembedding_near_dupmintedsource_kindsource_idsuperseded idea row disappeared before its rewrite could landtitleroot session has no durable public-session classificationfailed to classify root session visibilityfailed to load root session visibilityhttp://localhost/hatch/check_gatekeepersGatekeeper response was invalid; using defaultGatekeeper check failed; using defaultcaptured provider absentcaptured channel authorization retiredfailed to prefetch reply_to_target ideas for history hydrationfailed to prefetch reply_to_target feed units for history hydrationfailed to hydrate idea reply_to_targetfailed to hydrate image reply_to_targetfailed to hydrate images reply_to_target entryfailed to hydrate presentation reply_to_targetfailed to hydrate feed unit reply_to_targetfailed to prefetch reply_to_target message records for history hydrationfailed to normalize image reply_to_target pathfailed to resolve image reply_to_target pathfailed to stat image reply_to_target pathfailed to prefetch reply_to_target presentation records for history hydrationfailed to hydrate message reply_to_targetfailed to load presentation reply_to_target eventfailed to prefetch reply_to_target goals for history hydrationfailed to hydrate goal reply_to_targetfailed to load widget presentations for chat record hydrationdisplay_texttaglinedescriptionemojiIDENTITY.mdfailed to build identity.updated payloadavatar media completion attempt finishedprovider throttling also observed; avatar media completion attempt incompleteattempted_no_updateavatar media completion attempt throttledavatar media completion requires refreshed authenticationauthenticationhatchauth_requireddeferred_authfinalization_guardsupersededthe active avatar changed during the completion attemptstalefailed to resolve public session id for persisted message broadcastdropping persisted public message broadcast because owning root session could not be resolvedfailed to broadcast persisted public message for root sessionshow_do_it_buttonhide_summaryfailed to hydrate native idea widgetfailed to prefetch idea widget icon contexts for history hydrationattachment signing task failedwidget.present requires a widget idwidget.present requires a request idvoice_optionswidget.present complimentary subscription kind or delivery identity mismatchfailed to load persisted widgetvoice_genui_widget_subjectsystem widget presentation requires the primary root sessionhost_message_idchat_contextis_threadletter widget delivery marker skipped because briefing was not foundgoal_briefing_pushletter widget delivery marker could not load briefingletter widget delivery marker failedrefreshed expired shopping card image urlstext_formatheadertext_with_button header requires a non-empty title, subtitle, and iconsecondary_buttonstext_with_button widget requires non-empty secondary button URLstext_with_button widget requires non-empty secondary button labelstext_with_button widget requires a non-empty button URLtext_with_button widget requires a non-empty button labeltext_with_button widget requires non-empty texttext_with_button widget requires a request idsweep of open step attempts after terminal transition failedobjective state read failed; recurring window uses its first-run lookbacktriggerworkflow-skills-v1content_schemawindow_sincewindow_lower_boundenqueuecoalescedleaseactive_runwait_cancelledobjective_not_registeredcoalesced_into_existing_occurrencedeferred_recurring_window
+DELETE FROM search_documents
+WHERE owner_table = 'runtime.events'
+  AND owner_key = $1
+DELETE FROM resources WHERE event_seq = $1INSERT INTO resources (event_seq, ordinal, resource_kind, resource_key, label, mime_type, size_bytes, metadata_json) VALUES /__hatch/chat_context_jsonstring/__hatch/display_text_updated_at_msnumberSELECT field_path, scalar_type, scalar_value, text_value FROM event_payload_fields WHERE event_seq = $1 FOR UPDATEDELETE FROM event_payload_fields WHERE event_seq = $1 AND field_path = ANY($2::text[])field_pathscalar_typescalar_valuetext_valueINSERT INTO event_payload_fields (event_seq, field_path, scalar_type, scalar_value, text_value) VALUES  ON CONFLICT (event_seq, field_path) DO UPDATE SET scalar_type = excluded.scalar_type, scalar_value = excluded.scalar_value, text_value = excluded.text_valueruntime.search_documents.search_text
+INSERT INTO search_documents (owner_table, owner_key, search_text, language, search_vector)
+VALUES ('runtime.events', $1, $2, 'simple', to_tsvector('simple', $3))
+ON CONFLICT (owner_table, owner_key) DO UPDATE SET
+  search_text = excluded.search_text,
+  language = excluded.language,
+  search_vector = excluded.search_vector,
+  updated_at = now()
+WHERE search_documents.search_text IS DISTINCT FROM excluded.search_text
+   OR search_documents.language IS DISTINCT FROM excluded.language
+
+SELECT coalesce(f.text_value, f.scalar_value)
+FROM event_payload_fields f
+WHERE f.event_seq = $1
+  AND f.field_path = '/__hatch/chat_context_json'
+LIMIT 1
+
+UPDATE widgets
+SET state_bundle_json = $2,
+    state_version = $3,
+    state_updated_at_ms = $4,
+    updated_at_ms = $4
+WHERE widget_id = $1
+  AND state_version = $5
+RETURNING state_version
+
+SELECT state_bundle_json, state_version
+FROM widgets
+WHERE widget_id = $1
+state_bundle_jsonwidget state bundle must be a JSON objectstate_version
+INSERT INTO context_items (
+  agent_id, seq, item_kind, text_content, role, call_id, tool_name, success,
+  message_source, created_at, item_json,
+  data_fbids, data_message_ids, data_thread_ids, data_expires_at
+) VALUES  RETURNING context_item_id, seq::agent.context_item_kind, ::runtime.message_role, , to_timestamp(::double precision), ::bigint[], ::text[], ::timestamptz)context_item_id
+SELECT pg_advisory_xact_lock(hashtextextended(agent_id, $2))
+FROM unnest($1::text[]) AS locked(agent_id)
+ORDER BY agent_id
+
+WITH producer AS MATERIALIZED (
+  SELECT target.id AS agent_id,
+    CASE WHEN a.id IS NULL THEN NULL ELSE COALESCE(
+-- Highest seq of an agent's rows that no public voice import reads, or NULL
+-- when the import never reads any of them. Reads aliases `a` (the agent) and
+-- `root` (its presentation root). exempt_non_producer_rows.sql repeats it.
+CASE WHEN a.kind = 'root' AND a.depth = 0
+          AND a.agent_type = 'realtime_voice' THEN CASE
+    WHEN NOT pg_input_is_valid(a.spawn_metadata_json, 'jsonb') THEN -1
+    WHEN root.id IS NULL
+         OR a.spawn_metadata_json::jsonb #> '{realtime_voice,prompt_floor_seq}'
+            IS DISTINCT FROM to_jsonb(COALESCE(root.prompt_floor_seq, -1))
+        THEN NULL
+    WHEN pg_input_is_valid(
+        a.spawn_metadata_json::jsonb #>> '{realtime_voice,root_seed_context_seq}',
+        'bigint'
+    ) THEN GREATEST(
+        (a.spawn_metadata_json::jsonb #>> '{realtime_voice,root_seed_context_seq}')::bigint,
+        -1
+    )
+    ELSE -1
+END END
+    , 9223372036854775807) END AS exempt_through_seq
+  FROM (SELECT ::text AS id) target
+  LEFT JOIN agents a ON a.id = target.id
+  LEFT JOIN agents root ON root.id = a.presentation_root_session_id AND root.id <> a.id
+)
+INSERT INTO context_item_resume_projection (
+  agent_id, seq, context_item_id, created_at, message_source,
+  client_context_json, client_context_projected, public_import_exempt
+)
+SELECT producer.agent_id, v.seq, v.context_item_id, v.created_at, v.message_source,
+       v.client_context_json, v.client_context_projected,
+       CASE WHEN v.seq <= producer.exempt_through_seq THEN TRUE END
+FROM (VALUES ) AS v(seq, context_item_id, created_at, message_source, client_context_json,
+          client_context_projected)
+CROSS JOIN producer
+ON CONFLICT (agent_id, seq) DO UPDATE SET
+  context_item_id = excluded.context_item_id,
+  created_at = excluded.created_at,
+  message_source = COALESCE(excluded.message_source, context_item_resume_projection.message_source),
+  client_context_json = COALESCE(
+    excluded.client_context_json,
+    context_item_resume_projection.client_context_json
+  ),
+  client_context_projected = COALESCE(
+    context_item_resume_projection.client_context_projected,
+    FALSE
+  ) OR excluded.client_context_projected,
+  public_import_exempt = COALESCE(
+    context_item_resume_projection.public_import_exempt,
+    excluded.public_import_exempt
+  ),
+  updated_at = now()
+INSERT INTO context_item_resume_projection (
+  agent_id, seq, context_item_id, created_at, message_source,
+  client_context_json, reply_prefix, provenance_json,
+  client_context_projected, reply_prefix_projected, provenance_projected,
+  public_import_exempt
+)
+SELECT producer.agent_id, v.seq, v.context_item_id, v.created_at, v.message_source,
+       v.client_context_json, v.reply_prefix, v.provenance_json,
+       v.client_context_projected, v.reply_prefix_projected, v.provenance_projected,
+       CASE WHEN v.seq <= producer.exempt_through_seq THEN TRUE END
+FROM (VALUES ) AS v(seq, context_item_id, created_at, message_source, client_context_json,
+          reply_prefix, provenance_json, client_context_projected, reply_prefix_projected,
+          provenance_projected)
+CROSS JOIN producer
+ON CONFLICT (agent_id, seq) DO UPDATE SET
+  context_item_id = excluded.context_item_id,
+  created_at = excluded.created_at,
+  message_source = COALESCE(excluded.message_source, context_item_resume_projection.message_source),
+  client_context_json = excluded.client_context_json,
+  reply_prefix = excluded.reply_prefix,
+  provenance_json = excluded.provenance_json,
+  client_context_projected = excluded.client_context_projected,
+  reply_prefix_projected = excluded.reply_prefix_projected,
+  provenance_projected = excluded.provenance_projected,
+  public_import_exempt = COALESCE(
+    context_item_resume_projection.public_import_exempt,
+    excluded.public_import_exempt
+  ),
+  updated_at = now()
+
+INSERT INTO context_item_resume_projection (
+  agent_id, seq, message_source, client_context_json, reply_prefix, provenance_json,
+  client_context_projected, reply_prefix_projected, provenance_projected
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+ON CONFLICT (agent_id, seq) DO UPDATE SET
+  message_source = COALESCE(context_item_resume_projection.message_source, excluded.message_source),
+  client_context_json = excluded.client_context_json,
+  reply_prefix = excluded.reply_prefix,
+  provenance_json = excluded.provenance_json,
+  client_context_projected = excluded.client_context_projected,
+  reply_prefix_projected = excluded.reply_prefix_projected,
+  provenance_projected = excluded.provenance_projected,
+  updated_at = now()
+SELECT pg_advisory_xact_lock_shared(hashtextextended($1, 0))agent.volatile_context_pins.lifecycleSELECT pg_advisory_xact_lock(hashtextextended($1, 0))
+WITH owners AS MATERIALIZED (
+    SELECT DISTINCT agent_id COLLATE "C" AS agent_id
+    FROM unnest($1::text[]) AS input(agent_id)
+)
+SELECT pg_advisory_xact_lock(hashtextextended($2 || agent_id, 0))
+FROM owners ORDER BY agent_id COLLATE "C"
+agent.volatile_context_pins:SELECT agent_id FROM agent.agents WHERE agent_id = $1SELECT handoff_state_json -> $2::text AS state,
+                (extract(epoch FROM clock_timestamp()) * 1000)::bigint AS now_ms
+         FROM agent.subagent_spawns WHERE child_agent_id = $1 FOR UPDATEnow_msagent.subagent_spawns.handoff_state_jsonUPDATE agent.subagent_spawns
+         SET handoff_state_json = jsonb_set(COALESCE(handoff_state_json, '{}'::jsonb),
+                                           ARRAY[$2]::text[], $3::jsonb)
+         WHERE child_agent_id = $1insert into chat_private.publication_turns (execution_id, chat_id, disposition, phase)
+        select $1, $2, $3, $4 where pg_try_advisory_xact_lock_shared(hashtextextended($5, 0))
+        on conflict(execution_id) do nothing returning trueselect chat_id, phase, disposition from chat_private.publication_turns
+        where execution_id = $1 for updatechat_iddispositionphasepublication execution belongs to another chatavocado-5.17-v1-onboarding_shadowselect pg_advisory_xact_lock(4841544348435458)deleted sessions.updated events require an owner-visible deletion proofsession row unavailable for sessions.updated payloadfailed to hydrate sessions.updated payloadfailed to resolve public session id for streamed framefailed to broadcast streamed frame for root sessiondropped companion progress frame after its voice call changedruntime work observation timed out; continuing root event pumpproactivity flow changedfailed to open workflow store while suppressing cancelled async workflow handoffssuppressed async workflow terminal handoffs for cancelled source messagefailed to suppress cancelled async workflow terminal handoffsload proactive worker terminal follow-up evidencebackground job has an unsupported content localeworker_agent_idworker_generationworker_handoff_idgroup provider unavailablewhatsapp-owner-inbox-exploration-v1retaining terminal background reply with no valid destinationrefusing subagent relay delivery on a relay-fenced surfacerelay has no canonical reply identityrelay has no captured chat authorityrelay transport differs from captured authorityrelay chat owner mismatch_flight_presentationitemsflight_actionfailed to hydrate native letter widget title because briefing path is invalidfailed to hydrate native letter widget title because briefing is too largefailed to hydrate native letter widget title metadatafailed to hydrate native letter widget titlecontentfailed to hydrate native letter widget identity metadatafailed to hydrate native letter widget because briefing was not foundfailed to hydrate native letter widgetfailed to resolve Letter artifactartifact_slugfailed to hydrate native letter widget because self-improvement storage was unavailablefailed to hydrate native letter widget because relationship brief was not foundplaincomplimentary plan-name lookup failedruntime.skillsJARVIS_HOMEJARVIS_VAR_LIB_DIRCREDENTIALS_DIRECTORYJARVIS_TRACE_CONTEXTJARVIS_RUNTIME_CONTEXT_TOKENskill command runtime context registration failedfailed to load idea quality rows for HTTP feed selectionfailed to read active feed for rotation; selecting without itfailed to load persisted idea bandit state for HTTP feed selectionfailed to read idea memory affinity; ranking without the affinity termfailed to fetch ideas explore policy for HTTP feed selectiondefcon_level_3_daily_capshopping_daily_capdaily cadence read failed; admitting signal-triggered objective cyclestatusthrottledscheduler_grace_secondsprevious_cycle_idprevious_admitted_atsignal_admitted_runssignal_admission_limithatch_inference_defcon_level_3_enabledgatekeeperdefcon_cadencedaily cadence throttled objective cycledaily cadence read failed; admitting automatic objective cycleobjectivestartfailed to stamp boot generation on inline-triggered runproactivity_context_profileretired historical backfill state before objective runfailed to retire historical backfill state; continuing objective runrestart_checkpoint_parkeddurable_owner_retainedrestart_checkpoint_parked_agent_idrestart_checkpoint_parked_atprior_diagnosticsterminal_step_error_coderecovery staging lost current queue or objective lease ownershiprecovery admission cancelled after stagingrestart recovery staging write failed; retaining lease and retryingrecovery admission cancelledobjective execution gate wait cancelledqueue_claim_ownerrestart recovery admission cleanup failed; retrying atomicallyqueue_drainlease_wait_reasonlease_wait_requeued_atqueue_claim_boot_idobjective lease claim result was ambiguous; retrying the same fenced ownerrequeue_lost_racequeued self-improvement runrecovery_pending_lease_ownerbackfill_completehistorical backfill retired; pending march marked complete
+INSERT INTO requests (
+  request_id, root_request_id, parent_request_id, request_origin,
+  transcript_surface, root_work_class
+)
+VALUES ($1, $2, $3, $4, $5::runtime.transcript_surface, $6)
+ON CONFLICT (request_id) DO UPDATE SET
+  root_request_id = COALESCE(requests.root_request_id, excluded.root_request_id),
+  parent_request_id = COALESCE(requests.parent_request_id, excluded.parent_request_id),
+  request_origin = CASE
+    WHEN requests.request_origin = 'internal.runtime_replay' THEN excluded.request_origin
+    ELSE requests.request_origin
+  END,
+  transcript_surface = excluded.transcript_surface,
+  root_work_class = CASE
+    WHEN requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing'
+      THEN excluded.root_work_class
+    ELSE requests.root_work_class
+  END
+WHERE (requests.root_request_id IS NULL AND excluded.root_request_id IS NOT NULL)
+   OR (requests.parent_request_id IS NULL AND excluded.parent_request_id IS NOT NULL)
+   OR (requests.request_origin = 'internal.runtime_replay'
+       AND excluded.request_origin <> 'internal.runtime_replay')
+   OR requests.transcript_surface IS DISTINCT FROM excluded.transcript_surface
+   OR (requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing')
+call_idoutput
+INSERT INTO tool_outputs (event_seq, call_id, status, output_text, error_text, created_at)
+VALUES ($1, $2, $3, $4, $5, to_timestamp($6::double precision / 1000.0))
+ON CONFLICT (event_seq) DO UPDATE SET
+  call_id = excluded.call_id,
+  status = excluded.status,
+  output_text = excluded.output_text,
+  error_text = excluded.error_text
+arguments
+INSERT INTO tool_calls (event_seq, call_id, tool_name, status, arguments_json, created_at)
+VALUES ($1, $2, $3, 'started', $4, to_timestamp($5::double precision / 1000.0))
+ON CONFLICT (call_id) DO UPDATE SET
+  event_seq = excluded.event_seq,
+  tool_name = excluded.tool_name,
+  status = excluded.status,
+  arguments_json = excluded.arguments_json
+
+INSERT INTO chat_event_derived_write_backlog (event_seq, resources_json)
+VALUES ($1, $2)
+ON CONFLICT (event_seq) DO UPDATE SET
+  resources_json = excluded.resources_json,
+  updated_at = now()
+UPDATE chat_private.peer_conversations SET requester_chat_id = NULL
+         WHERE conversation_id = $1 AND requester_revision = $2
+           AND requester_chat_id = $3 AND NOT requester_unavailable
+           AND chat_id = $5
+           AND EXISTS (SELECT 1 FROM agent.agents
+                       WHERE id = $4 AND session_id = $3)peer handoff disagrees with its asking-chat claimpeer handoff requester changed before admissionSELECT session_id, COALESCE(prompt_floor_seq, -1) AS prompt_floor_seq,
+                kind = 'root' AND parent_agent_id IS NULL
+                AND ephemeral IS DISTINCT FROM TRUE
+                AND status NOT IN ('shutdown', 'not_found') AS eligible
+         FROM agent.agents WHERE agent_id = $1 FOR UPDATEstartup_root_changedSELECT EXISTS(SELECT 1 FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND accepted_ordinal < $2)startup mailbox promotion cannot overtake an earlier accepted input
+SELECT payload_json
+FROM agent.runtime_restart_checkpoints
+WHERE agent_id = $1
+FOR UPDATE
+
+SELECT EXISTS (
+  SELECT 1
+  FROM agent.message_mailbox
+  WHERE agent_id = $1
+    AND state = 'accepted'
+    AND accepted_ordinal < $2
+    AND (NOT $3 OR submission_kind <> 'internal_handoff')
+)
+message mailbox attachment cannot overtake an older priority peer
+INSERT INTO agent.runtime_restart_checkpoints (
+  agent_id, mode, recovery_class, recovery_owner_id, execution_config_json,
+  payload_json, created_at, updated_at
+) SELECT $1, $2, $3, $4, $5, $6, $7, $7
+WHERE EXISTS (
+  SELECT 1
+  FROM agent.agents
+  WHERE agent_id = $1
+    AND status NOT IN ('shutdown', 'not_found')
+)
+ON CONFLICT (agent_id) DO NOTHING
+SELECT EXISTS (SELECT 1 FROM agent.agents WHERE agent_id = $1 AND status NOT IN ('shutdown', 'not_found'))conversation epoch
+INSERT INTO agent.message_mailbox (
+  submission_id, agent_id, conversation_epoch, submission_kind,
+  routing_scope, state, checkpoint_custody, stream_owner_message_id,
+  submission_json, transcript_event_seq, attached_at
+) VALUES (
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+  CASE WHEN $6 = 'attached' THEN now() ELSE NULL END
+)
+ON CONFLICT (submission_id) DO NOTHING
+RETURNING accepted_ordinal, accepted_at
+startup mailbox promotion requires its previously accepted input
+SELECT agent_id, conversation_epoch, submission_kind, routing_scope,
+       state, stream_owner_message_id, submission_json,
+       transcript_event_seq, accepted_ordinal, accepted_at
+FROM agent.message_mailbox
+WHERE submission_id = $1
+FOR UPDATE
+update chat.message_bindings set admitted_at = coalesce(admitted_at, now())
+                    where jarvis_message_id = $1 and chat_id = $2 and binding_epoch = $3 and transport = $4binding epochconversation_epochsubmission_kindrouting_scope
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = $5,
+    stream_owner_message_id = $2,
+    submission_json = $3,
+    transcript_event_seq = coalesce($4, transcript_event_seq),
+    attached_at = now()
+WHERE submission_id = $1
+  AND state = 'accepted'
+  AND stream_owner_message_id IS NULL
+mailbox stream ownerselect a.account_id from chat_private.accounts a
+             join chat_private.binding_authorizations b on b.provider = a.provider and b.account_id = a.account_id
+             where b.provider = $1 and b.binding_id = $2
+               and a.connection_id = $3 and not a.revoked for share of adirect input has no captured binding epochaccount_retiredselect connection_id, generation, transport_json, delivery_target
+             from chat_private.binding_authorizations
+             where provider = $1 and binding_id = $2 and chat_id = $3
+               and account_id = $4 and external_kind = 'direct' and participation = 'active'
+             for shareaccount_authorization_retiredtransport_jsontransport_authorization_absentconnection_idgenerationdelivery_targetselect epoch from chat_private.bindings
+         where chat_id = $1 and provider = $2 and not revoked for sharetransport_authorization_changedbinding_retireddatabase write admission gate closedadmission_timeoutassert_table_existstable_presence.querycontext.subscription.advance_to_nowinsert into context.subscription_sources
+        (subscription_id, source_id, active, start_position, discovery_position)
+        select $1, s.id, true, boundary.position, boundary.position
+        from (select id, last_append_position from context.sources
+          where ($2 or source_domain = any($3)) and not exists
+            (select 1 from context.subscription_sources ss where ss.subscription_id = $1 and ss.source_id = context.sources.id)
+          order by id for update) s
+        cross join lateral (select case
+          when $4 then s.last_append_position
+          when $5::timestamptz is null then 0
+          else coalesce((select min(e.append_position) - 1 from context.events e
+            where e.source_id=s.id and e.ingested_at > $5
+              and e.append_position <= s.last_append_position), s.last_append_position)
+          end as position) boundary
+        on conflict do nothingselect ss.source_id, ss.start_position, ss.discovery_position, s.last_append_position
+        from context.subscription_sources ss join context.sources s on s.id = ss.source_id
+        where ss.subscription_id = $1 and ss.active and ss.discovery_position < s.last_append_position
+        order by ss.discovered_at nulls first, ss.source_id limit 1start_positiondiscovery_positionlast_append_positionwith page as materialized (
+            select group_id, append_position, content_hints from context.events
+            where source_id = $1 and append_position > $2 and append_position <= $3
+            and (expires_at is null or expires_at > statement_timestamp())
+            order by append_position limit 1000
+        ), heads as (
+            insert into context.group_cursors
+                (subscription_id, source_id, group_id, acknowledged_position, available_position)
+            select $4, $1, group_id, $5, max(append_position) from page
+            where ($6 or content_hints && $7::text[]) group by group_id
+            on conflict (subscription_id,source_id,group_id) do update
+                set available_position = greatest(context.group_cursors.available_position, excluded.available_position)
+            returning available_position
+        ) select case when count(*) < 1000 then $3 else max(append_position) end from pageupdate context.subscription_sources set discovery_position = $3, discovered_at = clock_timestamp()
+            where subscription_id = $1 and source_id = $2select exists(select 1 from context.subscription_sources ss
+        join context.sources s on s.id = ss.source_id where ss.subscription_id = $1
+        and ss.active and ss.discovery_position < s.last_append_position)context.subscription.readinessGoalsRevised memoryMemory changesChanged since preparationstandaloneclient rendering snapshot read failed; keeping lifts inline this turnproactive_notifierOnly Internal announcements accept fallback copyInternal announcement requires public fallback copyinternal_fallback_messageInternal fallback exceeds message limitWWW messages require agent-written deliveryInternal announcement requires delivery instructionsInternalWorker priority is reserved for worker owner noticesInternal priority is reserved for code-owned main-chat deliveriesfollow-up metadata must be a JSON objectfollow-up must expire after it becomes deliverablefollow-up message must not be emptyfollow-up key must not be emptyfollow-up producer must not be emptyhardcoded product campaign producer is retiredpresentation_localeenqueue follow-upfollow-up enqueued but the delivery worker could not be kickedfailed to read user time file for proactive delivery timezonespace_preview_repairspace preview repair: handler not registeredspace preview repair: handler registry unavailablespace_preview_missingspace preview repair: runtime work store unavailablequeued Space preview repairspace preview repair: seeding failedspace preview repair: catalog read failed on viewtrigger_input_telemetryself_improvement_baseline_ideasbaseline_skip_gatebounded_telemetry_readpublic_user_message_count_boundedpublic_user_message_count_limitlatest_actioned_idea_event_created_atactioned_idea_count_since_last_run_boundedactioned_idea_event_scan_limithas_any_active_goalgoals_max_updated_atinput_fingerprint_changedfingerprint_basisobjective_last_run_utcpublic_chat_signal_sourcelatest_public_user_turn_newer_than_last_runlatest_idea_event_created_atactive_client_countactive_client_app_idslast_active_connection_timestamp_mslast_in_process_user_message_at_msactive_session_started_at_msstripe-linkinspectStripe Link connection inspection failedStripe Link connection status failedconnector_call_reasonIdea catalog sharing context read failedIdea share variant projection read failedIdea share revision projection read failedIdea direct sharing read failedIdea publication hold read failedideas_null_state_relevanceideas null-state relevancecancelledhatch-engine/crates/hatch-server/prompts/self_improvement/ideas_null_state_relevance.mdself_improvement/ideas_null_state_relevance.md{{CANDIDATE_CARDS_JSON}}ideas null-state relevance payload failed; treating all relevance as 0ideas null-state relevance attempt failed; retrying with a fresh turnideas null-state relevance declined; treating all relevance as 0failed to read idea build statuses for Ideas tab cardsexplore_defaultfailed to read idea card item selectionsself_improvement.ideasgenerated_cardidea_cards.recent_rowsfailed to hydrate idea card tag iconsbundled_new_user.null_stateidea cards feed assembling category rowspreserving pinned eval-fixture Ideas feed; skipping rematerializeskipping Ideas feed rematerialize while limited feed is activefailed to hydrate idea card item badgesfailed to hydrate idea card source metadataapi.idea_cards_materialized_fallback_tailideas.dormant_cadenceskipping maintenance Ideas feed rematerialize while limited feed is activeIdeas feed already composed for this run; skipping rematerializeidea_cards.snapshot_publishidea cards snapshot publish skipped cards without feed-eligible backing rowsidea cards snapshot publish skipped incomplete row sectionsideas feed composer payload failed; rendering deterministic feedideas feed composer plan acceptedideas feed composer plan decode failed; rendering deterministic feedvector_count_mismatchfailed to load idea grounding facts for diversityclusteredclustered_partialexact_onlyexact_only_partialskipped_unavailableunknownideas semantic fact clusteringmaintenance scheduler could not open runtime work storecontext notification listener disconnected; reconnectingcontext subscription scheduling failed; retrying after backoffqueued daily wake could not be read for the phase movequeued daily wake moved to the resolved daily phaseruntime work terminal outbox is corrupt; settling without publishing itsynthetic_abort_pendingsynthetic_abort_publishedsynthetic_abort_supersededsynthetic_abort_invalidstale stream carrier lacks message identity; terminalizing without a synthetic abort eventfailed to serialize stale runtime work terminal eventruntime work stale timeout could not persist terminal intent; retrying laterruntime work supervisor rehydrated stale DB work rowsruntime work supervisor purged terminal DB work rowsruntime work process-event observer stoppedSELECT payload_json FROM runtime_restart_checkpoints WHERE agent_id = $1 FOR UPDATESELECT submission_json, octet_length(submission_json)::bigint AS serialized_bytes
+         FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND submission_id <> $2startup_queue_fulldue-occurrence coalesce check failed; seeding immediate occurrence anywaymaintenance readiness unknown; preserving scheduled checkdeferred maintenance readiness deadline is not in the futuredeferred maintenance readiness reason changeddeferred maintenance occurrence collided with terminal workconditional maintenance cursor collided with completed work

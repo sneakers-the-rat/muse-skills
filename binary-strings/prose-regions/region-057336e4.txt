@@ -1,0 +1,86 @@
+patchgetdescriptiondeleteinternal error: entered unreachable codeSocialSourceIconPathsourceFeedUnitTapHttpRequestFeedTemplateSlotHttpkeylabeldefault_valueFeedTemplateSpecialSlotHttpslot_idtitlecadencetemplate_idslotsspecial_slotsslot_alternatestemplatesformatlongitudeactionEndpointactionStreamEndpointhatchContextRenameSpaceRequestshortcodeshare_urlactioninternally tagged enum ParticipationRequestparticipationpresentationArtifactPlacementRequestartifact_refplacementpresentacceptignorefield index 0 <= i < 2expected_revisionfield index 0 <= i < 3}falseunclassifiednot_foundfeed.move_unit_to_positiongave up waiting for a socket-activated service to answerstill waiting for a socket-activated service to answersocket-activated service answered after waitingall branches are disabled and there is no else branchbackground task failederrorsuccessartifact catalog: could not resolve file artifact identities; projecting those nodes without onewrite_admissionwritepostgres write completed slowlypostgres write failedretrying idempotent postgres writehatch:db:operationen-USinternal_errorone-shot postgres write invoked more than oncelist goals before deletelist goal briefings before deletedelete goal Letter artifactdelete goalinvalid_paramsselect edition_local_date from feed.units where unit_id = $1unit_id, run_id, prompt_id, edition_kind, edition_local_date, edition_generated_at_ms, position, manual_order, kicker, title, body_md, attachment_kind, header_image_path, video_media_path, image_urls, carousel_clip_paths, widget_html, social_embed_url, social_thumbnail_url, social_thumbnail_aspect_ratio, social_attribution_text, social_post_username, category, connector_attribution, stats, source_post_url, source_idea_id, why_did_i_see_this, emoji, icon_key, reaction, reaction_updated_at_ms, seen_at_ms, share_count, discuss_count, origin, source_fleet_origin_id, source_url_keys, activity_tier, beat, reader_response, stake_type, act_by, share_instructions, share_artifact_generated_at_ms, share_artifact_stale, created_at_ms, updated_at_msfrom feed.units units
+                     left join (
+                       select unit_id as placed_unit_id,
+                              manual_order as placed_manual_order
+                       from feed.promptless_unit_orders
+                       where prompt_id = $1
+                     ) placements on placements.placed_unit_id = units.unit_id
+                     where (units.prompt_id = $1 or units.prompt_id is null)
+                       and edition_local_date = any($2)
+                     order by edition_local_date desc,
+                              coalesce(units.manual_order, placements.placed_manual_order)
+                                asc nulls last,
+                              edition_generated_at_ms desc, position asc, units.unit_id ascupdate feed.units u
+                         set manual_order = v.manual_order,
+                             updated_at_ms = $3
+                         from unnest($1::text[], $2::float8[]) as v(unit_id, manual_order)
+                         where u.unit_id = v.unit_id and u.prompt_id = $4insert into feed.promptless_unit_orders
+                           (prompt_id, unit_id, local_date, manual_order)
+                         select $1, v.unit_id, $2, v.manual_order
+                         from unnest($3::text[], $4::float8[]) as v(unit_id, manual_order)
+                         on conflict (prompt_id, unit_id)
+                           do update set manual_order = excluded.manual_ordergoal_idstatuscompletedcompleted_atinsert into goals.engagement_events
+                     (event_id, goal_id, event_type, surface, value, request_id, metadata,
+                      created_at)
+                     values ($1, $2, $3, $4, $5, $6, $7, coalesce($8::timestamptz, now()))
+                     returning event_id, goal_id, event_type, surface, value, request_id, metadata,
+                               created_at::text as created_atwith recursive selected(goal_id) as (
+                         select goal_id
+                         from goals.goals
+                         where goal_id = $1
+                         union
+                         select child.goal_id
+                         from goals.goals child
+                         join selected parent on child.parent_goal_id = parent.goal_id
+                         where $2
+                     )
+                     select goal.goal_id, goal.parent_goal_id, goal.source, goal.title,
+                            goal.summary, goal.description, goal.pushable, goal.status,
+                            goal.completed_at
+                     from goals.goals goal
+                     join selected on selected.goal_id = goal.goal_id
+                     order by goal.goal_id
+                     for update of goalsummaryparent_goal_idselect source from goals.goals where goal_id = $1goal cannot be its own parentgoal_id, source, attention_kind, attention_updated_at::text as attention_updated_at, next_due_at::text as next_due_at, escalation, slug, title, summary, description, momentum, momentum_status, emoji, image_relpath, icon_generation_status, status, created_at, updated_at, last_activity_at, pushable, parent_goal_id, sort_order, fixed_position, category, goal_kind, value_alignment, review_cadence, completed_atrequested source must match the parent; detach or choose a matching parentselect coalesce(max(sort_order), -1)::double precision + 1
+                             from goals.goals
+                             where parent_goal_id is not distinct from $1
+                               and source = $2
+                               and goal_id <> $3update goals.goals set source = $2, updated_at = $3,
+                                updated_at_ts = $4 where goal_id = any($1)update goals.goals goal
+                     set title = case
+                           when goal.goal_id = $1 then coalesce($2, goal.title)
+                           else goal.title
+                         end,
+                         summary = case
+                           when goal.goal_id = $1 then coalesce($3, goal.summary)
+                           else goal.summary
+                         end,
+                         description = case
+                           when goal.goal_id = $1 then coalesce($4, goal.description)
+                           else goal.description
+                         end,
+                         pushable = case
+                           when goal.goal_id = $1 then coalesce($5, goal.pushable)
+                           else goal.pushable
+                         end,
+                         parent_goal_id = case
+                           when goal.goal_id = $1 and $6 then $7
+                           else goal.parent_goal_id
+                         end,
+                         sort_order = case
+                           when goal.goal_id = $1 then coalesce($8, goal.sort_order)
+                           else goal.sort_order
+                         end,
+                         fixed_position = case
+                           when goal.goal_id = $1 and $15 then $16
+                           else goal.fixed_position
+                         end,
+                         status = mutation.status,
+                         completed_at = mutation.completed_at,
+                         completed_at_ts = mutation.completed_at_ts,
+                         updated_at = mutation.updated_at,
+                         updated_at_ts = mutation.updated_at_ts
+                     from unnest($9::text[], $10::text[], $11::text[], $12::timestamptz[],
+                                 $13::text[], $14::timestamptz[])
+                       as mutation(goal_id, status, completed_at, completed_at_ts,
+                                   updated_at, updated_at_ts)
+                     where goal.goal_id = mutation.goal_idmust be one of `active`, `paused`, `retired`, or `completed`spacesaved_spaceresolve pathpath escapes mount rootforbiddeninference-proxy returned an invalid model selection routedelete goal cron definitionslist ideas by idsspawn find for fs query scanfind stderr pipe unavailableread find stdout for fs query scanwait for fs query scanread find stderr for fs query scanfind stdout pipe unavailableread directory entrystat directoryshopping_results_v2navigationnavigation.scheduled_tasknode_card.notification_opt_inGatekeeper response omitted requested gate; using defaultread file artifact stateread artifact placementread saved artifact stateread share linkread saved artifactread artifact user statelist saved artifactshost cron definition store integration is unavailableauthoritative Space cron cleanup commit failedauthoritative Space cron cleanup preflight failedensure goal workspaceload goal update by iddelete goal updatelist goal pagelist goal page childrenload goal by idlist goal suggestionslist goal briefingslist goal updateslist goalsreorder goalupdate goal updateupdate goal momentumupdate goalupdate goal escalationload tracking goal for lifecycle transitionset tracking goal lifecycleparent_current_stateload parent goal for rollup activitymust be `active` or `completed` for a tracking lifecycle transitioncompare and set tracking goal with lifecycle copycompare and set tracking goalload subgoal rollup activityload goal for momentum updateclear goal escalation on completioninsert goal updateload goal for updateload goal session mappings by root goal idsload goal session mapping by root goal idresolve root goal parentadd goal briefingupdate goal briefinglist pushable goal briefingsgoal guide path has no parentlist authoritative cron definitionsread authoritative cron definitionretire authoritative cron definitionlist space-owned definitionscloudflare takedown request failedstat filestat fs.find scan segmenthttpsruntime.artifact_share_statedecode artifact sharingread artifact sharingfailed to load recent parent activity for subgoal rollupfailed to load goal for pulse/attention inferencefailed to load recent activity for pulse/attention inferenceheartbeatvertical_dataurlinstagramthreadsartifact_busyspaces_disabledsidebar_fullmissing auth tokenpath is not accessibleputthe store reported an absence for a put/definitions/deletethe cron definition does not exist/definitions/listthe store reported an absence for a listingUDS HTTP request path must start with '/'acquired connection, but time to acquire exceeded slow thresholdacquired connectionengagement.recordgoal engagement event requires a non-empty request_id for run-grounding attributionsort_order asc, goal_id asccase attention_kind when 'user_action_required' then 0 when 'action_required' then 0 when 'new_information' then 1 else 2 end asc, case when next_due_at is not null and next_due_at <= now() + interval '30 days' then next_due_at else timestamptz '9999-12-31' end asc, coalesce(last_activity_at_ts, updated_at_ts, updated_at::timestamptz) desc, sort_order asc, goal_id ascfixed_position asc nulls last, case when fixed_position is not null then goal_id end ascgoals.list_render_by_sourcegoals.compare_and_set_metadataunconditional goal metadata patch returned a guarded CAS outcomegoals.compare_and_set_metadata_and_insert_activitygoals.update_metadata_and_insert_activity_if_changedscheduleroptional model fallback setup timed out; using primary route; goal idgoal sluginference/v1/model/getmodel.get returned an empty selectioncredentials/v1/auth-file/getx-hatch-gk-assignment-confirmedcron grant revocationcron grant revocation requires a schedule idArtifact grant revocationArtifact grant revocation requires a Space slug

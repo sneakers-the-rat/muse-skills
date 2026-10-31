@@ -1,0 +1,18 @@
+errorsuccesscontent_referenceresult_count_mismatchwrite_admissionwritepostgres write completed slowlypostgres write failedretrying idempotent postgres writeone-shot postgres write invoked more than onceread_failed`DateTime + TimeDelta` overflowedhatch_context_committedselect id, source_domain, source_key as key, display_name, created_at::text as created_at
+                 from context.sources where id = $1select id, source_domain, source_key as key, display_name, created_at::text as created_at
+                 from context.sources where ($1::text is null or id > $1) order by id limit $2select s.id, s.source_domain, s.source_key as key,
+                    s.display_name, s.created_at::text as created_at,
+                    array_agg(e.id order by array_position($1, e.id)) as event_ids
+                 from context.sources s join context.events e on e.source_id=s.id
+                 where e.id = any($1) group by s.id
+                 order by s.idnotificationnotificationssmswith expired as (
+                select id from context.events where expires_at <= statement_timestamp()
+                order by expires_at, id limit 1000 for update skip locked
+            ) delete from context.events e using expired where e.id = expired.ididselect id,source_domain,source_key as key,display_name,
+                created_at::text as created_at from context.sources where id=$1not exists (select 1 from context.events newer
+    where newer.source_id=e.source_id and newer.group_id=e.group_id
+      and newer.append_position > e.append_position)
+    and not exists (select 1 from context.group_cursors g
+      join context.subscriptions s on s.id=g.subscription_id
+      where s.subscription_key='proactivity' and g.source_id=e.source_id
+        and g.group_id=e.group_id and g.available_position > e.append_position)€®

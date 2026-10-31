@@ -1,0 +1,157 @@
+select task.task_id from runtime.browser_tasks task where task.admission_seq is not null and task.is_task_card_visible and task.status <> 'parked_outcome' and ($1::text is null or task.admission_seq <= (select boundary.admission_seq from runtime.browser_tasks boundary where boundary.task_id = $1)) and not exists (select 1 from runtime.events event where event.idempotency_key = case
+                           when task.card_generation = 0 then
+                             'browser-task:' || task.task_id
+                           else
+                             'browser-task:' || task.task_id || ':card:' || task.card_generation
+                         end and event.event_name = 'delta.presentation') order by task.admission_seq
+select task.task_id,
+       task.card_generation,
+       task.admission_seq,
+       event.event_seq,
+       (extract(epoch from event.created_at) * 1000)::bigint as occurred_at_ms,
+       event.payload_json
+from runtime.browser_tasks task
+join runtime.events event
+  on event.idempotency_key = case
+    when task.card_generation = 0 then 'browser-task:' || task.task_id
+    else 'browser-task:' || task.task_id || ':card:' || task.card_generation
+  end
+ and event.event_name = 'delta.presentation'
+where task.presentation_root_session_id = $1
+  and task.admission_seq is not null
+  and task.is_task_card_visible
+  and event.payload_json is not null
+  and task.status in (
+    'queued', 'starting', 'running', 'user_controlled', 'parked_outcome'
+  )
+  and (
+    $2::bigint is null
+    or (task.admission_seq, task.task_id) > ($2, $3)
+  )
+order by task.admission_seq, task.task_id
+limit $4
+
+with candidate_events as (
+  select task.task_id,
+         task.card_generation,
+         event.payload_json,
+         task.updated_at,
+         false as retained_outcome_tombstone
+  from runtime.browser_tasks task
+  left join runtime.events event
+    on event.idempotency_key = case
+      when task.card_generation = 0 then 'browser-task:' || task.task_id
+      else 'browser-task:' || task.task_id || ':card:' || task.card_generation
+    end
+   and event.event_name = 'delta.presentation'
+  left join runtime.events tombstone_event
+    on tombstone_event.idempotency_key = case
+      when task.card_generation = 0 then 'browser-task-tombstone:' || task.task_id
+      else 'browser-task-tombstone:' || task.task_id || ':card:' || task.card_generation
+    end
+   and tombstone_event.event_name = 'delta.presentation'
+  where task.browser_session_id = $1
+    and task.admission_seq is not null
+    and task.is_task_card_visible
+    and task.status = 'superseded'
+    and task.terminal_reason = 'user_stop'
+    and tombstone_event.event_seq is null
+
+  union all
+
+  select task.task_id,
+         task.card_generation,
+         event.payload_json,
+         task.updated_at,
+         true as retained_outcome_tombstone
+  from runtime.browser_tasks task
+  left join runtime.events event
+    on event.idempotency_key = case
+      when task.card_generation = 0 then 'browser-task:' || task.task_id
+      else 'browser-task:' || task.task_id || ':card:' || task.card_generation
+    end
+   and event.event_name = 'delta.presentation'
+  left join runtime.events tombstone_event
+    on tombstone_event.idempotency_key = case
+      when task.card_generation = 0 then 'browser-task-tombstone:' || task.task_id
+      else 'browser-task-tombstone:' || task.task_id || ':card:' || task.card_generation
+    end
+   and tombstone_event.event_name = 'delta.presentation'
+  left join runtime.event_payload_fields card_updated_at
+    on card_updated_at.event_seq = event.event_seq
+   and card_updated_at.field_path = '/data/updated_at_ms'
+   and card_updated_at.scalar_type = 'number'
+  left join runtime.event_payload_fields card_status
+    on card_status.event_seq = event.event_seq
+   and card_status.field_path = '/data/status'
+   and card_status.scalar_type = 'string'
+  left join runtime.event_payload_fields live_preview
+    on live_preview.event_seq = event.event_seq
+   and live_preview.field_path = '/data/preview_available'
+   and live_preview.scalar_type = 'bool'
+   and live_preview.scalar_value = 'true'
+  where task.browser_session_id = $1
+    and task.admission_seq is not null
+    and task.is_task_card_visible
+    and task.status in ('needs_user', 'completed', 'failed')
+    and (
+      task.outcome_status = task.status
+      or (
+        task.status = 'failed'
+        and task.outcome_status = 'needs_user'
+        and task.outcome_reason is null
+        and task.terminal_reason is not null
+      )
+    )
+    and task.retention_end_reason is not null
+    and task.completed_at is not null
+    and task.deadline_at is null
+    and tombstone_event.event_seq is null
+    and (
+      event.event_seq is null
+      or event.payload_json is null
+      or coalesce(card_status.text_value, card_status.scalar_value)
+        is distinct from case task.status
+        when 'needs_user' then 'Needs user'
+        when 'completed' then 'Completed'
+        when 'failed' then 'Failed'
+      end
+      or card_updated_at.scalar_value is distinct from
+        ((extract(epoch from task.updated_at) * 1000)::bigint)::text
+      or live_preview.event_seq is not null
+    )
+)
+select candidate.task_id,
+       candidate.card_generation,
+       candidate.payload_json,
+       candidate.retained_outcome_tombstone
+from candidate_events candidate
+order by candidate.updated_at desc, candidate.task_id
+eventbrowser_monitor.rollover_task_cardacquired connection, but time to acquire exceeded slow thresholdacquired connectionbrowser_monitor.taskbrowser_monitor.update_projectionbrowser_monitor.active_for_sessionbrowser_monitor.unprojected_cardsbrowser_monitor.card_hydration_pagebrowser_monitor.terminal_card_repair_candidateswith content as (
+          select case when event_name = 'delta.presentation' and $3
+            then 'terminal' else $2 end as state from runtime.events where event_seq = $1
+        ) update chat_private.publications p set
+        body = m.body, content_state = content.state, display_ready = $3,
+        state = case
+          when t.disposition = 'quiet' or (t.phase = 'aborted' and (content.state <> 'terminal' or not $3))
+            or (t.phase = 'completed' and content.state = 'streaming') then 'retired'
+          when t.disposition = 'publish' and $3
+            and (content.state = 'terminal' or (t.phase = 'completed' and content.state = 'static'))
+            then case when length(trim(m.body)) = 0 then 'retired' else 'pending' end
+          else 'writing' end
+        from runtime.messages m, chat_private.publication_turns t, content
+        where p.event_seq = $1 and m.event_seq = p.event_seq
+          and t.execution_id = p.execution_id and p.state = 'writing'
+select event_seq
+from runtime.events
+where idempotency_key = $1
+  and message_id = $1
+  and event_name = 'delta.presentation'
+  and transcript_surface = 'main_chat'
+  and visibility = 'public'
+  and role = 'assistant'
+  and source = 'runtime'
+  and parent_agent_id = $2
+  and (parent_message_id is null or trim(parent_message_id) = '')
+for update
+€

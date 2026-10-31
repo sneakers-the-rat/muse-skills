@@ -1,0 +1,130 @@
+numberstringarrayobject
+SELECT
+  e.event_seq AS seq,
+  (extract(epoch from e.created_at) * 1000)::bigint AS occurred_at_ms,
+  e.event_name,
+  e.visibility::text AS visibility,
+  coalesce(e.role::text, m.role::text, 'system') AS role,
+  e.source,
+  e.stream_lane,
+  e.transcript_surface::text AS transcript_surface,
+  e.request_id,
+  e.root_request_id,
+  e.parent_request_id,
+  coalesce(e.message_id, m.message_id, '') AS message_id,
+  e.reply_to_message_id,
+  e.reply_target_message_id,
+  e.agent_id,
+  e.parent_agent_id,
+  e.parent_message_id,
+  case
+    when derived_backlog.event_seq is not null
+    then coalesce(e.payload_json, '{}'::text)
+    else '{}'::text
+  end AS payload_json,
+  CASE
+    WHEN e.event_name = 'delta.presentation' THEN NULLIF(m.body, '')
+    ELSE m.body
+  END AS display_text,
+  case when e.display_text_ready then 1::bigint else 0::bigint end AS display_text_ready,
+  null::bigint AS display_text_updated_at_ms,
+  coalesce(e.idempotency_key, e.event_id::text) AS idempotency_key,
+  channel_ctx.chat_context_json,
+  coalesce(
+    nullif(channel_ctx.chat_context_json::jsonb ->> 'origin_provider', ''),
+    nullif(channel_ctx.chat_context_json::jsonb ->> 'provider', ''),
+    external_transport.provider
+  ) AS origin_provider,
+  e.chat_kind,
+  mr.reaction_emoji
+FROM events e
+
+LEFT JOIN messages m ON m.event_seq = e.event_seq
+LEFT JOIN chat_event_derived_write_backlog derived_backlog ON derived_backlog.event_seq = e.event_seq
+LEFT JOIN message_reactions mr ON mr.message_id = coalesce(e.message_id, m.message_id)
+LEFT JOIN LATERAL (
+  SELECT coalesce(
+    (
+      SELECT coalesce(ctx_field.text_value, ctx_field.scalar_value)
+      FROM event_payload_fields ctx_field
+      WHERE ctx_field.event_seq = e.event_seq
+        AND ctx_field.field_path = '/__hatch/chat_context_json'
+      LIMIT 1
+    ),
+    e.chat_context_json,
+    nullif((e.payload_json::jsonb -> 'chat_context')::text, 'null')
+  ) AS chat_context_json
+) channel_ctx ON true
+LEFT JOIN LATERAL (
+  SELECT c.provider
+  FROM chat.event_transports c
+  WHERE c.event_seq = e.event_seq
+    AND nullif(c.provider, '') IS NOT NULL
+    AND c.provider <> 'main'
+  ORDER BY c.provider ASC
+  LIMIT 1
+) external_transport ON true
+~0~1/~/delta_state/transcript/message_idmain_chatassistantchannelchat_kindgroupemailunknowntranscript_surfacechat_event row missing valid transcript surface metadatafailedinterruptedstreaming
+SELECT
+  e.event_seq AS seq,
+  (extract(epoch from e.created_at) * 1000)::bigint AS occurred_at_ms,
+  e.event_name,
+  e.visibility::text AS visibility,
+  coalesce(e.role::text, m.role::text, 'system') AS role,
+  e.source,
+  e.stream_lane,
+  e.transcript_surface::text AS transcript_surface,
+  e.request_id,
+  e.root_request_id,
+  e.parent_request_id,
+  coalesce(e.message_id, m.message_id, '') AS message_id,
+  e.reply_to_message_id,
+  e.reply_target_message_id,
+  e.agent_id,
+  e.parent_agent_id,
+  e.parent_message_id,
+  coalesce(e.payload_json, '{}'::text) AS payload_json,
+  CASE
+    WHEN e.event_name = 'delta.presentation' THEN NULLIF(m.body, '')
+    ELSE m.body
+  END AS display_text,
+  case when e.display_text_ready then 1::bigint else 0::bigint end AS display_text_ready,
+  null::bigint AS display_text_updated_at_ms,
+  coalesce(e.idempotency_key, e.event_id::text) AS idempotency_key,
+  channel_ctx.chat_context_json,
+  coalesce(
+    nullif(channel_ctx.chat_context_json::jsonb ->> 'origin_provider', ''),
+    nullif(channel_ctx.chat_context_json::jsonb ->> 'provider', ''),
+    external_transport.provider
+  ) AS origin_provider,
+  e.chat_kind,
+  mr.reaction_emoji
+FROM events e
+
+LEFT JOIN messages m ON m.event_seq = e.event_seq
+LEFT JOIN chat_event_derived_write_backlog derived_backlog ON derived_backlog.event_seq = e.event_seq
+LEFT JOIN message_reactions mr ON mr.message_id = coalesce(e.message_id, m.message_id)
+LEFT JOIN LATERAL (
+  SELECT coalesce(
+    (
+      SELECT coalesce(ctx_field.text_value, ctx_field.scalar_value)
+      FROM event_payload_fields ctx_field
+      WHERE ctx_field.event_seq = e.event_seq
+        AND ctx_field.field_path = '/__hatch/chat_context_json'
+      LIMIT 1
+    ),
+    e.chat_context_json,
+    nullif((e.payload_json::jsonb -> 'chat_context')::text, 'null')
+  ) AS chat_context_json
+) channel_ctx ON true
+LEFT JOIN LATERAL (
+  SELECT c.provider
+  FROM chat.event_transports c
+  WHERE c.event_seq = e.event_seq
+    AND nullif(c.provider, '') IS NOT NULL
+    AND c.provider <> 'main'
+  ORDER BY c.provider ASC
+  LIMIT 1
+) external_transport ON true
+parts
+outputsuccesstool_outputargumentstool_calltext_segmentsdata_thread_idscontext_item_idapplication/octet-streamimageskipping corrupted agent itemmessage_sourceitem_jsonSELECT seq, (extract(epoch from created_at))::bigint AS created_at FROM context_items WHERE agent_id =  AND seq IN (hatch.context_items.sequencefbidsmessage_idsthread_idsexpires_atruntime.side_chat_mainruntime.side_thread_mainruntime.side_threadInternal System Context - a side chat was created with chat_id:Internal System Context - a side chat was created with thread_id:] runtime.events.payload_jsonforked message payload_json must be an objectfreshcanonical_context_item_idprojected_context_item_idcanonical_created_atprojected_message_sourcecanonical_message_sourcereply_prefixclient_context_projectedreply_prefix_projectedprovenance_projectedreply_to_targetspace_generation_funnel_summary_projectionattempt_budget_exhausteddata-call-id="voice_call_idcallIdchild_context_seqs/metadata/subagent_completion_identity/payload_sha256/metadata/subagent_completion_child_agent_ids/metadata/subagent_completion_context_seqsinvalid handoff payload digestevent hatch-engine/crates/hatch-db-conversations/src/agent_state/context_items.rs:2861hatch_db_conversations::agent_state::context_itemsmax_item_json_byteshatch-engine/crates/hatch-db-conversations/src/agent_state/context_items.rsevent hatch-engine/crates/hatch-db-conversations/src/agent_state/subagent_status_views.rs:888hatch_db_conversations::agent_state::subagent_status_viewsroot_request_idroot_request_originhatch-engine/crates/hatch-db-conversations/src/agent_state/subagent_status_views.rsevent hatch-engine/crates/hatch-db-conversations/src/agent_state/context_items.rs:62erroritem_json_len

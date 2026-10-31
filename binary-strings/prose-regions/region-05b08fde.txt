@@ -1,0 +1,140 @@
+
+insert into runtime.browser_tasks (
+    task_id, browser_session_id, root_session_id, presentation_root_session_id,
+    owner_agent_id, root_message_id, stream_owner_message_id, parent_agent_id,
+    tool_call_id, continuation_root_task_id, admission_seq, status, title,
+    initial_instruction, run_presentation_locale, owner_kind,
+    request_trace_context_json, run_location_context_json, is_task_card_visible,
+    browser_harness_kind, browser_harness_version
+) values (
+    $1, 'default', $2, $2, null, $1, $1, $2,
+    $1, $1, nextval('runtime.browser_tasks_admission_seq_seq'), 'starting',
+    'Browser', 'Open browser', $3, 'user', $4, $5, false, $6, $7
+)
+on conflict (task_id) do nothing
+queuedrunningclient browser lease has invalid reserved ownership or lifecycle
+select outcome_at + ($5::bigint * interval '1 second') <= now()
+from runtime.browser_tasks
+where task_id = $1
+  and admission_seq is not null
+  and owner_agent_id is not distinct from $2
+  and stream_owner_message_id = $3
+  and state_revision = $4
+  and status = 'user_controlled'
+  and outcome_status is not null
+  and completed_at is null
+for update
+
+update runtime.browser_tasks
+set status = $8,
+    terminal_reason = $9,
+    terminal_interrupt_subtype = null,
+    completed_at = case outcome_status
+      when 'needs_user' then greatest(now(), outcome_at)
+      else outcome_at
+    end,
+    terminal_user_update_due_at = now(),
+    retention_end_reason = $6,
+    requester_source = null,
+    requester_transport = null,
+    requester_model = null,
+    requester_effective_model = null,
+    request_mode_json = null,
+    max_training_tier_json = null,
+    wallet_selection_provider = case
+      when $6 = 'user_closed' then null
+      else wallet_selection_provider
+    end,
+    wallet_selection_payment_method_id = case
+      when $6 = 'user_closed' then null
+      else wallet_selection_payment_method_id
+    end,
+    initial_instruction = null,
+    deadline_at = null,
+    state_revision = state_revision + 1,
+    updated_at = now()
+where task_id = $1
+  and admission_seq is not null
+  and owner_agent_id is not distinct from $2
+  and stream_owner_message_id = $3
+  and state_revision = $4
+  and status = $5
+  and outcome_status is not null
+  and completed_at is null
+  and (
+    $6 <> 'evicted_for_queue'
+    or (
+      status = 'parked_outcome'
+      and outcome_status in ('completed', 'failed')
+    )
+  )
+  and ($6 <> 'environment_refresh' or status = 'parked_outcome')
+  and (
+    $6 <> 'deadline_expired'
+    or (status = 'parked_outcome' and deadline_at <= now())
+    or (
+      status = 'user_controlled'
+      and outcome_at + ($7::bigint * interval '1 second') <= now()
+    )
+  )
+returning state_revision
+
+select state_revision
+from runtime.browser_tasks
+where task_id = $1
+  and admission_seq is not null
+  and owner_agent_id is not distinct from $2
+  and stream_owner_message_id = $3
+  and state_revision = $4
+  and status = $6
+  and retention_end_reason = $5
+  and outcome_status = $8
+  and outcome_reason is not distinct from $9
+  and (
+    (outcome_status = 'needs_user' and completed_at >= outcome_at)
+    or (
+      outcome_status in ('completed', 'failed')
+      and completed_at = outcome_at
+    )
+  )
+  and terminal_reason is not distinct from $7
+  and deadline_at is null
+for update
+
+select case status
+  when 'parked_outcome' then deadline_at > now()
+  when 'user_controlled' then
+    outcome_at + ($5::bigint * interval '1 second') > now()
+  else false
+end
+from runtime.browser_tasks
+where task_id = $1
+  and admission_seq is not null
+  and owner_agent_id is not distinct from $2
+  and stream_owner_message_id = $3
+  and state_revision = $4
+  and status in ('parked_outcome', 'user_controlled')
+  and outcome_status is not null
+  and completed_at is null
+for update
+
+update runtime.browser_tasks
+set terminal_user_update_due_at = null
+where task_id = $1
+  and admission_seq is not null
+  and state_revision = $2
+  and completed_at is not null
+  and terminal_user_update_due_at is not null
+
+select broker_instance,
+       root_session_id,
+       presentation_root_session_id,
+       state_revision,
+       terminal_reason,
+       terminal_user_update_due_at is not null as obligation_pending
+from runtime.browser_tasks
+where task_id = $1
+  and owner_agent_id = $2
+  and admission_seq is not null
+  and completed_at is not null
+select pg_advisory_xact_lock(hashtextextended('runtime.browser_tasks.admission', 0))

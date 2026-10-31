@@ -1,0 +1,155 @@
+errorsuccesswrite_admissionwritepostgres write completed slowlypostgres write failedretrying idempotent postgres writeone-shot postgres write invoked more than once9999-12-31T00:00:00Z`DateTime + TimeDelta` overflowedgoals.bookkeeping_readiness singleton is missingcase attention_kind when 'user_action_required' then 0 when 'action_required' then 0 when 'new_information' then 1 else 2 end =  and case when next_due_at is not null and next_due_at <= now() + interval '30 days' then next_due_at else timestamptz '9999-12-31' endcoalesce(last_activity_at_ts, updated_at_ts, updated_at::timestamptz) and sort_order = select update_id, goal_id, title, summary, description, effective_at,
+                            created_at, updated_at, author_source
+                     from goals.updates
+                     where update_id = $1select root_goal_id, root_agent_id, session_id
+                     from goals.sessions
+                     where root_goal_id = $1select update_id, goal_id, title, summary, description, effective_at,
+                            created_at, updated_at, author_source
+                     from goals.updates
+                     where goal_id = $1
+                     order by effective_at_ts desc nulls last, updated_at_ts desc nulls last, update_id descdelete from goals.updates where update_id = $1select update_id, goal_id, title, summary, description, effective_at,
+                            created_at, updated_at, author_source
+                     from goals.updates
+                     where goal_id = any($1)
+                     order by effective_at_ts desc nulls last, updated_at_ts desc nulls last, update_id descselect root_goal_id, root_agent_id, session_id
+                     from goals.sessions
+                     where root_goal_id = any($1)
+                     order by root_goal_id ascupdate goals.updates
+                     set title = $2,
+                         summary = $3,
+                         description = $4,
+                         effective_at = $5,
+                         updated_at = $6,
+                         effective_at_ts = $7,
+                         updated_at_ts = $8,
+                         author_source = $9
+                     where update_id = $1select updates.update_id,
+                            updates.goal_id,
+                            updates.title,
+                            updates.summary,
+                            updates.description,
+                            updates.effective_at,
+                            updates.created_at,
+                            updates.updated_at,
+                            updates.author_source
+                     from unnest($1::text[]) with ordinality as requested(goal_id, requested_order)
+                     cross join lateral (
+                       select update_id,
+                              goal_id,
+                              title,
+                              summary,
+                              description,
+                              effective_at,
+                              created_at,
+                              updated_at,
+                              author_source,
+                              effective_at_ts,
+                              updated_at_ts
+                       from goals.updates
+                       where goal_id = requested.goal_id
+                       order by effective_at_ts desc nulls last,
+                                updated_at_ts desc nulls last,
+                                update_id desc
+                       limit $2
+                     ) updates
+                     order by requested.requested_order asc,
+                              updates.effective_at_ts desc nulls last,
+                              updates.updated_at_ts desc nulls last,
+                              updates.update_id descselect exists(
+                       select 1
+                       from runtime.maintenance_markers
+                       where marker_key = $1
+                     )goal_guide_marker_sweep_v1update goals.briefings
+              set path = case
+                    when path ~ '^workspace/projects/[^/]+/briefs/'
+                      then regexp_replace(
+                        path,
+                        '^workspace/projects/([^/]+)/briefs/',
+                        'workspace/goals/\1/briefs/')
+                    when path ~ '^workspace/goals/briefs/[^/]+/'
+                      then regexp_replace(
+                        path,
+                        '^workspace/goals/briefs/([^/]+)/',
+                        'workspace/goals/\1/briefs/')
+                    else path
+                  end,
+                  hero_image_path = case
+                    when hero_image_path ~ '^workspace/projects/[^/]+/briefs/'
+                      then regexp_replace(
+                        hero_image_path,
+                        '^workspace/projects/([^/]+)/briefs/',
+                        'workspace/goals/\1/briefs/')
+                    when hero_image_path ~ '^workspace/goals/briefs/[^/]+/'
+                      then regexp_replace(
+                        hero_image_path,
+                        '^workspace/goals/briefs/([^/]+)/',
+                        'workspace/goals/\1/briefs/')
+                    else hero_image_path
+                  end
+              where path ~ '^workspace/(projects/[^/]+/briefs|goals/briefs/[^/]+)/'
+                 or hero_image_path ~ '^workspace/(projects/[^/]+/briefs|goals/briefs/[^/]+)/'select exists(
+                           select 1
+                           from runtime.maintenance_markers
+                           where marker_key = $1
+                         )goal_workspace_consolidation_v1insert into runtime.maintenance_markers (marker_key, detail_json)
+                         values (
+                           $1,
+                           jsonb_build_object(
+                             'version', 1,
+                             'completed_at', now(),
+                             'scanned', $2::bigint,
+                             'rewritten', $3::bigint
+                           )
+                         )
+                         on conflict (marker_key) do nothinginsert into runtime.maintenance_markers (marker_key, detail_json)
+                         values (
+                           $1,
+                           jsonb_build_object('version', 1, 'completed_at', now())
+                         )
+                         on conflict (marker_key) do nothinginsert into goals.learning_state (goal_id, target_skill, prerequisites, mastery_estimate, mastery_evidence, misconceptions, last_retrieval_at, next_review_at, confidence, transfer_status, study_status, last_studied_at, updated_at_ts)  on conflict (goal_id) do update set target_skill = excluded.target_skill, prerequisites = excluded.prerequisites, mastery_estimate = excluded.mastery_estimate, mastery_evidence = excluded.mastery_evidence, misconceptions = excluded.misconceptions, last_retrieval_at = excluded.last_retrieval_at, next_review_at = excluded.next_review_at, confidence = excluded.confidence, transfer_status = excluded.transfer_status, study_status = excluded.study_status, last_studied_at = excluded.last_studied_at, updated_at_ts = now()insert into goals.momentum_history (goal_id, momentum_status, momentum_dimensions, adjustment_recommendation, source, run_id, observed_at) values , (, coalesce(, now()))select * from goals.learning_state where goal_id = any($1)update goals.bookkeeping_readiness
+                     set processed_revision = greatest(processed_revision, $1),
+                         processed_context_fingerprint = case
+                           when processed_revision <= $1 then $2
+                           else processed_context_fingerprint
+                         end,
+                         processed_through = greatest(processed_through, $3)
+                     where singleton
+                       and current_revision >= $1select readiness.current_revision,
+                            readiness.processed_revision,
+                            readiness.processed_context_fingerprint,
+                            readiness.processed_through,
+                            min(goal.next_due_at) filter (
+                              where goal.status = 'active'
+                                and goal.next_due_at is not null
+                                and (
+                                  readiness.processed_through is null
+                                  or goal.next_due_at > readiness.processed_through
+                                )
+                            ) as next_unprocessed_due_at
+                     from goals.bookkeeping_readiness readiness
+                     left join goals.goals goal on true
+                     where readiness.singleton
+                     group by readiness.current_revision,
+                              readiness.processed_revision,
+                              readiness.processed_context_fingerprint,
+                              readiness.processed_throughprocessed_revisionprocessed_context_fingerprintprocessed_throughnext_unprocessed_due_atselect suggestion_id, goal_id, idea_id, status, created_at, updated_at
+                     from goals.suggestions
+                     where goal_id = $1
+                     order by created_at_ts desc nulls last, suggestion_id descselect association_id, goal_id, association_type, target_id, details_json,
+                                created_at, updated_at
+                         from goals.associations
+                         where goal_id = $1
+                           and (created_at < $2 or (created_at = $2 and association_id < $3))
+                         order by created_at desc, association_id desc
+                         limit $4select association_id, goal_id, association_type, target_id, details_json,
+                                created_at, updated_at
+                         from goals.associations
+                         where goal_id = $1
+                         order by created_at desc, association_id desc
+                         limit $2select suggestion_id, goal_id, idea_id, status, created_at, updated_at
+                     from goals.suggestions
+                     where goal_id = any($1::text[])
+                     order by goal_id, created_at_ts desc nulls last, suggestion_id descdelete from goals.associations
+                     where goal_id = $1 and association_id = $2
+                     returning association_id, goal_id, association_type, target_id, details_json,
+                               created_at, updated_atgoal_id, source, attention_kind, attention_updated_at::text as attention_updated_at, next_due_at::text as next_due_at, escalation, slug, title, summary, description, momentum, momentum_status, emoji, image_relpath, icon_generation_status, status, created_at, updated_at, last_activity_at, pushable, parent_goal_id, sort_order, fixed_position, category, goal_kind, value_alignment, review_cadence, completed_at

@@ -1,0 +1,1192 @@
+select count(*)::bigint as missing
+                     from ideas.ideas
+                     where embedding is nullmissingselect source_id as source_idea_id, metadata_json
+                       from ideas.idea_sources
+                      where source_namespace = $1
+                        and source_kind = $2
+                        and source_id = $3ideasgeneralized_share_variantselect source_id as source_idea_id, metadata_json
+                       from ideas.idea_sources
+                      where source_namespace = $1
+                        and source_kind = $2
+                        and source_id = any($3::text[])with upserted as (
+                     insert into ideas.idea_sources
+                       (source_namespace, source_kind, source_id, idea_id, metadata_json)
+                     values ($1, $2, $3, $3,
+                       jsonb_build_object(
+                         'shareable_idea_id', $4::text,
+                         'source_updated_at', $5::text,
+                         'status', $6::text,
+                         'payload_json', $7::jsonb,
+                         'rejection_reason', $8::text,
+                         'source_content_fingerprint', $9::text,
+                         'created_at', now()::text,
+                         'updated_at', now()::text))
+                     on conflict (source_namespace, source_kind, source_id) do update set
+                       idea_id = excluded.idea_id,
+                       metadata_json =
+                         case when excluded.metadata_json ->> 'status' = 'ready'
+                           then jsonb_set(
+                             excluded.metadata_json,
+                             '{payload_json,idea_id}',
+                             to_jsonb(coalesce(
+                               ideas.idea_sources.metadata_json ->> 'shareable_idea_id',
+                               excluded.metadata_json ->> 'shareable_idea_id')),
+                             true)
+                           else excluded.metadata_json
+                         end
+                         || jsonb_build_object(
+                           'shareable_idea_id', coalesce(
+                             ideas.idea_sources.metadata_json ->> 'shareable_idea_id',
+                             excluded.metadata_json ->> 'shareable_idea_id'),
+                           'created_at', coalesce(
+                             ideas.idea_sources.metadata_json ->> 'created_at',
+                             excluded.metadata_json ->> 'created_at'))
+                     where excluded.metadata_json ->> 'source_updated_at' = (
+                       select idea.updated_at::text
+                         from ideas.ideas idea
+                        where idea.idea_id = $3)
+                     returning source_id as source_idea_id, metadata_json)
+                     select source_idea_id, metadata_json from upserted
+                     union all
+                     select source_id as source_idea_id, metadata_json
+                       from ideas.idea_sources
+                      where source_namespace = $1
+                        and source_kind = $2
+                        and source_id = $3
+                        and not exists (select 1 from upserted)
+                     limit 1update ideas.idea_sources
+                        set metadata_json = metadata_json || jsonb_build_object(
+                          'source_updated_at', $5::text,
+                          'updated_at', now()::text)
+                      where source_namespace = $1
+                        and source_kind = $2
+                        and source_id = $3
+                        and metadata_json ->> 'source_content_fingerprint' = $4
+                        and $5 = (
+                          select idea.updated_at::text
+                            from ideas.ideas idea
+                           where idea.idea_id = $3)select distinct c.source_key
+                           from ideas.feed_snapshots snapshot
+                           join ideas.feed_snapshot_cards c
+                             on c.snapshot_id = snapshot.snapshot_id
+                           join ideas.ideas i on i.idea_id = c.source_key
+                          where snapshot.is_active
+                            and (i.expires_at is null or i.expires_at > now())
+                            and exists (
+                              select 1 from ideas.idea_sources source
+                               where source.idea_id = i.idea_id
+                                 and source.source_namespace = 'self_improvement.ideas'
+                                 and source.source_kind = 'generated_card'
+                            )
+                            and not exists (
+                              select 1 from ideas.idea_feedback_state feedback
+                               where feedback.idea_id = i.idea_id
+                                 and feedback.feedback = 'feedback_down'
+                            )
+                            and not exists (
+                              select 1 from ideas.idea_build_status build
+                               where build.source_namespace = 'ideas'
+                                 and build.source_kind = 'idea'
+                                 and build.source_id = i.idea_id
+                                 and build.status in ('built', 'complete', 'completed', 'success')
+                            )
+                            and not exists (
+                              select 1 from ideas.idea_sources variant
+                               where variant.source_namespace = $2
+                                 and variant.source_kind = $3
+                                 and variant.source_id = i.idea_id
+                                 and variant.metadata_json ->> 'source_updated_at' = i.updated_at::text
+                                 and nullif(btrim(
+                                   variant.metadata_json ->> 'shareable_idea_id'
+                                 ), '') is not null
+                            )
+                          order by c.source_key
+                          limit $1delete from ideas.www_projection_retractions where idea_id = $1select idea_id
+                       from ideas.www_projection_retractions
+                      order by created_at asc, idea_id asc
+                      limit $1select icon_key,
+                            1.0 - (embedding <=> $3::vector) as similarity
+                     from ideas.icon_embeddings
+                     where model_name = $1 and descriptions_digest = $2
+                     order by embedding <=> $3::vector asc, icon_key asc
+                     limit 1select count(*) as n
+                     from ideas.icon_embeddings
+                     where model_name = $1 and descriptions_digest = $2ndelete from ideas.icon_embeddings
+                     where model_name <> $1 or descriptions_digest <> $2insert into ideas.icon_embeddings
+                         (icon_key, model_name, descriptions_digest, embedding)
+                     select key, $1, $2, literal::vector
+                     from unnest($3::text[], $4::text[]) as t(key, literal)
+                     on conflict (icon_key, model_name, descriptions_digest)
+                     do update set embedding = excluded.embeddingselect
+                       exists (
+                         select 1
+                         from ideas.idea_events events
+                         join ideas.ideas ideas on ideas.idea_id = events.idea_id
+                         where events.event_type in (
+                           'click', 'engagement', 'feedback_up', 'feedback_down', 'decision'
+                         )
+                           and events.created_at >= $1
+                           and coalesce(ideas.generator, '') <> 'system_health'
+                       ) as acted_since,
+                       exists (
+                         select 1
+                         from ideas.idea_events
+                         where event_type = 'surfaced'
+                           and created_at < $1
+                       ) as surfaced_beforeacted_sincesurfaced_beforeselect snapshot_id, generated_at::text as generated_at, is_active
+                     from ideas.feed_snapshots
+                     where snapshot_id = $1select snapshot_id, section_id, position::bigint as position,
+                            role, title, subtitle
+                     from ideas.feed_snapshot_sections
+                     where snapshot_id = $1
+                     order by position asc, section_id ascselect snapshot_id, section_id, position::bigint as position,
+                            source_key, origin, display_title, display_summary,
+                            context_label, detail_description, build_summary,
+                            prerequisite_notes, type_label
+                     from ideas.feed_snapshot_cards
+                     where snapshot_id = $1
+                     order by section_id asc, position asc, source_key ascselect feed_id, source, payload_json, generated_at, updated_at
+                     from ideas.idea_card_feeds
+                     where feed_id = $1select snapshot_id, generated_at::text as generated_at, is_active
+                     from ideas.feed_snapshots
+                     order by generated_at desc, snapshot_id desc
+                     limit $1select c.source_key
+                     from ideas.feed_snapshots s
+                     join ideas.feed_snapshot_cards c on c.snapshot_id = s.snapshot_id
+                     where s.is_activeselect pg_advisory_xact_lock(hashtext('ideas.feed_snapshots.publish'))insert into ideas.idea_card_feeds
+                           (feed_id, source, payload_json, generated_at, updated_at)
+                         values ($1, $2, $3, now(), now())
+                         on conflict (feed_id) do update set source = excluded.source,
+                           payload_json = excluded.payload_json, generated_at = excluded.generated_at,
+                           updated_at = excluded.updated_atinsert into ideas.feed_snapshots (snapshot_id, is_active)
+                     values ($1, false)insert into ideas.feed_snapshot_sections
+                             (snapshot_id, section_id, position, role, title, subtitle)
+                             select $1, s.section_id, s.position, s.role, s.title, s.subtitle
+                             from unnest($2::text[], $3::int4[], $4::text[], $5::text[], $6::text[])
+                               as s(section_id, position, role, title, subtitle)feed section positionfeed card positioninsert into ideas.feed_snapshot_cards
+                             (snapshot_id, section_id, position, source_key, origin,
+                              display_title, display_summary, context_label,
+                              detail_description, build_summary, type_label,
+                              prerequisite_notes)
+                             select $1, c.section_id, c.position, c.source_key, c.origin,
+                                    c.display_title, c.display_summary, c.context_label,
+                                    c.detail_description, c.build_summary, c.type_label,
+                                    c.prerequisite_notes
+                             from unnest($2::text[], $3::int4[], $4::text[], $5::text[], $6::text[],
+                                         $7::text[], $8::text[], $9::text[], $10::text[], $11::text[],
+                                         $12::text[])
+                               as c(section_id, position, source_key, origin, display_title,
+                                    display_summary, context_label, detail_description,
+                                    build_summary, type_label, prerequisite_notes)update ideas.feed_snapshots set is_active = false where is_activeupdate ideas.feed_snapshots set is_active = true where snapshot_id = $1delete from ideas.feed_snapshots
+                     where not is_active
+                       and snapshot_id not in (
+                         select snapshot_id from ideas.feed_snapshots
+                         order by generated_at desc, snapshot_id desc
+                         limit $1
+                       )update runtime.background_content_jobs set refresh_pending = false
+                         where job_id = 'ideas' and locale_revision = $1
+                           and content_locale = $2 and refresh_pendingselect key, source, payload_json, updated_at::text as updated_at
+                     from ideas.discovery_pool_meta
+                     where key = $1insert into ideas.discovery_pool_meta
+                     (key, source, payload_json, updated_at)
+                     values ($1, $2, $3, now())
+                     on conflict (key) do update set
+                        source = excluded.source,
+                        payload_json = excluded.payload_json,
+                        updated_at = now()select snapshot_id, generated_at::text as generated_at, is_active
+                     from ideas.feed_snapshots
+                     where is_active
+                     order by generated_at desc, snapshot_id desc
+                     limit 1select pg_advisory_xact_lock(hashtext('ideas.reset_for_null_state'))select exists(select 1 from ideas.ideas where generator = 'eval_fixture')delete from ideas.idea_card_feedsdelete from ideas.idea_build_statusdelete from ideas.discovery_pool_metadelete from ideas.discovery_pool_historydelete from ideas.ideas returning idea_idinsert into ideas.bandit_fold_state
+                             (policy_id, folded_until, folded_event_id, updated_at)
+                             values ($1, $2, $3, coalesce($4, now()))
+                             on conflict (policy_id) do update set
+                               folded_until = excluded.folded_until,
+                               folded_event_id = excluded.folded_event_id,
+                               updated_at = excluded.updated_atbandit fold cursor timestamp unparseable; skipping cursor writeinsert into ideas.bandit_arm_state
+                         (policy_id, domain, lane, decision_points, terminal_rewards,
+                          terminal_observations, fast_reward_sum, fast_observations, updated_at)
+                         values ($1, $2, $3, $4, $5, $6, $7, $8, coalesce($9, now()))
+                         on conflict (policy_id, domain, lane) do update set
+                           decision_points = excluded.decision_points,
+                           terminal_rewards = excluded.terminal_rewards,
+                           terminal_observations = excluded.terminal_observations,
+                           fast_reward_sum = excluded.fast_reward_sum,
+                           fast_observations = excluded.fast_observations,
+                           updated_at = excluded.updated_atinsert into ideas.bandit_folded_events (policy_id, event_id)
+                         select $1, unnest($2::text[])
+                         on conflict (policy_id, event_id) do nothingselect policy_id, domain, lane,
+                            decision_points, terminal_rewards, terminal_observations,
+                            fast_reward_sum, fast_observations, updated_at::text as updated_at
+                     from ideas.bandit_arm_state
+                     where policy_id = $1
+                     order by domain asc, lane ascselect policy_id, folded_until::text as folded_until,
+                            folded_event_id, updated_at::text as updated_at
+                     from ideas.bandit_fold_state
+                     where policy_id = $1insert into ideas.idea_events
+                     (event_id, idea_id, event_type, dismissal_reason, anchor_kind, anchor_id, lane,
+                      request_id, metadata)
+                     values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                     returning event_id, idea_id, event_type, dismissal_reason, anchor_kind, anchor_id,
+                               lane, request_id, metadata, created_at::text as created_atselect event_id, idea_id, event_type, dismissal_reason, anchor_kind, anchor_id,
+                            lane, request_id, metadata, created_at::text as created_at
+                     from ideas.idea_events
+                     where idea_id = $1
+                       and ($2::timestamptz is null or created_at >= $2::timestamptz)
+                     order by created_at desc, event_id desc
+                     limit $3insert into ideas.idea_events
+                     (event_id, idea_id, event_type, dismissal_reason, anchor_kind, anchor_id, lane,
+                      request_id, metadata)
+                     select * from unnest(
+                       $1::text[], $2::text[], $3::text[], $4::text[], $5::text[], $6::text[],
+                       $7::text[], $8::text[], $9::jsonb[]
+                     )with recent_actions as (
+                       select events.idea_id,
+                              events.created_at,
+                              events.event_id
+                       from ideas.idea_events events
+                       join ideas.ideas ideas on ideas.idea_id = events.idea_id
+                       where ($1::timestamptz is null or events.created_at >= $1::timestamptz)
+                         and ($2::timestamptz is null or events.created_at < $2::timestamptz)
+                         and ($3::text is null or ideas.domain = $3)
+                         and events.event_type in (
+                           'engagement', 'feedback_up', 'feedback_down', 'decision'
+                         )
+                         and coalesce(ideas.generator, '') <> 'system_health'
+                       order by events.created_at desc, events.event_id desc
+                       limit $4
+                     ),
+                     candidate_ideas as (
+                       select distinct idea_id from recent_actions
+                     ),
+                     actioned as (
+                       select events.idea_id,
+                              count(*)::bigint as action_count,
+                              array_agg(distinct events.event_type order by events.event_type) as action_types
+                       from ideas.idea_events events
+                       join candidate_ideas candidate on candidate.idea_id = events.idea_id
+                       where ($1::timestamptz is null or events.created_at >= $1::timestamptz)
+                         and ($2::timestamptz is null or events.created_at < $2::timestamptz)
+                         and events.event_type in (
+                           'engagement', 'feedback_up', 'feedback_down', 'decision'
+                         )
+                       group by events.idea_id
+                     ),
+                     latest_action as (
+                       select distinct on (events.idea_id)
+                              events.idea_id,
+                              events.event_type as latest_action_type,
+                              events.metadata as latest_action_metadata,
+                              events.created_at as latest_action_at,
+                              events.event_id
+                       from ideas.idea_events events
+                       join actioned on actioned.idea_id = events.idea_id
+                       where events.event_type in (
+                         'engagement', 'feedback_up', 'feedback_down', 'decision'
+                       )
+                       order by events.idea_id asc, events.created_at desc, events.event_id desc
+                     )
+                     select ideas.idea_id, ideas.kind, ideas.title, ideas.summary, ideas.build_summary,
+                            ideas.rationale, ideas.category_label, ideas.date_label,
+                            ideas.audience, ideas.lane, ideas.prerequisite_notes,
+                            ideas.install_markdown,
+                            ideas.domain, ideas.dedup_key,
+                            ideas.expires_at::text as expires_at, ideas.generator,
+                            ideas.created_at::text as created_at,
+                            ideas.updated_at::text as updated_at,
+                            latest_action.latest_action_type,
+                            latest_action.latest_action_metadata,
+                            latest_action.latest_action_at::text as latest_action_at,
+                            actioned.action_count,
+                            actioned.action_types
+                     from actioned
+                     join latest_action on latest_action.idea_id = actioned.idea_id
+                     join ideas.ideas ideas on ideas.idea_id = actioned.idea_id
+                     order by latest_action.latest_action_at desc,
+                              latest_action.event_id desc
+                     limit $5select count(*)::bigint as impression_count
+                     from ideas.idea_events
+                     where event_type = 'impression'
+                       and created_at > $1select idea_id, count(*)::bigint as impression_count
+                     from ideas.idea_events
+                     where event_type = 'impression'
+                       and idea_id = any($1::text[])
+                     group by idea_idselect events.created_at::text as created_at
+                     from ideas.idea_events events
+                     join ideas.ideas ideas on ideas.idea_id = events.idea_id
+                     where coalesce(ideas.generator, '') <> 'system_health'
+                     order by events.created_at desc, events.event_id desc
+                     limit 1delete from ideas.idea_events
+                     where event_id in (
+                       select event_id from ideas.idea_events
+                       where created_at < $1
+                       order by created_at asc
+                       limit $2
+                     )with latest_action as (
+                       select distinct on (events.idea_id)
+                              events.idea_id,
+                              events.created_at,
+                              events.event_id
+                       from ideas.idea_events events
+                       join ideas.ideas ideas on ideas.idea_id = events.idea_id
+                       where ($1::timestamptz is null or events.created_at >= $1::timestamptz)
+                         and ($2::timestamptz is null or events.created_at < $2::timestamptz)
+                         and events.event_type in (
+                           'engagement', 'feedback_up', 'feedback_down', 'decision'
+                         )
+                         and coalesce(ideas.generator, '') <> 'system_health'
+                       order by events.idea_id asc, events.created_at desc, events.event_id desc
+                     )
+                     select idea_id
+                     from latest_action
+                     order by created_at desc, event_id desc
+                     limit $3with recent_actions as (
+                           select events.idea_id
+                           from ideas.idea_events events
+                           join ideas.ideas ideas on ideas.idea_id = events.idea_id
+                           where ($1::timestamptz is null or events.created_at >= $1::timestamptz)
+                             and ($2::timestamptz is null or events.created_at < $2::timestamptz)
+                             and events.event_type in (
+                               'engagement', 'feedback_up', 'feedback_down', 'decision'
+                             )
+                             and coalesce(ideas.generator, '') <> 'system_health'
+                           order by events.created_at desc, events.event_id desc
+                           limit $3
+                         )
+                         select count(distinct idea_id)::bigint as count
+                         from recent_actionscountselect ideas.domain,
+                                count(distinct events.idea_id)::bigint as idea_count,
+                                count(*)::bigint as action_count,
+                                max(events.created_at)::text as latest_action_at,
+                                array_agg(distinct events.event_type order by events.event_type) as action_types
+                         from ideas.idea_events events
+                         join ideas.ideas ideas on ideas.idea_id = events.idea_id
+                         where ($1::timestamptz is null or events.created_at >= $1::timestamptz)
+                           and ($2::timestamptz is null or events.created_at < $2::timestamptz)
+                           and events.event_type in (
+                             'engagement', 'feedback_up', 'feedback_down', 'decision'
+                           )
+                           and coalesce(ideas.generator, '') <> 'system_health'
+                         group by ideas.domain
+                         order by max(events.created_at) desc, ideas.domain asc
+                         limit $3with recent_actions as (
+                           select events.idea_id,
+                                  events.created_at,
+                                  events.event_id
+                           from ideas.idea_events events
+                           join ideas.ideas ideas on ideas.idea_id = events.idea_id
+                           where ($1::timestamptz is null or events.created_at >= $1::timestamptz)
+                             and ($2::timestamptz is null or events.created_at < $2::timestamptz)
+                             and ($3::text is null or ideas.domain = $3)
+                             and events.event_type in (
+                               'engagement', 'feedback_up', 'feedback_down', 'decision'
+                             )
+                             and coalesce(ideas.generator, '') <> 'system_health'
+                           order by events.created_at desc, events.event_id desc
+                           limit $4
+                         ),
+                         candidate_ideas as (
+                           select distinct idea_id from recent_actions
+                         ),
+                         actioned as (
+                           select events.idea_id,
+                                  count(*)::bigint as action_count,
+                                  array_agg(distinct events.event_type order by events.event_type) as action_types
+                           from ideas.idea_events events
+                           join candidate_ideas candidate on candidate.idea_id = events.idea_id
+                           where ($1::timestamptz is null or events.created_at >= $1::timestamptz)
+                             and ($2::timestamptz is null or events.created_at < $2::timestamptz)
+                             and events.event_type in (
+                               'engagement', 'feedback_up', 'feedback_down', 'decision'
+                             )
+                           group by events.idea_id
+                         ),
+                         latest_action as (
+                           select distinct on (events.idea_id)
+                                  events.idea_id,
+                                  events.event_type as latest_action_type,
+                                  events.metadata as latest_action_metadata,
+                                  events.created_at as latest_action_at,
+                                  events.event_id
+                           from ideas.idea_events events
+                           join candidate_ideas candidate on candidate.idea_id = events.idea_id
+                           where ($1::timestamptz is null or events.created_at >= $1::timestamptz)
+                             and ($2::timestamptz is null or events.created_at < $2::timestamptz)
+                             and events.event_type in (
+                               'engagement', 'feedback_up', 'feedback_down', 'decision'
+                             )
+                           order by events.idea_id asc, events.created_at desc, events.event_id desc
+                         )
+                         select ideas.idea_id,
+                                ideas.title,
+                                ideas.summary,
+                                ideas.domain,
+                                ideas.created_at::text as created_at,
+                                latest_action.latest_action_type,
+                                latest_action.latest_action_metadata,
+                                latest_action.latest_action_at::text as latest_action_at,
+                                latest_action.event_id,
+                                actioned.action_count,
+                                actioned.action_types
+                         from latest_action
+                         join actioned on actioned.idea_id = latest_action.idea_id
+                         join ideas.ideas ideas on ideas.idea_id = latest_action.idea_id
+                         order by latest_action.latest_action_at desc,
+                                  latest_action.event_id desc
+                         limit $5select events.event_id, events.idea_id, events.event_type,
+                            events.dismissal_reason, events.anchor_kind, events.anchor_id,
+                            events.lane, events.request_id, events.metadata,
+                            events.created_at::text as created_at,
+                            ideas.domain as idea_domain,
+                            ideas.lane as idea_lane,
+                            source.metadata_json as source_metadata
+                     from ideas.idea_events events
+                     join ideas.ideas ideas on ideas.idea_id = events.idea_id
+                     left join lateral (
+                       select metadata_json
+                       from ideas.idea_sources
+                       where idea_sources.idea_id = ideas.idea_id
+                       -- Newest authored source first. A card can carry more
+                       -- than one generated source once a rewrite lands on it,
+                       -- and without this the tie fell to `source_id`, a
+                       -- content hash, so a card could render today's body
+                       -- under the superseded copy's icon and connector chips.
+                       -- Same term the fact-keys read already orders by.
+                       order by metadata_json->>'authored_at' desc nulls last,
+                                position asc nulls last,
+                                source_namespace asc,
+                                source_kind asc,
+                                source_id asc
+                       limit 1
+                     ) source on true
+                     where ($1::timestamptz is null or events.created_at >= $1::timestamptz)
+                       and coalesce(ideas.generator, '') <> 'system_health'
+                     order by events.created_at desc, events.event_id desc
+                     limit $2select events.created_at::text as created_at
+                         from ideas.idea_events events
+                         join ideas.ideas ideas on ideas.idea_id = events.idea_id
+                         where events.event_type in (
+                           'engagement', 'feedback_up', 'feedback_down', 'decision'
+                         )
+                           and coalesce(ideas.generator, '') <> 'system_health'
+                         order by events.created_at desc, events.event_id desc
+                         limit 1select events.event_id, events.idea_id, events.event_type,
+                            events.dismissal_reason, events.anchor_kind, events.anchor_id,
+                            events.lane, events.request_id, events.metadata,
+                            events.created_at::text as created_at,
+                            ideas.domain as idea_domain,
+                            ideas.lane as idea_lane,
+                            source.metadata_json as source_metadata
+                     from ideas.idea_events events
+                     join ideas.ideas ideas on ideas.idea_id = events.idea_id
+                     left join ideas.bandit_folded_events folded
+                       on folded.policy_id = $1 and folded.event_id = events.event_id
+                     left join lateral (
+                       select metadata_json
+                       from ideas.idea_sources
+                       where idea_sources.idea_id = ideas.idea_id
+                       -- Newest authored source first. A card can carry more
+                       -- than one generated source once a rewrite lands on it,
+                       -- and without this the tie fell to `source_id`, a
+                       -- content hash, so a card could render today's body
+                       -- under the superseded copy's icon and connector chips.
+                       -- Same term the fact-keys read already orders by.
+                       order by metadata_json->>'authored_at' desc nulls last,
+                                position asc nulls last,
+                                source_namespace asc,
+                                source_kind asc,
+                                source_id asc
+                       limit 1
+                     ) source on true
+                     where folded.event_id is null
+                       and ($2::timestamptz is null or events.created_at >= $2::timestamptz)
+                       and ($3::timestamptz is null or events.created_at < $3::timestamptz)
+                       and coalesce(ideas.generator, '') <> 'system_health'
+                       and events.event_type = any($4::text[])
+                     order by events.created_at asc, events.event_id ascselect events.event_id, events.idea_id, events.event_type,
+                            events.dismissal_reason, events.anchor_kind, events.anchor_id,
+                            events.lane, events.request_id, events.metadata,
+                            events.created_at::text as created_at,
+                            ideas.domain as idea_domain,
+                            ideas.lane as idea_lane,
+                            source.metadata_json as source_metadata
+                     from ideas.idea_events events
+                     join ideas.ideas ideas on ideas.idea_id = events.idea_id
+                     left join ideas.bandit_folded_events folded
+                       on folded.policy_id = $1 and folded.event_id = events.event_id
+                     left join lateral (
+                       select metadata_json
+                       from ideas.idea_sources
+                       where idea_sources.idea_id = ideas.idea_id
+                       -- Newest authored source first. A card can carry more
+                       -- than one generated source once a rewrite lands on it,
+                       -- and without this the tie fell to `source_id`, a
+                       -- content hash, so a card could render today's body
+                       -- under the superseded copy's icon and connector chips.
+                       -- Same term the fact-keys read already orders by.
+                       order by metadata_json->>'authored_at' desc nulls last,
+                                position asc nulls last,
+                                source_namespace asc,
+                                source_kind asc,
+                                source_id asc
+                       limit 1
+                     ) source on true
+                     where folded.event_id is null
+                       and ($2::timestamptz is null
+                         or events.created_at > $2::timestamptz
+                         or (events.created_at = $2::timestamptz and events.event_id > $3::text))
+                       and coalesce(ideas.generator, '') <> 'system_health'
+                       and events.event_type = any($4::text[])
+                     order by events.created_at asc, events.event_id ascselect policy_id, explore_floor::bigint as explore_floor,
+                            per_domain_min::bigint as per_domain_min,
+                            version, updated_at::text as updated_at
+                     from ideas.explore_policy
+                     where policy_id = $1insert into ideas.explore_policy
+                     (policy_id, explore_floor, per_domain_min, version, updated_at)
+                     values ($1, $2::integer, $3::integer, $4, coalesce($5, now()))
+                     on conflict (policy_id) do update set
+                       explore_floor = excluded.explore_floor,
+                       per_domain_min = excluded.per_domain_min,
+                       version = excluded.version,
+                       updated_at = excluded.updated_at
+                     returning policy_id, explore_floor::bigint as explore_floor,
+                               per_domain_min::bigint as per_domain_min,
+                               version, updated_at::text as updated_atexplore floorper-domain minimumselect idea_id, content_fingerprint, embedding_ref, canonical_idea_id,
+                            merged_at::text as merged_at, merge_reason,
+                            created_at::text as created_at
+                     from ideas.idea_dedup
+                     where idea_id = $1insert into ideas.idea_dedup
+                     (idea_id, content_fingerprint, embedding_ref, canonical_idea_id, merged_at,
+                      merge_reason, created_at)
+                     values ($1, $2, $3, $4, $5::timestamptz, $6, coalesce($7, now()))
+                     on conflict (idea_id) do update set
+                       content_fingerprint = excluded.content_fingerprint,
+                       embedding_ref = excluded.embedding_ref,
+                       canonical_idea_id = excluded.canonical_idea_id,
+                       merged_at = excluded.merged_at,
+                       merge_reason = excluded.merge_reasoninsert into ideas.idea_anchors
+                     (idea_id, anchor_kind, anchor_id, lifecycle_status, build_status, surfaced_at,
+                      impression_count, decided_at, dismiss_reason, created_at, updated_at)
+                     values ($1, $2, $3, $4, $5, $6::timestamptz, $7::integer, $8::timestamptz,
+                             $9, coalesce($10, now()), coalesce($11, now()))
+                     on conflict (idea_id, anchor_kind, anchor_id) do update set
+                       lifecycle_status = case
+                         when excluded.lifecycle_status = 'active'
+                              and excluded.build_status is not null
+                              and excluded.surfaced_at is null
+                              and excluded.decided_at is null
+                              and excluded.dismiss_reason is null
+                              and excluded.impression_count = 0
+                           then ideas.idea_anchors.lifecycle_status
+                         else excluded.lifecycle_status
+                       end,
+                       build_status = coalesce(excluded.build_status, ideas.idea_anchors.build_status),
+                       surfaced_at = coalesce(excluded.surfaced_at, ideas.idea_anchors.surfaced_at),
+                       impression_count = case
+                         when excluded.impression_count = 0 then ideas.idea_anchors.impression_count
+                         else excluded.impression_count
+                       end,
+                       decided_at = coalesce(excluded.decided_at, ideas.idea_anchors.decided_at),
+                       dismiss_reason = coalesce(excluded.dismiss_reason, ideas.idea_anchors.dismiss_reason),
+                       updated_at = excluded.updated_at
+                     returning idea_id, anchor_kind, anchor_id, lifecycle_status, build_status,
+                               surfaced_at::text as surfaced_at, impression_count::bigint as impression_count,
+                               decided_at::text as decided_at, dismiss_reason,
+                               created_at::text as created_at, updated_at::text as updated_atanchor impression countselect event_id, idea_id, event_type, dismissal_reason, anchor_kind, anchor_id,
+                            lane, request_id, metadata, created_at::text as created_at
+                     from ideas.idea_events
+                     where idea_id = $1
+                       and metadata->>'ranking_score' is not null
+                     order by created_at desc, event_id desc
+                     limit $2select idea_id, relevance_score, novelty_score, feasibility_score,
+                            value_score, composite_score, composite_version, scorer,
+                            decision_outcome, decision_reasons, scored_at::text as scored_at
+                     from ideas.idea_quality
+                     where idea_id = any($1::text[])
+                     order by scored_at desc, idea_id ascselect coalesce(canonical_idea_id, idea_id)
+                     from ideas.idea_dedup
+                     where idea_id = $1
+                     union all
+                     select idea_id
+                     from ideas.ideas
+                     where idea_id = $1
+                       and not exists (select 1 from ideas.idea_dedup where idea_id = $1)
+                     limit 1select idea_id, anchor_kind, anchor_id, lifecycle_status, build_status,
+                            surfaced_at::text as surfaced_at,
+                            impression_count::bigint as impression_count,
+                            decided_at::text as decided_at, dismiss_reason,
+                            created_at::text as created_at, updated_at::text as updated_at
+                     from ideas.idea_anchors
+                     where idea_id = $1
+                     order by updated_at desc, anchor_kind asc, anchor_id ascselect distinct idea_id
+                     from ideas.idea_anchors
+                     where anchor_kind = $1select idea_id, kind, title, summary, build_summary, rationale, category_label, date_label,
+                            audience, lane, prerequisite_notes,
+                            install_markdown,
+                            domain, dedup_key,
+                            expires_at::text as expires_at, generator,
+                            created_at::text as created_at, updated_at::text as updated_at
+                     from ideas.ideas
+                     where idea_id = $1select idea_item_id, idea_id, position::bigint as position, kind, title, summary,
+                            detail_description, instructions, build_plan_markdown, status,
+                            created_at::text as created_at, updated_at::text as updated_at
+                     from ideas.idea_items
+                     where idea_id = $1
+                     order by position asc, idea_item_id ascselect tag
+                     from ideas.idea_tags
+                     where idea_id = $1
+                     order by position ascselect asset_id, idea_id, asset_type, asset_json,
+                            created_at::text as created_at, updated_at::text as updated_at
+                     from ideas.idea_install_assets
+                     where idea_id = $1
+                     order by created_at asc, asset_id ascinsert into ideas.ideas
+                     (idea_id, kind, title, summary, rationale, category_label, date_label,
+                      audience, lane, prerequisite_notes,
+                      install_markdown,
+                      domain, dedup_key, expires_at,
+                      generator, category_index, created_at, updated_at, build_summary)
+                     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+                             $11, $12, $13, $14::timestamptz, $15, $16,
+                             coalesce($17, now()), coalesce($18, now()), $19)insert into ideas.idea_items
+                         (idea_item_id, idea_id, position, kind, title, summary, detail_description,
+                          instructions, build_plan_markdown, status, created_at, updated_at)
+                         select t.idea_item_id, t.idea_id, t.position, t.kind, t.title, t.summary,
+                                t.detail_description, t.instructions, t.build_plan_markdown, t.status,
+                                coalesce(t.created_at, now()), coalesce(t.updated_at, now())
+                         from unnest($1::text[], $2::text[], $3::int4[], $4::text[], $5::text[],
+                                     $6::text[], $7::text[], $8::text[], $9::text[], $10::text[],
+                                     $11::timestamptz[], $12::timestamptz[])
+                           as t(idea_item_id, idea_id, position, kind, title, summary,
+                                detail_description, instructions, build_plan_markdown, status,
+                                created_at, updated_at)idea item positioninsert into ideas.idea_tags (idea_id, position, tag)
+                         select $1, t.position, t.tag
+                         from unnest($2::int4[], $3::text[]) as t(position, tag)idea tag positioninsert into ideas.idea_install_assets
+                         (asset_id, idea_id, asset_type, asset_json, created_at, updated_at)
+                         values ($1, $2, $3, $4, coalesce($5, now()), coalesce($6, now()))select exists(select 1 from ideas.ideas where idea_id = $1)update ideas.ideas
+                     set title = coalesce($2, title),
+                         summary = coalesce($3, summary),
+                         rationale = coalesce($4, rationale),
+                         category_label = coalesce($5, category_label),
+                         date_label = coalesce($6, date_label),
+                         audience = coalesce($7, audience),
+                         lane = coalesce($8, lane),
+                         prerequisite_notes = coalesce($9, prerequisite_notes),
+                         install_markdown = coalesce($10, install_markdown),
+                         domain = coalesce($11, domain),
+                         dedup_key = coalesce($12, dedup_key),
+                         expires_at = coalesce($13::timestamptz, expires_at),
+                         generator = coalesce($14, generator),
+                         updated_at = now()
+                     where idea_id = $1
+                     returning idea_idupdate ideas.ideas
+                        set expires_at = now(), updated_at = now()
+                      where idea_id = any($1)
+                        and (expires_at is null or expires_at > now())
+                      returning idea_idwith requested as (
+                       select value::text as requested_id, ordinality
+                       from unnest($1::text[]) with ordinality as input(value, ordinality)
+                     )
+                     select requested.requested_id,
+                            coalesce(dedup.canonical_idea_id, own.idea_id) as idea_id
+                     from requested
+                     left join ideas.idea_dedup dedup on dedup.idea_id = requested.requested_id
+                     left join ideas.ideas own on own.idea_id = requested.requested_id
+                     where coalesce(dedup.canonical_idea_id, own.idea_id) is not null
+                     order by requested.ordinality ascselect idea_id, kind, title, summary, build_summary, rationale, category_label, date_label,
+                            audience, lane, prerequisite_notes,
+                            install_markdown,
+                            domain, dedup_key,
+                            expires_at::text as expires_at, generator,
+                            created_at::text as created_at, updated_at::text as updated_at
+                     from ideas.ideas
+                     where idea_id = any($1::text[])select idea_item_id, idea_id, position::bigint as position, kind, title, summary,
+                            detail_description, instructions, build_plan_markdown, status,
+                            created_at::text as created_at, updated_at::text as updated_at
+                     from ideas.idea_items
+                     where idea_id = any($1::text[])
+                     order by idea_id asc, position asc, idea_item_id ascselect idea_id, tag
+                     from ideas.idea_tags
+                     where idea_id = any($1::text[])
+                     order by idea_id asc, position ascselect asset_id, idea_id, asset_type, asset_json,
+                            created_at::text as created_at, updated_at::text as updated_at
+                     from ideas.idea_install_assets
+                     where idea_id = any($1::text[])
+                     order by idea_id asc, created_at asc, asset_id asctagselect idea_id, kind, title, summary, build_summary, rationale, category_label, date_label,
+                            audience, lane, prerequisite_notes,
+                            install_markdown,
+                            domain, dedup_key,
+                            expires_at::text as expires_at, generator,
+                            created_at::text as created_at, updated_at::text as updated_at
+                     from ideas.ideas
+                     where coalesce(generator, '') <> 'system_health'
+                       and (expires_at is null or expires_at > now())
+                     order by updated_at desc, idea_id asc
+                     limit $1select count(distinct i.idea_id)::bigint as idea_count
+                     from ideas.ideas i
+                     where coalesce(i.generator, '') <> 'system_health'
+                       and exists (
+                         select 1
+                         from ideas.idea_sources g
+                         where g.idea_id = i.idea_id
+                           and g.source_namespace = $1
+                       )idea_countselect i.idea_id, i.kind, i.title, i.summary, i.build_summary, i.rationale, i.category_label,
+                            i.date_label, i.audience, i.lane,
+                            i.prerequisite_notes, i.install_markdown, i.domain,
+                            i.dedup_key, i.expires_at::text as expires_at, i.generator,
+                            i.category_index,
+                            i.created_at::text as created_at, i.updated_at::text as updated_at
+                     from ideas.idea_sources s
+                     join ideas.ideas i on i.idea_id = s.idea_id
+                     where s.source_namespace = $1
+                       and s.source_kind = $2
+                       and coalesce(i.generator, '') <> 'system_health'
+                     order by s.position asc nulls last, s.source_id asc
+                     limit $3select idea_id
+                     from ideas.ideas
+                     where coalesce(generator, '') <> 'system_health'
+                       and (expires_at is null or expires_at > now())
+                     order by updated_at desc, idea_id asc
+                     limit $1update ideas.ideas
+                     set title = $2,
+                         summary = $3,
+                         build_summary = $4,
+                         rationale = $5,
+                         category_label = $6,
+                         date_label = $7,
+                         audience = $8,
+                         lane = $9,
+                         prerequisite_notes = $10,
+                         install_markdown = $11,
+                         domain = $12,
+                         dedup_key = $13,
+                         expires_at = $14::timestamptz,
+                         -- The stored vector describes the text this rewrite
+                         -- just replaced. Clearing it hands the row to the
+                         -- existing `list_ideas_missing_embedding` convergence
+                         -- net, which re-embeds from the new copy; leaving it
+                         -- would keep the card findable only under its
+                         -- superseded wording.
+                         embedding = null,
+                         updated_at = now()
+                     where idea_id = $1
+                     returning idea_iddelete from ideas.idea_items where idea_id = $1insert into ideas.idea_items
+                         (idea_item_id, idea_id, position, kind, title, summary,
+                          detail_description, instructions, build_plan_markdown, status,
+                          created_at, updated_at)
+                         select t.idea_item_id, $1, t.position, t.kind, t.title, t.summary,
+                                t.detail_description, t.instructions, t.build_plan_markdown,
+                                t.status, now(), now()
+                         from unnest($2::text[], $3::int4[], $4::text[], $5::text[], $6::text[],
+                                     $7::text[], $8::text[], $9::text[], $10::text[])
+                           as t(idea_item_id, position, kind, title, summary,
+                                detail_description, instructions, build_plan_markdown, status)delete from ideas.idea_tags where idea_id = $1select i.idea_id, i.kind, i.title, i.summary, i.build_summary, i.rationale, i.category_label,
+                            i.date_label, i.audience, i.lane,
+                            i.prerequisite_notes, i.install_markdown, i.domain,
+                            i.dedup_key, i.expires_at::text as expires_at, i.generator,
+                            i.created_at::text as created_at, i.updated_at::text as updated_at
+                     from ideas.idea_anchors a
+                     join ideas.ideas i on i.idea_id = a.idea_id
+                     where a.anchor_kind = $1 and a.anchor_id = $2
+                      and a.lifecycle_status in ('active', 'candidate')
+                     order by a.updated_at desc, i.updated_at desc, i.idea_id desc
+                     limit $3with requested as (
+                       select value::text as requested_id, ordinality
+                       from unnest($1::text[]) with ordinality as input(value, ordinality)
+                     )
+                     select coalesce(dedup.canonical_idea_id, own.idea_id) as idea_id
+                     from requested
+                     left join ideas.idea_dedup dedup on dedup.idea_id = requested.requested_id
+                     left join ideas.ideas own on own.idea_id = requested.requested_id
+                     where coalesce(dedup.canonical_idea_id, own.idea_id) is not nullwith requested as (
+                       select value::text as requested_id
+                       from unnest($1::text[]) as input(value)
+                     )
+                     select distinct existing.idea_id
+                     from requested
+                     left join ideas.idea_dedup dedup
+                       on dedup.idea_id = requested.requested_id
+                     left join ideas.ideas own
+                       on own.idea_id = requested.requested_id
+                     join ideas.ideas existing
+                       on existing.idea_id
+                          = coalesce(dedup.canonical_idea_id, own.idea_id)idea_id, kind, title, summary, build_summary, rationale, category_label, date_label,
+                    audience, lane, prerequisite_notes,
+                    install_markdown,
+                    domain, dedup_key,
+                    expires_at::text as expires_at, generator,
+                    created_at::text as created_at, updated_at::text as updated_atselect i.idea_id, i.kind, i.title, i.summary, i.build_summary, i.rationale, i.category_label,
+                            i.date_label, i.audience, i.lane,
+                            i.prerequisite_notes, i.install_markdown, i.domain,
+                            i.dedup_key, i.expires_at::text as expires_at, i.generator,
+                            i.created_at::text as created_at, i.updated_at::text as updated_at
+                     from ideas.ideas i
+                     where coalesce(i.generator, '') <> 'system_health'
+                       and (i.expires_at is null or i.expires_at > now())
+                       and exists (
+                         select 1
+                         from ideas.idea_sources g
+                         where g.idea_id = i.idea_id
+                           and g.source_namespace = $1
+                           and g.source_kind = $2
+                       )
+                     order by i.updated_at desc, i.idea_id asc
+                     limit $3with generated as (
+                       select distinct on (i.idea_id)
+                              i.idea_id, i.kind, i.title, i.summary, i.build_summary, i.rationale,
+                              i.category_label, i.date_label, i.audience, i.lane,
+                              i.prerequisite_notes,
+                              i.install_markdown,
+                              i.domain, i.dedup_key, i.expires_at::text as expires_at,
+                              i.generator, i.created_at::text as created_at,
+                              i.updated_at::text as updated_at,
+                              s.metadata_json as source_metadata,
+                              coalesce(s.metadata_json ->> 'authored_at', '') as authored_at,
+                              s.source_id
+                       from ideas.idea_sources s
+                       join ideas.ideas i on i.idea_id = s.idea_id
+                       where s.source_namespace = $1
+                         and s.source_kind = $2
+                         and s.metadata_json ->> 'run_id' = $3
+                         and coalesce(i.generator, '') <> 'system_health'
+                       order by i.idea_id, authored_at desc, s.source_id asc
+                     )
+                     select idea_id, kind, title, summary, build_summary, rationale, category_label,
+                            date_label, audience, lane,
+                            prerequisite_notes, install_markdown, domain, dedup_key, expires_at,
+                            generator,
+                            created_at, updated_at, source_id, source_metadata
+                     from generated
+                     order by authored_at desc, idea_id ascselect idea_id
+                     from ideas.ideas
+                     where domain = $1 and dedup_key = $2with latest_generated as (
+                       select distinct on (i.idea_id)
+                              i.idea_id, i.kind, i.title, i.summary, i.build_summary, i.rationale,
+                              i.category_label, i.date_label, i.audience, i.lane,
+                              i.prerequisite_notes, i.install_markdown, i.domain, i.dedup_key,
+                              i.expires_at::text as expires_at, i.generator,
+                              i.created_at::text as created_at,
+                              i.updated_at::text as updated_at,
+                              (i.expires_at is not null and i.expires_at <= now()) as archived,
+                              s.metadata_json as source_metadata,
+                              coalesce(s.metadata_json ->> 'authored_at', '') as authored_at,
+                              s.source_id
+                       from ideas.idea_sources s
+                       join ideas.ideas i on i.idea_id = s.idea_id
+                       where s.source_namespace = $1
+                         and s.source_kind = $2
+                         and coalesce(i.generator, '') <> 'system_health'
+                       order by i.idea_id, authored_at desc, s.source_id asc
+                     )
+                     select idea_id, kind, title, summary, build_summary, rationale,
+                            category_label, date_label, audience, lane, prerequisite_notes,
+                            install_markdown, domain, dedup_key, expires_at, generator,
+                            created_at, updated_at, archived, source_id, source_metadata
+                     from latest_generated
+                     where (source_metadata ->> 'www_projected_updated_at' is distinct from updated_at
+                        or source_metadata ->> 'www_projected_status' is distinct from
+                           case when archived then 'archived' else 'active' end
+                        or (not archived
+                            and source_metadata ->> 'www_icon_id' is null
+                            and (source_metadata ->> 'www_projection_terminal_disposition' is null
+                                 or source_metadata ->> 'www_projection_terminal_disposition'
+                                    = 'icon_unavailable')))
+                       and ($3 or archived)
+                     order by source_metadata ->> 'www_projection_attempted_at' asc nulls first,
+                              updated_at desc, idea_id asc
+                     limit $4select i.title
+                     from ideas.ideas i
+                     where coalesce(i.generator, '') <> 'system_health'
+                       and (i.expires_at is null or i.expires_at > now())
+                       and exists (
+                         select 1
+                         from ideas.idea_sources g
+                         where g.idea_id = i.idea_id
+                           and g.source_namespace = $1
+                           and g.source_kind = $2
+                       )
+                     order by i.updated_at desc, i.idea_id asc
+                     limit $3select i.idea_id, i.title, i.summary, i.build_summary, i.domain,
+                            (select string_agg(it.title, ' | ' order by it.position)
+                               from ideas.idea_items it where it.idea_id = i.idea_id)
+                              as item_context
+                       from ideas.ideas i
+                      where coalesce(i.generator, '') <> 'system_health'
+                        and (i.expires_at is null or i.expires_at > now())
+                        and exists (
+                              select 1 from ideas.idea_sources s
+                               where s.idea_id = i.idea_id
+                                 and s.source_namespace = $1
+                                 and s.source_kind = $2)
+                      order by i.created_at desc
+                      limit $3select i.idea_id, i.lane
+                         from ideas.idea_anchors a
+                         join ideas.ideas i on i.idea_id = a.idea_id
+                         where a.anchor_kind = $1 and a.anchor_id = $2
+                          and a.lifecycle_status in ('active', 'candidate', 'accepted', 'built')
+                         order by a.updated_at desc, i.updated_at desc, i.idea_id desc
+                         limit $3select i.idea_id, i.title, i.created_at
+                           from ideas.ideas i
+                          where coalesce(i.generator, '') <> 'system_health'
+                            and (i.expires_at is null or i.expires_at > now())
+                            and exists (
+                                  select 1 from ideas.idea_sources s
+                                   where s.idea_id = i.idea_id
+                                     and s.source_namespace = $1
+                                     and s.source_kind = $2)
+                          order by i.created_at desc, i.idea_id asc
+                          limit $3with generated as (
+                       select s.idea_id,
+                              s.metadata_json ->> 'run_id' as run_id,
+                              s.metadata_json ->> 'authored_at' as authored_at
+                       from ideas.idea_sources s
+                       join ideas.ideas i on i.idea_id = s.idea_id
+                       where s.source_namespace = $1
+                         and s.source_kind = $2
+                         and s.metadata_json ->> 'domain' = $3
+                         and coalesce(s.metadata_json ->> 'run_id', '') <> ''
+                         and coalesce(s.metadata_json ->> 'authored_at', '') <> ''
+                         and coalesce(i.generator, '') <> 'system_health'
+                     ),
+                     latest_run as (
+                       select run_id
+                       from generated
+                       order by authored_at desc, run_id desc
+                       limit 1
+                     )
+                     select i.idea_id, i.kind, i.title, i.summary, i.build_summary, i.rationale, i.category_label,
+                            i.date_label, i.audience, i.lane,
+                            i.prerequisite_notes, i.install_markdown, i.domain,
+                            i.dedup_key, i.expires_at::text as expires_at, i.generator,
+                            i.created_at::text as created_at, i.updated_at::text as updated_at
+                     from generated g
+                     join latest_run lr on lr.run_id = g.run_id
+                     join ideas.ideas i on i.idea_id = g.idea_id
+                     order by i.created_at desc, i.idea_id desc
+                     limit 200select source_namespace, source_kind, source_id, idea_id,
+                            position::bigint as position, metadata_json
+                     from ideas.idea_sources
+                     where source_namespace = $1 and source_kind = $2 and source_id = $3select idea_id
+                     from ideas.idea_sources
+                     where source_namespace = $1 and source_kind = $2 and source_id = $3select idea_item_id, idea_id, position::bigint as position, kind, title, summary,
+                                detail_description, instructions, build_plan_markdown, status,
+                                created_at::text as created_at, updated_at::text as updated_at
+                         from ideas.idea_items
+                         where idea_id = $1
+                         order by position asc, idea_item_id ascinsert into ideas.ideas
+                     (idea_id, kind, title, summary, rationale, category_label, date_label,
+                      audience, lane, prerequisite_notes,
+                      install_markdown,
+                      domain, dedup_key, expires_at,
+                      generator, category_index, created_at, updated_at, build_summary)
+                     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+                             $11, $12, $13, $14::timestamptz, $15, $16,
+                             coalesce($17, now()), coalesce($18, now()), $19)
+                     on conflict (idea_id) do update set
+                        kind = excluded.kind,
+                        title = excluded.title,
+                        summary = excluded.summary,
+                        build_summary = excluded.build_summary,
+                        rationale = excluded.rationale,
+                        category_label = excluded.category_label,
+                        date_label = excluded.date_label,
+                        audience = excluded.audience,
+                        lane = excluded.lane,
+                        prerequisite_notes = excluded.prerequisite_notes,
+                        install_markdown = excluded.install_markdown,
+                        domain = excluded.domain,
+                        dedup_key = excluded.dedup_key,
+                        expires_at = excluded.expires_at,
+                        generator = excluded.generator,
+                        category_index = excluded.category_index,
+                        updated_at = excluded.updated_atinsert into ideas.idea_items
+                         (idea_item_id, idea_id, position, kind, title, summary, detail_description,
+                          instructions, build_plan_markdown, status, created_at, updated_at)
+                         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+                                 coalesce($11, now()), coalesce($12, now()))delete from ideas.idea_install_assets where idea_id = $1insert into ideas.idea_tags (idea_id, position, tag)
+                         values ($1, $2, $3)insert into ideas.idea_sources as current_source
+                     (source_namespace, source_kind, source_id, idea_id, position, metadata_json)
+                     values ($1, $2, $3, $4, $5, $6)
+                     on conflict (source_namespace, source_kind, source_id) do update set
+                        idea_id = excluded.idea_id,
+                        position = excluded.position,
+                        metadata_json = excluded.metadata_json ||
+                          case when current_source.idea_id = excluded.idea_id then
+                            jsonb_strip_nulls(jsonb_build_object(
+                              'www_projection_attempted_at',
+                                current_source.metadata_json -> 'www_projection_attempted_at',
+                              'www_projected_updated_at',
+                                current_source.metadata_json -> 'www_projected_updated_at',
+                              'www_projected_status',
+                                current_source.metadata_json -> 'www_projected_status',
+                              'www_projection_terminal_disposition',
+                                current_source.metadata_json -> 'www_projection_terminal_disposition',
+                              'www_icon_id',
+                                current_source.metadata_json -> 'www_icon_id',
+                              'publication_hold',
+                                current_source.metadata_json -> 'publication_hold'))
+                          else '{}'::jsonb endselect source_namespace, source_kind, source_id, status,
+                            selected_item_ids, updated_at::text as updated_at
+                     from ideas.idea_build_status
+                     where source_namespace = $1 and source_kind = $2 and source_id = $3select ideas.idea_id, ideas.domain, ideas.lane, source.metadata_json
+                     from ideas.ideas ideas
+                     left join lateral (
+                       select metadata_json
+                       from ideas.idea_sources
+                       where idea_sources.idea_id = ideas.idea_id
+                         and not (source_namespace = 'ideas'
+                                  and source_kind = 'atlas_icon')
+                       order by (source_namespace = 'self_improvement.ideas'
+                                 and source_kind = 'generated_card') desc,
+                                case when source_namespace = 'self_improvement.ideas'
+                                           and source_kind = 'generated_card'
+                                     then metadata_json->>'authored_at'
+                                end desc nulls last,
+                                position asc nulls last,
+                                source_namespace asc,
+                                source_kind asc,
+                                source_id asc
+                       limit 1
+                     ) source on true
+                     where ideas.idea_id = $1select source_namespace, source_kind, source_id, status,
+                            selected_item_ids, updated_at::text as updated_at
+                     from ideas.idea_build_status
+                     where source_namespace = $1 and source_kind = $2select ideas.idea_id, ideas.domain, ideas.lane, source.metadata_json
+                     from ideas.ideas ideas
+                     left join lateral (
+                       select metadata_json
+                       from ideas.idea_sources
+                       where idea_sources.idea_id = ideas.idea_id
+                         and not (source_namespace = 'ideas'
+                                  and source_kind = 'atlas_icon')
+                       order by (source_namespace = 'self_improvement.ideas'
+                                 and source_kind = 'generated_card') desc,
+                                case when source_namespace = 'self_improvement.ideas'
+                                           and source_kind = 'generated_card'
+                                     then metadata_json->>'authored_at'
+                                end desc nulls last,
+                                position asc nulls last,
+                                source_namespace asc,
+                                source_kind asc,
+                                source_id asc
+                       limit 1
+                     ) source on true
+                     where ideas.idea_id = any($1::text[])select 1 from ideas.idea_build_status
+                     where status in ('built', 'complete', 'completed', 'success')
+                     limit 1delete from ideas.idea_sources
+                     where source_namespace = $1
+                       and source_kind = $2
+                       and not (source_id = any($3::text[]))select source_namespace, source_kind, source_id, idea_id,
+                            position::bigint as position, metadata_json
+                     from ideas.idea_sources
+                     where idea_id = $1
+                     order by position asc nulls last,
+                              source_namespace asc,
+                              source_kind asc,
+                              source_id ascselect distinct source.idea_id
+                     from ideas.idea_sources source
+                     where source.idea_id = any($1::text[])
+                       and (source.source_namespace, source.source_kind) in (
+                         ('idea_share', 'pending_share'),
+                         ('user', 'http_create'),
+                         ('shared_www', 'shared_idea')
+                       )
+                       and not exists (
+                         select 1
+                         from ideas.idea_sources other
+                         where other.idea_id = source.idea_id
+                           and (
+                             other.source_namespace = 'bundled_new_user'
+                             or (other.source_namespace = 'self_improvement.ideas'
+                                 and other.source_kind = 'generated_card')
+                           )
+                       )select source_id, status, selected_item_ids
+                     from ideas.idea_build_status
+                     where source_namespace = $1 and source_kind = $2select source.idea_id,
+                            source.source_kind,
+                            source.source_id,
+                            source.metadata_json ->> 'catalog_version' as catalog_version,
+                            exists (
+                              select 1
+                              from ideas.idea_sources other
+                              where other.idea_id = source.idea_id
+                                and other.source_namespace <> 'bundled_new_user'
+                                and not (
+                                  other.source_id = other.idea_id
+                                  and other.source_namespace in ('ideas', 'shared_www')
+                                )
+                            ) as has_non_catalog_source
+                     from ideas.idea_sources source
+                     where source.idea_id = any($1::text[])
+                       and source.source_namespace = 'bundled_new_user'
+                       and source.source_kind in ('post', 'onboarding_starter')
+                     order by source.idea_id, source.source_kind, source.source_idupdate ideas.ideas
+                         set lane = $2, updated_at = now()
+                         where idea_id = $1select idea_id,
+                                metadata_json #>> '{post,adoptions}' as adoptions_text,
+                                metadata_json #>> '{post,category}' as category
+                         from ideas.idea_sources
+                         where source_namespace = $1 and source_kind = $2
+                         order by position asc nulls last, source_id asc
+                         limit $3select distinct idea_id
+                         from ideas.idea_sources
+                         where idea_id = any($1::text[])
+                           and source_namespace <> $2select ideas.idea_id, source.fact_ids, source.fact_texts
+                     from ideas.ideas ideas
+                     left join lateral (
+                       select metadata_json->'fact_ids' as fact_ids,
+                              metadata_json->'fact_texts' as fact_texts
+                       from ideas.idea_sources
+                       where idea_sources.idea_id = ideas.idea_id
+                         and not (source_namespace = 'ideas'
+                                  and source_kind = 'atlas_icon')
+                       order by (source_namespace = 'self_improvement.ideas'
+                                 and source_kind = 'generated_card') desc,
+                                metadata_json->>'authored_at' desc nulls last,
+                                position asc nulls last,
+                                source_namespace asc,
+                                source_kind asc,
+                                source_id asc
+                       limit 1
+                     ) source on true
+                     where ideas.idea_id = any($1::text[])select distinct idea_id, source_kind
+                         from ideas.idea_sources
+                         where idea_id = any($1::text[])
+                           and source_namespace = $2
+                         order by idea_id, source_kindselect source_namespace, source_kind, source_id, idea_id,
+                                position::bigint as position, metadata_json
+                         from ideas.idea_sources
+                         where source_namespace = $1 and source_kind = $2
+                         order by position asc nulls last, source_id asc
+                         limit $3select distinct on (idea_id)
+                            idea_id,
+                            nullif(metadata_json->>'authored_at', '') as authored_at
+                     from ideas.idea_sources
+                     where idea_id = any($1::text[])
+                       and source_namespace = $2
+                       and source_kind = $3
+                     order by idea_id,
+                              metadata_json->>'authored_at' desc nulls last,
+                              source_id ascwith candidates as materialized (
+                       select i.idea_id, i.embedding
+                       from ideas.ideas i
+                       where i.idea_id = any($1::text[])
+                         and i.embedding is not null
+                     )
+                     select c.idea_id,
+                            a.affinity
+                     from candidates c
+                     cross join lateral (
+                       select avg(
+                                greatest(
+                                  0.0::double precision,
+                                  1.0::double precision - (n.embedding <=> c.embedding)
+                                )
+                              ) as affinity
+                       from (
+                         select emb.embedding
+                         from memory.embeddings emb
+                         order by emb.embedding <=> c.embedding
+                         limit $2
+                       ) n
+                     ) a
+                     where a.affinity is not nullfeedback_down€Ÿ

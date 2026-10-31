@@ -1,0 +1,419 @@
+errorsuccesswrite_admissionwritepostgres write completed slowlypostgres write failedretrying idempotent postgres writeone-shot postgres write invoked more than onceinvalid Muse Mail admission metadataMuse Mail checkpoint revision overflowterminal_decisionselect detail_json from runtime.maintenance_markers where marker_key = $1select detail_json from runtime.maintenance_markers
+                     where marker_key = $1 for updatedelete from runtime.execute_resolve_runs
+                     where worker_kind = $1 and starts_with(source_ref, $2)
+                       and status in ('completed_notified', 'completed_noop', 'failed')
+                       and not (metadata_json ? 'mail_intake_pending')
+                       and updated_at < now() - $4 * interval '1 second'
+                       and created_at < $3muse_mail_ownerstatusrun_idcreated_atupdate runtime.execute_resolve_runs
+                         set metadata_json = metadata_json - 'mail_intake_pending', updated_at = now()
+                         where worker_kind = $1 and starts_with(source_ref, $2)
+                           and metadata_json ? 'mail_intake_pending'mail_intake_pendinginsert into runtime.execute_resolve_runs (
+                           run_id, worker_kind, source_ref, lane_key, status, metadata_json, created_at
+                         ) values ($1, $2, $1, $3, 'pending', $4, $5)
+                         on conflict (worker_kind, source_ref) do nothing returning run_idselect run_id, lane_key, status, created_at
+                             from runtime.execute_resolve_runs
+                             where worker_kind = $1 and source_ref = $2inconsistent Muse Mail owner receiptupdate runtime.maintenance_markers
+                     set completed_at = now(), detail_json = $2 where marker_key = $1update runtime.maintenance_markers
+                         set detail_json = $2 where marker_key = $1insert into runtime.maintenance_markers (marker_key, detail_json)
+                     values ($1, $2) on conflict (marker_key) do nothingselect source_ref from runtime.execute_resolve_runs
+                     where worker_kind = $1 and source_ref = any($2)
+update runtime.execute_resolve_runs
+set worker_phase = 'resolve', terminal_decision = 'nothing_to_do',
+    terminal_message = $4, updated_at = now()
+where run_id = $1 and worker_kind = 'verification'
+  and metadata_json ->> 'category' = 'health'
+  and status = 'pending' and terminal_decision is null
+  and worker_phase = 'execute'
+  and worker_agent_id = $2 and worker_generation = $3
+returning run_id
+verification_not_relevant
+select exists (
+  select 1 from runtime.execute_resolve_runs
+  where run_id = $1 and worker_kind = 'verification'
+    and metadata_json ->> 'category' = 'health'
+    and worker_agent_id = $2 and worker_generation = $3
+    and worker_phase = 'resolve'
+    and status in ('pending', 'completed_noop')
+    and terminal_decision = 'nothing_to_do' and terminal_message = $4
+)
+not_relevant requires the current health verifier execute owner
+update runtime.execute_resolve_runs
+set worker_generation = worker_generation + 1,
+    worker_phase = 'execute',
+    worker_agent_id = $2,
+    worker_started_at = now(),
+    execute_message_id = $3,
+    resolve_message_id = $4,
+    updated_at = now()
+where run_id = $1
+  and status = 'pending'
+  and worker_agent_id is null
+returning worker_generation, worker_phase, worker_agent_id, worker_started_at,
+          execute_message_id, resolve_message_id
+
+select worker_generation, worker_phase, worker_agent_id, worker_started_at,
+       execute_message_id, resolve_message_id
+from runtime.execute_resolve_runs
+where run_id = $1
+  and status = 'pending'
+
+update runtime.execute_resolve_runs
+set worker_phase = $5,
+    updated_at = now()
+where run_id = $1
+  and status = 'pending'
+  and worker_generation = $2
+  and worker_agent_id = $3
+  and worker_phase = $4
+
+update runtime.execute_resolve_runs
+set last_error_stage = $4,
+    last_error_message = $5,
+    updated_at = now()
+where run_id = $1
+  and status = 'pending'
+  and terminal_decision is null
+  and worker_generation = $2
+  and worker_agent_id = $3
+  and worker_phase = 'execute'
+returning run_id
+
+select exists(
+  select 1 from runtime.execute_resolve_runs
+  where run_id = $1
+    and status = 'pending'
+    and terminal_decision is null
+    and worker_generation = $2
+    and worker_agent_id = $3
+    and worker_phase = 'execute'
+    and last_error_stage = $4
+    and last_error_message = $5
+)
+
+update runtime.execute_resolve_runs
+set status = 'failed',
+    last_error_stage = $8,
+    last_error_message = $9,
+    updated_at = now()
+where run_id = $1
+  and status in ('pending', 'notify_pending')
+  and terminal_decision is null
+  and worker_generation = $2
+  and worker_phase = $3
+  and worker_agent_id = $4
+  and worker_started_at = $5
+  and execute_message_id = $6
+  and resolve_message_id = $7
+  and worker_generation > 0
+returning worker_kind
+select terminal_decision, terminal_message
+                     from runtime.execute_resolve_runs where run_id = $1
+update runtime.execute_resolve_runs
+set terminal_decision = $2,
+    terminal_message = $3,
+    updated_at = now()
+where run_id = $1
+  and status = 'pending'
+  and worker_kind <> 'muse_mail_owner'
+  and terminal_decision is null
+  and worker_agent_id = $4
+  and worker_generation = $5
+  and worker_phase = 'resolve'
+returning run_id
+
+select terminal_decision, terminal_message
+from runtime.execute_resolve_runs
+where run_id = $1
+  and worker_agent_id = $2
+  and worker_generation = $3
+  and worker_phase = 'resolve'
+
+update runtime.execute_resolve_runs
+set status = 'failed',
+    last_error_stage = $2,
+    last_error_message = $3,
+    updated_at = now()
+where run_id = $1
+  and status in ('pending', 'notify_pending')
+  and worker_agent_id = $4
+  and worker_generation = $5
+  and worker_phase = $6
+returning run_id
+
+select exists(
+  select 1 from runtime.execute_resolve_runs
+  where run_id = $1
+    and status = 'failed'
+    and last_error_stage = $2
+    and last_error_message = $3
+    and worker_agent_id = $4
+    and worker_generation = $5
+    and worker_phase = $6
+)
+
+update runtime.execute_resolve_runs
+set status = 'completed_noop',
+    last_error_stage = null,
+    last_error_message = null,
+    updated_at = now()
+where run_id = $1
+  and status = 'pending'
+  and terminal_decision = 'nothing_to_do'
+  and worker_agent_id = $2
+  and worker_generation = $3
+  and worker_phase = $4
+returning run_id
+
+select exists(
+  select 1 from runtime.execute_resolve_runs
+  where run_id = $1
+    and status = 'completed_noop'
+    and terminal_decision = 'nothing_to_do'
+    and worker_agent_id = $2
+    and worker_generation = $3
+    and worker_phase = $4
+)
+
+update runtime.execute_resolve_runs
+set status = 'notify_pending',
+    handoff_message_id = $2,
+    updated_at = now()
+where run_id = $1
+  and status = 'pending'
+  and terminal_decision = 'notify_main_agent'
+  and worker_agent_id = $3
+  and worker_generation = $4
+  and worker_phase = 'resolve'
+returning run_id
+
+select exists(
+  select 1 from runtime.execute_resolve_runs
+  where run_id = $1
+    and status = 'notify_pending'
+    and terminal_decision = 'notify_main_agent'
+    and handoff_message_id = $2
+    and worker_agent_id = $3
+    and worker_generation = $4
+    and worker_phase = 'resolve'
+)
+
+update runtime.execute_resolve_runs
+set status = 'completed_notified',
+    handoff_message_id = $2,
+    last_error_stage = null,
+    last_error_message = null,
+    updated_at = now()
+where run_id = $1
+  and status = 'notify_pending'
+  and worker_agent_id = $3
+  and worker_generation = $4
+  and worker_phase = $5
+returning run_id
+
+select exists(
+  select 1 from runtime.execute_resolve_runs
+  where run_id = $1
+    and status = 'completed_notified'
+    and handoff_message_id = $2
+    and worker_agent_id = $3
+    and worker_generation = $4
+    and worker_phase = $5
+)
+
+update runtime.execute_resolve_runs
+set status = 'notify_pending',
+    last_error_stage = $2,
+    last_error_message = $3,
+    updated_at = now()
+where run_id = $1
+  and worker_kind = $7
+  and status = 'pending'
+  and terminal_decision is null
+  and worker_agent_id = $4
+  and worker_generation = $5
+  and worker_phase = $6
+returning run_id
+
+select exists(
+  select 1 from runtime.execute_resolve_runs
+  where run_id = $1
+    and worker_kind = $7
+    and status = 'notify_pending'
+    and last_error_stage = $2
+    and last_error_message = $3
+    and worker_agent_id = $4
+    and worker_generation = $5
+    and worker_phase = $6
+)
+update runtime.maintenance_markers set detail_json = $2 where marker_key = $1
+with candidates as (
+  select a.run_id, a.message_id, a.run_status, a.report_outcome, a.report_summary,
+         a.actions_json, a.started_at, a.finished_at, a.updated_at, a.agent_id,
+         a.worker_generation, a.execute_message_id, a.resolve_message_id,
+         a.handoff_message_id, a.root_session_id, a.handoff_submission_id,
+         a.assistant_message_id, a.failure_stage, a.origin, a.source_processing_id,
+         a.report_call_id, a.chat_submission_id
+  from runtime.mail_processing_activity a
+  where a.environment_id = $1 and a.message_id = any($2::text[])
+  union all
+  select r.run_id, split_part(r.source_ref, ':', 4), r.status,
+         null::text, null::text, '[]'::jsonb, r.worker_started_at,
+         case when r.status in ('completed_notified', 'completed_noop', 'failed')
+              then r.updated_at else null end,
+         r.updated_at, r.worker_agent_id, r.worker_generation,
+         r.execute_message_id, r.resolve_message_id, r.handoff_message_id,
+         null::text, null::text, null::text, r.last_error_stage, 'owner_email'::text,
+         null::text, null::text, null::text
+  from runtime.execute_resolve_runs r
+  where r.worker_kind = 'muse_mail_owner'
+    and split_part(r.source_ref, ':', 2) = $1
+    and split_part(r.source_ref, ':', 4) = any($2::text[])
+    and not (r.metadata_json ? 'mail_intake_pending')
+    and not exists (select 1 from runtime.mail_processing_activity a where a.run_id = r.run_id)
+)
+select * from runtime.execute_resolve_runs where run_id = $1
+insert into runtime.execute_resolve_runs as existing (
+  run_id,
+  worker_kind,
+  source_ref,
+  lane_key,
+  status,
+  metadata_json
+) values (
+  $1, $2, $3, $4, 'pending', $5
+)
+on conflict (worker_kind, source_ref) do update set
+  lane_key = case
+    when existing.status = 'failed' then excluded.lane_key
+    else existing.lane_key
+  end,
+  status = case
+    when existing.status = 'failed' then 'pending'
+    else existing.status
+  end,
+  terminal_decision = case
+    when existing.status = 'failed' then null
+    else existing.terminal_decision
+  end,
+  terminal_message = case
+    when existing.status = 'failed' then null
+    else existing.terminal_message
+  end,
+  handoff_message_id = case
+    when existing.status = 'failed' then null
+    else existing.handoff_message_id
+  end,
+  last_error_stage = case
+    when existing.status = 'failed' then null
+    else existing.last_error_stage
+  end,
+  last_error_message = case
+    when existing.status = 'failed' then null
+    else existing.last_error_message
+  end,
+  worker_phase = case
+    when existing.status = 'failed' then null
+    else existing.worker_phase
+  end,
+  worker_agent_id = case
+    when existing.status = 'failed' then null
+    else existing.worker_agent_id
+  end,
+  worker_started_at = case
+    when existing.status = 'failed' then null
+    else existing.worker_started_at
+  end,
+  execute_message_id = case
+    when existing.status = 'failed' then null
+    else existing.execute_message_id
+  end,
+  resolve_message_id = case
+    when existing.status = 'failed' then null
+    else existing.resolve_message_id
+  end,
+  metadata_json = case
+    when existing.status = 'failed' then excluded.metadata_json
+    else existing.metadata_json
+  end,
+  updated_at = now()
+returning run_id, source_ref, status
+source_refselect space_slug from runtime.event_hook_space_owners where hook_id = $1
+update runtime.execute_resolve_runs
+set status = 'failed',
+    last_error_stage = $3,
+    last_error_message = $4,
+    updated_at = now()
+where lane_key = $1
+  and status = 'pending'
+  and worker_agent_id is null
+  and worker_kind <> $5
+  and ($2::text is null or run_id = $2)
+insert into runtime.event_hook_space_owners (hook_id, space_slug) values ($1, $2) on conflict (hook_id) do update set space_slug = excluded.space_slug, updated_at = now()delete from runtime.event_hook_space_owners where hook_id = $1acquired connection, but time to acquire exceeded slow thresholdacquired connectionexecute_resolve_mail.poll_stateexecute_resolve_mail.pruneinvalid Muse Mail scan admission payloadexecute_resolve_mail.invalidate_scanexecute_resolve_mail.enrollexecute_resolve_mail.recorded_message_idsexecute_resolve_verification_not_relevantexecute_resolve_claim_worker_ownerexecute_resolve_advance_worker_phaseexecute_resolve_record_worker_warningexecute-resolve worker warning requires execute ownerexecute_resolve_fail_unrecoverable_workerexecute_resolve_get_terminal_decisionexecute_resolve_record_terminal_decisionexecute_resolve_get_owner_terminal_decisionexecute_resolve_mark_failedexecute_resolve_mark_completed_noopnoop completion requires resolve ownerexecute_resolve_mark_notify_pendingnotify-pending transition requires resolve ownerexecute_resolve_mark_completed_notifiednotified completion requires resolve ownerexecute_resolve_mark_mail_rejection_notice_pendingexecute_resolve_mail.conversation_stateexecute_resolve_mail.record_promptsinvalid Muse Mail prompted senderexecute_resolve_mail.activity_historyexecute_resolve_mail.activity_summariesmail processing summary batch exceeds 100 messagesexecute_resolve_get_runexecute_resolve_create_pending_runevent_hook_space_ownerexecute_resolve_cancel_unclaimed_lane_runsset_event_hook_space_ownerremove_event_hook_space_ownerselect worker_kind, source_ref, status, worker_agent_id, worker_generation,
+                worker_started_at, execute_message_id, resolve_message_id,
+                handoff_message_id, last_error_stage, updated_at
+         from runtime.execute_resolve_runs where run_id = $1worker_kindupdated_atinsert into runtime.mail_processing_activity (
+           run_id, environment_id, mailbox_id, message_id, run_status,
+           started_at, finished_at, updated_at, agent_id, worker_generation,
+           execute_message_id, resolve_message_id, handoff_message_id, failure_stage,
+           origin, actions_json
+         ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
+                   'owner_email', '[]'::jsonb)
+         on conflict (run_id) do update set
+           run_status = excluded.run_status,
+           finished_at = coalesce(mail_processing_activity.finished_at, excluded.finished_at),
+           updated_at = greatest(mail_processing_activity.updated_at, excluded.updated_at),
+           handoff_message_id = excluded.handoff_message_id,
+           failure_stage = excluded.failure_stage
+         where mail_processing_activity.environment_id = excluded.environment_id
+           and mail_processing_activity.mailbox_id = excluded.mailbox_id
+           and mail_processing_activity.message_id = excluded.message_id
+           and mail_processing_activity.agent_id is not distinct from excluded.agent_id
+           and mail_processing_activity.worker_generation = excluded.worker_generationworker_started_atworker_agent_idworker_generationexecute_message_idresolve_message_idhandoff_message_idmail processing activity owner does not match rundatabase write admission gate closedadmission_timeoutcalled `Result::unwrap()` on an `Err` valueexecuteresolveexecute_resolve_pending_lanes
+select distinct lane_key
+from runtime.execute_resolve_runs
+where status = 'pending'
+  and ($1::text is null or lane_key > $1)
+  and (worker_kind <> $3 or not (metadata_json ? 'mail_intake_pending'))
+order by lane_key
+limit $2
+
+select exists (
+  select 1
+  from runtime.execute_resolve_runs
+  where lane_key = $1
+    and status = 'pending'
+    and (worker_kind <> $2 or not (metadata_json ? 'mail_intake_pending'))
+)
+execute_resolve_notify_pending_lanes
+select distinct lane_key
+from runtime.execute_resolve_runs
+where status = 'notify_pending'
+  and ($1::text is null or lane_key > $1)
+  and (worker_kind <> $3 or not (metadata_json ? 'mail_intake_pending'))
+order by lane_key
+limit $2
+execute_resolve_oldest_pending_in_lane
+select *
+from runtime.execute_resolve_runs
+where lane_key = $1
+  and status = 'pending'
+  and (worker_kind <> $2 or not (metadata_json ? 'mail_intake_pending'))
+order by created_at asc, run_id asc
+limit 1
+execute_resolve_lane_has_notify_pending
+select exists (
+  select 1
+  from runtime.execute_resolve_runs
+  where lane_key = $1
+    and status = 'notify_pending'
+    and (worker_kind <> $2 or not (metadata_json ? 'mail_intake_pending'))
+)
+execute_resolve_oldest_notify_pending_in_lane
+select *
+from runtime.execute_resolve_runs
+where lane_key = $1
+  and status = 'notify_pending'
+  and (worker_kind <> $2 or not (metadata_json ? 'mail_intake_pending'))
+order by created_at asc, run_id asc
+limit 1
+BUG: inner connection already taken!ConfigurationInvalidArgumentIoTlsRowNotFoundTypeNotFoundtype_nameColumnIndexOutOfBoundsindexlenColumnNotFoundColumnDecodesourceEncodeDecodeAnyDriverErrorPoolTimedOutPoolClosedWorkerCrashedMigrateInvalidSavePointStatementBeginFaileda Display implementation returned an error unexpectedlyError

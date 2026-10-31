@@ -1,0 +1,74 @@
+errorsuccesswrite_admissionwritepostgres write completed slowlypostgres write failedretrying idempotent postgres writeone-shot postgres write invoked more than onceselect * from runtime.phone_calls where operation_id = $1insert into runtime.phone_calls
+                 (operation_id, root_session_id, origin_message_id, request_json, call_id,
+                  created_at_ms, next_poll_at_ms, outcome_submission_id, transcript_submission_id,
+                  context_json, recovery_generation)
+                 values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+                 on conflict do nothingselect * from runtime.phone_calls
+                where next_poll_at_ms is not null and next_poll_at_ms <= $1
+                and not exists (select 1 from runtime.work_items w
+                    where w.work_id = 'maintenance:phone_recovery:call:' ||
+                        phone_calls.recovery_generation || ':' || phone_calls.operation_id
+                    and w.terminalized_at is null)
+                order by next_poll_at_ms, operation_id limit $2select * from runtime.phone_calls where root_session_id = $1
+                and (outcome_submission_id = $2 or transcript_submission_id = $2
+                     or result_json->'question_delivery'->>'submission_id' = $2
+                     or result_json->'update_delivery'->>'submission_id' = $2)select * from (
+                    select operation_id, call_id, created_at_ms, observed_at_ms,
+                        next_poll_at_ms, recovery_error, outcome_delivered, transcript_delivered,
+                        result_json->'recovery_error_details' as recovery_error_details,
+                        transcript is not null as transcript_available,
+                        coalesce(result_json->>'status',
+                            case when call_id is null and recovery_error = $4 then $3
+                                else $5 end) as status,
+                        request_json->>'to' as "to",
+                        request_json->>'counterparty' as counterparty,
+                        coalesce(coalesce(nullif(result_json->>'provider', 'unknown'),
+                            request_json->>'executor') = $7, false) as human_routed
+                    from runtime.phone_calls where root_session_id = $1
+                ) calls
+                where ($2::text[] is null or status = any($2::text[]))
+                order by created_at_ms desc, operation_id limit $6phone_gateway_rejectedunknownhuman_call_centerselect * from runtime.phone_calls where root_session_id = $1 and call_id = $2update runtime.phone_calls set outcome_submission_id = $3 where operation_id = $1 and outcome_submission_id = $2 and not outcome_deliveredupdate runtime.phone_calls set transcript_submission_id = $3 where operation_id = $1 and transcript_submission_id = $2 and not transcript_deliveredupdate runtime.phone_calls set
+                call_id = coalesce(call_id, $3), result_json = $4,
+                transcript = coalesce(transcript, $5), observed_at_ms = $6,
+                next_poll_at_ms = $7, error_count = $8, recovery_error = $9,
+                outcome_text = coalesce(outcome_text, $10), revision = revision + 1
+                where operation_id = $1 and revision = $2
+                and recovery_generation = $11
+                and (call_id is null or call_id = $3)update runtime.phone_calls set
+                outcome_delivered = outcome_delivered or not $3,
+                transcript_delivered = transcript_delivered or $4
+                where operation_id = $1 and recovery_generation = $5
+                and (case when $3 then transcript_submission_id
+                     else outcome_submission_id end) = $2update runtime.phone_calls set revision = revision + 1
+                     where operation_id = $1 and recovery_generation = $2
+                     and revision = $3 and call_id is null and request_json is not nullselect * from runtime.phone_calls
+                     where root_session_id = $1 and operation_id = $2update runtime.phone_calls set recovery_generation = $3
+                where operation_id = $1 and recovery_generation = $2
+                and next_poll_at_ms is not nullselect exists(select 1 from runtime.phone_calls
+                     where operation_id = $1 and context_json #>> '{trace,schedule_id}' = $2)delete from runtime.phone_calls where operation_id = $1
+                     and recovery_generation = $2 and revision = 1 and call_id is nullselect exists(select 1 from runtime.phone_calls
+                     where next_poll_at_ms is not null)update runtime.phone_calls
+                set context_json = jsonb_set(context_json, '{user_close}', $2, true)
+                where operation_id = $1select coalesce(context_json -> 'judgment', '{}'::jsonb)
+                from runtime.phone_calls where call_id = $1update runtime.phone_calls
+                set context_json = jsonb_set(
+                    context_json,
+                    '{judgment}',
+                    coalesce(context_json -> 'judgment', '{}'::jsonb)
+                        || jsonb_build_object(
+                            'phase', 'publishing',
+                            'result', $3::jsonb,
+                            'recorded_outcome', $2::text),
+                    true),
+                next_poll_at_ms = coalesce(next_poll_at_ms, $4), revision = revision + 1
+                where call_id = $1
+                and coalesce(context_json #>> '{judgment,phase}', 'pending') in ('pending', 'queued', 'skipped', 'abandoned')update runtime.phone_calls
+                set context_json = jsonb_set(context_json, '{judgment}', $3, true)
+                where operation_id = $1 and recovery_generation = $2
+                and coalesce(context_json #>> '{judgment,phase}', 'pending') not in ('publishing', 'recorded')update runtime.phone_calls
+                set context_json = jsonb_set(context_json, '{judgment}',
+                    (context_json -> 'judgment') || jsonb_build_object(
+                        'phase', 'recorded', 'recorded_at_ms', $3::bigint), true)
+                where call_id = $1
+                and context_json #>> '{judgment,phase}' = 'publishing'
+                and context_json #>> '{judgment,result,event_id}' = $2phone_calls.insertphone call row needs a frozen request or a provider call IDphone_calls.pendingphone_calls.deliveryphone_calls.list_ownedhatch-call:phone_calls.load_ownedphone_calls.retry_deliveryphone_calls.save_observationphone_calls.replace_recovery_generationphone_calls.scheduled_run_owns_deliveryphone_calls.delete_unplaced_first_attemptphone_calls.record_user_closephone_calls.load_judgmentphone_calls.record_judgment_statephone_calls.acknowledge_judgment_resultdatabase write admission gate closedadmission_timeoutoperation_idroot_session_idorigin_message_idrequest_jsoncontext_jsonrecovery_generationcall_idresult_jsontranscriptcreated_at_msobserved_at_msnext_poll_at_mserror_countrecovery_erroroutcome_textoutcome_submission_idtranscript_submission_idoutcome_deliveredtranscript_deliveredschedule_iddestinationauthorized_output_jsonrecovery_error_detailstranscript_availablestatustocounterpartyhuman_routed

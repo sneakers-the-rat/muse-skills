@@ -1,0 +1,692 @@
+  AND metadata.pinned IS DISTINCT FROM TRUE
+load_all_root_conversation_candidates_partitionload_root_conversation_candidates_partitionload_root_conversation_candidate_by_session_idruntime work enforce mode requires a DB-backed registryruntime work start collided with an active row with different ownershippersisted runtime work startfailed to persist runtime work startruntime_work_pending_terminalfailed to persist runtime work terminal statefailed to parse runtime work row for rehydrationfailed to persist runtime work pending terminal intentruntime work terminal CAS did not find a terminal DB row in enforce modefailed to mirror canonical runtime work terminal row
+SELECT event_seq, event_name, source, role::text AS role, visibility::text AS visibility,
+       message_id, agent_id, parent_agent_id, parent_message_id, reply_to_message_id,
+       transcript_surface::text AS transcript_surface, payload_json,
+       (extract(epoch from created_at))::bigint AS created_at
+FROM runtime.events WHERE idempotency_key = $1
+runtime.cancellation
+SELECT ci.item_json, ci.message_source,
+       (extract(epoch from ci.created_at))::bigint AS created_at,
+       projection.client_context_json
+FROM agent.context_items AS ci
+LEFT JOIN agent.context_item_resume_projection AS projection
+  ON projection.agent_id = ci.agent_id AND projection.seq = ci.seq
+WHERE ci.agent_id = $1 AND ci.seq = $2
+cancellation retry does not match its committed identity
+SELECT
+  GREATEST(
+    (SELECT COALESCE(MAX(seq), -1) FROM context_items WHERE agent_id = $1),
+    (SELECT COALESCE(MAX(seq), -1) FROM context_item_resume_projection WHERE agent_id = $1),
+    COALESCE((SELECT handoff_context_high_water_seq FROM agent.agents WHERE agent_id = $1), -1),
+    (SELECT COALESCE(MAX(root_seq), -1) FROM agent.companion_trace_imports WHERE root_agent_id = $1),
+    (SELECT COALESCE(MAX(producer_seq), -1) FROM agent.companion_trace_imports WHERE producer_agent_id = $1),
+    COALESCE((SELECT settled_seq FROM agent.companion_trace_sources WHERE producer_agent_id = $1), -1)
+  ) AS max_item_seq,
+  COALESCE((SELECT prompt_floor_seq FROM agents WHERE id = $1), -1)
+    AS prompt_floor_seq,
+  (SELECT COALESCE(MAX(checkpoint_seq), -1)
+     FROM agent_compactions
+     WHERE agent_id = $1
+       AND checkpoint_seq IS NOT NULL
+       AND has_replacement_history)
+    AS checkpoint_seq
+max_item_seqcheckpoint_seqcontext_seqlegacy completion has no verifiable batch ownerUPDATE agent.agents SET handoff_context_high_water_seq =
+                GREATEST(COALESCE(handoff_context_high_water_seq, -1), $2)
+             WHERE agent_id = $1SELECT state, submission_json, accepted_at, transcript_event_seq,
+                    stream_owner_message_id FROM agent.message_mailbox
+             WHERE agent_id = $1 AND submission_id = $2 FOR UPDATEstartup_submission_missingsubmission_jsonreply_to_targetlegacy startup cancellation changed its replyaccepted_atstateinvalid startup mailbox statestartup_submission_terminalstartup_execution_ownedstartup_already_cancelledtranscript_event_seqstream_owner_message_idstartup cancellation input already has execution custodystartup_submission_changedUPDATE agent.message_mailbox SET state = 'aborted', terminalized_at = now(),
+                    transcript_event_seq = $3
+             WHERE agent_id = $1 AND submission_id = $2 AND state = 'accepted'
+               AND stream_owner_message_id IS NULL AND transcript_event_seq IS NULLstartup cancellation custody changed before commitSELECT state, submission_json, accepted_at, transcript_event_seq,
+                    stream_owner_message_id, checkpoint_custody FROM agent.message_mailbox
+             WHERE agent_id = $1 AND submission_id = $2 FOR UPDATElegacy startup quota rejection changed its replycheckpoint_custodypending startup input already has a transcript eventstartup_quota_rejectionUPDATE agent.message_mailbox SET state = 'completed', terminalized_at = now(),
+                    transcript_event_seq = $3
+             WHERE agent_id = $1 AND submission_id = $2 AND state = 'accepted'
+               AND stream_owner_message_id IS NULL AND checkpoint_custody IS NULL
+               AND transcript_event_seq IS NULLstartup quota rejection custody changed before commitfailed to load runtime work child by stream owner from DBJARVIS_STEFI_PROXY_SOCK,http://localhost/hatch/resolve_skill_iconicon_namescdnstefi resolve_skill_icon returned non-success statusfailed to resolve skill icon URLs via stefi proxynotification opt-in experiment and durable fallback unavailable; goal idgoal slugjob_idsource_pathsource_hashinference/v1/model/getmodel.get returned an empty selection/v1/auth-file/list/v1/custom-connectors/listx-hatch-gk-assignment-confirmedcron grant revocationcron grant revocation requires a schedule idscheduler reconcile after cron definition mutation failedscheduler db unavailable for cron definition reconciledropping duplicate root terminal event for already-terminal messageroot_inference_completepost_root_turn_terminalroot event pump next_event failed; retryinginterruptedimmediateinsert into chat_private.reactions
+         (reaction_id, chat_id, binding_epoch, provider, target_event_seq, state, work_json)
+         values ($1, $2, $3, $4, $5, $6, $7)select chat_id, binding_epoch, target_event_seq, state, work_json is not null as has_work
+         from chat_private.reactions
+         where reaction_id = $1chat_idbinding_epochreaction receipt changed ownershipreaction receipt has invalid work ownershipselect epoch from chat_private.bindings where chat_id = $1
+         and provider = $2 and not revoked for sharereaction binding was retiredselect b.chat_id, e.event_name, e.visibility::text AS visibility, e.payload_json, e.display_text_ready,
+        exists(select 1 from chat_private.publications p where p.event_seq = e.event_seq) as captured
+        from runtime.events e
+        join agent.agents root on root.id = coalesce(e.parent_agent_id, e.agent_id)
+        join chat_private.bindings b on b.chat_id = root.session_id
+        where e.event_seq = $1 and e.event_name in ('message.assistant', 'delta.presentation')
+          and root.kind = 'root' and root.parent_agent_id is null
+          and b.chat_id = $2 and b.provider = $3display_text_readyinsert into chat_private.publications
+        (message_id, event_seq, chat_id, context_json, request_trace_json, body, execution_id, state, content_state, display_ready)
+        select e.message_id, e.event_seq, $2, $3, $4, m.body, $5, $6, $7, $8
+        from runtime.events e join runtime.messages m using (event_seq)
+        where e.event_seq = $1 on conflict (message_id) do nothingwith content as (
+          select case when event_name = 'delta.presentation' and $3
+            then 'terminal' else $2 end as state from runtime.events where event_seq = $1
+        ) update chat_private.publications p set
+        body = m.body, content_state = content.state, display_ready = $3,
+        state = case
+          when t.disposition = 'quiet' or (t.phase = 'aborted' and (content.state <> 'terminal' or not $3))
+            or (t.phase = 'completed' and content.state = 'streaming') then 'retired'
+          when t.disposition = 'publish' and $3
+            and (content.state = 'terminal' or (t.phase = 'completed' and content.state = 'static'))
+            then case when length(trim(m.body)) = 0 then 'retired' else 'pending' end
+          else 'writing' end
+        from runtime.messages m, chat_private.publication_turns t, content
+        where p.event_seq = $1 and m.event_seq = p.event_seq
+          and t.execution_id = p.execution_id and p.state = 'writing'select case when pg_try_advisory_xact_lock_shared(hashtextextended($1, 0))
+         then pg_try_advisory_xact_lock_shared(hashtextextended($2, 0)) else false endchat creation overlaps retirementselect exists(select 1 from chat_private.retired_chat_ids where chat_id = $1)select exists(select 1 from chat.chats where chat_id = $1)chat owner is absent or being retiredroot session has no durable public-session classificationfailed to classify root session visibilityfailed to load root session visibilityfailed to resolve chat event root visibilityfailed to refresh latest public runtime user timezone cachefailed to read home timezone for quota status renderingUTCbrowser broker returned the wrong list-slots result shapefailed to persist side-chat memory capture deadlinefailed to resolve public session for side-chat idle memory capture scheduling; scheduling retryhttp://localhost/hatch/check_gatekeepersGatekeeper response was invalid; using defaultGatekeeper check failed; using defaultselect set_config('hatch.goals_bookkeeping_output', 'true', true)select source, parent_goal_id from goals.goals where goal_id = $1insert into goals.updates
+           (update_id, goal_id, title, summary, description, effective_at, created_at, updated_at,
+            effective_at_ts, updated_at_ts, author_source)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)update goals.goals
+         set last_activity_at = $2, last_activity_at_ts = $3
+         where goal_id = $1select pg_advisory_xact_lock(
+           hashtextextended('goals.parent_hierarchy', 0)
+         )unsupported_targetthe target client no longer declares target_call_id for this commandno_origin_connectionthe voice call's realtime stream is unavailableunsupported_originui_control is only available for external client-originated turnsui_control action must be `navigate` or `set`suggestinvalid_modeui_control mode must be `perform` or `suggest`server-only commandno active main-chat client is available for this email requeststale_calltarget_call_idui_control command deliveredui_control command not delivered to any clientdelivering client.invoke UI-control commandclient.invoke could not be enqueued for the target connectionclient result channel closed before reporting outcomeclient_timeoutclient did not send client.invoke.result before deadlinefield cannot be emptywidget_id cannot be emptywidget host message not foundwidget_state_patch_failedwidget state bundlewidget state field cannot be emptywidget_state_lookup_failedfailed to resolve widget state event session scopeartifact_openedfailed to record Letter openskipping widget.state_updated broadcast because owning root session is missingfailed to broadcast widget.state_updatedtarget_unavailabletarget_load_failedchat_quota_rejectionfailed to load rejected chat's presentation targetfailed to read current quota details for rejected chat submissionmessage_failedfailed to emit rejected-chat out-of-credits messagemessage_id_missingrejected-chat out-of-credits message omitted its presentation message idmessage_sentcaptured provider absentmuse-mail-setupmuse-mail-settingshatch://email_setupfailed to prefetch reply_to_target ideas for history hydrationfailed to prefetch reply_to_target feed units for history hydrationfailed to hydrate idea reply_to_targetfailed to hydrate image reply_to_targetfailed to hydrate images reply_to_target entryfailed to hydrate presentation reply_to_targetfailed to hydrate feed unit reply_to_targetfailed to prefetch reply_to_target message records for history hydrationfailed to normalize image reply_to_target pathfailed to resolve image reply_to_target pathfailed to stat image reply_to_target pathfailed to prefetch reply_to_target presentation records for history hydrationfailed to hydrate message reply_to_targetfailed to load presentation reply_to_target eventfailed to evaluate onboarding state after successful chat messagecould not load saved widgetcould not find saved widgetwidget publication requires captured authoritymissing chat contextmissing presentation turnmissing request or widget idwidget presentation requires a direct owner conversationthis card is not supported for the requesting input or its binding is no longer currentsuppressed denied filesystem update eventsuppressed unchanged filesystem update events2s_context_summaryvoice_context_source_changedfailed to enqueue S2S context summary maintenancecommitted memory projection planning failedcommitted goals bookkeeping input planning faileddeduped filesystem update eventfailed to prefetch reply_to_target goals for history hydrationfailed to hydrate goal reply_to_targettheme.updatedwidgetsfailed to load widget presentations for chat record hydrationdisplay_textcannot delete the primary sessionfailed to read effective model for session creation; falling back to registry defaultskipped invalid hook definitions while falling side chat delivery back to mainrewrote side chat hook delivery targets to mainskipped invalid cron definitions while falling side chat delivery back to mainrewrote side chat cron delivery targets to mainshopping_carthotel_resultsfailed to save notification opt-in offersnode_card.notification_opt_in.server_textfailed to read notification opt-in offersno_capabilityonboarding_recentno_originating_connectioncontrolnot_enabledstate_unavailablecard_writtencron_createdreasonnotification_opt_innode_cardchat_contextfailed to persist notification opt-in cardretiredfilestaglineemojiIDENTITY.mdfailed to build identity.updated payloadhatch.name_updatedreact_to_user_message target reauthorization rejectedfacebook_like_easter_egg_triggeredreact_to_user_message failedreaction could not be applieditemsbrowser broker returned the wrong slot-control result shapefailed to resolve public session id for command completiondelta.message_donefailed to resolve public session id for persisted message broadcastdropping persisted public message broadcast because owning root session could not be resolvedfailed to broadcast persisted public message for root sessionshow_do_it_buttonhide_summaryfailed to hydrate native idea widgetwidget presentation requires a matching request and widgetembedded widget presentation belongs to a stale conversation epochfailed to persist embedded delta.presentation eventfailed to prefetch idea widget icon contexts for history hydrationattachment signing task failedwidget.present requires a widget idwidget.present requires a request idwidget.present complimentary subscription kind or delivery identity mismatchfailed to load persisted widgetvoice_genui_widget_subjectsystem widget presentation requires the primary root sessionhost_message_idis_threadspace completion widget requires a canonical slugspace completion widget requires a widget idletter widget delivery marker skipped because briefing was not foundgoal_briefing_pushbriefing_idletter widget delivery marker could not load briefingletter widget delivery marker failedembedded widget presentation requires a widget idembedded widget presentation requires a request idfailed to load persisted widget for embedded presentationrefreshed expired shopping card image urlstext_formatheadertext_with_button header requires a non-empty title, subtitle, and iconsecondary_buttonstext_with_button widget requires non-empty secondary button URLstext_with_button widget requires non-empty secondary button labelstext_with_button widget requires a non-empty button URLtext_with_button widget requires a non-empty button labeltext_with_button widget requires non-empty texttext_with_button widget requires a request idout_of_credits_deliverysubscriptions.upgradesubscriptions.topuphatch://invite_friendsexclude_from_context_windowscheduled_task_created_activityfailed to serialize scheduled-task creation presentationfailed to serialize scheduled-task creation datafailed to persist scheduled-task creation presentationstripe-linkshop-wallet-clisource_disabledscripted_callcall_not_activeempty_responseforwarded completed text response into active Cosmos callcould not forward completed text response because the voice floor is saturatedvoice_floor_saturatedcompleted text response had no matching active Cosmos voice floorvoice_floor_unavailable
+    select
+        node_id,
+        coalesce(display_name, node_id) as display_name,
+        platform,
+        enabled_permissions_json,
+        commands_json,
+        data_sources_json,
+        version,
+        device_family,
+        model_id,
+        metadata_json,
+        is_wakeup_supported,
+        delivery_app,
+        invoke_protocol,
+        coalesce(paired_at_text, created_at::text) as paired_at,
+        coalesce(last_seen_at_text, last_seen_at::text, created_at::text) as last_seen_at,
+        status,
+        pairing_status
+    from device.nodes
+pairing_status <> 'revoked'goal compare-and-set updates do not support hierarchy fieldsgoal guide path is not a regular filegoal workspace path is not a real directorydynamic timezone unresolvedpersist reconciled scheduler statecancel queued runs for unresolved dynamic timezone jobsfailed to revoke stale Sentinel grants; cron reactivation remains quarantinedfailed to read next wake-eligible maintenance deadline; scheduled resume projection is incompletefailed to project authoritative side-chat cron fallback to the filesystemretired completed authoritative runonce definitionscheduler reconcile errordynamic scheduled-resume resolver returned unknown jobs; projection is incompletedynamic scheduled-resume eligibility could not be resolved; projection is incompletefailed to revoke Sentinel grants for removed cron schedulescheduler released source paths held by removed jobs so live definitions could persistreleased_source_pathsnext_effective_dispatch_at_utcdynamic_timezone_next_run_refreshed_jobsgrant_revocation_failuresinvalid_definitionsadoptschedule adoption did not resolve to the requested goalschedule changed after bookkeeping snapshotted itschedule moved after bookkeeping snapshotted itselect exists(select 1 from spaces.user_state
+         where sharing_state is null or accessed_at_ms is not null
+           or last_opened_at_ms is not null or frequency_score is not null
+           or favorite_order is not null)insert into spaces.user_state (space_slug, favorite_order, is_favorite) values library on conflict (space_slug) do update set
+            favorite_order = excluded.favorite_order, is_favorite = true
+          where spaces.user_state.sharing_state is not null
+            and spaces.user_state.accessed_at_ms is null
+            and spaces.user_state.last_opened_at_ms is null
+            and spaces.user_state.frequency_score is null
+            and spaces.user_state.favorite_order is null, true)
+DELETE FROM search_documents
+WHERE owner_table = 'runtime.events'
+  AND owner_key = $1
+DELETE FROM resources WHERE event_seq = $1INSERT INTO resources (event_seq, ordinal, resource_kind, resource_key, label, mime_type, size_bytes, metadata_json) VALUES /__hatch/chat_context_jsonstring/__hatch/display_text_updated_at_msnumberSELECT field_path, scalar_type, scalar_value, text_value FROM event_payload_fields WHERE event_seq = $1 FOR UPDATEDELETE FROM event_payload_fields WHERE event_seq = $1 AND field_path = ANY($2::text[])INSERT INTO event_payload_fields (event_seq, field_path, scalar_type, scalar_value, text_value) VALUES  ON CONFLICT (event_seq, field_path) DO UPDATE SET scalar_type = excluded.scalar_type, scalar_value = excluded.scalar_value, text_value = excluded.text_valueruntime.search_documents.search_text
+INSERT INTO search_documents (owner_table, owner_key, search_text, language, search_vector)
+VALUES ('runtime.events', $1, $2, 'simple', to_tsvector('simple', $3))
+ON CONFLICT (owner_table, owner_key) DO UPDATE SET
+  search_text = excluded.search_text,
+  language = excluded.language,
+  search_vector = excluded.search_vector,
+  updated_at = now()
+WHERE search_documents.search_text IS DISTINCT FROM excluded.search_text
+   OR search_documents.language IS DISTINCT FROM excluded.language
+
+SELECT coalesce(f.text_value, f.scalar_value)
+FROM event_payload_fields f
+WHERE f.event_seq = $1
+  AND f.field_path = '/__hatch/chat_context_json'
+LIMIT 1
+
+SELECT
+  e.event_name,
+  e.transcript_surface::text AS transcript_surface,
+  e.visibility::text AS visibility,
+  COALESCE(e.role::text, m.role::text, 'system') AS role,
+  e.source
+FROM events e
+LEFT JOIN messages m
+  ON m.event_seq = e.event_seq
+WHERE e.event_seq = $1
+
+UPDATE widgets
+SET state_bundle_json = $2,
+    state_version = $3,
+    state_updated_at_ms = $4,
+    updated_at_ms = $4
+WHERE widget_id = $1
+  AND state_version = $5
+RETURNING state_version
+
+SELECT state_bundle_json, state_version
+FROM widgets
+WHERE widget_id = $1
+state_bundle_jsonwidget state bundle must be a JSON objectstate_version
+INSERT INTO context_items (
+  agent_id, seq, item_kind, text_content, role, call_id, tool_name, success,
+  message_source, created_at, item_json,
+  data_fbids, data_message_ids, data_thread_ids, data_expires_at
+) VALUES  RETURNING context_item_id, seq::agent.context_item_kind, ::runtime.message_role, , to_timestamp(::double precision), ::bigint[], ::text[], ::timestamptz)context_item_id
+SELECT pg_advisory_xact_lock(hashtextextended(agent_id, $2))
+FROM unnest($1::text[]) AS locked(agent_id)
+ORDER BY agent_id
+
+WITH inserted AS (
+INSERT INTO chat.chats (
+  chat_id,
+  origin,
+  lifecycle,
+  status,
+  thread_title,
+  source_session_id,
+  source_prompt_seq_upper_bound,
+  source_message_id_boundary,
+  created_at,
+  updated_at
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $12, $12)
+RETURNING chat_id
+)
+INSERT INTO chat_private.bindings(chat_id, provider, conversation_key, delivery_target)
+SELECT chat_id, $9, $10, $11 FROM inserted WHERE $9::text IS NOT NULL
+persistent
+WITH producer AS MATERIALIZED (
+  SELECT target.id AS agent_id,
+    CASE WHEN a.id IS NULL THEN NULL ELSE COALESCE(
+-- Highest seq of an agent's rows that no public voice import reads, or NULL
+-- when the import never reads any of them. Reads aliases `a` (the agent) and
+-- `root` (its presentation root). exempt_non_producer_rows.sql repeats it.
+CASE WHEN a.kind = 'root' AND a.depth = 0
+          AND a.agent_type = 'realtime_voice' THEN CASE
+    WHEN NOT pg_input_is_valid(a.spawn_metadata_json, 'jsonb') THEN -1
+    WHEN root.id IS NULL
+         OR a.spawn_metadata_json::jsonb #> '{realtime_voice,prompt_floor_seq}'
+            IS DISTINCT FROM to_jsonb(COALESCE(root.prompt_floor_seq, -1))
+        THEN NULL
+    WHEN pg_input_is_valid(
+        a.spawn_metadata_json::jsonb #>> '{realtime_voice,root_seed_context_seq}',
+        'bigint'
+    ) THEN GREATEST(
+        (a.spawn_metadata_json::jsonb #>> '{realtime_voice,root_seed_context_seq}')::bigint,
+        -1
+    )
+    ELSE -1
+END END
+    , 9223372036854775807) END AS exempt_through_seq
+  FROM (SELECT ::text AS id) target
+  LEFT JOIN agents a ON a.id = target.id
+  LEFT JOIN agents root ON root.id = a.presentation_root_session_id AND root.id <> a.id
+)
+INSERT INTO context_item_resume_projection (
+  agent_id, seq, context_item_id, created_at, message_source,
+  client_context_json, client_context_projected, public_import_exempt
+)
+SELECT producer.agent_id, v.seq, v.context_item_id, v.created_at, v.message_source,
+       v.client_context_json, v.client_context_projected,
+       CASE WHEN v.seq <= producer.exempt_through_seq THEN TRUE END
+FROM (VALUES ) AS v(seq, context_item_id, created_at, message_source, client_context_json,
+          client_context_projected)
+CROSS JOIN producer
+ON CONFLICT (agent_id, seq) DO UPDATE SET
+  context_item_id = excluded.context_item_id,
+  created_at = excluded.created_at,
+  message_source = COALESCE(excluded.message_source, context_item_resume_projection.message_source),
+  client_context_json = COALESCE(
+    excluded.client_context_json,
+    context_item_resume_projection.client_context_json
+  ),
+  client_context_projected = COALESCE(
+    context_item_resume_projection.client_context_projected,
+    FALSE
+  ) OR excluded.client_context_projected,
+  public_import_exempt = COALESCE(
+    context_item_resume_projection.public_import_exempt,
+    excluded.public_import_exempt
+  ),
+  updated_at = now()
+INSERT INTO context_item_resume_projection (
+  agent_id, seq, context_item_id, created_at, message_source,
+  client_context_json, reply_prefix, provenance_json,
+  client_context_projected, reply_prefix_projected, provenance_projected,
+  public_import_exempt
+)
+SELECT producer.agent_id, v.seq, v.context_item_id, v.created_at, v.message_source,
+       v.client_context_json, v.reply_prefix, v.provenance_json,
+       v.client_context_projected, v.reply_prefix_projected, v.provenance_projected,
+       CASE WHEN v.seq <= producer.exempt_through_seq THEN TRUE END
+FROM (VALUES ) AS v(seq, context_item_id, created_at, message_source, client_context_json,
+          reply_prefix, provenance_json, client_context_projected, reply_prefix_projected,
+          provenance_projected)
+CROSS JOIN producer
+ON CONFLICT (agent_id, seq) DO UPDATE SET
+  context_item_id = excluded.context_item_id,
+  created_at = excluded.created_at,
+  message_source = COALESCE(excluded.message_source, context_item_resume_projection.message_source),
+  client_context_json = excluded.client_context_json,
+  reply_prefix = excluded.reply_prefix,
+  provenance_json = excluded.provenance_json,
+  client_context_projected = excluded.client_context_projected,
+  reply_prefix_projected = excluded.reply_prefix_projected,
+  provenance_projected = excluded.provenance_projected,
+  public_import_exempt = COALESCE(
+    context_item_resume_projection.public_import_exempt,
+    excluded.public_import_exempt
+  ),
+  updated_at = now()
+
+INSERT INTO context_item_resume_projection (
+  agent_id, seq, message_source, client_context_json, reply_prefix, provenance_json,
+  client_context_projected, reply_prefix_projected, provenance_projected
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+ON CONFLICT (agent_id, seq) DO UPDATE SET
+  message_source = COALESCE(context_item_resume_projection.message_source, excluded.message_source),
+  client_context_json = excluded.client_context_json,
+  reply_prefix = excluded.reply_prefix,
+  provenance_json = excluded.provenance_json,
+  client_context_projected = excluded.client_context_projected,
+  reply_prefix_projected = excluded.reply_prefix_projected,
+  provenance_projected = excluded.provenance_projected,
+  updated_at = now()
+SELECT pg_advisory_xact_lock_shared(hashtextextended($1, 0))agent.volatile_context_pins.lifecycleSELECT pg_advisory_xact_lock(hashtextextended($1, 0))
+WITH owners AS MATERIALIZED (
+    SELECT DISTINCT agent_id COLLATE "C" AS agent_id
+    FROM unnest($1::text[]) AS input(agent_id)
+)
+SELECT pg_advisory_xact_lock(hashtextextended($2 || agent_id, 0))
+FROM owners ORDER BY agent_id COLLATE "C"
+agent.volatile_context_pins:SELECT agent_id FROM agent.agents WHERE agent_id = $1SELECT handoff_state_json -> $2::text AS state,
+                (extract(epoch FROM clock_timestamp()) * 1000)::bigint AS now_ms
+         FROM agent.subagent_spawns WHERE child_agent_id = $1 FOR UPDATEnow_msagent.subagent_spawns.handoff_state_jsonUPDATE agent.subagent_spawns
+         SET handoff_state_json = jsonb_set(COALESCE(handoff_state_json, '{}'::jsonb),
+                                           ARRAY[$2]::text[], $3::jsonb)
+         WHERE child_agent_id = $1insert into chat_private.publication_turns (execution_id, chat_id, disposition, phase)
+        select $1, $2, $3, $4 where pg_try_advisory_xact_lock_shared(hashtextextended($5, 0))
+        on conflict(execution_id) do nothing returning trueselect chat_id, phase, disposition from chat_private.publication_turns
+        where execution_id = $1 for updatedispositionphasepublication execution belongs to another chatavocado-5.17-v1-onboarding_shadowdeleted sessions.updated events require an owner-visible deletion proofsession row unavailable for sessions.updated payloadfailed to hydrate sessions.updated payloadrefusing to publish a chat frame without an owning chatfailed to resolve public session id for streamed framefailed to broadcast streamed frame for root sessiondropped companion progress frame after its voice call changedactivity_monitor bumped activity epoch after direct finishambiguous root sessions for activity thread projectionfailed to resolve root session for activity thread projectionsuppressed new activity thread projection without visible rootpersisting existing activity thread projection without visible rootactivity_monitor_timing activity_thread_projection_persistedruntime work observation timed out; continuing root event pumpfailed to resolve public session id for agent.statusagent.statusworker open-todos block skipped: stored snapshot unreadableworker open-todos block skipped: snapshot load failedfailed to resolve active voice call device familyfailed to open workflow store while suppressing cancelled async workflow handoffssuppressed async workflow terminal handoffs for cancelled source messagefailed to suppress cancelled async workflow terminal handoffsread runtime-orphan approval response bodyparse runtime-orphan approval response bodyfailed to load peer chat metadatachat_id is required for chats.deletecannot delete the main chatname is required for chats.renamechat_id is required for chats.renamechat_id is required for chats.archivecannot archive the main chatchat_id is required for chats.send_messagemessage is required for chats.send_messagethis is your own chat; reply in it with mailbox.send_messagechat.send_message cannot target a chat connected to an external messaging service; the user must message that chat directly on that servicechat_id is required for chats.read_messageschat tools are unavailable from this side chatfailed to load the sending side chat's contactchat_id is required for chat.unarchivecannot unarchive the main chatfailed to resolve a peer Muse's name for chat.read_messagesfailed to load sender chat name for chats handoffhandling chats tool requestinvalid caller ownerinvalid callerowner-work read authority unavailableowner-work access is read-onlycaller chat owner mismatchcaller chat owner unavailablechats action must be one of: list, create, read_messages, send_message, rename, archive, unarchive, deletetrustedthis business conversation is no longer activethis business chat's worker is not waiting for an answer; send the rest after it asks againbusiness conversation is not admittedworker return route must be the current owner private chatuser input has no canonical admission receiptcanonical user input does not match its authenticated admissionworker request requires a caller chatworker request requires a tool call identitygroup provider authority or rollout awaits availabilitygroup private binding is no longer currentgroup provider authority awaits reconciliationgroup provider unavailablewhatsapp-owner-inbox-exploration-v1patch widget state: the widget kept changing; retryfailed to resolve root session for task status broadcastfailed to broadcast task status frame for root sessiontask.statusfailed to resolve root session for root task refreshfailed to resolve root session for presence transitionfailed to recover subagent presentation locale for presencefailed to resolve public session id for reactions.updatedreactions.updatedcustom_reactions_facebook_thumbs_up_v1canonical reactions: failed to resolve owning root sessioncanonical reactions: target persisted without a broadcast because the root session could not be resolvedfailed to resolve voice-design parent presentation ownerfailed to link completed web artifact to goal workspacespace construction status already terminal; skipping duplicate terminal updatefailed to update space construction status from completion resultconsuming voice-design completion without a parent follow-updelivered_space_build_completed_widget_idsinvalid recovered result metadata; omitting annotation
+
+[failure cause not recorded: this subagent ended errored, but the runtime did not capture a failure reason on its record. The text above is the subagent's last message, not the error.]failed to persist recovered subagent completion final_responsebrowser task presence projection was superseded while its row was readbrowser task presence parent changed while its row was being readbrowser task presence retention was superseded before settlementbrowser task owner has no root session for presence attachmentbrowser task owner resolved to a different root sessionopen browser specialists did not end with their taskordered browser task card projection failedserving canned response after terminal agent failurefiles.updatedfs.updatedfilesystem fingerprint task failedworkflow-skills-v1serialize filesystem watch hashes1failed to persist filesystem watch hash updateworkspace/your_filescould not resolve artifact identity for a lifecycle row; emitting it unattributedartifact.modifiedfailed to load root session for usage footer; falling back to response without usage metadatafailed to load chat command settingsfailed to persist chat command settingsbrowser user-control terminalization is already in progressbrowser task lifecycle settlement is still in progressbrowser task changed before releasing user controlbrowser takeover recovery is still settlingbrowser viewer did not drain; retry continuationrunning-continuationuser-browser-releasebrowser target was lost while releasing user controlbrowser target was lost while parking released control_flight_presentationflight_actionfailed to hydrate native letter widget title because briefing path is invalidfailed to hydrate native letter widget title because briefing is too largefailed to hydrate native letter widget title metadatafailed to hydrate native letter widget titlecontentfailed to hydrate native letter widget identity metadatafailed to hydrate native letter widget because briefing was not foundfailed to hydrate native letter widgetfailed to resolve Letter artifactartifact_slugfailed to hydrate native letter widget because self-improvement storage was unavailablefailed to hydrate native letter widget because relationship brief was not foundno_candidatevoice approval answer found no queue head for its root sessionmissing_tool_call_idmissing_message_idagent_handle_missingtracked_tool_not_foundfailed to mark tracked tool process pending approvalawaiting-approval checkpoint payload version is unsupportedfailed to decode runtime restart checkpoint payloadawaiting-approval checkpoint row was missing payload_jsonfailed to load runtime restart checkpointfailed to enrich approval snapshot with live wallet; preserving eligible mint-time optionsplaincomplimentary plan-name lookup failedskipping goal suggestion with missing ideaskipping goal suggestion with empty idea or goal id during idea anchor recoveryskipping goal suggestion with unrecognized status during idea anchor recoveryfailed to load goal suggestions for idea anchor recoveryfailed to batch-upsert goal suggestion idea anchorstracking lifecycle could not refresh user timezone; using cached valuetracking lifecycle supports only active or completed statusscheduler reconciliationtracking lifecycle requires expected_fingerprint and effect_key togethergoal lifecycle committracking resource adoption could not refresh user timezone; using cached valuecommitted goal maintenance planning failedfailed to serialize goal detail for goal.updated websocket eventfailed to load goal detail for goal.updated websocket eventfailed to serialize localized goal.updated websocket eventbroadcast goal.updated websocket eventgoal creation marker received invalid stream owner message idgoal_createdgoal creation has no stream owner for delta.markergoal creation marker received unknown stream owner message idregistered goal creation delta.markerfailed to hydrate goal Space associations from Spaces catalog%A, %Y-%m-%dT%H:%M:%SZcurrent_attentiontriggering_activitygoal_attentionYou determine the effective attention level of one assistant-tracking goal after
+an activity has been stored.
+
+Always call `muse.set_attention` exactly once. Do not return prose.
+
+Choose one value:
+
+- `user_action_required`: The next move on this goal is the user's own
+  discrete, finishable obligation: a decision to make, a request to approve,
+  missing information to provide, a blocker to resolve, or a specific
+  purchase, booking, filing, or hire that is theirs to do. Such an obligation
+  stays in this band even when it is undated, unstarted, or stalled (an
+  errand the user has not begun is still theirs to do) until the evidence
+  shows it was done or lapsed. An ongoing project, practice, habit, or
+  open-ended effort the user advances at their own pace is NOT
+  `user_action_required` by itself; it belongs here only while a specific
+  next step is pending (a choice teed up, the next item to buy, a form to
+  file). It is also NOT `user_action_required` when the next move is someone
+  else's (a reply, delivery, review, or decision being waited on) or when
+  the assistant is watching or monitoring on the user's behalf with nothing
+  for the user to do yet.
+- `new_information`: There is a meaningful new result, update, discovery, or
+  artifact worth the user seeing, but nothing the user must do.
+- `does_not_need_attention`: Nothing currently requires the user to act or to
+  look.
+
+Goal creation is itself meaningful news. When the triggering activity is the
+goal's creation, choose `new_information` unless the goal is already blocked on
+a concrete user action, in which case choose `user_action_required`. Never classify
+a just-created goal as `does_not_need_attention`.
+
+Judge the goal's effective attention from the complete supplied context:
+current goal details and lifecycle status, current attention, the triggering
+activity, and recent activity history. The triggering activity causes this
+decision, but do not classify it in isolation when the goal still has an
+unresolved user action or unseen meaningful result.
+
+A report of the user's own progress (something they did themselves and
+already know about) is not `new_information`. A development that arrives
+from outside the user (an offer, a reply, released options, a confirmed
+booking or appointment) is `new_information` worth seeing even when the user
+expresses no rush about it; deferred or relaxed framing lowers urgency, never
+visibility. Once the user has seen and dealt with a development (the choice
+made, the reply sent, the loop closed) it stops being news. A development
+that merely moves an obligation further away (a postponement, an extension,
+a rescheduled date) is not `new_information`; it settles with the goal at
+its new date.
+
+When the evidence names any due dates or deadlines for the goal, first list
+them in `evidence_dates` (resolving relative phrases such as "by Friday",
+"next week", or "end of the month" against the supplied weekday-anchored
+time), then
+report `next_due_at` as the nearest date the user is actually due to meet. A
+goal's own scheduled occurrence (a fire its schedule or pulse names, such as
+"next one lands August 28") is not a user obligation: never report it in
+`next_due_at`, and it never raises attention by itself; the attention bands
+above judge who must act. Use only dates the evidence states; never invent
+or guess an obligation, and omit both fields when none is dated. A deadline given only as a named month
+counts (its `next_due_at` is the month's start); a vaguer horizon (a season,
+"eventually", "someday") names no date at all.
+
+If the correct attention has not changed, call `muse.set_attention` with the current
+attention value. Every decision must still make the tool call.
+goal escalation persistence failed; preserving stored escalationgoal attention inference failed; preserving existing attentionfailed to record downstream idea engagement for goalfailed to record goal briefing clickgoal_briefing_openlate companion hangup found its call already endedvoice end-call queued as a session stop on the call's realtime streamonepasswordfailed to reconcile skills statuses with no subscribersfailed to build skills.updated payloadgoal_slugupdate runtime.browser_invocations set suspended_state = 'running'
+                 where invocation_id = $1 and suspended_state = 'waiting_child'select invocation_id from runtime.browser_invocations
+         where task_id = $1 and result_json is null
+           and ($2::text is null or planner_agent_id = $2)
+         order by ordinal for updateupdate runtime.browser_invocations i set state = $3, suspended_state = null,
+         result_json = $2, terminal_reason = $4, finished_at = now(), updated_at = now(),
+         handoff_state = case when i.parent_invocation_id is null then $5::text end,
+         handoff_submission_id = case when i.parent_invocation_id is null
+           then ended.handoff end
+         from unnest($6::text[], $7::text[]) as ended(invocation_id, handoff)
+         where i.invocation_id = ended.invocation_id and i.task_id = $1
+           and i.result_json is nullcapture new heartbeat occurrence languagescheduler source path holder lookup failed
+INSERT INTO requests (
+  request_id, root_request_id, parent_request_id, request_origin,
+  transcript_surface, root_work_class
+)
+VALUES ($1, $2, $3, $4, $5::runtime.transcript_surface, $6)
+ON CONFLICT (request_id) DO UPDATE SET
+  root_request_id = COALESCE(requests.root_request_id, excluded.root_request_id),
+  parent_request_id = COALESCE(requests.parent_request_id, excluded.parent_request_id),
+  request_origin = CASE
+    WHEN requests.request_origin = 'internal.runtime_replay' THEN excluded.request_origin
+    ELSE requests.request_origin
+  END,
+  transcript_surface = excluded.transcript_surface,
+  root_work_class = CASE
+    WHEN requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing'
+      THEN excluded.root_work_class
+    ELSE requests.root_work_class
+  END
+WHERE (requests.root_request_id IS NULL AND excluded.root_request_id IS NOT NULL)
+   OR (requests.parent_request_id IS NULL AND excluded.parent_request_id IS NOT NULL)
+   OR (requests.request_origin = 'internal.runtime_replay'
+       AND excluded.request_origin <> 'internal.runtime_replay')
+   OR requests.transcript_surface IS DISTINCT FROM excluded.transcript_surface
+   OR (requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing')
+call_idoutput
+INSERT INTO tool_outputs (event_seq, call_id, status, output_text, error_text, created_at)
+VALUES ($1, $2, $3, $4, $5, to_timestamp($6::double precision / 1000.0))
+ON CONFLICT (event_seq) DO UPDATE SET
+  call_id = excluded.call_id,
+  status = excluded.status,
+  output_text = excluded.output_text,
+  error_text = excluded.error_text
+arguments
+INSERT INTO tool_calls (event_seq, call_id, tool_name, status, arguments_json, created_at)
+VALUES ($1, $2, $3, 'started', $4, to_timestamp($5::double precision / 1000.0))
+ON CONFLICT (call_id) DO UPDATE SET
+  event_seq = excluded.event_seq,
+  tool_name = excluded.tool_name,
+  status = excluded.status,
+  arguments_json = excluded.arguments_json
+
+INSERT INTO chat_event_derived_write_backlog (event_seq, resources_json)
+VALUES ($1, $2)
+ON CONFLICT (event_seq) DO UPDATE SET
+  resources_json = excluded.resources_json,
+  updated_at = now()
+
+UPDATE events
+SET display_text_ready = $2,
+    reply_target_message_id = $3,
+    payload_json = $4
+WHERE event_seq = $1
+
+INSERT INTO messages (message_id, event_seq, role, body, created_at)
+SELECT e.message_id, e.event_seq, e.role, $2, e.created_at
+FROM events e
+WHERE e.event_seq = $1
+  AND e.message_id IS NOT NULL
+  AND e.role IS NOT NULL
+ON CONFLICT (message_id) DO UPDATE SET
+  body = excluded.body
+select pg_advisory_xact_lock(hashtextextended($1, 0))chat.chats.pinned_orderUPDATE chat_private.peer_conversations SET requester_chat_id = NULL
+         WHERE conversation_id = $1 AND requester_revision = $2
+           AND requester_chat_id = $3 AND NOT requester_unavailable
+           AND chat_id = $5
+           AND EXISTS (SELECT 1 FROM agent.agents
+                       WHERE id = $4 AND session_id = $3)peer handoff disagrees with its asking-chat claimpeer handoff requester changed before admissionSELECT session_id, COALESCE(prompt_floor_seq, -1) AS prompt_floor_seq,
+                kind = 'root' AND parent_agent_id IS NULL
+                AND ephemeral IS DISTINCT FROM TRUE
+                AND status NOT IN ('shutdown', 'not_found') AS eligible
+         FROM agent.agents WHERE agent_id = $1 FOR UPDATEstartup_root_changedSELECT EXISTS(SELECT 1 FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND accepted_ordinal < $2)startup mailbox promotion cannot overtake an earlier accepted input
+SELECT payload_json
+FROM agent.runtime_restart_checkpoints
+WHERE agent_id = $1
+FOR UPDATE
+
+SELECT EXISTS (
+  SELECT 1
+  FROM agent.message_mailbox
+  WHERE agent_id = $1
+    AND state = 'accepted'
+    AND accepted_ordinal < $2
+    AND (NOT $3 OR submission_kind <> 'internal_handoff')
+)
+message mailbox attachment cannot overtake an older priority peer
+INSERT INTO agent.runtime_restart_checkpoints (
+  agent_id, mode, recovery_class, recovery_owner_id, execution_config_json,
+  payload_json, created_at, updated_at
+) SELECT $1, $2, $3, $4, $5, $6, $7, $7
+WHERE EXISTS (
+  SELECT 1
+  FROM agent.agents
+  WHERE agent_id = $1
+    AND status NOT IN ('shutdown', 'not_found')
+)
+ON CONFLICT (agent_id) DO NOTHING
+SELECT EXISTS (SELECT 1 FROM agent.agents WHERE agent_id = $1 AND status NOT IN ('shutdown', 'not_found'))conversation epoch
+INSERT INTO agent.message_mailbox (
+  submission_id, agent_id, conversation_epoch, submission_kind,
+  routing_scope, state, checkpoint_custody, stream_owner_message_id,
+  submission_json, transcript_event_seq, attached_at
+) VALUES (
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+  CASE WHEN $6 = 'attached' THEN now() ELSE NULL END
+)
+ON CONFLICT (submission_id) DO NOTHING
+RETURNING accepted_ordinal, accepted_at
+startup mailbox promotion requires its previously accepted input
+SELECT agent_id, conversation_epoch, submission_kind, routing_scope,
+       state, stream_owner_message_id, submission_json,
+       transcript_event_seq, accepted_ordinal, accepted_at
+FROM agent.message_mailbox
+WHERE submission_id = $1
+FOR UPDATE
+update chat.message_bindings set admitted_at = coalesce(admitted_at, now())
+                    where jarvis_message_id = $1 and chat_id = $2 and binding_epoch = $3 and transport = $4binding epochconversation_epochsubmission_kindrouting_scope
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = $5,
+    stream_owner_message_id = $2,
+    submission_json = $3,
+    transcript_event_seq = coalesce($4, transcript_event_seq),
+    attached_at = now()
+WHERE submission_id = $1
+  AND state = 'accepted'
+  AND stream_owner_message_id IS NULL
+mailbox stream ownerselect a.account_id from chat_private.accounts a
+             join chat_private.binding_authorizations b on b.provider = a.provider and b.account_id = a.account_id
+             where b.provider = $1 and b.binding_id = $2
+               and a.connection_id = $3 and not a.revoked for share of adirect input has no captured binding epochaccount_retiredselect connection_id, generation, transport_json, delivery_target
+             from chat_private.binding_authorizations
+             where provider = $1 and binding_id = $2 and chat_id = $3
+               and account_id = $4 and external_kind = 'direct' and participation = 'active'
+             for shareaccount_authorization_retiredtransport_jsontransport_authorization_absentconnection_idgenerationdelivery_targetselect epoch from chat_private.bindings
+         where chat_id = $1 and provider = $2 and not revoked for sharetransport_authorization_changedbinding_retiredactivity_monitor_list_assigned_agentsactivity_monitor_list_thread_actionsactivity_monitor_list_recent_thread_actionsactivity_monitor_carrier_user_messagesactivity_monitor_message_thread_lookupactivity_monitor_runtime_work_ids_for_threadactivity_monitor_read_threadactivity_monitor_finish_activity_threaddatabase write admission gate closedadmission_timeoutassert_table_existstable_presence.queryagent_status broadcast presence statusfailed to broadcast presence status frame for root sessionfailed to resolve root session for runtime-work activity-thread presenceagent_status ignored voice Companion activity-thread presence with ambiguous root sessionsfailed to resolve runtime-work bindings for activity-thread presenceagent_status ignored runtime-work activity-thread presence with ambiguous root sessionsfailed to resolve root session candidate for activity-thread presence updateagent_status cleared activity-thread presenceagent_status ignored blocked activity-thread fallback for non-waiting threadagent_status ignored blocked activity-thread activity for unloaded root sessionagent_status blocked activity-thread fallback did not changeagent_status accepted blocked activity-thread fallbackagent_status ignored runtime-work activity-thread activity for unloaded root sessionagent_status runtime-work activity-thread status did not changeagent_status accepted runtime-work activity-thread statusagent_status accepted voice Companion activity-thread statusagent_status ignored retained forwarded activity-thread presence with ambiguous root sessionsagent_status accepted retained forwarded activity-thread statuspresence snapshot requested for unloaded root sessionfailed to resolve root session for presence updatestandaloneclient rendering snapshot read failed; keeping lifts inline this turnspace_preview_repairspace preview repair: handler not registeredspace preview repair: handler registry unavailablespace_preview_missingspace preview repair: runtime work store unavailablequeued Space preview repairspace preview repair: seeding failedspace preview repair: catalog read failed on viewcheck browser task terminal update mailbox receiptopen browser task queue for completion relay ownershipload browser task relocation predecessorload browser task terminal-update ownershipparse browser task execution root for completion relay ownershipbrowser_task_idcould not reconcile approval runtime waitersGenerate the user-facing goal state and lifecycle activity from this evidence.
+
+Evidence:
+{{evidence_json}}
+{{evidence_json}}tracking_goal_lifecycle_copytracking_lifecycle_copytracking lifecycle copy inference failed; using deterministic fallbackbundled Ideas localization catalog is unavailablefailed to load bundled Ideas localization provenancefailed to load bundled Ideas dogfood provenanceIdea catalog sharing context read failedIdea share variant projection read failedIdea share revision projection read failedIdea direct sharing read failedIdea publication hold read failedanchor_kindanchor_idsurfacefailed to batch-read idea source metadata for downstream eventsauth status row concurrency limiter closedauth status row task failedfailed to load paired devices for healthkit skill statusUnable to load paired device permissionsconnector catalog could not resolve Privacy Jurisdiction countrylisted custom connectors for skills.statusfailed to list custom connectors for skills.status; skipping synthetic rowsskills.status: hid connectors unavailable in this channel or environmentfailed to persist skill statuses to user configinsert into runtime.browser_task_tabs (task_id, tab_id, alias)
+         select $1, $2, 't' || (coalesce(max(substring(alias from 2)::integer), 0) + 1)
+         from runtime.browser_task_tabs where task_id = $1
+         on conflict (task_id, tab_id) do nothingupdate runtime.browser_task_tabs set actor_invocation_id = $3, actor_agent_id = $4
+             where task_id = $1 and tab_id = $2 and holder_invocation_id is not nullupdate runtime.browser_task_tabs set holder_invocation_id = null,
+                 actor_invocation_id = null, actor_agent_id = null, held_at = null
+                 where task_id = $1 and tab_id = $2update runtime.browser_task_tabs set holder_invocation_id = $3,
+                 actor_invocation_id = $4, actor_agent_id = $5, held_at = now()
+                 where task_id = $1 and tab_id = $2 and holder_invocation_id is nullbrowser tab hold changedtab_id, alias, holder_invocation_id, actor_invocation_id, actor_agent_id, (select holder.kind from runtime.browser_invocations holder where holder.invocation_id = browser_task_tabs.holder_invocation_id) as holder_kindupdate runtime.browser_task_tabs set holder_invocation_id = null,
+             actor_invocation_id = null, actor_agent_id = null, held_at = null
+             where task_id = $1 and tab_id = any($2)update runtime.browser_task_tabs set actor_invocation_id = $3, actor_agent_id = $4
+             where task_id = $1 and tab_id = any($2) and holder_invocation_id is not nulldemo history messages must be nonempty and at most 20 KiBdemo history must alternate user and assistant messages, starting with userdemo history seed must contain 1 to 32 messagesunsupported demo history schemaThe user ran /compact and the conversation has just been compacted. Reply briefly and naturally after the user's request to compact, picking up from where the conversation left off.runtime.compaction_checkinruntime_compaction_checkinfailed to enqueue post-compaction check-in follow-upinference-proxy returned unknown selected model for /status; using raw valueinference-proxy returned empty selected model for /status; falling back to root modelfailed to load model selection for /status; falling back to root modelfailed to load host token usage for /statusfailed to load local session token usage for /statusfailed to load local aggregated token usage for /statuscompact_carriercleared_milestonesunknown errorpresentation_message_idfailed to start compact command runtime work; continuing without lifecycle supervisionSELECT payload_json FROM runtime_restart_checkpoints WHERE agent_id = $1 FOR UPDATESELECT submission_json, octet_length(submission_json)::bigint AS serialized_bytes
+         FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND submission_id <> $2startup_queue_fullThe message does not belong to this chat.This is not an available personal chat.due-occurrence coalesce check failed; seeding immediate occurrence anywayretained cleanup cannot resolve endpointretained browser slot release is unconfirmedturn-deletion repair skipped: root did not settle idle inside the guard windowturn_deletion_repair_abandonedroot did not settle idle within the repair guard windowfailed to broadcast repair compacting presencefailed to broadcast restored presence after repairturn-deletion prefix compaction failed; leaving retained context verbatimturn_deletion_repair_failedunsupported chat command role for message-only persistencefailed to persist slash command messagefailed to resolve implicit subscribed sessionfork session failed; rechecking target writability before respondingsession already exists with incompatible fork lineagesession not foundfailed to resolve session idresolved session metadata is unavailablecreate the chat with /api/chats/fork before sending a turnchat.send was cancelled before execution startedfailed to dispatch startup-queued chat.send requestfailed to publish bootstrap presence repairpresence bootstrap subagent read failedfailed to resolve public session id for all-sessions replayfailed to load widget presentations for recent frame hydrationauthoritative browser card hydration failed; closing connectionrecent replay catch-up reached frame limit; closing connection to retry replayreplay catch-up reached frame limit; closing connection to retry replayfailed to replay stream events; closing connection to retry replayfailed to read scoped replay watermark; closing connection to retry replayreplaybrowser card hydration lost replay authorityfailed to check whether recent delta replay is shadowed by chat historymaintenance_occurrencemaintenance_attemptrequest_generationgeneric_maintenancejitter_offset_secsjitter_window_secsmaintenance occurrence collided with terminalized work itemsuppressed activity record for non-owner-visible rootauthoritative approval load failed before agent terminalization and the process-local copy has never hydrated; failing the close rather than treating an empty copy as no pending approvalsauthoritative approval load failed before agent terminalization; settling from the hydrated process-local approval copy instead of failing the closeapproval_cleanup_deferred_for_coalesced_ownercoalesced approval checkpoint ownership is unavailableSELECT event_seq, event_name, source, role::text AS role,
+                    visibility::text AS visibility, message_id, agent_id,
+                    parent_agent_id, parent_message_id, reply_to_message_id,
+                    transcript_surface::text AS transcript_surface, payload_json,
+                    request_id, root_request_id, parent_request_id,
+                    extract(epoch from created_at)::bigint AS created_at
+             FROM runtime.events WHERE idempotency_key = $1SELECT ci.item_json, ci.message_source,
+                        extract(epoch from ci.created_at)::bigint AS created_at,
+                        p.client_context_json
+                 FROM agent.context_items ci
+                 LEFT JOIN agent.context_item_resume_projection p
+                   ON p.agent_id = ci.agent_id AND p.seq = ci.seq
+                 WHERE ci.agent_id = $1 AND ci.seq = $2called `Result::unwrap()` on an `Err` valuetransportimpressionclickengagementfeedback_upfeedback_downside_chat_idleside_chat_archiveforeground_rootpeer_chat_rootgroup_chat_rootexternal_party_chat_rootmail_conversationdelegate_main_requestworkflow_subagentspaces_builderspaces_builder_litespaces_builder_editspaces_builder_python_editbrowser_taskdeep_researchideas_builderspace_taskself_improvement_stepflight_tracking_steppeer_sync_stepfeed_workflow_stepephemeral_agent_stepscheduler_cron_executescheduler_cron_resolveexecute_resolve_workersystem_cron_productvoice_delegaterealtime_voicecompaniondeveloperavatar_sharelocal_mapoptionimage_optionsdiscovery_pool_idea_idinternal_link_action_cardgeneric_listexternal_linkimagevideoaudioslidesinternal error: entered unreachable code: invalid Once stateaddupdateremoveinternal_wakeworkerafter_inferenceawaiting_approvalafter_tool_dispatchcreatedrenamedunarchivedpinnedagentonlineout_of_creditsneeds_approvalcompactingrespondingwaiting_for_subagentsworkinguser_goalassistant_trackingoffoncancelledsupersededtask_endedsuppressedstartup_reconcileloop_reconcilemutation_reconcileopportunisticcomplete_when_awakeobjectiveproactive_notificationflight_trackingvoice_persistencewebhook_fetchlighterroredlong_running_tasksteady_phasecadence_then_splayoverdue_catchupretryroot_user_turnroot_public_follow_uproot_internal_turnhandofftool_calltracked_subprocesscron_workercron_deliverymaintenance_jobchat_deliverymemory_flushdevice_syncavatar_generationonboarding_personalizationavatar_backfillobjective_stepclientdecodeinvalid_country_codeorigintarget_clientorigin_fallback_target_unresolvedcall_ownercall_devicefenced_stale_calluser_action_requirednew_informationdoes_not_need_attentionwaiting_for_inferencewaiting_for_tool_dispatchwaiting_for_user_confirmationcheckpointedcancellingpreemptingterminalizingtimed_outpreemptedmergedempty_namemalformed_nameunrecognized_namespaced_nameadmissionsubmission_commitafter_inference_persistedtool_dispatchafter_tool_dispatch_persistedfollow_up_settlementterminalizationmaterialize_submissionprompt_optionsskill_snapshottool_snapshotrequest_overlayclient_context_snapshotdevice_snapshotgoals_snapshothistory_projectionsystem_prompt_composecompaction_decisionprovider_request_readyrecovery_phase_deferredInstagramThreadsnon_preemptiblepre_output_restartablecancellablepreemptible_retryablepreemptible_terminalupdatedpauseddismissedQueuedRunningUser controlledwaitingprimarysecondarytext_user_turnconnector_followupcron_handoffonboarding_handoffself_improvement_handoffsubagent_relayworkflow_terminal_handoffdevice_sync_handoffnewchats_tool_read_history_page_eventspeer_read_conversation_history_page_eventsgroup_chat_read_history_page_eventschats_tool_read_history_page_boundariespeer_read_conversation_history_page_boundariesgroup_chat_read_history_page_boundariesfull_cadence_phaseimagesvideos
+task_id,
+broker_instance,
+node_id,
+node_name,
+browser_harness_kind,
+browser_harness_version,
+browser_session_id,
+root_session_id,
+owner_agent_id,
+root_message_id,
+stream_owner_message_id,
+status,
+title,
+step_count,
+chat_context_json,
+latest_action_id,
+latest_tab_json,
+latest_screenshot_json,
+admission_seq,
+presentation_root_session_id,
+parent_agent_id,
+tool_call_id,
+request_trace_context_json,
+requester_source,
+requester_transport,
+requester_model,
+requester_effective_model,
+request_mode_json,
+max_training_tier_json,
+run_presentation_locale,
+run_location_context_json,
+is_task_card_visible,
+owner_kind,
+initial_instruction,
+history_source_agent_id,
+wallet_selection_provider,
+wallet_selection_payment_method_id,
+wallet_choice_revision,
+continuation_root_task_id,
+browser_navigation_attempted,
+browser_route,
+egress_profile,
+profile_id,
+card_generation,
+run_number,
+(extract(epoch from run_started_at) * 1000)::bigint as run_started_at_ms,
+state_revision,
+(extract(epoch from deadline_at) * 1000)::bigint as deadline_at_ms,
+(extract(epoch from created_at) * 1000)::bigint as created_at_ms,
+(extract(epoch from updated_at) * 1000)::bigint as updated_at_ms,
+(extract(epoch from completed_at) * 1000)::bigint as completed_at_ms,
+(extract(epoch from terminal_user_update_due_at) * 1000)::bigint as terminal_user_update_due_at_ms,
+terminal_reason,
+terminal_interrupt_subtype,
+outcome_status,
+outcome_reason,
+(extract(epoch from outcome_at) * 1000)::bigint as outcome_at_ms,
+retention_end_reason,
+(extract(epoch from relocation_hold_until) * 1000)::bigint as relocation_hold_until_ms,
+relocating_to,
+relocated_from,
+on_shared_tab
+milestone_level_upgoals.update_parentgoals.update_metadata_if_exists
+INSERT INTO events (
+  event_kind, event_name, request_id, root_request_id, parent_request_id,
+  transcript_surface, visibility, source, role, chat_kind, stream_lane,
+  message_id, parent_message_id, reply_to_message_id, reply_target_message_id,
+  parent_agent_id, agent_id, idempotency_key, display_text_ready, payload_json,
+  chat_context_json, created_at
+)
+VALUES ($1::runtime.event_kind, $2, $3, $4, $5, $6::runtime.transcript_surface,
+        $7::runtime.visibility, $8, $9::runtime.message_role, $10, $11,
+        $12, $13, $14, $15, $16, $17, $18, $19,
+        $20, $21, to_timestamp($22::double precision / 1000.0))
+ON CONFLICT (idempotency_key) WHERE idempotency_key IS NOT NULL DO NOTHING
+RETURNING event_seq
+
+INSERT INTO events (
+  event_seq, event_kind, event_name, request_id, root_request_id, parent_request_id,
+  transcript_surface, visibility, source, role, chat_kind, stream_lane,
+  message_id, parent_message_id, reply_to_message_id, reply_target_message_id,
+  parent_agent_id, agent_id, idempotency_key, display_text_ready, payload_json,
+  chat_context_json, created_at
+)
+VALUES ($1, $2::runtime.event_kind, $3, $4, $5, $6, $7::runtime.transcript_surface,
+        $8::runtime.visibility, $9, $10::runtime.message_role, $11, $12,
+        $13, $14, $15, $16, $17, $18, $19, $20,
+        $21, $22, to_timestamp($23::double precision / 1000.0))
+ON CONFLICT (event_seq) DO NOTHING
+RETURNING event_seq
+task_statustool_donetool_startmessageunconfirmedpending_admissioncompletionYou write the user-facing state and activity when an assistant-tracking goal is
+completed.
+
+Use only the supplied goal, lifecycle reason, recent activity, and optional
+state hint. Do not invent work, results, blockers, dates, or next steps.
+
+For `current_state`, write one short sentence containing only the single most
+relevant durable final state. Prefer the latest meaningful result. If there is
+no result, state why the tracked responsibility ended.
+
+Do not claim work is still in progress. Do not append a next step, combine two
+states with a semicolon, or restate the goal title or description.
+
+For `activity_title`, write a concise user-facing completion event label.
+
+Do not mention internal runtime or scheduler machinery, job identifiers,
+internal action names, or counts of schedules paused. User-facing dates and
+meaningful result quantities from the evidence are allowed when they are the
+most relevant final state.
+
+Your only response must be one invocation of the available
+`muse.set_tracking_goal_lifecycle_copy` function tool with exactly these named
+arguments:
+
+- `current_state`: one short sentence with the final durable state.
+- `activity_title`: a concise completion event label.
+
+Invoke the function tool itself. Do not output text, Markdown, JSON, XML, or a
+written or pseudo-code representation of the call.
+reopenYou write the user-facing state and activity when an assistant-tracking goal is
+reopened.
+
+Use only the supplied goal, lifecycle reason, recent activity, and optional
+state hint. Do not invent work, results, blockers, dates, or next steps.
+
+For `current_state`, write one short sentence containing only the single most
+relevant durable state now. Prefer a specific wait, blocker, monitored
+condition, or user-facing cadence from the evidence. If the responsibility is
+waiting for user input, state exactly what input is needed. If no specific
+state exists, state that the responsibility resumed and what it concerns.
+
+Do not claim work is currently in progress. Do not append a next step, combine
+two states with a semicolon, or restate the goal title or description.
+
+For `activity_title`, write a concise user-facing reopening event label.
+
+Do not mention internal runtime or scheduler machinery, job identifiers,
+internal action names, or counts of schedules restored. User-facing cadence,
+dates, and meaningful quantities from the evidence are allowed when they are
+the most relevant current state.
+
+Your only response must be one invocation of the available
+`muse.set_tracking_goal_lifecycle_copy` function tool with exactly these named
+arguments:
+
+- `current_state`: one short sentence with the durable state now.
+- `activity_title`: a concise reopening event label.
+
+Invoke the function tool itself. Do not output text, Markdown, JSON, XML, or a
+written or pseudo-code representation of the call.
+BUG: inner connection already taken!AuthorityUnprovenPermissionUnprovenInvalidCursorWorkLimitExceededInvalidStateTimeoutRuntimeUnavailableStorageErrorExpiredDuringReadPageLimitExceededDeviceUnavailableCoverageGapReadFailedErrorProactivitySpacesConfigurationInvalidArgumentIoTlsRowNotFoundTypeNotFoundtype_nameColumnIndexOutOfBoundsindexlenColumnNotFoundColumnDecodeEncodeDecodeAnyDriverErrorPoolTimedOutPoolClosedWorkerCrashedMigrateInvalidSavePointStatementBeginFailedretryableidea_delivery_exclusionledger_codeHttpApiErrorSerializationFailureLockedConnectionTransientConstraintMalformedOrCorruptTransientIoIoTransientIoErrorPoolTimeoutChannelClosedLimitExceededQuickCheckUnknowna Display implementation returned an error unexpectedlyBackgroundAgentBrowserAgentBrowserMainCronWorkerCompactionBackgroundCompactionMemoryFlushAlignmentReflectionDiscoveryPoolPersonalizationAvatarPromptBuilderVoiceDesignRewriteVoiceOptionPlannerActivityMonitorActivityThreadSubtitleTrackingGoalLifecycleGoalActivityStateGoalAttentionGoalSubgoalRollupSubagentMonitorUserSentimentUserPromptLanguageMissedChatNotificationPlannerSessionTitleGoalPromptSafetyReviewPublishShareReviewArtifactShareDisclosureSentinelEgressSentinelApprovalExplanationVerificationCodeScanSpaceActionFileArtifactBuildHtmlArtifactBuildArtifactBuildArtifactIconSelectionArtifactBriefCheckVoiceApprovalClassifierVoiceEndCallClassifierVoiceLibraryClassifierBrowserVisualGestureBrowserTaskTaggingBrowserTaskTerminalSummaryPhoneBoostedKeywordsCronResolveSelfImprovementStepFlightClassificationFeedEditorFeedPulsePickFeedIconSelectionFeedWireTasteCheckFeedSignalLabel`Ready` polled after completionDbBackendErrorsqlstate_codeTextLengthMetadataOverflowJsonSerializationJsonValidationAgentStatusParseErrorNavigationPendingBrowserTasksActiveSensitiveSitesLimitReachedSensitiveSitesPolicyCapacityExceededSensitiveSitesNotInitializedSensitiveSitesUnavailableSensitiveSitesSaveUncertainUnsupportedUnknownSessionInvalidRequestChromeLaunchFailedChromeUnavailableUserControlActiveBrowserRouteResetAmbiguousActionOutcomeSlotCapacityExceededBrowserIncarnationLostStaleOperationTargetBindingUnavailableStaleRefScopeBrowserActionRefusedSharedTabUnavailableOutputUnavailableChildRendererRouteUnavailableResidentialEgressUnattributedCheckpointRequiredResidentialEgressDisabledResidentialEgressUnavailableEgressReplacementUnsupportedRouteBrokerInternalBrowserClipboardUnavailableSiteInUseAckHistoryActivePermissionsPayloadpayloadruntime_waitersruntime_waiter_generationHitlStatebackground_selectors_enabledConnectorPermissionsconnectorsConnectorAutomaticUseActivationactivationFeedEligibleConnectorschanges_at_msTaskPreapprovalRevokedrevokedStorageInvariantViolation`DateTime - TimeDelta` overflowedDeviceHistoryChatRetiredAgentRetiredAdmissionAuthorityUnavailableHandoffIdentityConflictGoalParentMustBeTopLevelInvalidGoalParentMessagedescription() is deprecated; use Display

@@ -1,0 +1,219 @@
+ !"#$%&'()*+,-./0123ÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿpersonthere are too many contacts to listthat request is no longer waiting; it may have been confirmed, declined, or expired. Nothing changed.chat decline failedthe decline failedthat request is no longer waiting; it may have been declined or expired. Nothing changed.open avatar imagestat avatar imageavatar image is empty or too largeread avatar imagemuse avatar unavailable for peerssource_unavailablemuse avatar could not be prepared for peersencode_workerBoth owners confirmed the connection.sthe contact has no current relationshipthat contact is not verified yet; only a verified contact's access can changeenqueue peer outbox enveloperesolve DM conversation for grant noticeresolve DM conversation for relationship confirmationcontrol.relationship_confirmationunexpected owner approval responsecurrentaccess change does not fit the approval previewpeer_trust_changepeer.change_trust_presetinvalid peer access changefingerprintthe action does not fit the approval previewinvalid chat worker actionchat_worker_actionchat.worker_actionpeer request reconciliation failedfailed to disconnect an ended peer request's linkrequest_endedfailed to refresh confirmed peer contactthe contact has no relationship generationYour owner didn't answer the card in time, so nothing was saved./v1/peer/sign-delegatesign peer delegate via authddecode signed delegate tokenpersist peer preset grantfailed to enqueue seeded grant noticeload peer contact for preset changelist live grants for preset changerevoke preset grant for preset changeset peer trust presetowner_grantpresetgrant.seededpeer_grantseededgrant.revokedfailed to enqueue grant revocation noticepeer person-page write failedpeer person-page task failedfailed to publish peer admission mirror to peerdfailed to read peer admission mirror; disabling previously admitted authorityread peer admission mirrorfailed to disable peer admission after snapshot read failurepeer admission mirror publication failed; rotating publisher tokenrebuild peer admission mirrorretry peer admission mirror publicationread peer admission mirror snapshotpeerd mirror status observed after failed disable (diagnostic only)peerd mirror status unavailable after failed disablevalidate peer invite requestcreate_request_id must be non-nil/v1/peer/sign-invite-v2inviteinviter_offered_presetpairing.request_supersededprevious_relationship_generation_idrequest_supersededfailed to write a peer conversation activity rowfailed to repair default peer DM titlespeer DM title has an invalid session idcustomfailed to reconcile peer profile photoruntime.skillsJARVIS_HOMEJARVIS_VAR_LIB_DIRCREDENTIALS_DIRECTORYJARVIS_TRACE_CONTEXTJARVIS_RUNTIME_CONTEXT_TOKENskill command runtime context registration failedpayment-methodswallet_provider_errorshop-wallet-clipayment_methods.listcapture new heartbeat occurrence languagescheduler source path holder lookup failed
+INSERT INTO requests (
+  request_id, root_request_id, parent_request_id, request_origin,
+  transcript_surface, root_work_class
+)
+VALUES ($1, $2, $3, $4, $5::runtime.transcript_surface, $6)
+ON CONFLICT (request_id) DO UPDATE SET
+  root_request_id = COALESCE(requests.root_request_id, excluded.root_request_id),
+  parent_request_id = COALESCE(requests.parent_request_id, excluded.parent_request_id),
+  request_origin = CASE
+    WHEN requests.request_origin = 'internal.runtime_replay' THEN excluded.request_origin
+    ELSE requests.request_origin
+  END,
+  transcript_surface = excluded.transcript_surface,
+  root_work_class = CASE
+    WHEN requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing'
+      THEN excluded.root_work_class
+    ELSE requests.root_work_class
+  END
+WHERE (requests.root_request_id IS NULL AND excluded.root_request_id IS NOT NULL)
+   OR (requests.parent_request_id IS NULL AND excluded.parent_request_id IS NOT NULL)
+   OR (requests.request_origin = 'internal.runtime_replay'
+       AND excluded.request_origin <> 'internal.runtime_replay')
+   OR requests.transcript_surface IS DISTINCT FROM excluded.transcript_surface
+   OR (requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing')
+output
+INSERT INTO tool_outputs (event_seq, call_id, status, output_text, error_text, created_at)
+VALUES ($1, $2, $3, $4, $5, to_timestamp($6::double precision / 1000.0))
+ON CONFLICT (event_seq) DO UPDATE SET
+  call_id = excluded.call_id,
+  status = excluded.status,
+  output_text = excluded.output_text,
+  error_text = excluded.error_text
+arguments
+INSERT INTO tool_calls (event_seq, call_id, tool_name, status, arguments_json, created_at)
+VALUES ($1, $2, $3, 'started', $4, to_timestamp($5::double precision / 1000.0))
+ON CONFLICT (call_id) DO UPDATE SET
+  event_seq = excluded.event_seq,
+  tool_name = excluded.tool_name,
+  status = excluded.status,
+  arguments_json = excluded.arguments_json
+
+INSERT INTO chat_event_derived_write_backlog (event_seq, resources_json)
+VALUES ($1, $2)
+ON CONFLICT (event_seq) DO UPDATE SET
+  resources_json = excluded.resources_json,
+  updated_at = now()
+UPDATE chat_private.peer_conversations SET requester_chat_id = NULL
+         WHERE conversation_id = $1 AND requester_revision = $2
+           AND requester_chat_id = $3 AND NOT requester_unavailable
+           AND chat_id = $5
+           AND EXISTS (SELECT 1 FROM agent.agents
+                       WHERE id = $4 AND session_id = $3)peer handoff disagrees with its asking-chat claimpeer handoff requester changed before admissionSELECT session_id, COALESCE(prompt_floor_seq, -1) AS prompt_floor_seq,
+                kind = 'root' AND parent_agent_id IS NULL
+                AND ephemeral IS DISTINCT FROM TRUE
+                AND status NOT IN ('shutdown', 'not_found') AS eligible
+         FROM agent.agents WHERE agent_id = $1 FOR UPDATEstartup_root_changedSELECT EXISTS(SELECT 1 FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND accepted_ordinal < $2)startup mailbox promotion cannot overtake an earlier accepted input
+SELECT payload_json
+FROM agent.runtime_restart_checkpoints
+WHERE agent_id = $1
+FOR UPDATE
+
+SELECT EXISTS (
+  SELECT 1
+  FROM agent.message_mailbox
+  WHERE agent_id = $1
+    AND state = 'accepted'
+    AND accepted_ordinal < $2
+    AND (NOT $3 OR submission_kind <> 'internal_handoff')
+)
+message mailbox attachment cannot overtake an older priority peer
+INSERT INTO agent.runtime_restart_checkpoints (
+  agent_id, mode, recovery_class, recovery_owner_id, execution_config_json,
+  payload_json, created_at, updated_at
+) SELECT $1, $2, $3, $4, $5, $6, $7, $7
+WHERE EXISTS (
+  SELECT 1
+  FROM agent.agents
+  WHERE agent_id = $1
+    AND status NOT IN ('shutdown', 'not_found')
+)
+ON CONFLICT (agent_id) DO NOTHING
+SELECT EXISTS (SELECT 1 FROM agent.agents WHERE agent_id = $1 AND status NOT IN ('shutdown', 'not_found'))conversation epoch
+INSERT INTO agent.message_mailbox (
+  submission_id, agent_id, conversation_epoch, submission_kind,
+  routing_scope, state, checkpoint_custody, stream_owner_message_id,
+  submission_json, transcript_event_seq, attached_at
+) VALUES (
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+  CASE WHEN $6 = 'attached' THEN now() ELSE NULL END
+)
+ON CONFLICT (submission_id) DO NOTHING
+RETURNING accepted_ordinal, accepted_at
+startup mailbox promotion requires its previously accepted input
+SELECT agent_id, conversation_epoch, submission_kind, routing_scope,
+       state, stream_owner_message_id, submission_json,
+       transcript_event_seq, accepted_ordinal, accepted_at
+FROM agent.message_mailbox
+WHERE submission_id = $1
+FOR UPDATE
+update chat.message_bindings set admitted_at = coalesce(admitted_at, now())
+                    where jarvis_message_id = $1 and chat_id = $2 and binding_epoch = $3 and transport = $4binding epochconversation_epochsubmission_kindrouting_scope
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = $5,
+    stream_owner_message_id = $2,
+    submission_json = $3,
+    transcript_event_seq = coalesce($4, transcript_event_seq),
+    attached_at = now()
+WHERE submission_id = $1
+  AND state = 'accepted'
+  AND stream_owner_message_id IS NULL
+mailbox stream ownerselect a.account_id from chat_private.accounts a
+             join chat_private.binding_authorizations b on b.provider = a.provider and b.account_id = a.account_id
+             where b.provider = $1 and b.binding_id = $2
+               and a.connection_id = $3 and not a.revoked for share of adirect input has no captured binding epochaccount_retiredselect connection_id, generation, transport_json, delivery_target
+             from chat_private.binding_authorizations
+             where provider = $1 and binding_id = $2 and chat_id = $3
+               and account_id = $4 and external_kind = 'direct' and participation = 'active'
+             for shareaccount_authorization_retiredtransport_jsontransport_authorization_absentselect epoch from chat_private.bindings
+         where chat_id = $1 and provider = $2 and not revoked for sharetransport_authorization_changedbinding_retiredSELECT pg_advisory_xact_lock(hashtextextended('activity-monitor-root-carrier:' || $1, 0))
+WITH lineage(message_id) AS (
+    SELECT $1::text
+    UNION
+    SELECT user_message_id
+    FROM activity_monitor_carrier_user_messages
+    WHERE carrier_message_id = $1
+      AND (root_agent_id IS NULL OR root_agent_id = $2)
+    UNION
+    SELECT $3::text
+    WHERE $3 IS NOT NULL AND $4
+)
+INSERT INTO activity_monitor_message_threads (
+    message_id, activity_thread_id, created_at, updated_at
+)
+SELECT message_id, $5, $6, $6
+FROM lineage
+ON CONFLICT(message_id) DO UPDATE SET
+    activity_thread_id = excluded.activity_thread_id,
+    updated_at = excluded.updated_at
+WHERE activity_monitor_message_threads.activity_thread_id
+    IS DISTINCT FROM excluded.activity_thread_id
+
+SELECT activity_thread_id
+FROM activity_monitor_message_threads
+WHERE message_id = $1
+LIMIT 1
+
+INSERT INTO activity_monitor_agent_threads (agent_id, activity_thread_id, created_at, updated_at)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT(agent_id) DO UPDATE SET
+    activity_thread_id = excluded.activity_thread_id,
+    updated_at = excluded.updated_at
+WHERE activity_monitor_agent_threads.activity_thread_id IS DISTINCT FROM excluded.activity_thread_id
+activity_monitor_upsert_activity_thread_actionactivity_monitor_list_thread_actionsactivity_monitor_action_by_idactivity_monitor_list_recent_thread_actions
+INSERT INTO activity_monitor_message_threads (message_id, activity_thread_id, created_at, updated_at)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT(message_id) DO UPDATE SET
+    activity_thread_id = excluded.activity_thread_id,
+    updated_at = excluded.updated_at
+WHERE activity_monitor_message_threads.activity_thread_id IS DISTINCT FROM excluded.activity_thread_id
+activity_monitor_message_thread_lookupactivity_monitor_read_threadactivity_monitor_reactivate_finished_threadfailed to reactivate finished activity threaddatabase write admission gate closedadmission_timeoutassert_table_existstable_presence.queryupdate self_improvement.connector_context_records set current = false
+        where connector = $1 and account_id = $2 and generation = $3 and subject_id = $4
+        and current and ($5::text is null or suggestion_id <> $5) returning suggestion_idupdate self_improvement.follow_up_queue set state = 'cancelled',
+        disposition_reason = 'connector_source_deleted', terminal_at = now(), updated_at = now()
+        where follow_up_id = any($1) and state = 'pending'connector context contribution does not match its checkpointdeletedselect e.group_key from self_improvement.connector_context_records r
+                join context.events e on e.id = r.event_id
+                where e.source_id = $1 and r.subject_id = $2
+                  and (e.expires_at is null or e.expires_at > statement_timestamp()) order by e.append_position desc limit 1select count(*) from unnest($1::text[]) requested(event_id)
+        left join context.events e on e.id = requested.event_id
+        where e.id is nullconnector context publication event is unavailableinsert into self_improvement.connector_context_records
+            (connector,account_id,generation,subject_id,suggestion_id,event_id,current,
+             source_id,group_id,append_position)
+            select $1,$2,$3,$4,$5,$6,true,e.source_id,e.group_id,e.append_position
+            from context.events e where e.id = $6 on conflict do nothingupdate self_improvement.connector_mailbox_state m
+        set responded_seen_at = $7
+        from unnest($4::text[], $5::text[], $6::bigint[]) as s(thread_id, message_id, position)
+        where m.connector = $1 and m.account_id = $2 and m.generation = $3
+          and m.thread_id = s.thread_id and m.source_id <> s.message_id
+          and m.arrival_position < s.position and m.responded_seen_at is nullinsert into self_improvement.connector_mailbox_state as existing
+        (connector, account_id, generation, source_id, thread_id,
+         arrival_position, position, facts, recorded_at, expires_at)
+        select $1, $2, $3, s.source_id, s.thread_id, s.arrival, s.position, s.facts, $9, $10
+        from unnest($4::text[], $5::text[], $6::bigint[], $7::bigint[], $8::jsonb[])
+          as s(source_id, thread_id, arrival, position, facts)
+        on conflict (connector, account_id, generation, source_id) do update
+        set arrival_position = least(existing.arrival_position, excluded.arrival_position),
+            position = greatest(existing.position, excluded.position),
+            facts = case when excluded.position > existing.position
+                then excluded.facts else existing.facts end,
+            recorded_at = case when excluded.position > existing.position
+                then excluded.recorded_at else existing.recorded_at end
+        where excluded.position > existing.position
+           or excluded.arrival_position < existing.arrival_positionselect source_id, position, facts from self_improvement.connector_mailbox_state
+        where connector = $1 and account_id = $2 and generation = $3
+          and source_id = any($4)
+        for updateupdate self_improvement.connector_mailbox_state m
+        set position = c.position, facts = c.facts, recorded_at = $7
+        from unnest($4::text[], $5::bigint[], $6::jsonb[]) as c(source_id, position, facts)
+        where m.connector = $1 and m.account_id = $2 and m.generation = $3
+          and m.source_id = c.source_iddelete from self_improvement.connector_mailbox_state
+            where connector = $1 and account_id = $2delete from self_improvement.connector_mailbox_state
+            where connector = $1 and account_id = $2 and generation = $3
+              and source_id = any($4)agent_status broadcast presence statusstandaloneclient rendering snapshot read failed; keeping lifts inline this turntoo many group attachment snapshotsinvalid group attachment snapshot referenceinvalid group attachment MIME typeduplicate group attachment snapshot referencegroup attachment snapshots exceed limitbusiness transcript revision is staleconversation activity projection unavailablemdtranscript file notification unavailablepreparingawaiting_replyawaiting_usertranscript messages missingtotal_messagessnapshot_pathtranscript_pathexternal_party_conversationconversation preview exceeds the state budgetconversation preview widget is missingappliedconversation preview state could not be updatedconversation preview card belongs to another ownerconversation preview is not its transcript filetext/markdownconversation preview could not be savedconversation preview changed before publicationconversation preview could not be presentedconversation preview is not visiblePreparing a messagePausedWaiting for a replyConversation endedPreparing the resultWaiting for your approvaltask_runningThe conversation reached its 60-exchange limit and is paused.The outgoing message needs review under the current approved scope.send a nonempty message of at most 16 KBchat send identity collisionchat has no discretion policythis conversation is closed to new messagesowner request for chat send review unavailablechat send review failedchat send review timed outchat worker disappearedchat worker changed before the sendthis contact's access has ended, so the message was not sentchat send drain failed; the chat retries itchat send was refused by the outboxchat send delivery state unavailableunread count after a send unavailablespace_preview_repairspace preview repair: handler not registeredspace preview repair: handler registry unavailablespace_preview_missingspace preview repair: runtime work store unavailablequeued Space preview repairspace preview repair: seeding failedspace preview repair: catalog read failed on viewnot_authorizedpermission_disabledstripeconnector_checkpoint_changed--insighttop_brand_by_transaction_count_per_category_t180dStripe Link Financial Insights fetch failedStripe Link Financial Insights response exceeded the size limitStripe Link Financial Insights response was too largeinspectStripe Link connection inspection failedStripe Link connection status failedas_ofstripe_financial_insights{"status":"ready"}connector_call_reasonfinancial_insightspublication transport changedoffline_threading_idinvalid Messenger publication identityMessenger publication identity overflowinvocation_otidinvocation_message_idunsupported publication origin projectionpublication origin has no immutable projectionbundled Ideas localization catalog is unavailablefailed to load bundled Ideas localization provenancefailed to load bundled Ideas dogfood provenanceIdea catalog sharing context read failedIdea share variant projection read failedIdea share revision projection read failedIdea direct sharing read failedIdea publication hold read failedanchor_kindanchor_idfailed to batch-read idea source metadata for downstream eventsload peer relationship for SAS confirmationload peer SAS confirmation replayreconcile peer SAS confirmation replaypairingacquire exact-link SAS confirmation leasepeerd SAS confirmation lease is shorter than the required commit bound/v1/peer/sign-relationship-confirmationsign peer relationship confirmation via authddecode signed relationship confirmationparse signed relationship confirmationverify authd relationship confirmationauthd relationship confirmation notice id does not match signed tupleauthd relationship confirmation does not match requested tuplefailed to release SAS confirmation leasefailed to reconcile replayed SAS confirmation leasepeer DM conversation creation raced; adopting existing rowmail completion has no ownermail completion owner is no longer currentThe mail turn ended without a verified handling report.The mail worker stopped without confirming its result. Its pending task is kept. Check its recorded actions with mail.status before handing the task off again.task.turn_completedmissing_verified_reportrecord_completionSELECT payload_json FROM runtime_restart_checkpoints WHERE agent_id = $1 FOR UPDATESELECT submission_json, octet_length(submission_json)::bigint AS serialized_bytes
+         FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND submission_id <> $2startup_queue_fulldue-occurrence coalesce check failed; seeding immediate occurrence anywayinvalid connector permission update idmaintenance_occurrencemaintenance_attemptrequest_generationgeneric_maintenancejitter_offset_secsjitter_window_secsmaintenance occurrence collided with terminalized work itemattemptstripe_link_financial_insights_fetch_failedSELECT event_seq, event_name, source, role::text AS role,
+                    visibility::text AS visibility, message_id, agent_id,
+                    parent_agent_id, parent_message_id, reply_to_message_id,
+                    transcript_surface::text AS transcript_surface, payload_json,
+                    request_id, root_request_id, parent_request_id,
+                    extract(epoch from created_at)::bigint AS created_at
+             FROM runtime.events WHERE idempotency_key = $1SELECT ci.item_json, ci.message_source,
+                        extract(epoch from ci.created_at)::bigint AS created_at,
+                        p.client_context_json
+                 FROM agent.context_items ci
+                 LEFT JOIN agent.context_item_resume_projection p
+                   ON p.agent_id = ci.agent_id AND p.seq = ci.seq
+                 WHERE ci.agent_id = $1 AND ci.seq = $2discretion policy or audience changed before deliveryideas build ended without delivering; carrier turn may owe the user a noticeworker task owner request unavailableruntime.muse_mailno_activationactivation_recoveredwork_idstripe_link_financial_insights_activation_recovery_failedinternal error: entered unreachable code: the last attempt returnsold peer chat is still settling; retrying its deletionthe old peer chat could not be resolved for deletionjoin room memory removalthe new chat's DISCRETION.md changed while it was being seededconversation.resetcould not read the reset contact for its update eventreserve re-homed voice result custodymark already re-homed voice results seencheck re-homed voice result mailbox admissioncalled `Result::unwrap()` on an `Err` valueimpressionclickengagementfeedback_upfeedback_downforeground_rootpeer_chat_rootmail_conversationdelegate_main_requestworkflow_subagentspaces_builderspaces_builder_litespaces_builder_editspaces_builder_python_editbrowser_taskdeep_researchideas_builderspace_taskself_improvement_stepflight_tracking_steppeer_sync_stepfeed_workflow_stepephemeral_agent_stepscheduler_cron_executescheduler_cron_resolveexecute_resolve_workersystem_cron_productvoice_delegaterealtime_voicecompaniondeveloperavatar_sharelocal_mapoptiondiscovery_pool_idea_idspace_build_completednode_cardinternal_link_action_cardgeneric_listexternal_linkvideoslidesStripe Link must be reconnected before it can list payment optionsStripe Link is not connected, so it has no payment options to listinterruptedfilled overflowinternal_wakeworkerafter_inferenceawaiting_approvalafter_tool_dispatchcreatedrenamedunarchivedpinnedonlineout_of_creditsneeds_approvalcompactingrespondingwaiting_for_subagentsworkinguser_goalassistant_tracking:completion::completion-batch:subagent completion has no producer identitysource_changedcancelledNo meals added.nutrition.empty_batchEmpty state of the meal-confirmation collectionNutrition unavailablenutrition.unavailableMeal row without available nutrition valuesMeal detailsnutrition.meal_detailsHeading above a logged meal's nutrition and ingredientsoneNutrition: {count} meal loggedotherNutrition: {count} meals loggednutrition.batch_displaySaved transcript fallback for a collection confirming logged meals{count} calnutrition.calorie_valueRounded meal or ingredient energy; cal is the abbreviation for caloriesNo meals logged in this window.nutrition.empty_historyEmpty meal-history card for the requested time windowNutrition for {meal}nutrition.meal_accessibilityAccessibility label of a meal card; meal is the caller's verbatim summaryNutrition for {count} meal loggedNutrition for {count} meals loggednutrition.batch_accessibilityAccessibility label for a collection confirming how many meals were loggedwindow{title} Â· {window}nutrition.history_accessibilityAccessibility label combining the caller's verbatim meal-history title and time-window descriptionFatnutrition.metric.fatNutrition metric label for fat massnutrition.mealFallback title for a nutrition meal with no caller-supplied summaryCarbsnutrition.metric.carbsNutrition metric label for carbohydrate massnutrition.gramsRounded nutrition mass; g is the abbreviation for gramsMEALSnutrition.mealsSection heading on a card confirming several logged mealsNutrition: {title}nutrition.displaySaved transcript fallback for a nutrition card; title is the caller's verbatim meal summary or history titleMEAL HISTORYnutrition.historySection heading above previously logged mealsProteinnutrition.metric.proteinNutrition metric label for protein massnutrition.metric.caloriesNutrition metric label for energy in caloriesLocal time out of range for `NaiveDateTime``NaiveDate - TimeDelta` overflowedYesterdaynutrition.yesterdayMeal-history day heading for the previous day in the meal timestamp's timezoneTodaynutrition.todayMeal-history day heading for the current day in the meal timestamp's timezoneView morenutrition.view_moreButton expanding the remaining meal rows or ingredients in a nutrition cardpeer.contact_updatedpeer.grant_updatedstartup_reconcileloop_reconcilemutation_reconcileopportunisticcomplete_when_awakeobjectiveproactive_notificationflight_trackingvoice_persistencewebhook_fetchlightstripe_link_connectedpermission_enableddeparturearrival{departure} â†’ {arrival}flight.summary.same_day_timesDeparture and arrival airport-local times on the same calendar date; the arrow follows travel orderÁ 

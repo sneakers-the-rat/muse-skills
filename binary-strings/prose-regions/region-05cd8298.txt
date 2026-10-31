@@ -1,0 +1,1036 @@
+internal error: entered unreachable codefalseerrorsuccess/device_sync/payload/content_coverageinvalid device history fragment positionwrite_admissionwritepostgres write completed slowlypostgres write failedretrying idempotent postgres writeone-shot postgres write invoked more than oncescheduler worker phase attempt is negativescheduler worker phase attempt is too largeexpected scheduler worker phase attempt is too largestatusscheduler delivery attempt count is negativescheduler delivery attempt count is too largesignal_typemessageproducer_request_trace_jsonblocked_reasonblocked_dependencyscheduler phase attempt is too largescheduler.terminal_signals.producer_request_trace_jsoninvalid worker attemptcron timeout repair lost its phase ownerjob_iderror_textrun_idscheduled_for_utctrigger_reasonmax_retriesworker phase attempt is too largeapproval budget worker no longer owns runselect worker_phase, worker_phase_attempt, worker_agent_id,
+                            worker_boot_generation, worker_claimed_at_utc,
+                            worker_execution_timed_out, worker_history_agent_id
+                     from scheduler.job_runs
+                     where run_id = $1worker_phaseworker_phase_attemptworker_agent_idworker_boot_generationworker_claimed_at_utcworker_execution_timed_outworker_history_agent_idupdate scheduler.job_runs as owned_run
+                         set status = 'failed',
+                             finished_at = to_timestamp($10::double precision),
+                             finished_at_utc = $10,
+                             error_text = $9
+                         where run_id = $1
+                           and status in ('queued', 'running')
+                           and worker_phase = $2
+                           and worker_phase_attempt = $3
+                           and worker_agent_id = $4
+                           and worker_boot_generation = $5
+                           and worker_claimed_at_utc = $6
+                           and worker_execution_timed_out = $7
+                           and worker_history_agent_id is not distinct from $8
+                           and pending_terminal_result_json is null
+                           and not exists (
+                             select 1
+                             from scheduler.terminal_signals
+                             where terminal_signals.run_id = owned_run.run_id
+                           )
+                         returning job_id, trigger_reasonfailedupdate scheduler.job_runs
+                            set worker_phase = $2,
+                                worker_phase_attempt = $3,
+                                worker_agent_id = $4,
+                                worker_boot_generation = $5,
+                                worker_claimed_at_utc = $6,
+                                worker_execution_timed_out = $11,
+                                worker_history_agent_id = $12
+                          where run_id = $1
+                            and status = 'running'
+                            and pending_terminal_result_json is null
+                            and worker_phase = $7
+                            and worker_phase_attempt = $8
+                            and worker_agent_id = $9
+                            and worker_boot_generation = $10
+                            and worker_history_agent_id is not distinct from $13update scheduler.job_runs
+                            set worker_phase = $2,
+                                worker_phase_attempt = $3,
+                                worker_agent_id = $4,
+                                worker_boot_generation = $5,
+                                worker_claimed_at_utc = $6,
+                                worker_execution_timed_out = $7,
+                                worker_history_agent_id = $8
+                          where run_id = $1
+                            and status = 'running'
+                            and pending_terminal_result_json is null
+                            and worker_phase is null
+                            and worker_phase_attempt is null
+                            and worker_agent_id is null
+                            and worker_boot_generation is null
+                            and worker_claimed_at_utc is null
+                            and worker_history_agent_id is nullselect exists (
+                           select 1
+                             from scheduler.job_runs
+                            where run_id = $1
+                              and status in ('queued', 'running')
+                              and pending_terminal_result_json is null
+                              and worker_phase = $2
+                              and worker_phase_attempt > 0
+                              and worker_agent_id = $3
+                              and worker_boot_generation is not null
+                              and worker_claimed_at_utc is not null
+                              and (
+                                ($2 = 'execute' and worker_phase_attempt = 1
+                                     and worker_history_agent_id is null)
+                                or
+                                ($2 = 'resolve' and worker_history_agent_id is not null)
+                              )
+                         )select owned_run.job_id
+                         from scheduler.job_runs as owned_run
+                         where run_id = $1
+                           and status in ('queued', 'running')
+                           and worker_phase = $2
+                           and worker_phase_attempt = $3
+                           and worker_agent_id = $4
+                           and worker_boot_generation = $5
+                           and worker_claimed_at_utc = $6
+                           and worker_execution_timed_out = $7
+                           and worker_history_agent_id is not distinct from $8
+                           and pending_terminal_result_json is null
+                           and not exists (
+                             select 1
+                             from scheduler.terminal_signals
+                             where terminal_signals.run_id = owned_run.run_id
+                           )
+                           and not exists (
+                             select 1
+                             from scheduler.events
+                             where events.job_id = owned_run.job_id
+                               and events.run_id = owned_run.run_id
+                               and events.event_name = $9
+                           )
+                         for updaterestart_continuation
+SELECT mutation_seq,
+       job_id,
+       action,
+       occurred_at_ms,
+       carrier_message_id,
+       request_id,
+       tool_call_id,
+       input_message_ids
+FROM scheduler.cron_mutations
+WHERE job_id = $1
+ORDER BY mutation_seq ASC
+
+SELECT mutation_seq,
+       job_id,
+       action,
+       occurred_at_ms,
+       carrier_message_id,
+       request_id,
+       tool_call_id,
+       input_message_ids
+FROM scheduler.cron_mutations
+WHERE job_id = $1
+ORDER BY mutation_seq DESC
+LIMIT 1
+
+INSERT INTO scheduler.cron_mutations (
+  job_id,
+  action,
+  occurred_at_ms,
+  carrier_message_id,
+  request_id,
+  tool_call_id,
+  input_message_ids
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+ON CONFLICT (request_id, tool_call_id, job_id) DO NOTHING
+RETURNING mutation_seq
+
+SELECT job_id,
+       action,
+       carrier_message_id,
+       input_message_ids
+FROM scheduler.cron_mutations
+WHERE request_id = $1
+  AND tool_call_id = $2
+  AND job_id = $3
+actioncarrier_message_idinput_message_idsset transaction isolation level repeatable read, read onlyselect r.run_id, r.status::text as status, r.trigger_reason, r.attempt,
+                        r.scheduled_for_utc, r.worker_phase, r.worker_phase_attempt,
+                        r.worker_agent_id, r.worker_boot_generation, r.worker_claimed_at_utc,
+                        r.worker_execution_timed_out, r.worker_history_agent_id,
+                        r.worker_timeouts_json, r.worker_approval_wait_json,
+                        r.product_endpoint_deadline_at_ms, r.pending_terminal_result_json,
+                        c.payload_json
+                 from scheduler.job_runs r
+                 left join agent.runtime_restart_checkpoints c
+                   on c.agent_id = r.worker_agent_id and c.recovery_owner_id = r.run_id
+                 where r.job_id = $1 and r.status in ('queued', 'running')
+                 order by r.scheduled_for_utc, r.run_idselect run_id, state, attempt_count, next_attempt_at_utc, payload_json
+                 from scheduler.delivery_outbox where job_id = $1
+                   and state in ('pending', 'dispatching', 'admitted')
+                 order by next_attempt_at_utc, delivery_keypending_terminal_result_jsonpayload_jsonworker_timeouts_jsonworker_approval_wait_jsonattemptproduct_endpoint_deadline_at_msremaining_active_phase_mspending_approvalsinference_recoverypending_result_outcomedelivery_recoveryselect checkpoint.agent_id, checkpoint.payload_json,
+                            array(
+                                select json_build_object(
+                                    'accepted_ordinal', mailbox.accepted_ordinal,
+                                    'state', mailbox.state,
+                                    'checkpoint_custody', mailbox.checkpoint_custody,
+                                    'submission_json', mailbox.submission_json
+                                )::text
+                                from agent.message_mailbox mailbox
+                                where mailbox.agent_id = checkpoint.agent_id
+                                  and mailbox.state in ('accepted', 'attached')
+                                order by mailbox.accepted_ordinal, mailbox.submission_id
+                            ) as mailbox_overlay_rows
+                     from agent.runtime_restart_checkpoints checkpoint
+                     where checkpoint.agent_id = any($1)
+                       and checkpoint.payload_json is not nullstateattempt_countnext_observation_or_attempt_at_utcnext_attempt_at_utcconsumer_continuationmailbox_overlay_rowsselect delivery_key, job_id, run_id, payload_json, state,
+            dispatch_boot_generation, attempt_count, next_attempt_at_utc
+       from scheduler.delivery_outboxupdate scheduler.delivery_outbox
+                        set state = 'dispatching',
+                            dispatch_boot_generation = $2,
+                            attempt_count = attempt_count + 1,
+                            next_attempt_at_utc = $4,
+                            updated_at_utc = $3
+                      where delivery_key = $1
+                        and state in ('pending', 'dispatching', 'admitted')
+                        and ((dispatch_boot_generation is not null
+                              and dispatch_boot_generation is distinct from $2)
+                             or (state = 'pending' and next_attempt_at_utc <= $3))
+                    returning attempt_countselect pending_terminal_result_json from scheduler.job_runs
+                         where run_id = $1 and job_id = $2 for updatecron delivery authority changed during preparationinsert into scheduler.delivery_outbox
+                           (delivery_key, job_id, run_id, payload_json, state,
+                            attempt_count, next_attempt_at_utc, created_at_utc,
+                            updated_at_utc)
+                         values ($1, $2, $3, $4, 'pending', 0, $5, $5, $5)
+                         on conflict (delivery_key) do nothing
+                         returning job_id, run_idcron delivery no longer has a retained resultselect job_id, run_id
+                               from scheduler.delivery_outbox
+                              where delivery_key = $1update scheduler.delivery_outbox
+                        set state = 'pending', next_attempt_at_utc = $4,
+                            updated_at_utc = $3, last_error = $5
+                      where delivery_key = $1 and state = 'dispatching'
+                        and dispatch_boot_generation = $2
+                        and attempt_count = $6update scheduler.delivery_outbox
+                        set state = 'failed',
+                            dispatch_boot_generation = null,
+                            updated_at_utc = $3,
+                            delivered_at_utc = $3,
+                            last_error = $4
+                      where delivery_key = $1 and state = 'dispatching'
+                        and dispatch_boot_generation = $2
+                        and attempt_count = $5update scheduler.delivery_outbox
+                        set state = 'admitted', next_attempt_at_utc = $4,
+                            updated_at_utc = $3, last_error = null
+                      where delivery_key = $1 and state = 'dispatching'
+                        and dispatch_boot_generation = $2
+                        and attempt_count = $5update scheduler.delivery_outbox
+                        set state = 'delivered', delivered_at_utc = $2,
+                            updated_at_utc = $2, last_error = null
+                      where delivery_key = $1
+                        and state in ('pending', 'dispatching', 'admitted')update scheduler.delivery_outbox
+                        set next_attempt_at_utc = $7, updated_at_utc = $6
+                      where delivery_key = $1
+                        and state = $2
+                        and state in ('dispatching', 'admitted')
+                        and dispatch_boot_generation = $3
+                        and attempt_count = $4
+                        and next_attempt_at_utc = $5
+                        and next_attempt_at_utc <= $6select next_attempt_at_utc
+                       from scheduler.delivery_outbox
+                      where state in ('pending', 'dispatching', 'admitted')
+                      order by next_attempt_at_utc, delivery_key
+                      limit 1update scheduler.delivery_outbox
+                        set state = $7,
+                            dispatch_boot_generation = $8,
+                            next_attempt_at_utc = $9,
+                            updated_at_utc = $6
+                      where delivery_key = $1
+                        and state = $2
+                        and dispatch_boot_generation is not distinct from $3
+                        and attempt_count = $4
+                        and next_attempt_at_utc = $5update scheduler.delivery_outbox
+                        set state = 'failed',
+                            dispatch_boot_generation = null,
+                            updated_at_utc = $6,
+                            delivered_at_utc = $6,
+                            last_error = $7
+                      where delivery_key = $1
+                        and state = $2
+                        and dispatch_boot_generation is not distinct from $3
+                        and attempt_count = $4
+                        and next_attempt_at_utc = $5
+                        and state in ('pending', 'dispatching', 'admitted')delete from scheduler.delivery_outbox
+                      where delivery_key in (
+                        select delivery_key from scheduler.delivery_outbox
+                         where state in ('delivered', 'failed')
+                           and delivered_at_utc < $1
+                         order by delivered_at_utc, delivery_key
+                         limit $2
+                         for update skip locked
+                      )select onboarding_tour_body from scheduler.job_runs
+                 where run_id = $1 and job_id = 'agentic-feature-tour'select import_run_id from scheduler.onboarding_tour_state
+                 where job_id = 'agentic-feature-tour' for updateselect onboarding_tour_body from scheduler.job_runs
+                 where run_id = $1 and job_id = 'agentic-feature-tour'
+                   and status = 'running' for updateselect run_id from scheduler.job_runs
+                         where job_id = 'agentic-feature-tour' and onboarding_tour_body is null
+                           and (strpos(result_summary, '<memory_import_offer/>') > 0
+                                or strpos(result_summary, '<portable_memory_prompt>') > 0)
+                         order by scheduled_for_utc, run_id limit 1update scheduler.onboarding_tour_state set import_run_id = $1
+                             where job_id = 'agentic-feature-tour'update scheduler.job_runs set onboarding_tour_body = $2
+                 where run_id = $1 and job_id = 'agentic-feature-tour'update scheduler.onboarding_tour_state set import_run_id = $1
+                     where job_id = 'agentic-feature-tour'select import_run_id is not null or exists (
+                        select 1 from scheduler.job_runs
+                        where job_id = 'agentic-feature-tour' and onboarding_tour_body is null
+                          and (strpos(result_summary, '<memory_import_offer/>') > 0
+                               or strpos(result_summary, '<portable_memory_prompt>') > 0)
+                    ) from scheduler.onboarding_tour_state
+                    where job_id = 'agentic-feature-tour'select extract(epoch from created_at)::bigint from scheduler.jobs
+                 where job_id = 'agentic-feature-tour'select exists (select 1 from scheduler.job_runs
+                 where job_id = 'agentic-feature-tour' and status = 'running'
+                   and worker_agent_id is not null and onboarding_tour_body is null)select signal_type, message, producer_request_trace_json,
+                            blocked_reason, blocked_dependency
+             from scheduler.terminal_signals
+             where run_id = $1select ts.blocked_reason, ts.blocked_dependency
+             from scheduler.job_runs r
+             left join scheduler.terminal_signals ts on ts.run_id = r.run_id
+             where r.job_id = $1
+               and r.run_id <> $2
+               and r.status in ('succeeded', 'failed', 'timeout', 'cancelled')
+               and r.started_at_utc is not null
+               and r.finished_at_utc is not null
+               and r.scheduled_for_utc <= $3
+             order by r.scheduled_for_utc desc, r.finished_at_utc desc, r.run_id desc
+             limit 1with adopted_owner as (
+                       update scheduler.job_runs
+                          set worker_boot_generation = $5
+                        where run_id = $1
+                          and status = 'running'
+                          and pending_terminal_result_json is null
+                          and worker_phase = 'resolve'
+                          and worker_phase_attempt = $3
+                          and worker_agent_id = $2
+                          and worker_boot_generation = $4
+                      returning run_id
+                     )
+                     insert into scheduler.terminal_signals
+             (run_id, signal_type, message, producer_request_trace_json, created_at_utc,
+              producer_agent_id, producer_phase_attempt, producer_boot_generation,
+              blocked_reason, blocked_dependency)
+             select $1, $6, $7, $8, $9, $2, $3, $5, $10, $11
+               from adopted_owner
+             on conflict (run_id) do nothingselect signal_type, message, blocked_reason, blocked_dependency
+             from scheduler.terminal_signals
+             where run_id = $1select worker_timeouts_json from scheduler.job_runs where run_id = $1select worker_timeouts_json from scheduler.job_runs
+                 where run_id=$1 and status in ('queued','running')
+                   and pending_terminal_result_json is null
+                   and worker_phase=$2 and worker_phase_attempt=$3
+                   and worker_agent_id=$4 and worker_boot_generation=$5
+                   and worker_claimed_at_utc=$6
+                   and worker_history_agent_id is not distinct from $7
+                   and worker_execution_timed_out=$8
+                 for updateresolution_policy_versionresolutionupdate scheduler.job_runs set worker_timeouts_json=$2
+                    where run_id=$1 and worker_timeouts_json=$3select run_id from scheduler.job_runs where run_id = $1 for updateselect job_id from scheduler.jobs where job_id = $1 for updateupdate scheduler.jobs set device_authority_hash = $3,
+                    device_read_checkpoints_json = case
+                        when device_authority_hash = $4 then device_read_checkpoints_json
+                        else '{}' end
+                 where job_id = $1 and source_hash = $2update scheduler.job_runs
+                         set device_snapshot_hash = $2, device_authority_hash = $3
+                         where run_id = $1schedule changed before its device authority could be bound
+select projection_complete, next_resume_at_utc, next_resume_job_name
+from scheduler.scheduled_resume_state
+where singleton
+select resume_at_utc, environment_id, schedule_id, dispatch_at_ms,
+       acknowledgement_attempts, acknowledgement_next_attempt_at_ms,
+       registration_attempts, job_name, shadow
+from scheduler.scheduled_resume_registrations
+order by resume_at_utcprojection_completenext_resume_at_utcnext_resume_job_nameupdate scheduler.scheduled_resume_state
+                     set projection_complete = false,
+                         next_resume_at_utc = null,
+                         next_resume_job_name = null
+                     where singletoninsert into scheduler.scheduled_resume_registrations
+                       (resume_at_utc, job_name)
+                     select $1, next_resume_job_name
+                     from scheduler.scheduled_resume_state
+                     where singleton
+                       and projection_complete
+                       and next_resume_at_utc = $1
+                     on conflict (resume_at_utc)
+                     do nothing
+                     returning resume_at_utcdelete from scheduler.scheduled_resume_registrations
+                         where resume_at_utc = $1
+                           and schedule_id = $2update scheduler.scheduled_resume_registrations
+                         set registration_attempts = greatest(registration_attempts, $2)
+                         where resume_at_utc = $1
+                           and schedule_id is nullupdate scheduler.scheduled_resume_registrations
+                         set environment_id = $2,
+                             schedule_id = $3,
+                             dispatch_at_ms = $4,
+                             shadow = $5
+                         where resume_at_utc = $1
+                           and (
+                             schedule_id is null
+                             or (
+                               (environment_id is null or environment_id = $2)
+                               and schedule_id = $3
+                               and dispatch_at_ms = $4
+                             )
+                           )scheduled resume registration target changed before completion
+select deadline_at as next_deadline_at,
+       (metadata_json::jsonb)->>'maintenance_kind' as maintenance_kind
+from runtime.work_items
+where work_class = 'maintenance_job'
+  and terminalized_at is null
+  and state = 'queued'
+  and deadline_at is not null
+  and deadline_at > now()
+  and deadline_at >= $1
+  -- Legacy rows seeded before `suspend_policy` existed fall back to
+  -- `wake_eligible`; mirrored in `SCHEDULER_LIVENESS_QUERY`.
+  and coalesce(
+        (metadata_json::jsonb)->>'suspend_policy' = 'wake_to_complete',
+        ((metadata_json::jsonb)->>'wake_eligible')::boolean
+      )
+order by deadline_at asc, work_id asc
+limit 1update scheduler.scheduled_resume_registrations r
+                         set environment_id = null,
+                             schedule_id = null,
+                             dispatch_at_ms = null,
+                             shadow = false,
+                             registration_attempts = 0,
+                             acknowledgement_attempts = 0,
+                             acknowledgement_next_attempt_at_ms = 0
+                         from scheduler.scheduled_resume_state s
+                         where r.resume_at_utc = $1
+                           and r.schedule_id = $2
+                           and r.shadow
+                           and s.singleton
+                           and s.projection_complete
+                           and s.next_resume_at_utc = $1
+                         returning r.job_nameupdate scheduler.scheduled_resume_registrations
+                             set registration_attempts = registration_attempts + 1
+                             where resume_at_utc = $1
+                               and schedule_id is null
+                             returning registration_attemptsdelete from scheduler.scheduled_resume_registrations
+                         where resume_at_utc = $1
+                           and schedule_id is nullupdate scheduler.scheduled_resume_registrations
+                             set acknowledgement_attempts = acknowledgement_attempts + 1,
+                                 acknowledgement_next_attempt_at_ms = $5
+                             where resume_at_utc = $1
+                               and schedule_id = $2
+                               and acknowledgement_attempts = $3
+                               and acknowledgement_next_attempt_at_ms <= $4
+                             returning acknowledgement_attemptsupdate scheduler.scheduled_resume_registrations
+                         set acknowledgement_next_attempt_at_ms = $4
+                         where resume_at_utc = $1
+                           and schedule_id = $2
+                           and acknowledgement_attempts = $3select pending_terminal_result_json
+                     from scheduler.job_runs where run_id = $1 and status = 'running'select pending_terminal_result_json from scheduler.job_runs
+                     where run_id = $1 and status = 'running'
+                       and pending_terminal_result_json is not null for updateverification_categoryupdate scheduler.job_runs set pending_terminal_result_json = $2
+                     where run_id = $1cron report is not successful
+with earliest_obligation as (
+  select deadline_at,
+         left((metadata_json::jsonb)->>'maintenance_kind', 128) as maintenance_kind,
+         coalesce(length((metadata_json::jsonb)->>'maintenance_kind') > 128, false)
+           as maintenance_kind_truncated,
+         state = 'running' as is_running,
+         (metadata_json::jsonb)->>'suspend_policy' is null as uses_legacy_wake_eligible
+  from runtime.work_items
+  where work_class = 'maintenance_job'
+    and terminalized_at is null
+    and state in ('queued', 'running')
+    and deadline_at is not null
+    and coalesce(
+          (metadata_json::jsonb)->>'suspend_policy' = 'wake_to_complete',
+          ((metadata_json::jsonb)->>'wake_eligible')::boolean
+        )
+  order by deadline_at asc, work_id asc
+  limit 1
+)
+select statement_timestamp() as observed_at,
+       earliest_obligation.deadline_at,
+       earliest_obligation.maintenance_kind,
+       earliest_obligation.maintenance_kind_truncated,
+       earliest_obligation.is_running,
+       earliest_obligation.uses_legacy_wake_eligible,
+       projection.singleton is not null as projection_exists,
+       projection.projection_complete,
+       projection.next_resume_at_utc,
+       registration.resume_at_utc is not null as registration_exists,
+       registration.schedule_id is not null as registration_confirmed,
+       registration.dispatch_at_ms,
+       registration.shadow,
+       registration.registration_attempts
+from (values (true)) as anchor(singleton)
+left join earliest_obligation on true
+left join scheduler.scheduled_resume_state projection on projection.singleton = anchor.singleton
+left join scheduler.scheduled_resume_registrations registration
+  on registration.resume_at_utc = projection.next_resume_at_utc
+observed_atdeadline_atmaintenance_kind_truncatedis_runninguses_legacy_wake_eligibleprojection_existsregistration_existsregistration_confirmeddispatch_at_msshadowregistration_attemptsselect
+               (select count(*)::bigint from scheduler.jobs where enabled = true) as enabled_jobs,
+               (select count(*)::bigint from scheduler.job_runs where status = 'queued') as queued_runs,
+               (select count(*)::bigint from scheduler.job_runs r
+                  join scheduler.jobs j on j.job_id = r.job_id
+                 where r.status = 'queued' and j.enabled = true) as enabled_job_queued_runs,
+               (select count(*)::bigint from scheduler.job_runs where status = 'running') as running_runsenabled_jobsqueued_runsenabled_job_queued_runsrunning_runs
+select run_id, job_id, scheduled_for_utc, trigger_reason,
+       status::text as status, attempt, started_at_utc, finished_at_utc,
+       error_text, result_summary, presentation_locale
+from scheduler.job_runsselect r.run_id, r.job_id, r.scheduled_for_utc, r.trigger_reason, r.attempt,
+                    r.presentation_locale, j.source_path, j.is_heartbeat, j.delivery_targets_json
+             from scheduler.job_runs r
+             join scheduler.jobs j on r.job_id = j.job_id
+             where r.run_id = $1 and r.job_id = $2select 1::bigint
+             from scheduler.events
+             where job_id = $1 and run_id = $2 and event_name = $3
+             limit 1select status::text as status
+                     from scheduler.job_runs
+                     where run_id = $1update scheduler.job_runs
+             set status = 'running',
+                 started_at_utc = $1,
+                 started_at = to_timestamp($1::double precision),
+                 worker_timeouts_json = coalesce(worker_timeouts_json,
+                     case when worker_phase is null then $4 else $5 end),
+                 worker_boot_generation = case
+                     when worker_agent_id is null then null
+                     else $3
+                 end
+             where run_id = $2 and status = 'queued'
+             returning worker_timeouts_jsonselect r.run_id, r.job_id, r.scheduled_for_utc, r.trigger_reason, r.attempt,
+                    r.presentation_locale, j.source_path, j.is_heartbeat, j.delivery_targets_json
+             from scheduler.job_runs r
+             join scheduler.jobs j on r.job_id = j.job_id
+             where r.status = 'queued' and j.enabled = true
+             order by r.scheduled_for_utc ascselect run_id, job_id, scheduled_for_utc, trigger_reason
+             from scheduler.job_runs
+             where status = 'running'
+             order by scheduled_for_utc asc, run_id ascwith updated as (
+                 update scheduler.job_runs
+                    set status = $1::scheduler.run_status,
+                        finished_at_utc = $2,
+                        finished_at = to_timestamp($2::double precision),
+                        error_text = $3,
+                        result_summary = $4,
+                        pending_terminal_result_json = null
+                  where run_id = $5 and status in ('queued', 'running')
+              returning job_id, scheduled_for_utc, attempt, presentation_locale,
+                        trigger_reason, (device_read_state_json is not null) as has_device_reads
+             )
+             select updated.job_id, updated.scheduled_for_utc, updated.attempt,
+                    updated.presentation_locale, updated.trigger_reason, updated.has_device_reads, j.source_path
+               from updated
+               left join scheduler.jobs j on j.job_id = updated.job_idsource_pathpresentation_localeselect 1::bigint from scheduler.jobs where job_id = $1 limit 1insert into scheduler.job_runs
+                 (run_id, job_id, scheduled_for, scheduled_for_utc, trigger_reason, status, attempt,
+                  presentation_locale)
+                 values ($1, $2, to_timestamp($3::double precision), $3, $4, 'queued', 1, $5)
+                 on conflict (job_id, scheduled_for_utc) do nothingselect job_id, status::text as status
+                     from scheduler.job_runs
+                     where run_id = $1select status::text as status, error_text
+                     from scheduler.job_runs
+                     where run_id = $1update scheduler.jobs
+                 set enabled = false,
+                     source_hash = '',
+                     updated_at_utc = $1,
+                     updated_at = to_timestamp($1::double precision)
+                 where job_id = $2
+                   and (enabled is distinct from false or source_hash is distinct from '')schedule disabledselect
+                       count(*) filter (where status = 'queued')::bigint as queued_runs,
+                       count(*) filter (where status = 'running')::bigint as running_runs
+                     from scheduler.job_runs
+                     where job_id = $1
+                       and status in ('queued', 'running')select status::text
+                     from scheduler.job_runs
+                     where job_id = $1
+                     order by scheduled_for_utc asc, run_id ascselect least(
+                        (select floor(extract(epoch from min(created_at)))::bigint
+                           from scheduler.events),
+                        (select min(delivered_at_utc)
+                           from scheduler.delivery_outbox
+                          where state in ('delivered', 'failed')),
+                        (select min(greatest(finished_at_utc, scheduled_for_utc))
+                           from scheduler.job_runs
+                          where status in ('succeeded', 'failed', 'timeout', 'cancelled')
+                            and finished_at_utc is not null)
+                     ) + 1 + $1::bigintselect run_id, job_id, scheduled_for_utc, trigger_reason
+             from scheduler.job_runs
+             where status = 'running'
+               and job_id = any($1)
+             order by scheduled_for_utc asc, run_id ascselect run_id
+             from scheduler.job_runs
+             where status in ('succeeded', 'failed', 'timeout', 'cancelled')
+               and finished_at_utc is not null
+               and finished_at_utc < $1
+               and scheduled_for_utc < $1
+             order by scheduled_for_utc asc, run_id asc
+             limit $2delete from scheduler.terminal_signals where run_id = any($1)delete from scheduler.events where run_id = any($1)delete from scheduler.job_runs where run_id = any($1)select run_id, job_id, scheduled_for_utc, trigger_reason
+                     from scheduler.job_runs
+                     where run_id = $1
+                       and job_id = $2
+                       and status = 'running'select run_id, job_id, scheduled_for_utc, trigger_reason,
+                            status::text as status, attempt, presentation_locale,
+                            (started_at_utc is null and worker_agent_id is null
+                             and pending_terminal_result_json is null) as never_started
+                     from scheduler.job_runs
+                     where status in ('queued', 'running')
+                     order by scheduled_for_utc ascupdate scheduler.job_runs
+             set status = 'queued', started_at_utc = null, started_at = null
+             where run_id = $1 and status = 'running'
+               and pending_terminal_result_json is nullinsert into scheduler.events (created_at, job_id, run_id, event_name, detail)
+             values (coalesce($1, now()), $2, $3, $4, $5)delete from scheduler.events
+                     where scheduler_event_id in (
+                       select scheduler_event_id
+                       from scheduler.events
+                       where created_at < $1
+                       order by created_at asc
+                       limit $2
+                     )select newer.run_id from scheduler.job_runs newer
+                   join scheduler.job_runs previous on previous.run_id = $1
+                  where previous.job_id = $2 and newer.job_id = previous.job_id
+                    and previous.status = 'running' and previous.trigger_reason = 'scheduled'
+                    and previous.attempt = 1
+                    and newer.scheduled_for_utc > previous.scheduled_for_utc
+                    and newer.status = 'queued' and newer.trigger_reason = 'scheduled'
+                    and newer.attempt = 1 and newer.started_at_utc is null
+                    and newer.worker_agent_id is null
+                    and newer.pending_terminal_result_json is null
+                  order by newer.scheduled_for_utc desc
+                  offset $3 limit 1update scheduler.jobs
+             set enabled = false, source_hash = '', updated_at_utc = $1, updated_at = now()
+             where job_id = $2
+select job_id, is_heartbeat, source_path, source_hash,
+       schedule_kind, schedule_expr, timezone, enabled,
+       retry_on_failure, max_retries,
+       delivery_targets_json,
+       next_run_at_utc, last_run_at_utc, last_success_at_utc,
+       last_status, consecutive_failures,
+       blocked_reason, blocked_dependency, blocked_at_utc,
+       next_blocked_probe_at_utc, updated_at_utc
+from scheduler.jobs
+where job_id = $1select schedule_kind from scheduler.jobs where job_id = $1 and schedule_kind = 'runonce'select job_id, is_heartbeat, source_path, source_hash,
+                    schedule_kind, schedule_expr, timezone, enabled,
+                    retry_on_failure, max_retries,
+                    delivery_targets_json,
+                    next_run_at_utc, last_run_at_utc, last_success_at_utc,
+                    last_status, consecutive_failures,
+                    blocked_reason, blocked_dependency, blocked_at_utc,
+                    next_blocked_probe_at_utc, updated_at_utc
+             from scheduler.jobs
+with obligations as (
+  select exists(
+         select 1
+         from scheduler.jobs j
+         where (
+           j.enabled = true
+           or exists(
+             select 1
+             from scheduler.job_runs r
+             where r.job_id = j.job_id
+               and r.status in ('queued', 'running')
+               -- This branch sees only disabled jobs, whose queued runs never
+               -- dispatch (`load_queued_runs`).
+               and (r.status = 'running' or not $3::boolean)
+           )
+         )
+         and j.is_heartbeat = false
+         -- A paused cron budget starts no queued run, and a runonce job with an
+         -- unfinished run projects no wake, so a runonce job whose only
+         -- unfinished run is queued owes nothing while paused.
+         and not (
+           $6::boolean
+           and j.schedule_kind = 'runonce'
+           and exists(select 1 from scheduler.job_runs r
+                       where r.job_id = j.job_id and r.status = 'queued')
+           and not exists(select 1 from scheduler.job_runs r
+                           where r.job_id = j.job_id and r.status = 'running')
+         )
+         and (
+           j.source_path is null
+           or $1::text = ''
+           or length(j.source_path) <= length($1::text) + 1
+           or left(j.source_path, length($1::text) + 1) <> ($1::text || '/')
+           or string_to_array(
+                substring(j.source_path from length($1::text) + 2),
+                '/'
+              ) && array['', '.', '..']::text[]
+         )
+       ) as has_non_system_scheduled_obligations
+), maintenance_obligations as (
+  -- Count queued and running debt, including deadlines too near to register.
+  -- RuntimeWork liveness is sampled separately: a row crossing its deadline
+  -- or being claimed between those reads must remain visible in this snapshot.
+  -- Read the earliest deadline so a successor seeded after projection
+  -- reconciliation cannot be covered by an older, later alarm.
+  select min(deadline_at) as next_deadline_at
+  from runtime.work_items
+  where work_class = 'maintenance_job'
+    and terminalized_at is null
+    and state in ('queued', 'running')
+    -- A paused maintenance budget runs no queued row, so it owes no wake.
+    and not ($5::boolean and state = 'queued')
+    and deadline_at is not null
+    -- Mirrors the wake predicate in `scheduled_resume.rs`.
+    and coalesce(
+          (metadata_json::jsonb)->>'suspend_policy' = 'wake_to_complete',
+          ((metadata_json::jsonb)->>'wake_eligible')::boolean
+        )
+), scheduled_resume as (
+  -- The VM holds a wake for the current projection only when a registration
+  -- covers that exact instant and no live maintenance debt precedes it.
+  -- Registration is additive, so other outstanding registrations for later
+  -- instants are deliberately not reported here: a 7pm registration says
+  -- nothing about a 3pm obligation. Shadow registrations count once the
+  -- endpoint accepts and journals them, even though they do not arm a timer.
+  select s.projection_complete,
+         case
+           when s.projection_complete
+             and (maintenance_obligations.next_deadline_at is null
+                  or maintenance_obligations.next_deadline_at
+                     >= to_timestamp(s.next_resume_at_utc::double precision))
+           then (select r.dispatch_at_ms
+                   from scheduler.scheduled_resume_registrations r
+                  where r.resume_at_utc = s.next_resume_at_utc
+                    and r.schedule_id is not null)
+           else null
+         end as registered_dispatch_at_ms
+  from scheduler.scheduled_resume_state s
+  cross join maintenance_obligations
+  where s.singleton
+)
+select case
+         when $2::boolean and scheduled_resume.projection_complete is distinct from true then null
+         else obligations.has_non_system_scheduled_obligations
+       end as has_non_system_scheduled_obligations,
+       case
+         when $2::boolean and scheduled_resume.projection_complete is distinct from true then null
+         else maintenance_obligations.next_deadline_at is not null
+       end as has_wake_eligible_maintenance_jobs,
+       (select count(*)::bigint
+          from scheduler.job_runs r
+         where r.status in ('queued', 'running')
+           -- A paused cron budget starts no queued run, so it holds no VM awake.
+           and not ($6::boolean and r.status = 'queued')
+           and (r.status = 'running'
+                or not $3::boolean
+                or exists(select 1
+                            from scheduler.jobs j
+                           where j.job_id = r.job_id and j.enabled = true))) as active_run_count,
+       (select count(*)::bigint
+          from scheduler.job_runs
+         where status = 'running') as running_run_count,
+       (select count(*)::bigint
+          from scheduler.delivery_outbox
+         where state in ('pending', 'dispatching', 'admitted'))
+       +
+       -- A provider-held row and the later rows of its chat wait for an outside
+       -- event that wakes the VM itself, so they do not keep it awake.
+       (select count(*)::bigint
+          from chat_private.deliveries d
+         where d.state = 'pending'
+           and not exists(select 1
+                            from chat_private.deliveries held
+                           where held.chat_id = d.chat_id
+                             and held.sequence <= d.sequence
+                             and held.state = 'pending'
+                             and held.next_attempt_at_utc > $4))
+       +
+       (select count(*)::bigint
+         from chat_private.deliveries
+         where state = 'dispatching') as active_delivery_count,
+       case
+         when $2::boolean then scheduled_resume.registered_dispatch_at_ms
+         else null
+       end as registered_scheduled_wake_at_ms
+from obligations
+cross join maintenance_obligations
+left join scheduled_resume on true
+has_non_system_scheduled_obligationshas_wake_eligible_maintenance_jobsrunning_run_countactive_delivery_countregistered_scheduled_wake_at_msselect idea_provenance_json from scheduler.job_idea_scope where job_id = $1delete from scheduler.job_idea_scope where job_id = $1insert into scheduler.job_idea_scope
+                     (job_id, idea_provenance_json, created_at, updated_at)
+                     values ($1, $2, now(), now())
+                     on conflict (job_id) do update set
+                       idea_provenance_json = excluded.idea_provenance_json,
+                       updated_at = now()select content_locale from runtime.background_content_jobs where job_id = $1select job_id, schedule_kind, timezone,
+                            greatest(next_run_at_utc,
+                                     coalesce(next_blocked_probe_at_utc, next_run_at_utc))
+                              as next_run_at_utc
+             from scheduler.jobs
+             where job_id = any($1)
+               and enabled = trueselect incoming.job_id as incoming_job_id,
+                            exists(select 1 from scheduler.jobs existing
+                                   where existing.job_id = incoming.job_id)
+                              as incoming_persisted,
+                            holder.job_id, holder.source_path, holder.enabled,
+                            holder.source_hash,
+                            extract(epoch from holder.created_at)::bigint as created_at_utc
+             from unnest($1::text[], $2::text[]) as incoming(job_id, source_path)
+             join scheduler.jobs holder
+               on holder.source_path = incoming.source_path
+              and holder.job_id <> incoming.job_id
+             where holder.source_path is not nullupdate scheduler.jobs
+                     set blocked_reason = null,
+                         blocked_dependency = null,
+                         blocked_at_utc = null,
+                         next_blocked_probe_at_utc = null,
+                         updated_at_utc = $1,
+                         updated_at = to_timestamp($1::double precision)
+                     where blocked_dependency = $2
+                       and blocked_reason in ('connector_not_connected', 'reauth_required')update scheduler.jobs
+                     set next_blocked_probe_at_utc = least(
+                           coalesce(next_blocked_probe_at_utc, $1),
+                           $1
+                         ),
+                         updated_at_utc = $1,
+                         updated_at = to_timestamp($1::double precision)
+                     where blocked_dependency = $2
+                       and blocked_reason in ('connector_not_connected', 'reauth_required')
+                       and enabled = true
+                     returning job_idset local statement_timeout = '5s'select device_read_state_json from scheduler.job_runs
+                     where run_id = $1 for updateselect device_read_checkpoints_json, statement_timestamp() as opened_at
+                     from scheduler.jobs where job_id = $1 for updatedevice_read_state_jsonopened_atdevice_read_checkpoints_jsoninserted read windowupdate scheduler.job_runs set device_read_state_json = $2 where run_id = $1select device_read_state_json from scheduler.job_runs where run_id = $1select device_read_state_json from scheduler.job_runs where run_id = $1 for updateselect worker_approval_wait_json from scheduler.job_runs
+                 where run_id = $1 and status = 'running' and worker_phase = $2
+                   and worker_phase_attempt = $3 and worker_agent_id = $4
+                   and worker_boot_generation = $5 and worker_claimed_at_utc = $6
+                   and worker_execution_timed_out = $7
+                   and worker_history_agent_id is not distinct from $8select worker_approval_wait_json from scheduler.job_runs
+                 where run_id = $1 and status = 'running' and worker_phase = $2
+                   and worker_phase_attempt = $3 and worker_agent_id = $4
+                   and worker_boot_generation = $5 and worker_claimed_at_utc = $6
+                   and worker_execution_timed_out = $7
+                   and worker_history_agent_id is not distinct from $8
+                 for updateupdate scheduler.job_runs set worker_approval_wait_json = $2 where run_id = $1select pending_terminal_result_json from scheduler.job_runs
+                 where run_id = $1 and job_id = $2 and status = 'running'
+                   and pending_terminal_result_json is not null for updateupdate scheduler.job_runs set pending_terminal_result_json = $2 where run_id = $1select pending_terminal_result_json from scheduler.job_runs
+                  where run_id = $1 and job_id = $2 and status = 'running'select run_id, pending_terminal_result_json from scheduler.job_runs
+                  where job_id = $1 and status = 'running'
+                    and pending_terminal_result_json is not null
+                  order by run_id for updateupdate scheduler.job_runs set pending_terminal_result_json = $2
+                      where run_id = $1select run_id, pending_terminal_result_json from scheduler.job_runs
+                 where job_id = $1 and status = 'running'
+                   and pending_terminal_result_json is not null
+                 order by run_id for updateselect exists(select 1 from scheduler.delivery_outbox where job_id = $1 and run_id = $2)update scheduler.job_runs
+                    set pending_terminal_result_json = $3
+                  where run_id = $1 and job_id = $2 and status = 'running'
+                    and pending_terminal_result_json is null
+                  returning pending_terminal_result_jsonblocked_at_utcnext_blocked_probe_at_utcTimeDelta::hours out of bounds`DateTime - TimeDelta` overflowedacquired connection, but time to acquire exceeded slow thresholdacquired connectionload_scheduler_worker_leasefail_scheduler_run_for_worker_ownercompare_and_set_scheduler_worker_leaseactive_scheduler_worker_owner_for_agentscheduler_worker_recovery_owner_matchesselect run_id, worker_phase, worker_phase_attempt,
+                                worker_agent_id, worker_boot_generation,
+                                worker_claimed_at_utc, worker_execution_timed_out,
+                                worker_history_agent_id
+                         from scheduler.job_runs
+                         where status in ('queued', 'running')
+                           and worker_agent_id = $1
+                         order by run_id
+                         limit 2multiple active scheduler runs name the same recovery agentcontinue_scheduler_run_after_invalid_checkpointlist_cron_mutationsjob_id cannot be emptylatest_cron_mutationrecord_cron_mutationscheduler_recovery_factsclaim_delivery_outboxscheduler.delivery_outbox.payload_jsonensure_delivery_outboxrelease_delivery_outboxlist_due_delivery_outboxfail_claimed_delivery_outboxmark_delivery_outbox_admittedmark_delivery_outbox_delivereddefer_delivery_outbox_observationnext_delivery_outbox_attempt_at_utcdefer_delivery_outbox_for_checkpointmark_delivery_outbox_failed_terminalprune_delivered_delivery_outbox_beforeonboarding_tour_bodybind_onboarding_tour_bodyonboarding_tour_import_usedonboarding_tour_created_at_utconboarding_tour_legacy_runningload_terminal_signalprevious_run_blockerrecord_terminal_signalload_terminal_signal_decisionload_worker_timeoutsreconcile_worker_resolution_allowancebind_cron_device_authorityscheduler_device_access_is_currentget_scheduled_resume_stateclear_scheduled_resume_projectionbegin_scheduled_resume_registrationclear_scheduled_resume_registrationexhaust_scheduled_resume_registrationcomplete_scheduled_resume_registrationnext_wake_eligible_maintenance_occurrencereopen_shadow_scheduled_resume_registrationrecord_scheduled_resume_registration_failurediscard_pending_scheduled_resume_registrationclaim_scheduled_resume_acknowledgement_attemptschedule_scheduled_resume_acknowledgement_retryload_cron_verification_categoryretain_cron_verification_categorymaintenance_wake_coverage_snapshotcountsget_runload_run_inforun_has_eventget_run_statuslist_running_runslist_runs_for_jobrecord_run_resultenqueue_manual_runget_run_job_and_statusget_run_status_and_errorlist_recent_job_runs_allpersist_reconciled_statecount_active_runs_for_joblist_run_statuses_for_jobnext_history_purge_at_utclist_running_runs_for_jobsprune_terminal_runs_beforecancel_queued_runs_for_jobsget_running_run_for_recoverylist_active_runs_for_reconcilerequeue_running_run_after_restartappend_eventunstarted_scheduled_successordisable_jobget_job_stateis_runonce_joblist_job_statesliveness_snapshotget_job_idea_scopedelete_job_idea_scopescheduler.job_idea_scope.idea_provenance_jsonupsert_job_idea_scopeheartbeat_content_localelist_job_schedule_labelslist_source_path_holdersrelease_connection_blockswake_connector_blocked_jobsscheduler_device_access_stateupdate scheduler.onboarding_tour_state set import_run_id = nulldelete from scheduler.terminal_signalsdelete from scheduler.delivery_outboxdelete from scheduler.eventsdelete from scheduler.cron_mutationsdelete from scheduler.job_runsdelete from scheduler.scheduled_resume_statedelete from scheduler.scheduled_resume_registrationsdelete from scheduler.jobsreset_allread_device_historydevice_reads_incompletenote_device_read_attemptload_worker_approval_waitrecord_worker_approval_transitionset_pending_result_recoveryload_pending_terminal_resultretain_delivery_repair_blockrepair_pending_result_deliveryscheduler.job_runs.pending_terminal_result_jsonretain_pending_terminal_resultupdate scheduler.jobs
+             set last_status = $1,
+                 last_run_at_utc = $2,
+                 consecutive_failures = consecutive_failures + 1,
+                 updated_at_utc = $2,
+                 updated_at = to_timestamp($2::double precision)
+             where job_id = $3update scheduler.jobs
+             set last_status = 'succeeded',
+                 last_run_at_utc = $1,
+                 last_success_at_utc = $1,
+                 consecutive_failures = 0,
+                 updated_at_utc = $1,
+                 updated_at = to_timestamp($1::double precision)
+             where job_id = $2update scheduler.jobs
+             set last_status = 'succeeded',
+                 last_run_at_utc = $1,
+                 last_success_at_utc = $1,
+                 consecutive_failures = 0,
+                 blocked_reason = null,
+                 blocked_dependency = null,
+                 blocked_at_utc = null,
+                 next_blocked_probe_at_utc = null,
+                 updated_at_utc = $1,
+                 updated_at = to_timestamp($1::double precision)
+             where job_id = $2update scheduler.jobs
+             set last_status = $1,
+                 last_run_at_utc = $2,
+                 consecutive_failures = consecutive_failures + 1,
+                 blocked_reason = $3,
+                 blocked_dependency = $4,
+                 blocked_at_utc = $2,
+                 next_blocked_probe_at_utc = $5,
+                 updated_at_utc = $2,
+                 updated_at = to_timestamp($2::double precision)
+             where job_id = $6update scheduler.jobs
+             set last_status = $1,
+                 last_run_at_utc = $2,
+                 consecutive_failures = consecutive_failures + 1,
+                 next_blocked_probe_at_utc = $3,
+                 updated_at_utc = $2,
+                 updated_at = to_timestamp($2::double precision)
+             where job_id = $4select blocked_at_utc, next_blocked_probe_at_utc
+         from scheduler.jobs
+         where job_id = $1 and blocked_reason is not null
+         for updateselect blocked_reason, blocked_at_utc, next_blocked_probe_at_utc
+         from scheduler.jobs
+         where job_id = $1
+         for updateselect case when r.job_id = $2 and r.worker_agent_id = $3
+           and r.worker_phase = 'execute' and r.worker_phase_attempt = 1
+           and r.worker_boot_generation = $5 and r.worker_claimed_at_utc is not null
+           and r.status = 'running' and r.pending_terminal_result_json is null
+           and not r.worker_execution_timed_out and r.worker_history_agent_id is null
+         then case when j.device_authority_hash is null then 'missing_grant'
+           when (r.device_snapshot_hash is null or r.device_snapshot_hash = $4)
+           and j.device_authority_hash = coalesce(r.device_authority_hash, $4)
+           and j.source_hash = coalesce($6::text, j.device_authority_hash)
+           and ($7::text is null or j.device_authority_hash = $7)
+         then 'current' else 'stale_definition' end else 'stale_worker' end
+         from scheduler.job_runs r join scheduler.jobs j on j.job_id = r.job_id
+         where r.run_id = $1insert into scheduler.scheduled_resume_state
+               (singleton, projection_complete, next_resume_at_utc, next_resume_job_name)
+             values (true, true, $1, $2)
+             on conflict (singleton) do update
+             set projection_complete = true,
+                 next_resume_at_utc = excluded.next_resume_at_utc,
+                 next_resume_job_name = excluded.next_resume_job_name
+             where (scheduler.scheduled_resume_state.projection_complete,
+                    scheduler.scheduled_resume_state.next_resume_at_utc,
+                    scheduler.scheduled_resume_state.next_resume_job_name)
+               is distinct from
+                   (true, excluded.next_resume_at_utc, excluded.next_resume_job_name)update scheduler.scheduled_resume_state
+             set projection_complete = false,
+                 next_resume_at_utc = null,
+                 next_resume_job_name = null
+             where singleton
+               and (projection_complete, next_resume_at_utc, next_resume_job_name)
+                   is distinct from (false, null, null)insert into scheduler.job_runs
+         (run_id, job_id, scheduled_for, scheduled_for_utc, trigger_reason,
+          status, attempt, started_at_utc, started_at, presentation_locale) values  on conflict do nothing, (, to_timestamp(::double precision), ::scheduler.run_status, , case when  is null then null else to_timestamp(::double precision) end, )insert into scheduler.events (job_id, run_id, event_name, detail)
+         values ($1, $2, $3, $4)update scheduler.job_runs
+         set status = 'cancelled',
+             finished_at_utc = $2,
+             finished_at = to_timestamp($2::double precision),
+             error_text = $3
+         where job_id = $1 and status = 'queued'
+         returning run_idcancelledselect retry_on_failure, max_retries from scheduler.jobs where job_id = $1select coalesce(max(scheduled_for_utc), $2 - 1) + 1
+         from scheduler.job_runs
+         where job_id = $1 and scheduled_for_utc >= $2scheduler retry attemptretry_queuedinsert into scheduler.job_runs
+             (run_id, job_id, scheduled_for, scheduled_for_utc, trigger_reason, status, attempt,
+              presentation_locale, onboarding_tour_body)
+             values ($1, $2, to_timestamp($3::double precision), $3, 'retry', 'queued', $4, $5,
+                     (select onboarding_tour_body from scheduler.job_runs
+                      where job_id = $2 and job_id = 'agentic-feature-tour'
+                        and scheduled_for_utc = $6))
+             on conflict (job_id, scheduled_for_utc) do nothingupdate scheduler.jobs
+         set enabled = false,
+             updated_at_utc = $1,
+             updated_at = to_timestamp($1::double precision)
+         where job_id = $2 and schedule_kind = 'runonce'
+         returning source_pathupdate scheduler.jobs holder
+         set source_path = null,
+             updated_at_utc = $3,
+             updated_at = to_timestamp($3::double precision)
+         from unnest($1::text[], $2::text[]) as incoming(job_id, source_path)
+         where holder.source_path = incoming.source_path
+           and holder.job_id <> incoming.job_id
+           and btrim(coalesce(holder.source_hash, '')) = ''with superseded as (
+                update scheduler.job_runs as r
+                   set status = 'cancelled',
+                       finished_at_utc = $4,
+                       finished_at = to_timestamp($4::double precision),
+                       result_summary = 'Coalesced into a newer scheduled occurrence',
+                       error_text = 'scheduled_occurrence_coalesced'
+                 where r.run_id in (
+                     select excess.run_id
+                       from unnest($1::text[], $2::text[], $3::bigint[])
+                         as policy(job_id, source_hash, keep_latest)
+                       join scheduler.jobs j
+                         on j.job_id = policy.job_id and j.source_hash = policy.source_hash
+                        and j.enabled = true and j.schedule_kind <> 'runonce'
+                      cross join lateral (
+                          select q.run_id from scheduler.job_runs q
+                           where q.job_id = policy.job_id
+                             and q.status = 'queued' and q.trigger_reason = 'scheduled'
+                             and q.attempt = 1 and q.started_at_utc is null
+                             and q.worker_agent_id is null
+                             and q.pending_terminal_result_json is null
+                           order by q.scheduled_for_utc desc
+                           offset policy.keep_latest
+                      ) excess
+                 )
+                   and r.status = 'queued' and r.started_at_utc is null
+                   and r.worker_agent_id is null and r.pending_terminal_result_json is null
+                returning r.job_id, r.run_id, r.scheduled_for_utc
+             ),
+             logged as (
+                insert into scheduler.events (job_id, run_id, event_name, detail)
+                select job_id, run_id, 'scheduled_occurrence_coalesced',
+                       'Never-started occurrence replaced under the schedule catch-up policy'
+                  from superseded
+             )
+             select job_id, run_id, scheduled_for_utc from supersededscheduler.jobs.delivery_targets_jsonwith job_lock as materialized (
+           select pg_advisory_xact_lock(hashtextextended('scheduler.jobs:' || $1, 0))
+         )
+         insert into scheduler.jobs
+         (job_id, is_heartbeat, source_path, source_hash,
+          schedule_kind, schedule_expr, timezone, enabled,
+          retry_on_failure, max_retries,
+          delivery_targets_json,
+          next_run_at, next_run_at_utc, last_run_at_utc, last_success_at_utc,
+          last_status, consecutive_failures, updated_at_utc, updated_at)
+         select $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
+                to_timestamp($12::double precision), $12, $13, $14, $15, $16, $17,
+                to_timestamp($17::double precision)
+         from job_lock
+         on conflict (job_id) do update set
+           is_heartbeat = excluded.is_heartbeat,
+           source_path = excluded.source_path,
+           source_hash = excluded.source_hash,
+           schedule_kind = excluded.schedule_kind,
+           schedule_expr = excluded.schedule_expr,
+           timezone = excluded.timezone,
+           retry_on_failure = excluded.retry_on_failure,
+           max_retries = excluded.max_retries,
+           delivery_targets_json = excluded.delivery_targets_json,
+           next_run_at = excluded.next_run_at,
+           next_run_at_utc = excluded.next_run_at_utc,
+           enabled = case
+             when scheduler.jobs.schedule_kind = 'runonce'
+              and excluded.schedule_kind = 'runonce'
+              and scheduler.jobs.source_hash is not distinct from excluded.source_hash
+              and scheduler.jobs.last_status is not null
+              and not scheduler.jobs.enabled
+             then false
+             else excluded.enabled
+           end,
+           blocked_reason = case
+             when scheduler.jobs.source_hash is distinct from excluded.source_hash then null
+             else scheduler.jobs.blocked_reason
+           end,
+           blocked_dependency = case
+             when scheduler.jobs.source_hash is distinct from excluded.source_hash then null
+             else scheduler.jobs.blocked_dependency
+           end,
+           blocked_at_utc = case
+             when scheduler.jobs.source_hash is distinct from excluded.source_hash then null
+             else scheduler.jobs.blocked_at_utc
+           end,
+           next_blocked_probe_at_utc = case
+             when scheduler.jobs.source_hash is distinct from excluded.source_hash then null
+             else scheduler.jobs.next_blocked_probe_at_utc
+           end,
+           updated_at_utc = excluded.updated_at_utc,
+           updated_at = excluded.updated_at
+         where (scheduler.jobs.is_heartbeat, scheduler.jobs.source_path,
+                scheduler.jobs.source_hash, scheduler.jobs.schedule_kind,
+                scheduler.jobs.schedule_expr, scheduler.jobs.timezone,
+                scheduler.jobs.enabled, scheduler.jobs.retry_on_failure,
+                scheduler.jobs.max_retries, scheduler.jobs.delivery_targets_json,
+                scheduler.jobs.next_run_at_utc)
+           is distinct from
+               (excluded.is_heartbeat, excluded.source_path, excluded.source_hash,
+                excluded.schedule_kind, excluded.schedule_expr, excluded.timezone,
+                case
+                  when scheduler.jobs.schedule_kind = 'runonce'
+                   and excluded.schedule_kind = 'runonce'
+                   and scheduler.jobs.source_hash is not distinct from excluded.source_hash
+                   and scheduler.jobs.last_status is not null
+                   and not scheduler.jobs.enabled
+                  then false
+                  else excluded.enabled
+                end,
+                excluded.retry_on_failure, excluded.max_retries,
+                excluded.delivery_targets_json, excluded.next_run_at_utc)select s.id, s.source_key, s.last_append_position,
+            (select min(e.append_position) from context.events e
+             where e.source_id = s.id and e.ingested_at >= $2) as first_position
+         from context.sources s where s.source_domain = 'device_sync'
+           and s.source_key = any($1) order by s.idselect (n.pairing_status = 'ok'
+           and exists(select 1 from unnest($2::text[]) a
+               where n.data_sources_json::jsonb -> a -> 'is_permission_granted' = 'true'::jsonb)
+           and not exists(select 1 from unnest($2::text[]) a
+               where n.data_sources_json::jsonb -> a is not null
+                 and not coalesce(n.data_sources_json::jsonb -> a -> 'is_permission_granted' = 'true'::jsonb, false)))
+         from device.nodes n where n.node_id = $1 and n.node_kind = 'device' for shareselect r.status::text as run_status, r.device_read_state_json, r.device_snapshot_hash,
+                r.device_authority_hash as run_authority_hash,
+                j.job_id, j.device_read_checkpoints_json,
+                j.device_authority_hash, j.source_hash
+         from scheduler.job_runs r join scheduler.jobs j on j.job_id = r.job_id
+         where r.run_id = $1 and r.status in ('succeeded', 'failed', 'timeout') for update of jdevice_snapshot_hashrun_authority_hashdevice_authority_hashsource_hashrun_statusupdate scheduler.jobs set device_read_checkpoints_json = $2 where job_id = $1database write admission gate closedadmission_timeoutcalled `Result::unwrap()` on an `Err` valueaddupdateremoveheartbeatsmsnotificationnotificationspendingdispatchingdeliveredconnector_not_connectedreauth_requiredaccount_action_requiredsite_challengedevice_offlineexecuteresolvevariant identifierBUG: inner connection already taken!ConfigurationInvalidArgumentIoTlsRowNotFoundTypeNotFoundtype_nameColumnIndexOutOfBoundsindexlenColumnNotFoundColumnDecodesourceEncodeDecodeAnyDriverErrorPoolTimedOutPoolClosedWorkerCrashedMigrateInvalidSavePointStatementBeginFaileda Display implementation returned an error unexpectedlyError

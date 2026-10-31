@@ -1,0 +1,101 @@
+signal received in task, starting graceful shutdownunknown validation errorunknownbrowser_task_idbrowser_invocation_idhttp API server shutting down (unix)serving_prereq.pre_recovery_checkpoint_doctorskipped primary-root tool gate prefetchowner_credentials_absentowner_credentials_unresolvedprimary-root tool gate prefetch task failedhttp API server stoppedactivity feed lazy init failedpost-recovery startup producers remained gateddeferred checkpoint recovery remained gatedbackground exec interruption sweep remained gatedmain system prompt copy skipped because the primary root is unavailablecould not write the startup system prompt reference copycleared execd drain state on daemon startupfailed to clear execd drain state on daemon startupexecd drain clear timed out after 5s (best-effort; retried by                              the first spawn)message_idcontent-understanding inference client readyfailed to build content-understanding inference client; media analysis disabledinvocation_id, task_id, planner_agent_id, parent_invocation_id, caller_agent_id, caller_submission_id, call_id, agent_id, submission_id, runtime_work_id, input_digest, kind, state, input_json, context_json, result_json, wait_call_id, ordinal, tab_id, (extract(epoch from created_at) * 1000)::bigint as created_at_ms, (extract(epoch from stop_requested_at) * 1000)::bigint as stop_requested_at_ms, terminal_reason, handoff_state, (extract(epoch from finished_at) * 1000)::bigint as finished_at_ms, completedfollow_up_settlemententer-tool-environment connection failedMedia browser callback connection failed
+WITH bound_carriers AS (
+    SELECT DISTINCT b.message_id
+    FROM activity_monitor_message_threads b
+    WHERE b.activity_thread_id = $1
+      AND EXISTS (
+          SELECT 1
+          FROM activity_monitor_carrier_user_messages carrier
+          WHERE carrier.carrier_message_id = b.message_id
+      )
+),
+carrier_events AS (
+    SELECT
+        bc.message_id AS carrier_message_id,
+        ev.event_seq AS user_event_seq,
+        ev.request_id AS user_request_id,
+        ev.root_request_id AS user_root_request_id,
+        ev.parent_request_id AS user_parent_request_id
+    FROM bound_carriers bc
+    JOIN activity_monitor_carrier_user_messages carrier
+      ON carrier.carrier_message_id = bc.message_id
+    JOIN runtime.events ev
+      ON ev.message_id = carrier.user_message_id
+)
+SELECT
+    bc.message_id AS message_id,
+    EXISTS (
+        SELECT 1 FROM runtime.events terminal
+        WHERE terminal.event_name IN ('message.assistant', 'message.internal')
+          AND (
+              -- Canonical message identity is authoritative across carrier sources;
+              -- keep the weaker request-lineage fallbacks runtime-only.
+              terminal.message_id = 'assistant-msg-' || bc.message_id
+              OR (
+                  terminal.source = 'runtime'
+                  AND (
+                      terminal.request_id = 'req:fallback:submission:' || bc.message_id
+                      OR EXISTS (
+                          SELECT 1
+                          FROM carrier_events ce
+                          WHERE ce.carrier_message_id = bc.message_id
+                            AND ce.user_request_id IS NOT NULL
+                            AND terminal.request_id = ce.user_request_id
+                            AND terminal.root_request_id = ce.user_root_request_id
+                            AND terminal.event_seq > ce.user_event_seq
+                      )
+                      OR EXISTS (
+                          SELECT 1
+                          FROM carrier_events ce
+                          WHERE ce.carrier_message_id = bc.message_id
+                            AND ce.user_parent_request_id IS NOT NULL
+                            AND terminal.request_id = ce.user_parent_request_id
+                            AND terminal.event_seq > ce.user_event_seq
+                      )
+                  )
+              )
+          )
+    ) OR EXISTS (
+        SELECT 1
+        FROM runtime.events settled
+        WHERE settled.event_name = 'message.internal'
+          AND EXISTS (
+              SELECT 1
+              FROM runtime.event_payload_fields f
+              WHERE f.event_seq = settled.event_seq
+                AND f.field_path = '/metadata/kind'
+                AND COALESCE(f.text_value, f.scalar_value) = 'follow_up_settlement'
+          )
+          AND EXISTS (
+              SELECT 1
+              FROM runtime.event_payload_fields f
+              WHERE f.event_seq = settled.event_seq
+                AND f.field_path = '/metadata/action'
+                AND COALESCE(f.text_value, f.scalar_value) = 'nothing_to_do'
+          )
+          AND EXISTS (
+              SELECT 1
+              FROM runtime.event_payload_fields f
+              WHERE f.event_seq = settled.event_seq
+                AND f.field_path = '/metadata/submission_message_id'
+                AND COALESCE(f.text_value, f.scalar_value) = bc.message_id
+          )
+    ) OR EXISTS (
+        -- A subagent completion is marked seen only after the relay has
+        -- deliberately consumed its handoff. This durable evidence closes the
+        -- exact carrier if the daemon restarted after marking the child seen
+        -- but before Activity Monitor observed its terminal lifecycle event.
+        SELECT 1
+        FROM activity_monitor_carrier_user_messages carrier
+        JOIN agent.subagent_spawns child
+          ON child.child_agent_id =
+             split_part(carrier.user_message_id, ':completion:', 2)
+         AND carrier.user_message_id =
+             'subagent-progress:' || child.parent_message_id
+             || ':completion:' || child.child_agent_id
+        WHERE carrier.carrier_message_id = bc.message_id
+          AND child.seen_at IS NOT NULL
+    ) AS terminal
+FROM bound_carriers bc
+ORDER BY bc.message_id ASC
+no provider configured for media descriptionsgeo client not availableNo EXIF data available.runtimereceived graceful shutdown signal. Telling tasks to shutdowninference-proxy returned an invalid model selection routestorage_and_root_session.model_resolveverify activity feed table`DateTime + TimeDelta` overflowed/run/hatch/runtime-cell/rl-hold.jsonshopping_results_v2navigationnavigation.scheduled_tasknode_card.notification_opt_inGatekeeper response omitted requested gate; using defaultread file artifact stateread artifact placementread saved artifact stateread share linkread saved artifactinvalid_paramsbroker_timeoutbrowser sensitive-site settings request rejectedbroker_incompatiblebroker_rejected

@@ -1,0 +1,392 @@
+postgres write failedretrying idempotent postgres writecommitted handoff has no context sequencenegative handoff event sequenceevent_seqpayload_jsonevent_namemessage_idhandoff event sequence
+SELECT e.event_seq, e.event_name, coalesce(e.message_id, '') AS message_id,
+       e.payload_json
+FROM events e
+WHERE e.idempotency_key = $1
+  AND e.payload_json IS NOT NULL
+context event identity already belongs to another writerSELECT event_seq FROM events WHERE idempotency_key = $1runtime_events_main_public_root_message_uidxdelta.presentationruntime.messages.body
+INSERT INTO messages (message_id, event_seq, role, body, created_at)
+VALUES ($1, $2, $3::runtime.message_role, $4, to_timestamp($5::double precision / 1000.0))
+ON CONFLICT (message_id) DO NOTHING
+
+SELECT event_seq AS seq, event_name, role::text AS role
+FROM events
+WHERE message_id = $1
+  AND transcript_surface = 'main_chat'
+  AND visibility = 'public'
+  AND event_name IN ('message.user', 'message.assistant')
+  AND (parent_message_id IS NULL OR TRIM(parent_message_id) = '')
+LIMIT 1
+seqDELETE FROM chat.event_transports WHERE event_seq = $1INSERT INTO chat.event_transports (event_seq, provider) VALUES  ON CONFLICT (provider, event_seq) DO NOTHING, ()retailer_nameexplicit chat event seqcompleted startup quota rejection has no eventnegative startup quota rejection event sequencecompleted startup quota rejection event is absentnegative cancellation event sequencecontext item sequence space is exhaustedcommitted cancellation has no context sequencestartup quota rejection payload is not an objectstartup quota rejection metadata is not an objectpublication has no chat ownerinvalid publication tracepublication owner does not match its transcript/metadata/message_kindpublication has no execution ownerinvalid publication authorityshopping_results_v2navigationnavigation.scheduled_tasknode_card.notification_opt_inGatekeeper response omitted requested gate; using defaultshopping presentation requires meaningful fallback textruntime.resources.metadata_jsontool_call_ididtool_namerequestresulttool_idsession_idattached mailbox input has no stream ownerstagedexecutinginput chat is absentinvalid input binding epochConversationTransportStatelink_idneeds_reconciliationpending_cancellationinput provider is absentinvalid shopping-results request bodyshopping-results failedstartup input size exceeds i64startup queue size exceeds i64startup media size overflowsourcevisibilityparent_agent_idparent_message_idreply_to_message_idtranscript_surfacerequest_idroot_request_idparent_request_idcreated_atitem_jsonmessage_sourceclient_context_jsonacquired connection, but time to acquire exceeded slow thresholdacquired connectionruntime.events.payload_jsoninsert_chat_eventchat_event insert requires non-empty event_name, source, message_id, and idempotency_keycancellation context cannot accompany another transitionruntimefailed to refresh latest public runtime user timezone cache after user message insertSELECT event_seq, event_name, source, role::text AS role,
+                    visibility::text AS visibility, message_id, agent_id,
+                    parent_agent_id, parent_message_id, reply_to_message_id,
+                    transcript_surface::text AS transcript_surface, payload_json,
+                    request_id, root_request_id, parent_request_id, created_at,
+                    chat_context_json
+             FROM runtime.events WHERE event_seq = $1 AND idempotency_key = $2chat_context_jsonmain_chatSELECT ci.item_json, ci.message_source, ci.created_at, projection.client_context_json
+             FROM agent.context_items ci
+             LEFT JOIN agent.context_item_resume_projection projection
+               ON projection.agent_id = ci.agent_id AND projection.seq = ci.seq
+             WHERE ci.agent_id = $1 AND ci.seq = $2startup quota rejection retry changed its committed identitystartup quota rejection context was replaced
+SELECT event_seq, event_name, source, role::text AS role, visibility::text AS visibility,
+       message_id, agent_id, parent_agent_id, parent_message_id, reply_to_message_id,
+       transcript_surface::text AS transcript_surface, payload_json,
+       (extract(epoch from created_at))::bigint AS created_at
+FROM runtime.events WHERE idempotency_key = $1
+runtime.cancellation
+SELECT ci.item_json, ci.message_source,
+       (extract(epoch from ci.created_at))::bigint AS created_at,
+       projection.client_context_json
+FROM agent.context_items AS ci
+LEFT JOIN agent.context_item_resume_projection AS projection
+  ON projection.agent_id = ci.agent_id AND projection.seq = ci.seq
+WHERE ci.agent_id = $1 AND ci.seq = $2
+cancellation retry does not match its committed identity
+SELECT
+  GREATEST(
+    (SELECT COALESCE(MAX(seq), -1) FROM context_items WHERE agent_id = $1),
+    (SELECT COALESCE(MAX(seq), -1) FROM context_item_resume_projection WHERE agent_id = $1),
+    COALESCE((SELECT handoff_context_high_water_seq FROM agent.agents WHERE agent_id = $1), -1),
+    (SELECT COALESCE(MAX(root_seq), -1) FROM agent.companion_trace_imports WHERE root_agent_id = $1),
+    (SELECT COALESCE(MAX(producer_seq), -1) FROM agent.companion_trace_imports WHERE producer_agent_id = $1),
+    COALESCE((SELECT settled_seq FROM agent.companion_trace_sources WHERE producer_agent_id = $1), -1)
+  ) AS max_item_seq,
+  COALESCE((SELECT prompt_floor_seq FROM agents WHERE id = $1), -1)
+    AS prompt_floor_seq,
+  (SELECT COALESCE(MAX(checkpoint_seq), -1)
+     FROM agent_compactions
+     WHERE agent_id = $1
+       AND checkpoint_seq IS NOT NULL
+       AND has_replacement_history)
+    AS checkpoint_seq
+max_item_seqcheckpoint_seqcontext_seqlegacy completion has no verifiable batch ownerUPDATE agent.agents SET handoff_context_high_water_seq =
+                GREATEST(COALESCE(handoff_context_high_water_seq, -1), $2)
+             WHERE agent_id = $1SELECT state, submission_json, accepted_at, transcript_event_seq,
+                    stream_owner_message_id FROM agent.message_mailbox
+             WHERE agent_id = $1 AND submission_id = $2 FOR UPDATEstartup_submission_missingsubmission_jsonreply_to_targetlegacy startup cancellation changed its replyaccepted_atstatecompletedinvalid startup mailbox statestartup_submission_terminalstartup_execution_ownedstartup_already_cancelledtranscript_event_seqstream_owner_message_idstartup cancellation input already has execution custodystartup_submission_changedUPDATE agent.message_mailbox SET state = 'aborted', terminalized_at = now(),
+                    transcript_event_seq = $3
+             WHERE agent_id = $1 AND submission_id = $2 AND state = 'accepted'
+               AND stream_owner_message_id IS NULL AND transcript_event_seq IS NULLstartup cancellation custody changed before commitSELECT state, submission_json, accepted_at, transcript_event_seq,
+                    stream_owner_message_id, checkpoint_custody FROM agent.message_mailbox
+             WHERE agent_id = $1 AND submission_id = $2 FOR UPDATElegacy startup quota rejection changed its replycheckpoint_custodypending startup input already has a transcript eventstartup_quota_rejectionUPDATE agent.message_mailbox SET state = 'completed', terminalized_at = now(),
+                    transcript_event_seq = $3
+             WHERE agent_id = $1 AND submission_id = $2 AND state = 'accepted'
+               AND stream_owner_message_id IS NULL AND checkpoint_custody IS NULL
+               AND transcript_event_seq IS NULLstartup quota rejection custody changed before commitJARVIS_STEFI_PROXY_SOCKhttp://localhost/hatch/resolve_skill_iconicon_namescdnstefi resolve_skill_icon returned non-success statusfailed to resolve skill icon URLs via stefi proxyx-hatch-gk-assignment-confirmedselect b.chat_id, e.event_name, e.visibility::text AS visibility, e.payload_json, e.display_text_ready,
+        exists(select 1 from chat_private.publications p where p.event_seq = e.event_seq) as captured
+        from runtime.events e
+        join agent.agents root on root.id = coalesce(e.parent_agent_id, e.agent_id)
+        join chat_private.bindings b on b.chat_id = root.session_id
+        where e.event_seq = $1 and e.event_name in ('message.assistant', 'delta.presentation')
+          and root.kind = 'root' and root.parent_agent_id is null
+          and b.chat_id = $2 and b.provider = $3display_text_readyinsert into chat_private.publications
+        (message_id, event_seq, chat_id, context_json, request_trace_json, body, execution_id, state, content_state, display_ready)
+        select e.message_id, e.event_seq, $2, $3, $4, m.body, $5, $6, $7, $8
+        from runtime.events e join runtime.messages m using (event_seq)
+        where e.event_seq = $1 on conflict (message_id) do nothingwith content as (
+          select case when event_name = 'delta.presentation' and $3
+            then 'terminal' else $2 end as state from runtime.events where event_seq = $1
+        ) update chat_private.publications p set
+        body = m.body, content_state = content.state, display_ready = $3,
+        state = case
+          when t.disposition = 'quiet' or (t.phase = 'aborted' and (content.state <> 'terminal' or not $3))
+            or (t.phase = 'completed' and content.state = 'streaming') then 'retired'
+          when t.disposition = 'publish' and $3
+            and (content.state = 'terminal' or (t.phase = 'completed' and content.state = 'static'))
+            then case when length(trim(m.body)) = 0 then 'retired' else 'pending' end
+          else 'writing' end
+        from runtime.messages m, chat_private.publication_turns t, content
+        where p.event_seq = $1 and m.event_seq = p.event_seq
+          and t.execution_id = p.execution_id and p.state = 'writing'select case when pg_try_advisory_xact_lock_shared(hashtextextended($1, 0))
+         then pg_try_advisory_xact_lock_shared(hashtextextended($2, 0)) else false endselect exists(select 1 from chat.chats where chat_id = $1)chat owner is absent or being retiredroot session has no durable public-session classificationfailed to classify root session visibilityfailed to load root session visibilityhttp://localhost/hatch/check_gatekeepersGatekeeper response was invalid; using defaultGatekeeper check failed; using defaultattributionshopping action requires an available bundled connector skillfallback_textshopping results presentation requires a request idreply_to_textfailed to persist shopping_results delta.presentation
+DELETE FROM search_documents
+WHERE owner_table = 'runtime.events'
+  AND owner_key = $1
+DELETE FROM resources WHERE event_seq = $1INSERT INTO resources (event_seq, ordinal, resource_kind, resource_key, label, mime_type, size_bytes, metadata_json) VALUES /__hatch/chat_context_jsonstring/__hatch/display_text_updated_at_msnumberSELECT field_path, scalar_type, scalar_value, text_value FROM event_payload_fields WHERE event_seq = $1 FOR UPDATEDELETE FROM event_payload_fields WHERE event_seq = $1 AND field_path = ANY($2::text[])field_pathscalar_typescalar_valuetext_valueINSERT INTO event_payload_fields (event_seq, field_path, scalar_type, scalar_value, text_value) VALUES  ON CONFLICT (event_seq, field_path) DO UPDATE SET scalar_type = excluded.scalar_type, scalar_value = excluded.scalar_value, text_value = excluded.text_valueruntime.search_documents.search_text
+INSERT INTO search_documents (owner_table, owner_key, search_text, language, search_vector)
+VALUES ('runtime.events', $1, $2, 'simple', to_tsvector('simple', $3))
+ON CONFLICT (owner_table, owner_key) DO UPDATE SET
+  search_text = excluded.search_text,
+  language = excluded.language,
+  search_vector = excluded.search_vector,
+  updated_at = now()
+WHERE search_documents.search_text IS DISTINCT FROM excluded.search_text
+   OR search_documents.language IS DISTINCT FROM excluded.language
+
+SELECT coalesce(f.text_value, f.scalar_value)
+FROM event_payload_fields f
+WHERE f.event_seq = $1
+  AND f.field_path = '/__hatch/chat_context_json'
+LIMIT 1
+
+UPDATE widgets
+SET state_bundle_json = $2,
+    state_version = $3,
+    state_updated_at_ms = $4,
+    updated_at_ms = $4
+WHERE widget_id = $1
+  AND state_version = $5
+RETURNING state_version
+
+SELECT state_bundle_json, state_version
+FROM widgets
+WHERE widget_id = $1
+state_bundle_jsonwidget state bundle must be a JSON objectstate_version
+INSERT INTO context_items (
+  agent_id, seq, item_kind, text_content, role, call_id, tool_name, success,
+  message_source, created_at, item_json,
+  data_fbids, data_message_ids, data_thread_ids, data_expires_at
+) VALUES  RETURNING context_item_id, seq::agent.context_item_kind, ::runtime.message_role, , to_timestamp(::double precision), ::bigint[], ::text[], ::timestamptz)context_item_id
+SELECT pg_advisory_xact_lock(hashtextextended(agent_id, $2))
+FROM unnest($1::text[]) AS locked(agent_id)
+ORDER BY agent_id
+
+WITH producer AS MATERIALIZED (
+  SELECT target.id AS agent_id,
+    CASE WHEN a.id IS NULL THEN NULL ELSE COALESCE(
+-- Highest seq of an agent's rows that no public voice import reads, or NULL
+-- when the import never reads any of them. Reads aliases `a` (the agent) and
+-- `root` (its presentation root). exempt_non_producer_rows.sql repeats it.
+CASE WHEN a.kind = 'root' AND a.depth = 0
+          AND a.agent_type = 'realtime_voice' THEN CASE
+    WHEN NOT pg_input_is_valid(a.spawn_metadata_json, 'jsonb') THEN -1
+    WHEN root.id IS NULL
+         OR a.spawn_metadata_json::jsonb #> '{realtime_voice,prompt_floor_seq}'
+            IS DISTINCT FROM to_jsonb(COALESCE(root.prompt_floor_seq, -1))
+        THEN NULL
+    WHEN pg_input_is_valid(
+        a.spawn_metadata_json::jsonb #>> '{realtime_voice,root_seed_context_seq}',
+        'bigint'
+    ) THEN GREATEST(
+        (a.spawn_metadata_json::jsonb #>> '{realtime_voice,root_seed_context_seq}')::bigint,
+        -1
+    )
+    ELSE -1
+END END
+    , 9223372036854775807) END AS exempt_through_seq
+  FROM (SELECT ::text AS id) target
+  LEFT JOIN agents a ON a.id = target.id
+  LEFT JOIN agents root ON root.id = a.presentation_root_session_id AND root.id <> a.id
+)
+INSERT INTO context_item_resume_projection (
+  agent_id, seq, context_item_id, created_at, message_source,
+  client_context_json, client_context_projected, public_import_exempt
+)
+SELECT producer.agent_id, v.seq, v.context_item_id, v.created_at, v.message_source,
+       v.client_context_json, v.client_context_projected,
+       CASE WHEN v.seq <= producer.exempt_through_seq THEN TRUE END
+FROM (VALUES ) AS v(seq, context_item_id, created_at, message_source, client_context_json,
+          client_context_projected)
+CROSS JOIN producer
+ON CONFLICT (agent_id, seq) DO UPDATE SET
+  context_item_id = excluded.context_item_id,
+  created_at = excluded.created_at,
+  message_source = COALESCE(excluded.message_source, context_item_resume_projection.message_source),
+  client_context_json = COALESCE(
+    excluded.client_context_json,
+    context_item_resume_projection.client_context_json
+  ),
+  client_context_projected = COALESCE(
+    context_item_resume_projection.client_context_projected,
+    FALSE
+  ) OR excluded.client_context_projected,
+  public_import_exempt = COALESCE(
+    context_item_resume_projection.public_import_exempt,
+    excluded.public_import_exempt
+  ),
+  updated_at = now()
+INSERT INTO context_item_resume_projection (
+  agent_id, seq, context_item_id, created_at, message_source,
+  client_context_json, reply_prefix, provenance_json,
+  client_context_projected, reply_prefix_projected, provenance_projected,
+  public_import_exempt
+)
+SELECT producer.agent_id, v.seq, v.context_item_id, v.created_at, v.message_source,
+       v.client_context_json, v.reply_prefix, v.provenance_json,
+       v.client_context_projected, v.reply_prefix_projected, v.provenance_projected,
+       CASE WHEN v.seq <= producer.exempt_through_seq THEN TRUE END
+FROM (VALUES ) AS v(seq, context_item_id, created_at, message_source, client_context_json,
+          reply_prefix, provenance_json, client_context_projected, reply_prefix_projected,
+          provenance_projected)
+CROSS JOIN producer
+ON CONFLICT (agent_id, seq) DO UPDATE SET
+  context_item_id = excluded.context_item_id,
+  created_at = excluded.created_at,
+  message_source = COALESCE(excluded.message_source, context_item_resume_projection.message_source),
+  client_context_json = excluded.client_context_json,
+  reply_prefix = excluded.reply_prefix,
+  provenance_json = excluded.provenance_json,
+  client_context_projected = excluded.client_context_projected,
+  reply_prefix_projected = excluded.reply_prefix_projected,
+  provenance_projected = excluded.provenance_projected,
+  public_import_exempt = COALESCE(
+    context_item_resume_projection.public_import_exempt,
+    excluded.public_import_exempt
+  ),
+  updated_at = now()
+
+INSERT INTO context_item_resume_projection (
+  agent_id, seq, message_source, client_context_json, reply_prefix, provenance_json,
+  client_context_projected, reply_prefix_projected, provenance_projected
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+ON CONFLICT (agent_id, seq) DO UPDATE SET
+  message_source = COALESCE(context_item_resume_projection.message_source, excluded.message_source),
+  client_context_json = excluded.client_context_json,
+  reply_prefix = excluded.reply_prefix,
+  provenance_json = excluded.provenance_json,
+  client_context_projected = excluded.client_context_projected,
+  reply_prefix_projected = excluded.reply_prefix_projected,
+  provenance_projected = excluded.provenance_projected,
+  updated_at = now()
+SELECT pg_advisory_xact_lock_shared(hashtextextended($1, 0))agent.volatile_context_pins.lifecycleSELECT pg_advisory_xact_lock(hashtextextended($1, 0))
+WITH owners AS MATERIALIZED (
+    SELECT DISTINCT agent_id COLLATE "C" AS agent_id
+    FROM unnest($1::text[]) AS input(agent_id)
+)
+SELECT pg_advisory_xact_lock(hashtextextended($2 || agent_id, 0))
+FROM owners ORDER BY agent_id COLLATE "C"
+agent.volatile_context_pins:SELECT agent_id FROM agent.agents WHERE agent_id = $1SELECT handoff_state_json -> $2::text AS state,
+                (extract(epoch FROM clock_timestamp()) * 1000)::bigint AS now_ms
+         FROM agent.subagent_spawns WHERE child_agent_id = $1 FOR UPDATEnow_msagent.subagent_spawns.handoff_state_jsonUPDATE agent.subagent_spawns
+         SET handoff_state_json = jsonb_set(COALESCE(handoff_state_json, '{}'::jsonb),
+                                           ARRAY[$2]::text[], $3::jsonb)
+         WHERE child_agent_id = $1insert into chat_private.publication_turns (execution_id, chat_id, disposition, phase)
+        select $1, $2, $3, $4 where pg_try_advisory_xact_lock_shared(hashtextextended($5, 0))
+        on conflict(execution_id) do nothing returning trueselect chat_id, phase, disposition from chat_private.publication_turns
+        where execution_id = $1 for updatechat_iddispositionphasepublication execution belongs to another chatfailed to resolve public session id for streamed framefailed to broadcast streamed frame for root sessiondropped companion progress frame after its voice call changed
+INSERT INTO requests (
+  request_id, root_request_id, parent_request_id, request_origin,
+  transcript_surface, root_work_class
+)
+VALUES ($1, $2, $3, $4, $5::runtime.transcript_surface, $6)
+ON CONFLICT (request_id) DO UPDATE SET
+  root_request_id = COALESCE(requests.root_request_id, excluded.root_request_id),
+  parent_request_id = COALESCE(requests.parent_request_id, excluded.parent_request_id),
+  request_origin = CASE
+    WHEN requests.request_origin = 'internal.runtime_replay' THEN excluded.request_origin
+    ELSE requests.request_origin
+  END,
+  transcript_surface = excluded.transcript_surface,
+  root_work_class = CASE
+    WHEN requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing'
+      THEN excluded.root_work_class
+    ELSE requests.root_work_class
+  END
+WHERE (requests.root_request_id IS NULL AND excluded.root_request_id IS NOT NULL)
+   OR (requests.parent_request_id IS NULL AND excluded.parent_request_id IS NOT NULL)
+   OR (requests.request_origin = 'internal.runtime_replay'
+       AND excluded.request_origin <> 'internal.runtime_replay')
+   OR requests.transcript_surface IS DISTINCT FROM excluded.transcript_surface
+   OR (requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing')
+call_idstatusoutput
+INSERT INTO tool_outputs (event_seq, call_id, status, output_text, error_text, created_at)
+VALUES ($1, $2, $3, $4, $5, to_timestamp($6::double precision / 1000.0))
+ON CONFLICT (event_seq) DO UPDATE SET
+  call_id = excluded.call_id,
+  status = excluded.status,
+  output_text = excluded.output_text,
+  error_text = excluded.error_text
+arguments
+INSERT INTO tool_calls (event_seq, call_id, tool_name, status, arguments_json, created_at)
+VALUES ($1, $2, $3, 'started', $4, to_timestamp($5::double precision / 1000.0))
+ON CONFLICT (call_id) DO UPDATE SET
+  event_seq = excluded.event_seq,
+  tool_name = excluded.tool_name,
+  status = excluded.status,
+  arguments_json = excluded.arguments_json
+
+INSERT INTO chat_event_derived_write_backlog (event_seq, resources_json)
+VALUES ($1, $2)
+ON CONFLICT (event_seq) DO UPDATE SET
+  resources_json = excluded.resources_json,
+  updated_at = now()
+UPDATE chat_private.peer_conversations SET requester_chat_id = NULL
+         WHERE conversation_id = $1 AND requester_revision = $2
+           AND requester_chat_id = $3 AND NOT requester_unavailable
+           AND chat_id = $5
+           AND EXISTS (SELECT 1 FROM agent.agents
+                       WHERE id = $4 AND session_id = $3)peer handoff disagrees with its asking-chat claimpeer handoff requester changed before admissionSELECT session_id, COALESCE(prompt_floor_seq, -1) AS prompt_floor_seq,
+                kind = 'root' AND parent_agent_id IS NULL
+                AND ephemeral IS DISTINCT FROM TRUE
+                AND status NOT IN ('shutdown', 'not_found') AS eligible
+         FROM agent.agents WHERE agent_id = $1 FOR UPDATEstartup_root_changedSELECT EXISTS(SELECT 1 FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND accepted_ordinal < $2)startup mailbox promotion cannot overtake an earlier accepted input
+SELECT payload_json
+FROM agent.runtime_restart_checkpoints
+WHERE agent_id = $1
+FOR UPDATE
+
+SELECT EXISTS (
+  SELECT 1
+  FROM agent.message_mailbox
+  WHERE agent_id = $1
+    AND state = 'accepted'
+    AND accepted_ordinal < $2
+    AND (NOT $3 OR submission_kind <> 'internal_handoff')
+)
+message mailbox attachment cannot overtake an older priority peer
+INSERT INTO agent.runtime_restart_checkpoints (
+  agent_id, mode, recovery_class, recovery_owner_id, execution_config_json,
+  payload_json, created_at, updated_at
+) SELECT $1, $2, $3, $4, $5, $6, $7, $7
+WHERE EXISTS (
+  SELECT 1
+  FROM agent.agents
+  WHERE agent_id = $1
+    AND status NOT IN ('shutdown', 'not_found')
+)
+ON CONFLICT (agent_id) DO NOTHING
+SELECT EXISTS (SELECT 1 FROM agent.agents WHERE agent_id = $1 AND status NOT IN ('shutdown', 'not_found'))conversation epoch
+INSERT INTO agent.message_mailbox (
+  submission_id, agent_id, conversation_epoch, submission_kind,
+  routing_scope, state, checkpoint_custody, stream_owner_message_id,
+  submission_json, transcript_event_seq, attached_at
+) VALUES (
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+  CASE WHEN $6 = 'attached' THEN now() ELSE NULL END
+)
+ON CONFLICT (submission_id) DO NOTHING
+RETURNING accepted_ordinal, accepted_at
+startup mailbox promotion requires its previously accepted input
+SELECT agent_id, conversation_epoch, submission_kind, routing_scope,
+       state, stream_owner_message_id, submission_json,
+       transcript_event_seq, accepted_ordinal, accepted_at
+FROM agent.message_mailbox
+WHERE submission_id = $1
+FOR UPDATE
+update chat.message_bindings set admitted_at = coalesce(admitted_at, now())
+                    where jarvis_message_id = $1 and chat_id = $2 and binding_epoch = $3 and transport = $4binding epochconversation_epochsubmission_kindrouting_scope
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = $5,
+    stream_owner_message_id = $2,
+    submission_json = $3,
+    transcript_event_seq = coalesce($4, transcript_event_seq),
+    attached_at = now()
+WHERE submission_id = $1
+  AND state = 'accepted'
+  AND stream_owner_message_id IS NULL
+mailbox stream ownerselect a.account_id from chat_private.accounts a
+             join chat_private.binding_authorizations b on b.provider = a.provider and b.account_id = a.account_id
+             where b.provider = $1 and b.binding_id = $2
+               and a.connection_id = $3 and not a.revoked for share of adirect input has no captured binding epochaccount_retiredselect connection_id, generation, transport_json, delivery_target
+             from chat_private.binding_authorizations
+             where provider = $1 and binding_id = $2 and chat_id = $3
+               and account_id = $4 and external_kind = 'direct' and participation = 'active'
+             for shareaccount_authorization_retiredtransport_jsontransport_authorization_absentconnection_idgenerationdelivery_targetselect epoch from chat_private.bindings
+         where chat_id = $1 and provider = $2 and not revoked for sharetransport_authorization_changedbinding_retireddatabase write admission gate closedadmission_timeoutstandalonerequest_id is required (from JARVIS_TRACE_CONTEXT env var)HTTP shopping-results presentation failedunknownpresentation_message_idSELECT payload_json FROM runtime_restart_checkpoints WHERE agent_id = $1 FOR UPDATESELECT submission_json, octet_length(submission_json)::bigint AS serialized_bytes
+         FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND submission_id <> $2startup_queue_fullSELECT event_seq, event_name, source, role::text AS role,
+                    visibility::text AS visibility, message_id, agent_id,
+                    parent_agent_id, parent_message_id, reply_to_message_id,
+                    transcript_surface::text AS transcript_surface, payload_json,
+                    request_id, root_request_id, parent_request_id,
+                    extract(epoch from created_at)::bigint AS created_at
+             FROM runtime.events WHERE idempotency_key = $1SELECT ci.item_json, ci.message_source,
+                        extract(epoch from ci.created_at)::bigint AS created_at,
+                        p.client_context_json
+                 FROM agent.context_items ci
+                 LEFT JOIN agent.context_item_resume_projection p
+                   ON p.agent_id = ci.agent_id AND p.seq = ci.seq
+                 WHERE ci.agent_id = $1 AND ci.seq = $2called `Result::unwrap()` on an `Err` valueforeground_rootpeer_chat_rootgroup_chat_rootexternal_party_chat_rootmail_conversationdelegate_main_requestworkflow_subagentspaces_builderspaces_builder_litespaces_builder_editspaces_builder_python_editbrowser_taskdeep_researchideas_builderspace_taskself_improvement_stepflight_tracking_steppeer_sync_stepfeed_workflow_stepephemeral_agent_stepscheduler_cron_executescheduler_cron_resolveexecute_resolve_workersystem_cron_productvoice_delegaterealtime_voicecompaniondeveloperassistantinternal_wakeafter_inferenceawaiting_approvalafter_tool_dispatch/identity/feed/spaces/v2/spaces/v2/{slug}/spaces/v2/{slug}//spaces/v2/{slug}/assets/{*asset_relpath}/spaces/v2/{slug}/blobs/{*key}/spaces/v2/{slug}/icon.jpg/spaces/v2/{slug}/icon.png/spaces/v2/{slug}/actions/spaces/cvm/{slug}/spaces/cvm/{slug}//spaces/cvm/{slug}/assets/{*asset_relpath}/spaces/cvm/{slug}/blobs/{*key}/spaces/cvm/{slug}/icon.jpg/spaces/cvm/{slug}/icon.png/spaces/cvm/{slug}/actions/spaces/cvm/{slug}/actions_stream/spaces/icons/spaces/icons/{asset}/feed/infinite/feed/units/{unit_id}/feed/units/{unit_id}/media/{handle}/feed/units/{unit_id}/media/{handle}/{name}/feed/social-source-icon/{source}/ideasdaemon.ideas.listhatch-ideas reads the owning user's first-class idea feed. Single-user VM scope; the sandbox exposure is read-only but can reveal idea text to any in-cell caller./ideas/data-connectionsdaemon.ideas.data_connectionsRead-only inventory of connected/available idea data-connection sources (skills) for in-cell idea-generation grounding. Owning-user scope; no mutation and no secret material — returns source names/labels/connection status only.daemon.ideas.create/ideas/refreshdaemon.ideas.refresh/ideas/resetdaemon.ideas.resetdaemon.ideas.explore_deprecated/ideas/{id}daemon.ideas.detailNative Ideas callers read back a previously-created idea record. Same single-user scope — all ideas belong to the owning user.daemon.feed.infinite/feed/statusdaemon.feed.status/feed/searchdaemon.feed.searchdaemon.feed.unit_detaildaemon.feed.unit_mediadaemon.feed.unit_media_nameddaemon.feed.social_source_icon/protocol-icons/{icon}daemon.protocol_icons.getdaemon.feed.unit_delete/feed/units/{unit_id}/reactiondaemon.feed.unit_reaction/feed/units/{unit_id}/tapdaemon.feed.unit_tapdaemon.feed.units_seen/feed/reorderdaemon.feed.reorderdaemon.feed.regenerate/feed/pool/generatedaemon.feed.pool_generate/feed/promptdaemon.feed.prompt_readdaemon.feed.prompt_upsert/feed/promptsdaemon.feed.prompts_listdaemon.feed.prompt_create/feed/prompts/{prompt_id}daemon.feed.prompt_updatedaemon.feed.prompt_delete/feed/templatesdaemon.feed.templates/feed/units/{unit_id}/sharedaemon.feed.unit_share/feed/ingestdaemon.feed.ingest/ideas/anchor/{anchor_kind}/{anchor_id}daemon.ideas.anchor_feedhatch-ideas reads idea records attached to typed anchors such as goals and Spaces. Single-user VM scope; same read exposure as /ideas./ideas/{id}/decisiondaemon.ideas.decisionhatch-ideas records decisions on first-class ideas. Single-user VM scope; a compromised in-cell process could mark ideas accepted or dismissed./ideas/{id}/lifecycledaemon.ideas.lifecycle/ideas/{id}/build-statusdaemon.ideas.build_status/feedbackdaemon.feedback/ideas/{id}/feedbackdaemon.ideas.feedbackhatch-ideas persists structured feedback for idea calibration. Single-user VM scope; a compromised in-cell process could inject false feedback. In-cell callers are admitted at TELEMETRY authority only: the route appends the ledger row and moves the bandit, but the durable per-idea state that suppresses a card from the feed is folded only for an authenticated user vote, and the free-form `reason` (which the next generation run renders to its writers as a standing instruction from the user) is rejected outright. Widening either would hand feed deletion and prompt authorship to any in-cell process and needs its own review./ideas/{id}/engagementdaemon.ideas.engagementhatch-ideas records the impression/click/engage/thumbs funnel for an idea. Single-user VM scope; for in-cell callers this remains telemetry-only (engagement counts), not idea truth. A compromised in-cell process could only inflate or fabricate engagement counts for the owning user's own ideas. The explicit-thumbs values this route also accepts move durable delivery state ONLY for an authenticated user vote; an in-cell thumb appends its ledger row and moves the bandit but cannot suppress a card from the feed./spaces/v2/{slug}/ideasdaemon.spaces.v2.ideashatch-ideas and Space workers read first-class ideas anchored to a Space slug. Single-user VM scope; same read exposure as /ideas./idea-cardsdaemon.idea_cards.list/idea-cards/{ideaCardId}daemon.idea_cards.detail/idea-cards/{ideaCardId}/debugdaemon.idea_cards.debugdaemon.idea_cards.execute/idea-cards/{ideaCardId}/sharedaemon.idea_cards.share/idea-cards/media/{handle}daemon.idea_cards.media/ideas/explore/snapshotdaemon.ideas.explore_snapshot/hooks/applydaemon.hooks.apply.deprecated/hooks/statusdaemon.hooks.status.deprecated/hooks/inspect/streamdaemon.hooks.inspect_stream.deprecated/goalsdaemon.goals.listGoal read for native in-cell goal callers./goals/trackingdaemon.goals.tracking.deprecated_list/goal_suggestionsdaemon.goals.suggestions.deprecated_listdaemon.goals.createdaemon.goals.detailGoal detail read for in-cell subagents.daemon.goals.updatedaemon.goals.delete/goals_fixed_positionsdaemon.goals.clear_fixed_positions/goals/{goal_id}/orderdaemon.goals.reorder/goals/{goal_id}/updatesdaemon.goals.updates.create/goals/{goal_id}/suggestionsdaemon.goals.suggestions.add/goals/{goal_id}/suggestions/{suggestion_id}/decisiondaemon.goals.suggestions.decision/goals/{goal_id}/momentumdaemon.goals.momentumGoal momentum-flag update for native in-cell goal callers. POSSIBLY DANGEROUS: momentum is a boolean flag, not free text, but it controls which goals the agent surfaces. A compromised tool can pin attacker-planted goals as high-momentum to keep them in the prompt context./goals/{goal_id}/icondaemon.goals.iconGoal icon update for native in-cell goal callers. POSSIBLY DANGEROUS: icon is an ID, not free text, but a malicious tool can swap icons to disguise attacker-planted goals as user-trusted entries when surfaced in UI prompts./goals/{goal_id}/engagementdaemon.goals.engagementRecords the impression/click/engage/thumbs funnel for a goal into goals.engagement_events. Single-user VM scope; this is telemetry-only (engagement counts), not goal truth (title, momentum, structure). A compromised in-cell process could only inflate or fabricate engagement counts for the owning user's own goals./goal_updates/{update_id}daemon.goal_updates.editdaemon.goal_updates.deleteGoal-update delete for native in-cell goal callers. POSSIBLY DANGEROUS: same chain-of-evidence concern as daemon.goals.delete — lets a compromised tool erase its own tracks./goals/{goal_id}/briefingsdaemon.goals.briefings.addGoal-briefing add for in-cell briefing crons. POSSIBLY DANGEROUS: a compromised tool can attach attacker-controlled briefing metadata/content pointers to a goal, influencing future user-facing and agent-read goal context. See daemon.goals.create rationale./goals/briefings/{briefing_id}daemon.goals.briefings.updateGoal-briefing update for in-cell briefing crons. POSSIBLY DANGEROUS: a compromised tool can alter briefing metadata used by native Letter previews, influencing future user-facing goal surfaces. See daemon.goals.create rationale.daemon.goals.briefings.deprecated_list/goals/briefings/pushabledaemon.goals.briefings.pushableGoal-briefing pushability calculation for in-cell crons. POSSIBLY DANGEROUS: does not write free text directly, but it decides which briefing candidates are surfaced/pushed, so a compromised caller can amplify attacker-planted briefing context./chat/historydaemon.chat.history.read/browser-session/{session_id}/startdaemon.browser_session.start.post/chat/send/present-widgetdaemon.present_widgetPersist and broadcast a widget to connected clients. Replaces the narrow coop-display/visual writer with the full widget pipeline (persist + WS broadcast + transcript). POSSIBLY DANGEROUS: in-cell callers author widget HTML as the owning user; admission is bound server-side to a live message-hub execution of the target root (resolve_presentation_execution), so an idle cell process cannot inject with harvested ids — the residual is impersonating a currently running execution./nutrition-widgetPersist and broadcast a server-rendered nutrition card to connected clients. The caller supplies only a bounded, typed meal payload; caller-authored HTML is not accepted. Admission is bound server-side to a live root or detached voice Companion execution, and placement derives from the server-owned execution record. A compromised in-cell process can spoof nutrition data only while such an execution is live./shopping-resultsdaemon.shopping_resultsPersist and broadcast bounded native shopping result cards to connected clients. POSSIBLY DANGEROUS: cards can carry checkout-enabled products; admission is bound server-side to a live execution of the target root and the persisted reply-to derives from that resolved execution (resolve_presentation_execution), never the body's message id. Keep the schema narrow and runtime validation strict./transcript/recentdaemon.transcript.recentRead-only recent public main-chat user/assistant transcript turns for in-cell product prompts. Applies the canonical public-main-chat visibility filter, so tool/developer/internal rows never leak. Scoped to the owning user's own transcript.daemon.activity.recentRead-only recent activity-feed entries, scoped to the owning user's own activity feed; the reader excludes internal-source activity threads./device-syncsdaemon.device_syncs.recentRead-only recent device ingest events (summary + status only, never the payload blob). Owning-user data only./device-syncs/{global_seq}daemon.device_syncs.detailRead-only single device ingest event by global_seq, INCLUDING its full payload. Owning-user data only; an explicit per-event read (callers list first, then fetch one payload), which bounds payload exposure versus returning blobs in bulk./spaces-actionsdaemon.spaces_actions.recentRead-only Spaces action-invocation ledger (by space, invocation id, or source kind). Owning-user data only./spaces-root-pathdaemon.spaces.root_pathRead-only registered-Space root-path lookup by slug. Owning-user data only.daemon.spaces.v2.deleteLegacy local Space builder cleanup. POSSIBLY DANGEROUS: any in-cell caller can delete a published Space and its explicitly owner-tagged cron definitions as the owning user; sandbox-writable Space metadata cannot select additional crons. Active Cloudflare shares are rejected before local cleanup because this trust class cannot perform credential-backed external teardown.daemon.spaces.v2.2Legacy local published-Space renderer reads the Space HTML shell. Read-only, but exposes owning-user Space content to any in-cell caller./spaces/v2/{slug}/element-picker.jsdaemon.spaces.v2.element_pickerdaemon.spaces.v2.actions.postLegacy local published-Space actions. POSSIBLY DANGEROUS: any in-cell caller can execute a Space action as the owning user; keep only until callers mint/pass auth.daemon.spaces.v2.actions_stream.postLegacy local published-Space streaming actions. POSSIBLY DANGEROUS: any in-cell caller can execute and stream a Space action as the owning user; keep only until callers mint/pass auth.daemon.spaces.v2.sdk_inference.postdaemon.spaces.v2.sdk_tool_call.post/spaces/v2/{slug}/_sdk/agentdaemon.spaces.v2.sdk_agent.post/spaces/v2/{slug}/_sdk/privilegeddaemon.spaces.v2.sdk_privileged.postdaemon.spaces.v2.assetsLegacy local published-Space renderer reads Space assets. Read-only, but exposes owning-user Space artifact contents to any in-cell caller.daemon.spaces.cvm.renderdaemon.spaces.cvm.render.slashdaemon.spaces.cvm.assetsdaemon.spaces.cvm.blobsdaemon.spaces.cvm.actions.postdaemon.spaces.cvm.actions_stream.postdaemon.spaces.cvm.icon.jpgdaemon.spaces.cvm.icon.pngdaemon.spaces.v2.blobs.getLocal artifact capture reads only a live audit workspace blob; published and static reads are denied./spaces/v2/{slug}/spaces/v2/{inner_slug}/blobs/{*key}daemon.spaces.v2.blobs.shared_proxy_getdaemon.spaces.v2.icon_jpgLegacy local published-Space renderer reads the Space icon. Read-only, but exposes owning-user Space icon data to any in-cell caller.daemon.spaces.v2.icon_png/spaces/v2/{slug}/publishdaemon.spaces.v2.publishLegacy local Space builders publish already-built artifacts. POSSIBLY DANGEROUS: any in-cell caller can publish attacker-controlled Space content as the owning user; keep only until builders mint/pass auth./podcasts/generation/observedaemon.podcasts.generation.observePodcast helper reports bounded generation observations with UUID correlation. No content, credentials, catalog mutations, publication, or scheduling. In-cell callers can forge observations, so these are advisory telemetry only; the handler emits through the existing bounded runtime logger./podcasts/episodesdaemon.podcasts.episodes.listgenerate_podcast in-cell podcast-helper lists the owning user's podcast episode catalog. Single-user VM — all episodes belong to that one user. Read-only./podcasts/episodes/{slug}daemon.podcasts.episodes.detailgenerate_podcast in-cell podcast-helper reads back a single episode by slug from the owning user's catalog. Single-user VM. Read-only.daemon.podcasts.episodes.upsertgenerate_podcast in-cell podcast-helper records a generated episode (and attaches publish URLs) for the owning user. Single-user VM. POSSIBLY DANGEROUS: a compromised in-cell caller can write attacker-controlled title/description text into the podcast catalog, which later surfaces in podcast listings; it can also point an episode's audio path/URL at arbitrary local/remote content. The catalog only mirrors locally-generated episodes and does not itself grant publish to the remote feed. Note: episode DELETE derives the Manifold blob key from the stored episode_url, but the daemon binds that key's owner to the VM's authd user id (skipping cleanup on mismatch) and hatch_podcast_storage validates every id as a safe single segment, so a planted URL cannot inject STEFI query parameters or target another user's namespace./podcasts/publish-reviewdaemon.podcasts.publish_reviewgenerate_podcast in-cell podcast-helper asks the daemon to content-review the script an episode's audio was synthesized from, before publishing it to the public remote feed (remote-storage path only, not save-to-Spotify, whose destination is the user's own authenticated Spotify show). The caller names an audio artifact and supplies no script text: the reviewed script is the one the trusted TTS worker bound to those exact bytes at synthesis time, read from Sentinel's immutable store, so overwriting the episode row's script column via podcasts.episodes.upsert cannot change what is judged. Naming another caller's artifact leaks nothing -- the response is an allow/block decision and never echoes the script. Calling this is also not an escalation: Sentinel refuses to release the audio to remote-storage without a recorded allow, so an in-cell caller can only ever cause its own publish to be judged, never skip the gate./podcasts/episodes/{slug}/publish-reviewdaemon.podcasts.episodes.publish_review_retired/podcasts/feeddaemon.podcasts.feed.getgenerate_podcast in-cell podcast-helper reads the owning user's single podcast feed object. Single-user VM. Read-only./podcasts/feedsdaemon.podcasts.feeds.listgenerate_podcast in-cell podcast-helper lists every podcast feed the owning user publishes into, so a publish reuses the existing feed for that show instead of minting a second one and stranding its subscribers. Single-user VM. Read-only, and discloses nothing new at this trust level: feed ids and URLs already ride every row of daemon.podcasts.episodes.list, and a feed's title is readable from its public unauthenticated RSS URL. POSSIBLY DANGEROUS: this read can trigger a Manifold fetch, to recover a feed published before the catalog held more than one. The key is always feed_object_key(<VM owner>, <feed id>), so it stays inside the owner's own prefix: the feed id comes only from a feed_url already in the catalog, both URL segments must be safe single segments, and a user_id that is not this VM's owner is refused -- the same owner binding the episode delete path applies before its Manifold deletes, which is the stronger capability. A compromised caller can write feed_url through daemon.podcasts.episodes.upsert, so the reachable worst case is making the daemon 404 against its own prefix; work per request is capped and each success persists.daemon.podcasts.feed.upsertgenerate_podcast in-cell podcast-helper records the owning user's podcast feed metadata (and, on publish, unifies episode cover art). Single-user VM. POSSIBLY DANGEROUS: a compromised in-cell caller can overwrite the feed title/cover shown in podcast listings. It does not mutate the remote published feed, which is owned by the remote-storage binary./checkdaemon.system.checkdaemon.podcasts.episodes.delete/nodes/invoke-resultdaemon.nodes.invoke_result/call/ads/detailsdaemon.ads.details/shoppingdaemon.shopping.get/shopping/cartdaemon.shopping.cart/hotels/eventsdaemon.hotels.events/hotels/resultsdaemon.hotels.results/hotels/detailsdaemon.hotels.detailsdaemon.shopping.events/system/execdaemon.system.exec/debug/bug-report-logsdaemon.debug.bug_report_logs.createdaemon.debug.bug_report_logs.download/debug/home-link-bug-reportsdaemon.debug.home_link_bug_reports.collect/skills/disconnectdaemon.skills.disconnect/skills/set-disableddaemon.skills.set_disabled/navigation/tab-orderdaemon.navigation.tab_order_getdaemon.navigation.tab_order_set/navigation/subscribedaemon.navigation.subscribe/navigation/recents/touchdaemon.navigation.recents_touch/navigation/pinned/setdaemon.navigation.pinned_set/channels/linkdaemon.channels.linkdaemon.channels.unlink/consent_auth/callbackdaemon.consent_auth.callback.postdaemon.bootstrap.reset/session/deletedaemon.session.delete/openapi.jsondaemon.docs.openapi_json/docsdaemon.docs.scalar/docs/daemon.docs.scalar.trailing_slash/invite/badgedaemon.invite.badge/invite/badge/seendaemon.invite.badge.seen/ac_oauth/callbackdaemon.ac_oauth.callback.post/activitydaemon.activity/activity/{activity_id}daemon.activity.2/activity/goals/{goal_id}/actionsdaemon.activity.goal_actions/activity/goals/{goal_id}/actions/{action_id}daemon.activity.goal_action_report/activity/{activity_id}/statusdaemon.activity.status.post/activity/logdaemon.activity.log.post/api/messenger/fb-checkdaemon.api.messenger.fb_check/artifacts/fetch_urldaemon.artifacts.fetch_urldaemon.spaces.icon_assetdaemon.spaces.icons/spaces/renamedaemon.spaces.rename/artifactsdaemon.artifacts.query/artifacts/pindaemon.artifacts.pin/artifacts/placementdaemon.artifacts.placement/artifacts/participationdaemon.artifacts.participation.getdaemon.artifacts.participation.post/artifacts/subscribedaemon.artifacts.subscribe/artifacts/removedaemon.artifacts.remove.postdaemon.artifacts.share.post/artifacts/slides/rebuilddaemon.artifacts.slides.rebuild/browser/sensitive-sitesdaemon.browser_sensitive_sites.list/browser/sensitive-sites/adddaemon.browser_sensitive_sites.add/browser/sensitive-sites/removedaemon.browser_sensitive_sites.remove/browser-session/{session_id}daemon.browser_session.snapshot/browser/leasedaemon.browser.lease/computer/contextdaemon.computer.context/computer/subscribedaemon.computer.subscribe/computer/assets/{asset}daemon.computer.asset/computer/previews/{task_id}/{sha256}daemon.computer.preview/browser-task/{task_id}daemon.browser_task.snapshotdaemon.browser_task.takeover.post/browser-task/{task_id}/clipboard/readinessdaemon.browser_task.clipboard.readiness.post/browser-task/{task_id}/clipboard/copydaemon.browser_task.clipboard.copy.post/browser-task/{task_id}/clipboard/pastedaemon.browser_task.clipboard.paste.post/browser-task/{task_id}/present/browser-task/{task_id}/viewer/browser-task/{task_id}/heartbeatdaemon.browser_task.heartbeat.post/browser-task/{task_id}/closedaemon.browser_task.close.post/browser-task/{task_id}/stopdaemon.browser_task.stop.post/browser-task/{task_id}/release/browser-task/{task_id}/refresh-environmentdaemon.browser_task.refresh_environment.post/browser-task/{task_id}/end-and-releasedaemon.browser_task.end_and_release.post/browser/debug-accessdaemon.browser.debug_access.get/browser/lease-overridesdaemon.browser.lease_overrides.getdaemon.browser.lease_overrides.patchdaemon.browser.lease_overrides.release.post/browser-task/{task_id}/leasedaemon.browser_task.lease.get/browser/local-testingdaemon.browser.local_testing.patch/search/debug-overridesdaemon.search.debug_overrides.getdaemon.search.debug_overrides.patch/browser-task/{task_id}/streamdaemon.browser_task.stream.postdaemon.channels.status/chat/themesdaemon.chat.themesdaemon.chat.themes.set.post/chat/unread-countdaemon.chat.unread_count/chat/{thread_id}/seendaemon.chat.seen.post/configdaemon.config.getdaemon.config.patchdaemon.contacts.status/dyi/exportdaemon.dyi.export.post/foa/accountsdaemon.foa.accounts/connectors/{id}/accountsdaemon.connectors.accounts/vm-migrations/latestdaemon.vm_migrations.latest/poppy/sign-in/callbackdaemon.poppy.sign_in_callback/connectors/{id}/accounts/linkdaemon.connectors.accounts_link/connectors/{id}/reconnectdaemon.connectors.reconnect/connectors/{id}/accounts/{account_id}/reconnectdaemon.connectors.accounts_reconnect/connectors/{id}/scopes/{method}/linkdaemon.connectors.scope_link/connectors/{id}/accounts/{account_id}/unlinkdaemon.connectors.accounts_unlink/connectors/{id}/connectdaemon.connectors.connect/connectors/{id}/disconnectdaemon.connectors.disconnect/fs/deletedaemon.fs.delete.post/fs/exportdaemon.fs.export.post/fs/librarydaemon.fs.library.postdaemon.fs.list.post/fs/mediadaemon.fs.media.post/fs/mkdirdaemon.fs.mkdir.post/fs/raw/{*path}daemon.fs.raw/media/raw/{*path}daemon.fs.read.post/fs/readsdaemon.fs.reads.post/fs/recentsdaemon.fs.recents.post/fs/renamedaemon.fs.rename.post/fs/searchdaemon.fs.search.postdaemon.fs.stat.post/fs/statsdaemon.fs.stats.post/fs/thumbnail/{*path}daemon.fs.thumbnail/fs/uploaddaemon.fs.upload.post/fs/upload/statusdaemon.fs.upload.status.post/fs/writedaemon.fs.write.post/goal_promptdaemon.goal_prompt.postdaemon.identity/avatar/videosdaemon.avatar.videos/identity/themes/setdaemon.identity.themes.deprecated_set/memory/getdaemon.memory.get.post/memory/consolidatedaemon.memory.consolidate.deprecated_post/memory/reindexdaemon.memory.reindex.deprecated_post/memory/searchdaemon.memory.search.post/messenger_companion/unlockdaemon.messenger_companion.unlock.post/messenger_companion/statusdaemon.messenger_companion.status.get/messenger_companion/pin-statusdaemon.messenger_companion.pin_status.get/messenger-read/unlockdaemon.messenger_read.deprecated_unlock.post/messenger-read/checkdaemon.messenger_read.deprecated_check/nodes/device-approvaldaemon.nodes.device_approval.post/nodes/recipient-approvaldaemon.nodes.recipient_approval.post/nodes/commands/disableddaemon.nodes.commands.disabled.post/nodes/disconnectdaemon.nodes.disconnect.post/nodes/invoke-ackdaemon.nodes.invoke_ack.post/nodes/syncdaemon.nodes.sync.post/nodes/registerdaemon.nodes.register.post/nodes/listdaemon.nodes.list.post/nodes/unpairdaemon.nodes.unpair.postdaemon.nodes.heartbeat.post/link-controldaemon.link_control.post/onboardingdaemon.onboarding.getdaemon.onboarding.deprecated_seed.post/onboarding/completedaemon.onboarding.complete.post/onboarding/identitydaemon.onboarding.identity.getdaemon.onboarding.identity.post/onboarding/pagesdaemon.onboarding.pages.getdaemon.onboarding.pages.post/onboarding/v2/startdaemon.onboarding.v2.start.post/onboarding/v2/variantsdaemon.onboarding.v2.variants/onboarding/questionsdaemon.onboarding.questions/onboarding/tasksdaemon.onboarding.tasks.get/onboarding/resetdaemon.onboarding.reset.post/onboarding/variantsdaemon.onboarding.variants/reactions/toggledaemon.reactions.toggle.post/redteam/mocksdaemon.redteam.apply_mocksdaemon.redteam.clear_mocksdaemon.redteam.get_mocks/redteam/mocks/sidecardaemon.redteam.sidecar_taildaemon.session.archive.post/session/forkdaemon.session.fork.post/session/listdaemon.session.list/session/list/{id}daemon.session.list.one/session/has-unread-threadsdaemon.session.has_unread_threads/session/pindaemon.session.pin.post/session/renamedaemon.session.rename.post/session/searchdaemon.session.search/session/startdaemon.session.start.post/session/unarchivedaemon.session.unarchive.post/session/unpindaemon.session.unpin.post/sharing/eligibilitydaemon.sharing.eligibilitydaemon.sharing.attempt/skillsdaemon.skills/skills/statusdaemon.skills.status/spaces/favoritesdaemon.spaces.favorites.post/spaces/recentsdaemon.spaces.recents.post/spaces/share/{slug}daemon.spaces.share.status/spaces/{slug}/export.htmldaemon.spaces.export_html/spaces/share/{slug}/audiencedaemon.spaces.share.audience/spaces/share/{slug}/audience/updatedaemon.spaces.share.audience.updatedaemon.spaces.share.deletedaemon.spaces.share.post/spaces/share/{slug}/settingsdaemon.spaces.sharing_settings.getdaemon.spaces.sharing_settings.save/spaces/share/{slug}/reviewdaemon.spaces.share.review/spaces/share/{slug}/fixdaemon.spaces.share.fixdaemon.spaces.v2.get/artifacts/savedaemon.artifacts.save.post/spaces/v2/{slug}/savedaemon.spaces.v2.save.post/spaces/v2/{slug}/sessiondaemon.spaces.v2.session.postdaemon.spaces.debug.invocations/spaces/{slug}/debug/invocations/{invocation_id}daemon.spaces.debug.invocations.2/spaces/{slug}/debug/logdaemon.spaces.debug.log/spaces/{slug}/debug/summarydaemon.spaces.debug.summary/subagents/subagents/statusdaemon.subagents.status/subscription/available-plansdaemon.subscription.available_plans/subscription/check-complimentarydaemon.subscription.check_complimentary/subscription/redeem-complimentarydaemon.subscription.redeem_complimentary/subscription/callbackdaemon.subscription.callback.post/subscription/quotadaemon.subscription.quota/permissions/inventorydaemon.permissions.inventory/tasksdaemon.tasks/tasks/runsdaemon.tasks.runs/tasks/{job_id}/rundaemon.tasks.run.post/tasks/{job_id}daemon.tasks.delete/update-user-locationdaemon.version/voice/active-voicedaemon.voice.active_voice.getdaemon.voice.active_voice.post/voice/available-voicesdaemon.voice.available_voices.getdaemon.voice.available_voices.post/voice/avatar-video/preparedaemon.voice.avatar_video.prepare.post/voice/custom-voicesdaemon.voice.custom_voices.list/voice/catalogdaemon.voice.catalog.list/voice/catalog/filtersdaemon.voice.catalog.filters/voice/custom-voices/{saved_voice_id}daemon.voice.custom_voices.renamedaemon.voice.custom_voices.delete/voice/calls/media-endpointdaemon.voice.calls.media_endpoint.get/voice/calls/joindaemon.voice.calls.join.post/voice/calls/user-speechdaemon.voice.calls.user_speech.post/voice/calls/script-stepdaemon.voice.calls.script_step.post/voice/rtc-media-bridge/start-calldaemon.voice.rtc_media_bridge.start_call.post/voice/end-calldaemon.voice.end_call.post/voice/delete-call-historydaemon.voice.delete_call_history.post/voice/onboarding/resetdaemon.voice.onboarding.reset.post/voice/pipeline-profilesdaemon.voice.pipeline_profiles.get/voice/pipeline-profiledaemon.voice.pipeline_profile.post/voice/realtimedaemon.voice.realtime.postdaemon.voice.dictation.post/voice/start-calldaemon.voice.start_call.post/voice/user-speech-starteddaemon.voice.user_speech_started.post/voice/playback-statusdaemon.voice.playback_status.post/voice/call-contextdaemon.voice.call_context.post/voice/tts-streamdaemon.voice.tts_stream.get/voice/speakdaemon.voice.speak.post/wallet/checkout-infodaemon.wallet.checkout_info.get/walletdaemon.wallet.getdaemon.wallet.post/whatsapp_companion/linkdaemon.whatsapp_companion.link.post/whatsapp_companion/status/model/email/mailboxdaemon.email.mailbox.get/email/owners/challengesdaemon.email.owner_challenges.create/email/owners/challenges/{challenge_id}/verifydaemon.email.owner_challenges.verify/email/ownersdaemon.email.owners.list/email/settingsdaemon.email.settings.get/email/owners/{owner_id}daemon.email.owner.revokedaemon.email.settings.update/email/owner-candidatesdaemon.email.owner_candidates/email/mailbox/setupdaemon.email.mailbox.setupdaemon.email.mailbox.createdaemon.email.mailbox.update/email/mailbox/address-availabilitydaemon.email.mailbox.address_availability/email/mailbox/setup/enddaemon.email.mailbox.setup.enddaemon.email.mailbox.delete/email/messagesdaemon.email.messages.list/email/messages/{message_id}daemon.email.message.getdaemon.email.message.delete/email/test-messagedaemon.email.test_message/email/threadsdaemon.email.threads.list/email/threads/{thread_id}daemon.email.thread.get/email/messages/{message_id}/activitydaemon.email.message.activity/email/messages/{message_id}/attachments/{index}daemon.email.attachment.get/product-improvementsdaemon.product_improvements.getdaemon.product_improvements.set/chat/searchdaemon.chat.searchdaemon.chat.search_get/chat/messagedaemon.chat.message_get/chat/history-windowdaemon.chat.history_window/chat/subscribedaemon.chat.subscribe/chat/streamdaemon.chat.streamdaemon.chat.sxs.select/chat/canceldaemon.chat.cancel/chat/resumedaemon.chat.resume/webhooks/deliveries/notifydaemon.webhooks.notifydaemon.webhooks.installation_notify/webhooks/deliveries/consumedaemon.webhooks.consume/webhooks/subscriptions/revokedaemon.webhooks.revoke/professional-consent/resumedaemon.professional_consent.resume/chat/stream-eventsdaemon.chat.stream_eventsdaemon.chat.stream_events_post/chat/delete-messagedaemon.chat.delete_message/chat/delete-turndaemon.chat.delete_turndaemon.channels.actiondaemon.connection.ping/connection/disconnectdaemon.connection.disconnect/connection/establishdaemon.connection.establish/pingdaemon.ping/widgets/state-patchdaemon.widgets.state_patch/widgets/state/patchdaemon.widgets.state_patch_alt/widgets/statedaemon.widgets.state_set/pin-reminder/updatedaemon.pin_reminder.update/pin-reminder/confirmdaemon.pin_reminder.confirmdaemon.circles.listdaemon.circles.create/circles/{circle_id}/membersdaemon.circles.add_member/circles/{circle_id}/members/{muse}daemon.circles.remove_member/circles/{circle_id}daemon.circles.delete/peers/statusdaemon.peers.status/peersdaemon.peers.list/peers/requestsdaemon.peers.list_requests/peers/identitydaemon.peers.identity/peers/invitesdaemon.peers.mint_invitedaemon.peers.list_invites/peers/invites/acceptdaemon.peers.accept_invite/peers/invites/opendaemon.peers.open_invite/peers/inboxdaemon.peers.list_inbox/peers/inbox/deliverdaemon.peers.deliver_inbox/peer-spaces/sharedaemon.peer_spaces.share/peers/activitydaemon.peers.list_activity/peers/activity/{activity_id}/dismissdaemon.peers.dismiss_activity/peers/inbox/declinedaemon.peers.decline_inbox/peers/invites/{invite_id}daemon.peers.revoke_invite/peers/invites/{invite_id}/deliverydaemon.peers.register_invite_delivery/peers/{muse}/photo/{sha256}daemon.peers.photo/peers/{muse}/avatar/{sha256}daemon.peers.avatar/peers/requests/{relationship_generation_id}/sasdaemon.peers.read_sas/peers/requests/{relationship_generation_id}/sas/confirmdaemon.peers.confirm_sas/peers/{muse}/auditdaemon.peers.audit/peers/{muse}/dialdaemon.peers.dial/peers/{muse}/rulesdaemon.peers.list_rules/peers/{muse}/rules/{rule_id}daemon.peers.delete_ruledaemon.peers.reset_conversation/peers/{muse}daemon.peers.patchdaemon.peers.unpair/grantsdaemon.peers.list_grantsdaemon.peers.issue_grant/grants/helddaemon.peers.list_held_grants/grants/{grant_id}/revokedaemon.peers.revoke_grant/grants/{grant_id}/narrowdaemon.peers.narrow_grant/grants/{grant_id}/auditdaemon.grants.audit/peer-spaces/{host_muse}/{slug}daemon.peer_spaces.document_redirectdaemon.peer_spaces.document/peer-spaces/{host_muse}/{slug}/{*rest}daemon.peer_spaces.proxy_getdaemon.peer_spaces.proxy_post/peer-spaces/{host_muse}/{slug}/actions_streamdaemon.peer_spaces.actions_stream_ssedaemon.peer_spaces.actions_stream_post/client/register-capabilitiesdaemon.client.register_capabilities/client/invoke-resultdaemon.client.invoke_result/client/runtime-statedaemon.client.runtime_state/client/data-source-publishdaemon.client.data_source_publish/client/disconnectdaemon.client.disconnect/identity/subscribedaemon.identity.subscribe/skills/subscribedaemon.skills.subscribe/spaces/subscribedaemon.spaces.subscribe/themes/subscribedaemon.themes.subscribe/fs/subscribedaemon.fs.subscribe/activity/subscribedaemon.activity.subscribedaemon.reset.subscribedaemon.tasks.subscribe/connectorsdaemon.connectors.list/connectors/homepagedaemon.connectors.homepagedaemon.connectors.get/connectors/{id}/connect/infodaemon.connectors.connect_info/connectors/{id}/permissionsdaemon.connectors.permissions/chats/deletedaemon.chats.delete/chats/archivedaemon.chats.archive.post/chats/forkdaemon.chats.fork.post/chats/listdaemon.chats.list/chats/primarydaemon.chats.primarydaemon.chats.list.one/chats/has-unreaddaemon.chats.has_unread_threads/chats/pindaemon.chats.pin.post/chats/renamedaemon.chats.rename.post/chats/inventory-searchdaemon.chats.inventory_search/chats/startdaemon.chats.start.postdaemon.chats.unarchive.post/chats/unpindaemon.chats.unpin.post/chat-connections/linkdaemon.chat_connections.link/chat-connections/unlinkdaemon.chat_connections.unlink/chat-connections/statusdaemon.chat_connections.status/chat-connections/settings/chat-connections/actiondaemon.chat_connections.action/chats/historydaemon.chats.history.read/chats/senddaemon.chats.send/chats/warmupdaemon.chats.warmup/chats/unread-countdaemon.chats.unread_count/chats/{chat_id}/seendaemon.chats.seen.post/chats/searchdaemon.chats.searchdaemon.chats.search_get/chats/messagedaemon.chats.message_get/chats/history-windowdaemon.chats.history_windowdaemon.chats.subscribe/chats/streamdaemon.chats.stream/chats/canceldaemon.chats.cancel/chats/resumedaemon.chats.resume/chats/stream-eventsdaemon.chats.stream_eventsdaemon.chats.stream_events_post/chats/delete-messagedaemon.chats.delete_message/chats/delete-turndaemon.chats.delete_turnGETPUTPATCHDELETEOPTIONSTRACECONNECT

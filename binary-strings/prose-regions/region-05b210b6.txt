@@ -1,0 +1,1107 @@
+proactive change appendix lost its delivery ownerwith owner as materialized (
+                     select turn_id,agent_id,message_id,request_id
+                     from background_workers.turns
+                     where turn_id=$2 and attempt=$3 and agent_id=$4 and message_id=$5
+                       and worker='proactivity' and kind in ('research','compose') and state='running'
+                       and deadline_at > clock_timestamp()
+                     for share
+                 )
+                 insert into self_improvement.proactivity_changes
+                 (change_id,research_turn_id,agent_id,message_id,request_id,recording_call_id,summary)
+                 select $1,turn_id,agent_id,message_id,request_id,$6,$7
+                 from owner
+                 on conflict (change_id) do update set change_id=excluded.change_id
+                 where proactivity_changes.research_turn_id=excluded.research_turn_id
+                   and proactivity_changes.agent_id=excluded.agent_id
+                   and proactivity_changes.message_id=excluded.message_id
+                   and proactivity_changes.recording_call_id=excluded.recording_call_id
+                   and proactivity_changes.summary=excluded.summaryselect q.follow_up_id, q.producer, q.message, q.allocation, q.state, q.created_at,
+                        q.terminal_at, q.delivery_submission_id, q.metadata_json,
+                        coalesce(e.items, '[]'::jsonb) as items
+                 from self_improvement.follow_up_queue q
+                 left join self_improvement.proactive_editions e
+                   on e.edition_id = q.metadata_json->>'edition_id'
+                 where ((q.state = 'delivered' and q.terminal_at >= $1)
+                     or (q.producer = 'proactive_notifier'
+                         and q.state in ('pending','delivering') and q.expires_at > $2))
+                 order by coalesce(q.terminal_at, q.created_at), q.follow_up_idselect brief_id, title
+                     from self_improvement.relationship_briefs
+                     where brief_id = $1update self_improvement.relationship_briefs
+                     set last_opened_at = coalesce(last_opened_at, now())
+                     where brief_id = $1
+                     returning brief_id, title, body_html, anchored_idea_ids, request_id,
+                               created_at, last_opened_atselect exists (select 1 from self_improvement.runs
+                 where state in ('queued', 'running'))select *
+                     from self_improvement.runs
+                     where run_id = $1insert into self_improvement.runs
+                     (run_id, objective_id, state, request_id, request_origin, run_clock, phase,
+                      subphase, diagnostics, started_at)
+                     values ($1, $2, $3, $4, $5, $6, $7, $8, $9,
+                             case when $3 = 'running' then now() else null end)update self_improvement.leases
+                     set expires_at = $3, heartbeat_at = now()
+                     where lease_key = $1 and owner = $2
+                     returning expires_atdelete from self_improvement.leases
+                     where lease_key = $1 and owner = $2select *
+                     from self_improvement.runs
+                     order by created_at desc, run_id desc
+                     limit $1insert into self_improvement.leases
+                     (lease_key, owner, objective_id, run_id, acquired_at, expires_at, heartbeat_at, metadata)
+                     values ($1, $2, $3, $4, now(), $5, now(), $6)
+                     on conflict (lease_key) do update set
+                       owner = excluded.owner,
+                       objective_id = excluded.objective_id,
+                       run_id = excluded.run_id,
+                       acquired_at = now(),
+                       expires_at = excluded.expires_at,
+                       heartbeat_at = now(),
+                       metadata = excluded.metadata
+                     where self_improvement.leases.expires_at <= now()
+                        or self_improvement.leases.owner = excluded.owner
+                     returning 1select 1 as one
+                     from self_improvement.runs
+                     where state not in ('succeeded', 'failed', 'cancelled', 'skipped')
+                     limit 1select 1 as one
+                     from self_improvement.runs
+                     where objective_id = $1 and state in ('queued', 'running')
+                     limit 1with candidate as (
+                       select run_id
+                       from self_improvement.runs
+                       where state = 'queued'
+                         and objective_id <> 'urgency_classifier'
+                         and available_at <= now()
+                         and (recovery_phase_version is null or recovery_phase_version = 1)
+                       order by available_at asc, queued_at asc, run_id asc
+                       for update skip locked
+                       limit 1
+                     )
+                     update self_improvement.runs run
+                     set state = 'running',
+                         phase = 'objective',
+                         subphase = 'queue_claimed',
+                         run_clock = case
+                           when coalesce(run.diagnostics, '{}'::jsonb)
+                                  ? 'restart_recovery_from_run_id'
+                             or coalesce(run.subphase, '') in (
+                                  'restart_requeued',
+                                  'restart_phase_deferred',
+                                  'restart_checkpoint_requeued',
+                                  'idle_deferred'
+                                )
+                             or run.recovery_phase_version is not null
+                           then run.run_clock
+                           else now()
+                         end,
+                         diagnostics = jsonb_set(
+                           jsonb_set(
+                             run.diagnostics,
+                             '{queue_claim_owner}',
+                             to_jsonb($1::text),
+                             true
+                           ),
+                           '{queue_claim_boot_id}',
+                           to_jsonb($2::text),
+                           true
+                         ),
+                         started_at = coalesce(run.started_at, now()),
+                         updated_at = now()
+                     from candidate
+                     where run.run_id = candidate.run_id
+                     returning run.*select *
+                     from self_improvement.runs
+                     where objective_id = $1
+                     order by created_at desc, run_id desc
+                     limit $2select runs.run_id, runs.objective_id,
+                            runs.queued_at, runs.started_at
+                     from self_improvement.runs runs
+                     where runs.state = 'running'
+                       and (
+                         runs.started_at <= $1
+                         or (runs.started_at is null and runs.queued_at <= $1)
+                       )
+                       and not exists (
+                         select 1
+                         from self_improvement.run_steps step
+                         join agent.runtime_restart_checkpoints checkpoint
+                           on checkpoint.agent_id = step.agent_id
+                          and checkpoint.recovery_class = 'self_improvement_step'
+                          and checkpoint.recovery_owner_id = format(
+                                'si:%s:%s:%s:%s:%s',
+                                octet_length(step.run_id), step.run_id,
+                                octet_length(step.step_id), step.step_id,
+                                step.attempt
+                              )
+                         where step.run_id = runs.run_id
+                           and step.status = 'running'
+                           and (
+                             runs.subphase = 'restart_checkpoint_parked'
+                             or runs.recovery_phase_version is null
+                             or runs.diagnostics
+                                  -> 'recovery_admitted_executor_ids'
+                                  ->> (step.agent_id::text)
+                                = runs.recovery_admission_boot_id
+                           )
+                       )
+                     order by runs.started_at asc nulls first,
+                              runs.queued_at asc,
+                              runs.run_id asc
+                     limit $2with updated as (
+                       update self_improvement.runs
+                       set state = $3,
+                           phase = $4,
+                           subphase = $5,
+                           -- Never overwrite diagnostics, merge into them.
+                           -- The JSON holds the keys written at enqueue
+                           -- (trigger, metadata idle_session_key, the
+                           -- processing window) plus the outcome written when
+                           -- the run finishes. The idle sweep's per-day
+                           -- ceiling and per-session dedupe look completed
+                           -- runs up by the enqueue-time keys, so overwriting
+                           -- would erase them the moment a run finished: the
+                           -- run stops matching and the sweep refires every
+                           -- scheduler tick without bound. The two key groups
+                           -- are disjoint, so the incoming outcome never
+                           -- collides with the enqueue-time keys.
+                           diagnostics = coalesce(diagnostics, '{}'::jsonb) || coalesce($6, '{}'::jsonb),
+                           run_clock = case
+                             when started_at is null
+                               and $3 = 'running'
+                               and not (
+                                 coalesce(diagnostics, '{}'::jsonb)
+                                   ? 'restart_recovery_from_run_id'
+                                 or coalesce(subphase, '') in (
+                                   'restart_requeued',
+                                   'restart_phase_deferred',
+                                   'restart_checkpoint_requeued',
+                                   'idle_deferred'
+                                 )
+                                 or recovery_phase_version is not null
+                               )
+                             then now()
+                             else run_clock
+                           end,
+                           started_at = case when started_at is null and $3 = 'running' then now() else started_at end,
+                           finished_at = case when $3 in ('succeeded', 'failed', 'cancelled', 'skipped') then now() else finished_at end,
+                           updated_at = now()
+                       where run_id = $1
+                         and state = $2
+                       returning *
+                     ),
+                     cancelled_steps as (
+                       update self_improvement.run_steps
+                       set status = 'cancelled',
+                           finished_at = now(),
+                           updated_at = now()
+                       where run_id = $1
+                         and status = 'running'
+                         and $3 in ('succeeded', 'failed', 'cancelled', 'skipped')
+                         and exists (select 1 from updated)
+                       returning 1
+                     )
+                     select updated.*
+                     from updated, (select count(*) from cancelled_steps) step_sweepupdate self_improvement.runs
+                     set diagnostics = jsonb_set(
+                           diagnostics,
+                           '{queue_claim_boot_id}',
+                           to_jsonb($2::text),
+                           true
+                         ),
+                         updated_at = now()
+                     where run_id = $1
+                       and state = 'running'select exists (
+                       select 1
+                       from self_improvement.runs
+                       where created_at >= $1
+                         and diagnostics ->> 'trigger' = $2
+                         and diagnostics -> 'metadata' ->> 'idle_session_key' = $3
+                     )with cycle_runs as materialized (
+                       select run_id, started_at, diagnostics
+                       from self_improvement.runs
+                       where objective_id = $1
+                         and run_id <> $2
+                         and started_at is not null
+                         and state <> 'skipped'
+                         and diagnostics ->> 'admission_class' = 'signal_triggered'
+                         and diagnostics ->> 'admission_cycle_id' = $3
+                     ), pinned_budget as (
+                       select case
+                         when diagnostics ->> 'signal_admission_limit' ~ '^[0-9]+$'
+                         then (diagnostics ->> 'signal_admission_limit')::bigint
+                         else 1
+                       end as admission_limit
+                       from cycle_runs
+                       order by started_at, run_id
+                       limit 1
+                     )
+                     select cycle_runs.run_id, cycle_runs.started_at,
+                            count(*) over () as admitted_runs,
+                            pinned_budget.admission_limit
+                     from cycle_runs cross join pinned_budget
+                     order by cycle_runs.started_at desc, cycle_runs.run_id desc
+                     limit 1with candidate_state as (
+       select run_id,
+              recovery_phase_version,
+              recovery_admission_boot_id,
+              diagnostics,
+              case
+                when subphase = 'restart_checkpoint_parked'
+                  then 'checkpoint_parked'
+                when recovery_phase_version is null
+                  then null
+                when coalesce(
+                       diagnostics -> 'recovery_pending_executor_ids',
+                       '{}'::jsonb
+                     ) <> '{}'::jsonb
+                  then 'pending_executor'
+                when coalesce(
+                       diagnostics -> 'recovery_attached_executor_ids',
+                       '{}'::jsonb
+                     ) <> '{}'::jsonb
+                  then 'attached_executor'
+                when exists (
+                  select 1
+                  from self_improvement.run_steps step
+                  join agent.runtime_restart_checkpoints checkpoint
+                    on checkpoint.agent_id = step.agent_id
+                   and checkpoint.recovery_class = 'self_improvement_step'
+                   and checkpoint.recovery_owner_id = format(
+                         'si:%s:%s:%s:%s:%s',
+                         octet_length(step.run_id), step.run_id,
+                         octet_length(step.step_id), step.step_id,
+                         step.attempt
+                       )
+                  where step.run_id = runs.run_id
+                    and step.status = 'running'
+                    and runs.diagnostics
+                          -> 'recovery_admitted_executor_ids'
+                          ->> (step.agent_id::text)
+                        is distinct from runs.recovery_admission_boot_id
+                ) then 'unadmitted_checkpoint'
+                when recovery_admission_boot_id is null
+                  then 'missing_boot_receipt'
+                else null
+              end as requeue_reason
+       from self_improvement.runs runs
+       where runs.run_id = $1
+         and runs.state = 'running'
+       for update of runs
+     ),
+     candidate as (
+       select *, requeue_reason is not null as requeue_parked
+       from candidate_state
+     ),
+     exact_checkpoint as (
+       select 1
+       from self_improvement.run_steps step
+       join candidate
+         on candidate.run_id = step.run_id
+       join agent.runtime_restart_checkpoints checkpoint
+         on checkpoint.agent_id = step.agent_id
+        and checkpoint.recovery_class = 'self_improvement_step'
+        and checkpoint.recovery_owner_id = format(
+              'si:%s:%s:%s:%s:%s',
+              octet_length(step.run_id), step.run_id,
+              octet_length(step.step_id), step.step_id,
+              step.attempt
+            )
+       where step.run_id = $1
+         and step.status = 'running'
+         and (
+           candidate.requeue_reason = 'checkpoint_parked'
+           or candidate.recovery_phase_version is null
+           or candidate.diagnostics
+                -> 'recovery_admitted_executor_ids'
+                ->> (step.agent_id::text)
+              = candidate.recovery_admission_boot_id
+         )
+       limit 1
+     ),
+     resolved as (
+       update self_improvement.runs runs
+       set state = case when candidate.requeue_parked then 'queued' else $2 end,
+           phase = case
+             when candidate.requeue_parked then 'objective'
+             else coalesce($3, runs.phase)
+           end,
+           subphase = case
+             when candidate.requeue_parked then 'restart_checkpoint_requeued'
+             else coalesce($4, runs.subphase)
+           end,
+           diagnostics = case
+             when candidate.requeue_parked then
+               (
+                 coalesce(runs.diagnostics, '{}'::jsonb)
+                 - 'queue_claim_owner'
+                 - 'queue_claim_boot_id'
+                 - 'recovery_pending_lease_owner'
+                 - 'recovery_admission_lease_owner'
+                 - 'recovery_pending_executor_ids'
+                 - 'recovery_attached_executor_ids'
+                 - 'recovery_admitted_executor_ids'
+                 - 'restart_checkpoint_parked_agent_id'
+               ) || jsonb_build_object(
+                      'restart_checkpoint_parked', false,
+                      'restart_checkpoint_requeued_at', now()
+                    )
+             -- Never overwrite diagnostics, merge into them: the keys
+             -- written at enqueue (trigger, idle session key, window)
+             -- must outlive this terminal write. Full rationale at
+             -- `update_run_state_if_state`.
+             else coalesce(runs.diagnostics, '{}'::jsonb) || coalesce($5, '{}'::jsonb)
+           end,
+           started_at = case
+             when candidate.requeue_parked then null
+             else runs.started_at
+           end,
+           finished_at = case
+             when candidate.requeue_parked then null
+             else now()
+           end,
+           recovery_admission_boot_id = case
+             when candidate.requeue_parked then null
+             else runs.recovery_admission_boot_id
+           end,
+           updated_at = now()
+       from candidate
+       where runs.run_id = candidate.run_id
+         and runs.state = 'running'
+         and not exists (select 1 from exact_checkpoint)
+       returning runs.*, candidate.requeue_parked, candidate.requeue_reason
+     ),
+     cancelled_steps as (
+       update self_improvement.run_steps step
+       set status = 'cancelled',
+           finished_at = now(),
+           updated_at = now()
+       where step.run_id = $1
+         and step.status = 'running'
+         and exists (
+           select 1
+           from resolved candidate
+           where not candidate.requeue_parked
+         )
+       returning 1
+     )
+     select resolved.*
+     from resolved, (select count(*) from cancelled_steps) step_sweeprequeue_parkedrequeue_reasonwith skipped as (
+                       update self_improvement.runs
+                       set state = 'skipped',
+                           phase = 'queue',
+                           subphase = 'superseded_by_successful_run',
+                           diagnostics = coalesce(diagnostics, '{}'::jsonb)
+                             || jsonb_build_object(
+                                  'superseded_by_run_id', $2::text,
+                                  'superseded_reason', $3::text
+                                ),
+                           finished_at = now(),
+                           updated_at = now()
+                       where objective_id = $1
+                         and state = 'queued'
+                         and coalesce(diagnostics #> '{metadata,content_locale_revision}', '0'::jsonb) = (
+                           select coalesce(owner.diagnostics #> '{metadata,content_locale_revision}', '0'::jsonb)
+                           from self_improvement.runs owner
+                           where owner.run_id = $2 and owner.objective_id = $1
+                         )
+                       returning run_id
+                     ),
+                     cancelled_steps as (
+                       update self_improvement.run_steps step
+                       set status = 'cancelled',
+                           finished_at = now(),
+                           updated_at = now()
+                       where step.status = 'running'
+                         and step.run_id in (select run_id from skipped)
+                       returning 1
+                     )
+                     select count(*)::bigint
+                     from skipped,
+                          (select count(*) from cancelled_steps) step_sweepwith candidate as (
+                       select run_id, objective_id
+                       from self_improvement.runs
+                       where run_id = $1
+                         and state = 'running'
+                         and recovery_phase_version = $3
+                         and available_at <= now()
+                         and diagnostics ->> 'queue_claim_boot_id' = $2
+                         and diagnostics ->> 'recovery_admission_lease_owner' = $4
+                         and (
+                           coalesce(
+                             diagnostics -> 'recovery_attached_executor_ids',
+                             '{}'::jsonb
+                           ) ? $5
+                           or coalesce(
+                             diagnostics -> 'recovery_admitted_executor_ids',
+                             '{}'::jsonb
+                           ) ? $5
+                         )
+                       for update
+                     ),
+                     renewed as (
+                       update self_improvement.leases lease
+                       set expires_at = clock_timestamp()
+                             + ($6::bigint * interval '1 second'),
+                           heartbeat_at = clock_timestamp()
+                       from candidate
+                       where lease.lease_key = 'objective:' || candidate.objective_id
+                         and lease.owner = $4
+                         and lease.run_id = $1
+                         and lease.expires_at > clock_timestamp()
+                       returning 1
+                     )
+                     update self_improvement.runs run
+                     set recovery_admission_boot_id = $2,
+                         diagnostics = jsonb_set(
+                           jsonb_set(
+                             run.diagnostics,
+                             '{recovery_admitted_executor_ids}',
+                             coalesce(
+                               run.diagnostics -> 'recovery_admitted_executor_ids',
+                               '{}'::jsonb
+                             ) || jsonb_build_object($5::text, $2::text),
+                             true
+                           ),
+                           '{recovery_attached_executor_ids}',
+                           coalesce(
+                             run.diagnostics -> 'recovery_attached_executor_ids',
+                             '{}'::jsonb
+                           ) - $5::text,
+                           true
+                         ),
+                         updated_at = clock_timestamp()
+                     from candidate, renewed
+                     where run.run_id = candidate.run_id
+                     returning run.*update self_improvement.runs
+                     -- Never overwrite diagnostics, merge into them: the keys
+                     -- written at enqueue (trigger, idle session key, window)
+                     -- must outlive this write. Full rationale at
+                     -- `update_run_state_if_state`.
+                     set diagnostics = coalesce(diagnostics, '{}'::jsonb) || $3,
+                         updated_at = now()
+                     where run_id = $1
+                       and state = $2with candidate as (
+                       select run_id
+                       from self_improvement.runs
+                       where state = 'queued'
+                         and objective_id <> 'urgency_classifier'
+                         and available_at <= now()
+                         and (recovery_phase_version is null or recovery_phase_version = 1)
+                         and (coalesce(diagnostics, '{}'::jsonb) ? 'idle_gated')
+                       order by available_at asc, queued_at asc, run_id asc
+                       for update skip locked
+                       limit 1
+                     )
+                     update self_improvement.runs run
+                     set state = 'running',
+                         phase = 'objective',
+                         subphase = 'queue_claimed',
+                         run_clock = case
+                           when coalesce(run.diagnostics, '{}'::jsonb)
+                                  ? 'restart_recovery_from_run_id'
+                             or coalesce(run.subphase, '') in (
+                                  'restart_requeued',
+                                  'restart_phase_deferred',
+                                  'restart_checkpoint_requeued',
+                                  'idle_deferred'
+                                )
+                             or run.recovery_phase_version is not null
+                           then run.run_clock
+                           else now()
+                         end,
+                         diagnostics = jsonb_set(
+                           jsonb_set(
+                             run.diagnostics,
+                             '{queue_claim_owner}',
+                             to_jsonb($1::text),
+                             true
+                           ),
+                           '{queue_claim_boot_id}',
+                           to_jsonb($2::text),
+                           true
+                         ),
+                         started_at = coalesce(run.started_at, now()),
+                         updated_at = now()
+                     from candidate
+                     where run.run_id = candidate.run_id
+                     returning run.*with newest_cycle as materialized (
+                       select run_id,
+                              coalesce(
+                                nullif(diagnostics ->> 'admission_cycle_id', ''),
+                                run_id
+                              ) as cycle_id
+                       from self_improvement.runs
+                       where objective_id = $1
+                         and run_id <> $2
+                         and started_at is not null
+                         and state <> 'skipped'
+                         and (
+                           diagnostics ->> 'admission_class' = 'automatic'
+                           or (
+                             not diagnostics ? 'admission_class'
+                             and diagnostics ->> 'trigger' in (
+                               'maintenance.self_improvement_baseline',
+                               'idle.sweep',
+                               'maintenance.nightly_coherence',
+                               'feed.edition_published'
+                             )
+                           )
+                         )
+                       order by started_at desc, run_id desc
+                       limit 1
+                     )
+                     select newest_cycle.run_id,
+                            newest_cycle.cycle_id,
+                            min(cycle_run.started_at) as started_at
+                     from newest_cycle
+                     join self_improvement.runs cycle_run
+                       on cycle_run.objective_id = $1
+                      and cycle_run.run_id <> $2
+                      and cycle_run.started_at is not null
+                      and cycle_run.state <> 'skipped'
+                      and coalesce(
+                            nullif(
+                              cycle_run.diagnostics ->> 'admission_cycle_id',
+                              ''
+                            ),
+                            cycle_run.run_id
+                          ) = newest_cycle.cycle_id
+                     group by newest_cycle.run_id, newest_cycle.cycle_idselect objective_id, coalesce(finished_at, updated_at) as emitted_at
+                     from self_improvement.runs
+                     where diagnostics ->> 'handoff_emitted' = 'true'
+                       and coalesce(finished_at, updated_at) >= $1
+                     order by coalesce(finished_at, updated_at) desc, run_id descwith interrupted as (
+                       select run_id
+                       from self_improvement.runs
+                       where state = 'running'
+                         and diagnostics ->> 'queue_claim_boot_id' is distinct from $1
+                       order by started_at asc nulls first, queued_at asc, run_id asc
+                       for update
+                       limit $2
+                     ),
+                     cleared_leases as (
+                       delete from self_improvement.leases
+                       where run_id in (select run_id from interrupted)
+                     )
+                     update self_improvement.runs run
+                     set state = 'queued',
+                         phase = 'triggered',
+                         subphase = case
+                           when run.objective_id = $3
+                             and run.diagnostics ->> 'trigger' = $4
+                             and run.recovery_phase_version is null
+                           then 'restart_phase_deferred'
+                           else 'restart_requeued'
+                         end,
+                         available_at = case
+                           when run.objective_id = $3
+                             and run.diagnostics ->> 'trigger' = $4
+                             and run.recovery_phase_version is null
+                           then $6
+                           else run.available_at
+                         end,
+                         recovery_phase_version = case
+                           when run.objective_id = $3
+                             and run.diagnostics ->> 'trigger' = $4
+                             and run.recovery_phase_version is null
+                           then $5
+                           else run.recovery_phase_version
+                         end,
+                         recovery_admission_boot_id = null,
+                         diagnostics = run.diagnostics
+                           - 'recovery_pending_lease_owner'
+                           - 'recovery_admission_lease_owner'
+                           - 'recovery_pending_executor_ids'
+                           - 'recovery_attached_executor_ids'
+                           - 'recovery_admitted_executor_ids',
+                         started_at = null,
+                         finished_at = null,
+                         updated_at = now()
+                     from interrupted
+                     where run.run_id = interrupted.run_id
+                     returning run.*with requeued as (
+                       update self_improvement.runs
+                       set state = 'queued',
+                           phase = 'triggered',
+                           subphase = 'restart_checkpoint_requeued',
+                           diagnostics = (
+                             diagnostics
+                             - 'queue_claim_owner'
+                             - 'queue_claim_boot_id'
+                             - 'recovery_pending_lease_owner'
+                             - 'recovery_admission_lease_owner'
+                             - 'recovery_pending_executor_ids'
+                             - 'recovery_attached_executor_ids'
+                             - 'recovery_admitted_executor_ids'
+                           ) || jsonb_build_object(
+                             'recovery_admission_requeue_reason', $5::text
+                           ),
+                           recovery_admission_boot_id = null,
+                           started_at = null,
+                           finished_at = null,
+                           queued_at = now(),
+                           available_at = now(),
+                           updated_at = now()
+                       where run_id = $1
+                         and state = 'running'
+                         and recovery_phase_version = $6
+                         and diagnostics ->> 'queue_claim_owner' = $2
+                       returning 1
+                     ),
+                     released as (
+                       delete from self_improvement.leases
+                       where lease_key = $3
+                         and owner = $4
+                         and run_id = $1
+                         and exists (select 1 from requeued)
+                       returning 1
+                     )
+                     select exists(select 1 from requeued),
+                            count(*)::bigint
+                     from releasedwith candidate as (
+                       select run_id, objective_id
+                       from self_improvement.runs
+                       where run_id = $1
+                         and state = 'running'
+                         and recovery_phase_version = $3
+                         and available_at <= now()
+                         and diagnostics ->> 'queue_claim_boot_id' = $2
+                         and diagnostics ->> 'recovery_admission_lease_owner' = $4
+                         and (
+                           coalesce(
+                             diagnostics -> 'recovery_pending_executor_ids',
+                             '{}'::jsonb
+                           ) ? $5
+                           or coalesce(
+                             diagnostics -> 'recovery_attached_executor_ids',
+                             '{}'::jsonb
+                           ) ? $5
+                         )
+                       for update
+                     ),
+                     renewed as (
+                       update self_improvement.leases lease
+                       set expires_at = clock_timestamp()
+                             + ($6::bigint * interval '1 second'),
+                           heartbeat_at = clock_timestamp()
+                       from candidate
+                       where lease.lease_key = 'objective:' || candidate.objective_id
+                         and lease.owner = $4
+                         and lease.run_id = $1
+                         and lease.expires_at > clock_timestamp()
+                       returning 1
+                     )
+                     update self_improvement.runs run
+                     set diagnostics = jsonb_set(
+                           jsonb_set(
+                             run.diagnostics,
+                             '{recovery_attached_executor_ids}',
+                             coalesce(
+                               run.diagnostics -> 'recovery_attached_executor_ids',
+                               '{}'::jsonb
+                             ) || jsonb_build_object($5::text, true),
+                             true
+                           ),
+                           '{recovery_pending_executor_ids}',
+                           coalesce(
+                             run.diagnostics -> 'recovery_pending_executor_ids',
+                             '{}'::jsonb
+                           ) - $5::text,
+                           true
+                         ),
+                         updated_at = clock_timestamp()
+                     from candidate, renewed
+                     where run.run_id = candidate.run_id
+                     returning run.*select *
+                     from self_improvement.runs
+                     where objective_id = $1
+                       and state = 'succeeded'
+                       and diagnostics ->> 'coalesce_key' = $2
+                     order by queued_at desc, run_id desc
+                     limit 1select *
+                     from self_improvement.runs
+                     where objective_id = $1
+                       and state in ('queued', 'running')
+                       and diagnostics ->> 'coalesce_key' = $2
+                     order by queued_at asc, run_id asc
+                     limit 1with candidate as (
+                       select run_id
+                       from self_improvement.runs
+                       where state = 'queued'
+                         and objective_id <> 'urgency_classifier'
+                         and available_at <= now()
+                         and (recovery_phase_version is null or recovery_phase_version = 1)
+                         and not (coalesce(diagnostics, '{}'::jsonb) ? 'idle_gated')
+                       order by available_at asc, queued_at asc, run_id asc
+                       for update skip locked
+                       limit 1
+                     )
+                     update self_improvement.runs run
+                     set state = 'running',
+                         phase = 'objective',
+                         subphase = 'queue_claimed',
+                         run_clock = case
+                           when coalesce(run.diagnostics, '{}'::jsonb)
+                                  ? 'restart_recovery_from_run_id'
+                             or coalesce(run.subphase, '') in (
+                                  'restart_requeued',
+                                  'restart_phase_deferred',
+                                  'restart_checkpoint_requeued',
+                                  'idle_deferred'
+                                )
+                             or run.recovery_phase_version is not null
+                           then run.run_clock
+                           else now()
+                         end,
+                         diagnostics = jsonb_set(
+                           jsonb_set(
+                             run.diagnostics,
+                             '{queue_claim_owner}',
+                             to_jsonb($1::text),
+                             true
+                           ),
+                           '{queue_claim_boot_id}',
+                           to_jsonb($2::text),
+                           true
+                         ),
+                         started_at = coalesce(run.started_at, now()),
+                         updated_at = now()
+                     from candidate
+                     where run.run_id = candidate.run_id
+                     returning run.*with candidate as (
+                       select run_id, objective_id
+                       from self_improvement.runs
+                       where run_id = $1
+                         and state = 'running'
+                         and recovery_phase_version = $3
+                         and available_at <= now()
+                         and diagnostics ->> 'queue_claim_boot_id' = $2
+                         and (
+                           diagnostics ->> 'recovery_pending_lease_owner' = $4
+                           or diagnostics ->> 'recovery_admission_lease_owner' = $4
+                         )
+                       for update
+                     ),
+                     renewed as (
+                       update self_improvement.leases lease
+                       set expires_at = clock_timestamp()
+                             + ($6::bigint * interval '1 second'),
+                           heartbeat_at = clock_timestamp()
+                       from candidate
+                       where lease.lease_key = 'objective:' || candidate.objective_id
+                         and lease.owner = $4
+                         and lease.run_id = $1
+                         and lease.expires_at > clock_timestamp()
+                       returning 1
+                     )
+                     update self_improvement.runs run
+                     set diagnostics = jsonb_set(
+                           jsonb_set(
+                             run.diagnostics - 'recovery_pending_lease_owner',
+                             '{recovery_admission_lease_owner}',
+                             to_jsonb($4::text),
+                             true
+                           ),
+                           '{recovery_pending_executor_ids}',
+                           coalesce(
+                             run.diagnostics -> 'recovery_pending_executor_ids',
+                             '{}'::jsonb
+                           ) || jsonb_build_object($5::text, true),
+                           true
+                         ),
+                         updated_at = clock_timestamp()
+                     from candidate, renewed
+                     where run.run_id = candidate.run_id
+                     returning run.*with candidate as (
+                       select run_id
+                       from self_improvement.runs
+                       where run_id = $1
+                         and state = 'running'
+                         and recovery_phase_version = $3
+                         and available_at <= now()
+                         and diagnostics ->> 'queue_claim_boot_id' = $2
+                       for update
+                     ),
+                     renewed as (
+                       update self_improvement.leases lease
+                       set expires_at = clock_timestamp()
+                             + ($6::bigint * interval '1 second'),
+                           heartbeat_at = clock_timestamp()
+                       where lease.lease_key = $4
+                         and lease.owner = $5
+                         and lease.run_id = $1
+                         and lease.expires_at > clock_timestamp()
+                         and exists (select 1 from candidate)
+                       returning 1
+                     )
+                     update self_improvement.runs run
+                     set recovery_admitted_at = coalesce(
+                           run.recovery_admitted_at,
+                           clock_timestamp()
+                         ),
+                         diagnostics = jsonb_set(
+                           run.diagnostics,
+                           '{recovery_pending_lease_owner}',
+                           to_jsonb($5::text),
+                           true
+                         ),
+                         updated_at = clock_timestamp()
+                     from candidate, renewed
+                     where run.run_id = candidate.run_id
+                     returning run.*update self_improvement.runs
+                     set diagnostics = jsonb_set(
+                           coalesce(diagnostics, '{}'::jsonb),
+                           '{worker}',
+                           case
+                             when jsonb_typeof(diagnostics -> 'worker') = 'object'
+                               then (diagnostics -> 'worker') || $3
+                             else $3
+                           end
+                         ),
+                         updated_at = now()
+                     where run_id = $1
+                       and state = $2select count(distinct coalesce(
+                         diagnostics -> 'metadata' ->> 'idle_session_since_utc',
+                         run_id
+                     ))::bigint
+                     from self_improvement.runs
+                     where created_at >= $1
+                       and state in ('running', 'succeeded', 'failed', 'cancelled')
+                       and (
+                         diagnostics ->> 'trigger' = $2
+                         or diagnostics ? 'idle_gated'
+                       )with recent_runs as (
+                           select run_id, state, finished_at, created_at, diagnostics
+                           from self_improvement.runs
+                           where objective_id = $1
+                           order by created_at desc, run_id desc
+                           limit $3
+                         )
+                         select run_id, state, finished_at, created_at,
+                                coalesce(
+                                  diagnostics -> $2 ->> 'input_fingerprint',
+                                  diagnostics -> 'metadata' -> $2 ->> 'input_fingerprint'
+                                ) as input_fingerprint
+                         from recent_runs
+                         where coalesce(
+                           diagnostics -> $2 ->> 'input_fingerprint',
+                           diagnostics -> 'metadata' -> $2 ->> 'input_fingerprint'
+                         ) is not null
+                         order by created_at desc, run_id desc
+                         limit 1update self_improvement.runs
+                     set state = 'queued',
+                         phase = $3,
+                         subphase = $4,
+                         -- Replace, not merge: callers pass a copy of this
+                         -- row's diagnostics they just read and edited,
+                         -- removing the queue-claim keys (queue_claim_owner,
+                         -- queue_claim_boot_id). Replacement drops exactly
+                         -- what they removed; a merge would revive it.
+                         diagnostics = $5
+                           - 'recovery_pending_lease_owner'
+                           - 'recovery_admission_lease_owner'
+                           - 'recovery_pending_executor_ids'
+                           - 'recovery_attached_executor_ids'
+                           - 'recovery_admitted_executor_ids',
+                         recovery_admission_boot_id = null,
+                         started_at = null,
+                         finished_at = null,
+                         queued_at = now(),
+                         available_at = now(),
+                         updated_at = now()
+                     where run_id = $1
+                       and state = 'running'
+                       and diagnostics->>'queue_claim_owner' = $2
+                     returning *insert into self_improvement.fleet_publish_receipts
+                     (origin_id, payload_hash, namespace, status, discovery_pool_post_id, discovery_pool_url, error,
+                      attempted_at, published_at, record)
+                     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                     on conflict (origin_id, payload_hash) do update set
+                       namespace = excluded.namespace,
+                       status = excluded.status,
+                       discovery_pool_post_id = excluded.discovery_pool_post_id,
+                       discovery_pool_url = excluded.discovery_pool_url,
+                       error = excluded.error,
+                       attempted_at = excluded.attempted_at,
+                       published_at = excluded.published_at,
+                       record = excluded.record
+                     where self_improvement.fleet_publish_receipts.status <> 'published'select status
+                     from self_improvement.fleet_publish_receipts
+                     where origin_id = $1 and payload_hash = $2select *
+                     from self_improvement.objective_state
+                     where objective_id = $1insert into self_improvement.handoff_dedupe
+                     (objective_id, content_hash, run_id)
+                     values ($1, $2, $3)
+                     on conflict (objective_id, content_hash) do nothingselect 1 from self_improvement.objective_markers
+                     where objective_id = $1 and marker = $2insert into self_improvement.objective_markers (objective_id, marker)
+                     values ($1, $2)
+                     on conflict (objective_id, marker) do nothingselect last_run_utc
+                     from self_improvement.objective_state
+                     where objective_id = $1insert into self_improvement.objective_state
+                     (objective_id, current_file_hash, projection_hash, status, last_run_utc, state_json)
+                     values ($1, $2, $3, $4, $5, $6)
+                     on conflict (objective_id) do update set
+                       current_file_hash = excluded.current_file_hash,
+                       projection_hash = excluded.projection_hash,
+                       status = excluded.status,
+                       last_run_utc = excluded.last_run_utc,
+                       state_json = excluded.state_json,
+                       updated_at = now()insert into self_improvement.calculation_records
+                     (replay_id, card_id, objective_id, config_hash, code_version, source_handles,
+                      normalized_inputs, formulas, outputs)
+                     values ($1, $2, $3, $4, $5, $6, $7, $8, $9)insert into self_improvement.calibration_records
+                     (calibration_id, card_id, objective_id, change_id, classification, window_start,
+                      window_end, source_handles, diagnostics)
+                     values ($1, $2, $3, $4, $5, $6, $7, $8, $9)insert into self_improvement.connector_read_audit
+                     (connector_id, device_node_id, method_key, purpose, request_id, request_origin,
+                      sensitivity, source_handle, metadata)
+                     values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                     returning audit_iddelete from self_improvement.runs
+                     where run_id in (
+                       select runs.run_id from self_improvement.runs runs
+                       where runs.state in ('succeeded', 'failed', 'cancelled', 'skipped')
+                         and runs.updated_at < $1
+                         and not exists (
+                           select 1 from runtime.background_content_jobs jobs
+                           where jobs.job_id = runs.objective_id and jobs.refresh_pending
+                             and runs.diagnostics ->> 'trigger' = 'maintenance.locale_change'
+                             and runs.diagnostics #>> '{metadata,content_locale_revision}'
+                                   = jobs.locale_revision::text
+                         )
+                       order by runs.updated_at asc
+                       limit $2
+                     )select card_id, objective_id, config_hash, outputs, created_at
+                     from self_improvement.calculation_records
+                     order by created_at desc, replay_id desc
+                     limit $1select calibration_id, change_id, classification, diagnostics
+                     from self_improvement.calibration_records
+                     where objective_id = $1
+                     order by created_at desc, calibration_id desc
+                     limit $2delete from self_improvement.backfill_day_runs
+                     where backfill_day_run_id in (
+                       select backfill_day_run_id from self_improvement.backfill_day_runs
+                       where updated_at < $1
+                       order by updated_at asc
+                       limit $2
+                     )delete from self_improvement.calculation_records
+                     where replay_id in (
+                       select replay_id from self_improvement.calculation_records
+                       where created_at < $1
+                       order by created_at asc
+                       limit $2
+                     )delete from self_improvement.calibration_records
+                     where calibration_id in (
+                       select calibration_id from self_improvement.calibration_records
+                       where created_at < $1
+                       order by created_at asc
+                       limit $2
+                     )delete from self_improvement.connector_read_audit
+                     where audit_id in (
+                       select audit_id from self_improvement.connector_read_audit
+                       where created_at < $1
+                       order by created_at asc
+                       limit $2
+                     )select *
+                     from self_improvement.run_steps
+                     where run_id = $1
+                     order by started_at asc, step_id asc, attempt ascupdate self_improvement.run_steps
+                     set agent_id = $4,
+                         updated_at = now()
+                     where run_id = $1 and step_id = $2 and attempt = $3
+                       and status = 'running'
+                       and (agent_id is null or agent_id = $4)select *
+     from self_improvement.run_steps
+     where run_id = $1 and step_id = $2
+       and status = 'running'
+     order by attempt desc
+     limit 1insert into self_improvement.run_steps
+                       (run_id, objective_id, step_id, attempt, input_hash, status)
+                     select $1, $2, $3,
+                            coalesce(max(attempt) + 1, 0),
+                            $4, 'running'
+                     from self_improvement.run_steps
+                     where run_id = $1 and step_id = $3
+                     returning *select status, output_json
+                     from self_improvement.run_steps
+                     where run_id = $1 and step_id = $2 and attempt = $3
+                       and agent_id is not distinct from $4update self_improvement.run_steps
+                     set output_json = $5,
+                         updated_at = now()
+                     where run_id = $1 and step_id = $2 and attempt = $3
+                       and agent_id = $4 and status = 'running'select output_json
+                     from self_improvement.run_steps
+                     where objective_id = $1 and step_id = $2 and input_hash = $3
+                       and status = 'succeeded'
+                     order by finished_at desc nulls last, attempt desc
+                     limit 1update self_improvement.run_steps
+                     set status = 'cancelled',
+                         finished_at = now(),
+                         updated_at = now()
+                     where run_id = $1 and status = 'running'select count(*)
+                     from self_improvement.run_steps
+                     where run_id = $1 and step_id = $2
+                       and attempt <= $3 and input_hash = $4
+                       and exists (
+                           select 1
+                           from self_improvement.run_steps current_attempt
+                           where current_attempt.run_id = $1
+                             and current_attempt.step_id = $2
+                             and current_attempt.attempt = $3
+                             and current_attempt.input_hash = $4
+                       )select exists (
+                       select 1
+                       from self_improvement.run_steps step
+                       join self_improvement.runs run
+                         on run.run_id = step.run_id
+                        and run.state in ('queued', 'running')
+                       where step.run_id = $1
+                         and step.step_id = $2
+                         and step.attempt = $3
+                         and step.agent_id = $4
+                         and step.status = 'running'
+                     )select r.run_id, s.step_id, r.finished_at as completed_at, s.output_json
+                 from self_improvement.runs r
+                 join lateral (
+                     select distinct on (step_id) step_id, status, output_json
+                     from self_improvement.run_steps
+                     where run_id = r.run_id and step_id = any($2)
+                     order by step_id, attempt desc
+                 ) s on s.status = 'succeeded'
+                 where r.objective_id = $1 and r.state = 'succeeded'
+                   and r.finished_at >= $3 and r.finished_at <= $4
+                 order by r.finished_at, r.run_id, s.step_idselect *
+                     from self_improvement.run_steps
+                     where step_id = any($1)
+                     order by coalesce(finished_at, started_at) desc, attempt desc
+                     limit $2update self_improvement.run_steps
+                         set status = 'failed',
+                             telemetry = jsonb_build_object(
+                               'error_code', 'invalid_restart_checkpoint',
+                               'error_message', $5::text
+                             ),
+                             finished_at = now(),
+                             updated_at = now()
+                         where run_id = $1 and step_id = $2 and attempt = $3
+                           and agent_id = $4
+                           and status = 'running'
+                           and output_json = '{}'::jsonb
+                         returning run_idupdate self_improvement.runs
+                         set state = 'failed',
+                             subphase = 'invalid_restart_checkpoint',
+                             diagnostics = coalesce(diagnostics, '{}'::jsonb)
+                               || jsonb_build_object(
+                                    'error_code', 'invalid_restart_checkpoint',
+                                    'error_message', $2::text
+                                  ),
+                             finished_at = now(),
+                             updated_at = now()
+                         where run_id = $1 and state in ('queued', 'running')select state from self_improvement.runs where run_id = $1update self_improvement.run_steps
+                         set status = 'cancelled',
+                             finished_at = now(),
+                             updated_at = now()
+                       where run_id = $1 and status = 'running'select terminal_at, priority
+                     from self_improvement.follow_up_queue
+                     where state = 'delivered'
+                       and producer <> 'internal'
+                       and allocation = $2
+                       and terminal_at > $1
+                     order by terminal_at ascselect max(terminal_at)
+                     from self_improvement.follow_up_queue
+                     where state = 'delivered'follow_up_id, producer, message, source_root_agent_id, priority, allocation, not_before, expires_at, delivery_instructions, allowed_tools, metadata_json, conversation_derived, state, disposition_reason, delivery_submission_id, claimed_at, terminal_at, created_at, updated_at, chat_id, chat_binding_epoch

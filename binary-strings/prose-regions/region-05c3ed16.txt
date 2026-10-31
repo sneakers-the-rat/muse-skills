@@ -1,0 +1,33 @@
+update peer.outbox set state = 'superseded', claim_id = null, claim_expires_at_ms = null, last_error_class = 'relationship_inactive' where conversation_id = $1 and state in ('pending', 'dispatching')activeupdate chat_private.peer_conversations set archived_at_ms = $2 where conversation_id = $1 and archived_at_ms is nullupdate chat_private.peer_remote_conversations set last_acked_seq = $2, updated_at_ms = $3 where conv_id = $1 and last_acked_seq < $2
+update chat.chats as metadata
+set thread_title = concat_ws(' · ',
+  nullif(btrim(contact.display_name), ''),
+  nullif(btrim(contact.agent_name), '')
+)
+from chat_private.peer_conversations as conversation
+join chat_private.bindings as binding on binding.chat_id = conversation.chat_id
+join peer.contacts as contact on contact.muse_id = conversation.peer_muse
+join agent.agents as root on root.id = conversation.root_agent_id
+  and root.session_id = conversation.chat_id
+where conversation.kind = 'dm'
+  and conversation.archived_at_ms is null
+  and contact.status in ('pending', 'awaiting_sas', 'confirmed_local', 'verified')
+  and root.kind = 'root'
+  and root.parent_agent_id is null
+  and root.ephemeral is distinct from true
+  and metadata.chat_id = conversation.chat_id
+  and metadata.status = 'active'
+  and metadata.origin = 'peer'
+  and binding.provider = 'peer'
+  and binding.conversation_key = conversation.conversation_id::text
+  and binding.delivery_target = contact.muse_id
+  and (btrim(coalesce(metadata.thread_title, '')) = ''
+    or metadata.thread_title = 'Peer')
+  and metadata.thread_title is distinct from concat_ws(' · ',
+    nullif(btrim(contact.display_name), ''),
+    nullif(btrim(contact.agent_name), '')
+  )
+  and (nullif(btrim(contact.display_name), '') is not null
+    or nullif(btrim(contact.agent_name), '') is not null)
+  and conversation.peer_muse = 
+returning metadata.chat_idselect chat_id from chat_private.peer_remote_conversations where conv_id = $1conv_id, host_muse, kind, circle_id, artifact_slug, chat_id, last_acked_seq, created_at_ms, updated_at_msremote conversation ownership changed

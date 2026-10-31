@@ -1,0 +1,240 @@
+The runtime restarted while your research run was in progress and has resumed you from your last checkpoint. {directory_clause} Your remaining time budget for this run is about {remaining_minutes} minutes; finish with `finish_research` as usual. Any browser state from before the restart is gone; reopen pages you still need.
+{directory_clause}{remaining_minutes}primary_root_checkpoint_deferred_marker_cleanupprimary_root_checkpoint_malformed_cleanupremoving malformed runtime restart checkpoint identityfailed to resolve malformed checkpoint conversationfailed to terminalize owner of malformed checkpointfailed to delete malformed checkpoint by its exact raw keyfailed to delete checkpoint with invalid raw agent idcheckpoint carried duplicate pending tool identitiescheckpoint reused a tool call id for contradictory callscheckpoint carried an incomplete pending tool identitycheckpoint carried duplicate tool output identitiescheckpoint carried an incomplete tool identitydurable tool call disagreed with checkpoint evidencedurable tool call projection was malformeddurable tool call identity was not uniquedurable tool output existed without its function calldurable tool output projection was malformeddurable tool output identity was not uniquecheckpoint tool identity map was inconsistentresume_fallback_epochresume_index_readresume_index_read_queueresume_index_read_workerresume_index_boundsresume_index_verifyresume_index_verify_queueresume_index_verify_workerfailed to read resume indexresume index read task failedresume_index_item_countresume_index_assemblyresume index envelope rejectedresume index verify task failedresume_epoch_reportingno clean resume handoff; PostgreSQL-derived recovery will runclean handoff marker consumed; resume index installedresume_index_installhandoff_marker_readhandoff_marker_queuehandoff_marker_workerpg_clean_proofhandoff marker committed but PostgreSQL stop is unproven; quarantiningresume_cluster_identityhandoff marker rejected; quarantininghandoff marker read task failedno_markermarker_iohandoff marker PG identity mismatch; quarantiningresume_current_epochresume epoch source unavailable; marker left in placeepoch_source_unavailablepg_identity_mismatchresume_epoch_validationresume_epoch_advanceepoch_gaphandoff marker epoch does not extend the installed epoch; quarantiningresume epoch compare-and-advance lost; quarantining markerhandoff_marker_retirehandoff_retire_queuehandoff_retire_workerepoch_cas_lostfailed to retire consumed handoff markerhandoff marker retire task failedcleanclean handoff marker consumed but resume index unusablefailed to load durable checkpoint row during index reconstructionfailed to list durable checkpoint ids for resume index proofresume index reconstruction task failedresume index reconstruction finishedworkspace/ts-spacesselect 1 from runtime.browser_invocations where invocation_id = $1 for updateinsert into runtime.browser_seat_inputs
+         (input_id, task_id, invocation_id, revision, kind, source_id, detail_json, shown_at)
+         select $1, $2, $3, coalesce(max(revision), 0) + 1, $4, $5, $6,
+           case when $7::boolean then now() end
+         from runtime.browser_seat_inputs where invocation_id = $3
+         on conflict (input_id) do nothinginsert into runtime.browser_seat_inputs
+         (input_id, task_id, kind, source_id, detail_json)
+         values ($1, $2, $3, $4, $5) on conflict (input_id) do nothingselect owner_agent_id, root_session_id
+        from runtime.browser_tasks where task_id = $1 and status = 'running' for updateselect epoch, control_revision from runtime.browser_executions
+        where task_id = $1 and planner_agent_id = $2 for updatebrowser seat changedbrowser service authority changedbrowser invocation authority changeddevice data source deleteddevice data deletion response must serializedevice data source deletion failed{"ok":false,"error":"device data deletion failed"}sensitive sources do not support reconciliation admissionfull_snapshotdatatype is requirednodes.notify route does not match its admission metadatachunked /nodes/sync uploads are no longer supported; send a full payloadephemeral payload handle is requiredproactive{"redacted":true,"redaction_reason":"notification and sms payloads are not stored raw"}node notification admitted but worker wake failedunauthorized; authenticated ingress request is missing verified identityuser_controlledparked_outcomeneeds_useropen self-improvement store for startup recoveryrequeue interrupted self-improvement runs before checkpoint recoverystartup:self_improvement_recoveryrequeued interrupted self-improvement run in place after daemon restartavatar-state: adopted a concurrently seeded DB rowavatar-state: seeded the authoritative DB rowbroker_failedadopt_failedbrowser node download failed verification
+INSERT INTO requests (
+  request_id, root_request_id, parent_request_id, request_origin,
+  transcript_surface, root_work_class
+)
+VALUES ($1, $2, $3, $4, $5::runtime.transcript_surface, $6)
+ON CONFLICT (request_id) DO UPDATE SET
+  root_request_id = COALESCE(requests.root_request_id, excluded.root_request_id),
+  parent_request_id = COALESCE(requests.parent_request_id, excluded.parent_request_id),
+  request_origin = CASE
+    WHEN requests.request_origin = 'internal.runtime_replay' THEN excluded.request_origin
+    ELSE requests.request_origin
+  END,
+  transcript_surface = excluded.transcript_surface,
+  root_work_class = CASE
+    WHEN requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing'
+      THEN excluded.root_work_class
+    ELSE requests.root_work_class
+  END
+WHERE (requests.root_request_id IS NULL AND excluded.root_request_id IS NOT NULL)
+   OR (requests.parent_request_id IS NULL AND excluded.parent_request_id IS NOT NULL)
+   OR (requests.request_origin = 'internal.runtime_replay'
+       AND excluded.request_origin <> 'internal.runtime_replay')
+   OR requests.transcript_surface IS DISTINCT FROM excluded.transcript_surface
+   OR (requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing')
+
+INSERT INTO tool_outputs (event_seq, call_id, status, output_text, error_text, created_at)
+VALUES ($1, $2, $3, $4, $5, to_timestamp($6::double precision / 1000.0))
+ON CONFLICT (event_seq) DO UPDATE SET
+  call_id = excluded.call_id,
+  status = excluded.status,
+  output_text = excluded.output_text,
+  error_text = excluded.error_text
+arguments
+INSERT INTO tool_calls (event_seq, call_id, tool_name, status, arguments_json, created_at)
+VALUES ($1, $2, $3, 'started', $4, to_timestamp($5::double precision / 1000.0))
+ON CONFLICT (call_id) DO UPDATE SET
+  event_seq = excluded.event_seq,
+  tool_name = excluded.tool_name,
+  status = excluded.status,
+  arguments_json = excluded.arguments_json
+
+INSERT INTO chat_event_derived_write_backlog (event_seq, resources_json)
+VALUES ($1, $2)
+ON CONFLICT (event_seq) DO UPDATE SET
+  resources_json = excluded.resources_json,
+  updated_at = now()
+
+UPDATE events
+SET display_text_ready = $2,
+    reply_target_message_id = $3,
+    payload_json = $4
+WHERE event_seq = $1
+
+INSERT INTO messages (message_id, event_seq, role, body, created_at)
+SELECT e.message_id, e.event_seq, e.role, $2, e.created_at
+FROM events e
+WHERE e.event_seq = $1
+  AND e.message_id IS NOT NULL
+  AND e.role IS NOT NULL
+ON CONFLICT (message_id) DO UPDATE SET
+  body = excluded.body
+UPDATE chat_private.peer_conversations SET requester_chat_id = NULL
+         WHERE conversation_id = $1 AND requester_revision = $2
+           AND requester_chat_id = $3 AND NOT requester_unavailable
+           AND chat_id = $5
+           AND EXISTS (SELECT 1 FROM agent.agents
+                       WHERE id = $4 AND session_id = $3)peer handoff disagrees with its asking-chat claimpeer handoff requester changed before admission
+SELECT json_build_object(
+         'accepted_ordinal', accepted_ordinal,
+         'state', state,
+         'checkpoint_custody', checkpoint_custody,
+         'submission_json', submission_json
+       )::text
+FROM agent.message_mailbox
+WHERE agent_id = $1
+  AND state IN ('accepted', 'attached')
+ORDER BY accepted_ordinal, submission_id
+FOR UPDATE
+SELECT payload_json FROM runtime_restart_checkpoints WHERE agent_id = $1
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = 'executing',
+    stream_owner_message_id = $3,
+    attached_at = now()
+WHERE submission_id = $1
+  AND agent_id = $2
+  AND state = 'accepted'
+  AND stream_owner_message_id IS NULL
+
+SELECT agent_id, state, stream_owner_message_id, submission_json,
+       accepted_ordinal
+FROM agent.message_mailbox
+WHERE submission_id = $1
+FOR UPDATE
+
+SELECT EXISTS (
+  SELECT 1
+  FROM agent.message_mailbox
+  WHERE agent_id = $1
+    AND state = 'accepted'
+    AND accepted_ordinal < $2
+    AND (NOT $3 OR submission_kind <> 'internal_handoff')
+)
+tracked mailbox successor unexpectedly lost custodymessage mailbox successor promotion cannot overtake an older priority peer
+UPDATE agent.message_mailbox
+SET state = CASE WHEN $4 THEN 'completed' ELSE 'aborted' END,
+    checkpoint_custody = coalesce(checkpoint_custody, 'executing'),
+    terminalized_at = now()
+WHERE agent_id = $1
+  AND stream_owner_message_id = $2
+  AND submission_id = ANY($3)
+  AND state = 'attached'
+
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = 'executing',
+    stream_owner_message_id = $2,
+    attached_at = coalesce(attached_at, now())
+WHERE agent_id = $1
+  AND submission_id = ANY($3)
+  AND (
+    (state = 'accepted' AND stream_owner_message_id IS NULL)
+    OR (state = 'attached' AND stream_owner_message_id = $2)
+  )
+
+UPDATE agent.message_mailbox
+SET checkpoint_custody = 'queued'
+WHERE agent_id = $1
+  AND stream_owner_message_id = $2
+  AND submission_id = ANY($3)
+  AND state = 'attached'
+
+UPDATE agent.message_mailbox
+SET state = CASE
+      WHEN state = 'attached' AND $2 THEN 'completed'
+      ELSE 'aborted'
+    END,
+    terminalized_at = now()
+WHERE agent_id = $1
+  AND state IN ('accepted', 'attached')
+SELECT session_id, COALESCE(prompt_floor_seq, -1) AS prompt_floor_seq,
+                kind = 'root' AND parent_agent_id IS NULL
+                AND ephemeral IS DISTINCT FROM TRUE
+                AND status NOT IN ('shutdown', 'not_found') AS eligible
+         FROM agent.agents WHERE agent_id = $1 FOR UPDATEstartup_root_changedSELECT EXISTS(SELECT 1 FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND accepted_ordinal < $2)startup mailbox promotion cannot overtake an earlier accepted input
+SELECT payload_json
+FROM agent.runtime_restart_checkpoints
+WHERE agent_id = $1
+FOR UPDATE
+message mailbox attachment cannot overtake an older priority peer
+INSERT INTO agent.runtime_restart_checkpoints (
+  agent_id, mode, recovery_class, recovery_owner_id, execution_config_json,
+  payload_json, created_at, updated_at
+) SELECT $1, $2, $3, $4, $5, $6, $7, $7
+WHERE EXISTS (
+  SELECT 1
+  FROM agent.agents
+  WHERE agent_id = $1
+    AND status NOT IN ('shutdown', 'not_found')
+)
+ON CONFLICT (agent_id) DO NOTHING
+SELECT EXISTS (SELECT 1 FROM agent.agents WHERE agent_id = $1 AND status NOT IN ('shutdown', 'not_found'))conversation epoch
+INSERT INTO agent.message_mailbox (
+  submission_id, agent_id, conversation_epoch, submission_kind,
+  routing_scope, state, checkpoint_custody, stream_owner_message_id,
+  submission_json, transcript_event_seq, attached_at
+) VALUES (
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+  CASE WHEN $6 = 'attached' THEN now() ELSE NULL END
+)
+ON CONFLICT (submission_id) DO NOTHING
+RETURNING accepted_ordinal, accepted_at
+startup mailbox promotion requires its previously accepted input
+SELECT agent_id, conversation_epoch, submission_kind, routing_scope,
+       state, stream_owner_message_id, submission_json,
+       transcript_event_seq, accepted_ordinal, accepted_at
+FROM agent.message_mailbox
+WHERE submission_id = $1
+FOR UPDATE
+update chat.message_bindings set admitted_at = coalesce(admitted_at, now())
+                    where jarvis_message_id = $1 and chat_id = $2 and binding_epoch = $3 and transport = $4binding epochconversation_epochsubmission_kindrouting_scope
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = $5,
+    stream_owner_message_id = $2,
+    submission_json = $3,
+    transcript_event_seq = coalesce($4, transcript_event_seq),
+    attached_at = now()
+WHERE submission_id = $1
+  AND state = 'accepted'
+  AND stream_owner_message_id IS NULL
+mailbox stream ownerselect a.account_id from chat_private.accounts a
+             join chat_private.binding_authorizations b on b.provider = a.provider and b.account_id = a.account_id
+             where b.provider = $1 and b.binding_id = $2
+               and a.connection_id = $3 and not a.revoked for share of adirect input has no captured binding epochaccount_retiredselect connection_id, generation, transport_json, delivery_target
+             from chat_private.binding_authorizations
+             where provider = $1 and binding_id = $2 and chat_id = $3
+               and account_id = $4 and external_kind = 'direct' and participation = 'active'
+             for shareaccount_authorization_retiredtransport_jsontransport_authorization_absentconnection_idgenerationdelivery_targetselect epoch from chat_private.bindings
+         where chat_id = $1 and provider = $2 and not revoked for sharetransport_authorization_changedbinding_retiredactivity_monitor_list_thread_actionsactivity_monitor_list_recent_thread_actionsactivity_monitor_message_thread_lookupactivity_monitor_read_threaddatabase write admission gate closedadmission_timeoutassert_table_existstable_presence.queryeventscontext_snapshotsdeliveriesskill_invalidation_stateskill_invalidation_receiptsdev_notice_watermarkinvite_badge_seen_stateagentscontext_itemsrecovery_ownersdelivery_outboxassert_required_tablesstream_lanesearch_vectorsearch_textwork_idsnapshot_kindstate_jsondelivery_keynext_attempt_at_utcskill_namepending_invalidation_hashlast_seen_version_idlast_seen_badge_versiontext_contentrecovery_classjob_idrun_idretired_chat_ids_pkeyruntime_search_documents_events_fts_idxruntime_search_documents_media_fts_idxruntime_search_documents_memory_fts_idxruntime_events_main_history_seq_desc_idxruntime_events_main_history_parent_kind_seq_idxruntime_events_public_runtime_user_seq_idxruntime_work_items_active_idxruntime_work_items_terminalized_idxdeliveries_retry_idxdeliveries_terminal_retention_idxruntime_chat_event_derived_write_backlog_created_idxruntime_chat_event_derived_write_backlog_ready_idxagent_subagent_progress_message_child_pending_idxagent_subagent_spawns_open_global_created_idxagent_agents_spawn_metadata_gin_idxagent_agents_active_subagent_liveness_idxagent_context_item_derived_write_backlog_created_idxagent_context_item_derived_write_backlog_ready_idxagent_runtime_restart_checkpoints_updated_idxagent_recovery_owners_active_scan_idxagent_recovery_owners_terminal_retention_idxagent_recovery_owners_terminal_status_idxscheduler_jobs_due_idxscheduler_runs_status_scheduled_utc_idxscheduler_delivery_outbox_retry_idxscheduler_delivery_outbox_retention_idxself_improvement_runs_queue_idle_gated_idxself_improvement_runs_queue_non_idle_gated_idxmediamedia_items_description_retry_idxmedia_items_ready_media_idxmedia_locations_geocode_retry_idxhiddenmessage_roledeveloperassistantevent_kindtool_starttool_donetask_statuscontext_item_kindmessage_texttext_segmentstool_calltool_outputrun_statussucceededskippedapplied_migration_max_versioncredential_resolutionshared_pool_mutexresolve_database_urlshared_pool_reuse_checkpool_connectshared_pool_reusedHATCH_DATABASE_URLenvironment_overridecredential_task_queuecredential_decodeagent_status broadcast presence statusstandalonedelivery_modechunkedfinalization_fencedreconciliation_storage_failedfinalization_failedclaim reconciliation finalizationfinalization_ignored_staleinvalid_stream_uploadfinalization_fence_failedfence invalid reconciliation uploadinvalid_source_snapshotsettle invalid device reconciliation for retrydevice_sync_stateHealth reconciliation applied but device-sync worker wake failedfinalize device reconciliationrejecting malformed restart replay fence transitionfailed to persist replay fence before successor activationfailed to persist restart replay fencereplay-forbidden checkpoint had no durable payload fingerprintrejecting malformed replay-forbidden checkpointfailed to reconcile durable cancellation handoff before checkpoint replayfailed to read durable cancellation handoff evidencereplay-forbidden checkpoint changed before successor activationrestart checkpoint changed before successor activationfailed to persist replay-forbidden checkpoint successorfailed to persist restart checkpoint successorrejecting restart checkpoint with contradictory tool output evidencefailed to reconcile checkpoint tool outputs with the durable transcriptfailed to read durable tool output evidencefailed to terminalize invalid restart checkpoint ownerfailed to check for a live session before closing a refused browser checkpointbrowser_input_unsupported_kindbrowser_input_classification_failedbrowser_input_refusedclosing browser restart checkpoint refused by browser input admissionrestart checkpoint payload was invalidfailed to decode runtime restart checkpoint payloadpayload_decode_failedruntime restart checkpoint payload was missingpayload_missingrestart checkpoint payload version was invalidunsupported runtime restart checkpoint version was invalidunsupported_payload_versionruntime restart checkpoint required the retired voice executorlegacy_voice_execution_unsupportedruntime restart execution config was invalidexecution_config_invalidexplicit restart recovery identity had no execution configexplicit_execution_config_missingruntime restart approval correlation was invalidapproval_wait_invalidremoving invalid runtime restart checkpoint without executing itprimary_root_checkpoint_owner_terminalizationprimary_root_checkpoint_closefailed to terminalize owner of invalid restart checkpointprimary_root_checkpoint_metadata_readprimary_root_checkpoint_envelope_validationvalidprimary_root_checkpoint_terminal_cleanupterminal restart checkpoint classification lacked conversation metadataprimary_root_checkpoint_owner_validationprimary_root_checkpoint_invalid_cleanupfailed to load conversation meta before restart envelope validationfailed to resolve restart recovery policy inputsfailed to terminalize owner of terminal restart checkpointclosing legacy checkpoint without an exact execution configprimary_root_checkpoint_legacy_cleanupprimary_root_checkpoint_replay_preparationclosing runtime restart checkpoint without resume: recovery class has no proven live owner workprimary_root_checkpoint_owner_cleanupprimary_root_checkpoint_deferred_marker_storeprimary_root_checkpoint_agent_resumefailed to resume agent for runtime restart checkpointprimary_root_checkpoint_active_message_readvalidated restart checkpoint is missing its durable payload tokenprimary_root_checkpoint_message_activationcheckpoint agent is running a different message; leaving row unresolvedfailed to inspect active message during checkpoint rehydrateprimary_root_checkpoint_deletefailed to resume message from runtime restart checkpointfailed to delete runtime restart checkpoint after successful rehydratefailed to generate local video thumbnail; continuing without thumbnailvideo FileRef MIME type cannot be canonicalized; preserving original referencevideo FileRef could not be materialized; preserving original referencevideo FileRef store task failed; preserving original referenceinsert into runtime.browser_task_tabs (task_id, tab_id, alias)
+         select $1, $2, 't' || (coalesce(max(substring(alias from 2)::integer), 0) + 1)
+         from runtime.browser_task_tabs where task_id = $1
+         on conflict (task_id, tab_id) do nothingupdate runtime.browser_task_tabs set actor_invocation_id = $3, actor_agent_id = $4
+             where task_id = $1 and tab_id = $2 and holder_invocation_id is not nullupdate runtime.browser_task_tabs set holder_invocation_id = null,
+                 actor_invocation_id = null, actor_agent_id = null, held_at = null
+                 where task_id = $1 and tab_id = $2update runtime.browser_task_tabs set holder_invocation_id = $3,
+                 actor_invocation_id = $4, actor_agent_id = $5, held_at = now()
+                 where task_id = $1 and tab_id = $2 and holder_invocation_id is nullbrowser tab hold changedtab_id, alias, holder_invocation_id, actor_invocation_id, actor_agent_id, (select holder.kind from runtime.browser_invocations holder where holder.invocation_id = browser_task_tabs.holder_invocation_id) as holder_kindbrowser seat is missingselect i.input_json,i.created_at
+    from runtime.browser_invocations i join runtime.browser_tasks t using(task_id)
+    where i.invocation_id=$1 and i.task_id=$2 and i.agent_id=$3
+      and i.planner_agent_id=$4 and t.owner_agent_id=$4
+      and t.status in ('running','user_controlled') and i.kind='login'
+      and i.result_json is null and i.stop_requested_at is null and i.sign_in_site=$5select
+        (select detail_json from runtime.browser_seat_inputs s
+          where s.task_id=$1 and s.kind='account'
+            and (s.invocation_id=$2 or s.invocation_id is null)
+            and ($4::timestamptz is null or s.created_at >= $4)
+            and s.created_at <= (select created_at from runtime.browser_calls where operation_id=$3)
+          order by s.created_at desc,s.revision desc nulls last,s.input_id desc limit 1),
+        (select detail_json from runtime.browser_seat_inputs s
+          where s.task_id=$1 and s.kind='account'
+            and (s.invocation_id=$2 or s.invocation_id is null)
+            and ($4::timestamptz is null or s.created_at >= $4)
+          order by s.created_at desc,s.revision desc nulls last,s.input_id desc limit 1)code target is not a loginselect c.operation_id, t.alias from runtime.browser_calls c
+        left join runtime.browser_task_tabs t on t.task_id = c.task_id and t.tab_id = c.tab_id
+        where c.task_id=$1 and c.kind='action' and c.phase='dispatched' and c.operation_id<>$2
+        and c.tab_id is not distinct from $3
+        order by c.operation_id limit 1unknown_checkpoint_kindcommitted_handoffstandby_checkpointstartup media safety dispatch interrupted by shutdownpurchasesbrowser question is emptybrowser question changed during replaybrowser question disappearedprovide the user's reply or information already authorized for the taskThis specialist's call chain has a confirmed or uncertain browser environment replacement. New work requires a handoff to the browser planner.browser.browseverification_codepage.credential_fillverification_code needs the exact HTTPS origin of the sign-in page that sent the code.browser specialist journal step was not recordednotificationsproactive_sync_workerscheduled action previously reached its deadlinescheduled action was already dispatched; its outcome is uncertain after interruption. Verify committed effects before a manual retrycheckpointed work lost its restart checkpoint owner during daemon restartskipping checkpointed RuntimeWork retirement: retained checkpoint evidence is incompletereconciled checkpointed RuntimeWork at startupretrying checkpointed RuntimeWork orphan retirementideas_catalog_config_cacheIdeas catalog last-known-good snapshot is invalidIdeas catalog last-known-good metadata is invalidfailed to read Ideas catalog last-known-good snapshotresume_epoch_installresume_verdict_reportingresume_maintainer_scheduleresume epoch installedcore_loop_runtime.orchestrator_startup.required_pre_readyrequired orchestrator startup work failedfailed to migrate legacy goal association into goal workspaceinspect goal workspace migration markergoal workspace consolidation already completed; skipping legacy migrationlist goals for workspace reconciliationstage legacy goal rootsinspect legacy goal cron associations for shared schedules%migrate legacy associations for goal À

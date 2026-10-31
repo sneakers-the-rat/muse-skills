@@ -1,0 +1,113 @@
+select greatest(
+                           (select max(terminal_at)
+                            from self_improvement.follow_up_queue
+                            where state = 'delivered'),
+                           (select $1::timestamptz
+                            where exists (
+                              select 1
+                              from self_improvement.follow_up_queue
+                              where state = 'delivering'
+                            ))
+                         )select exists(select 1 from self_improvement.follow_up_queue
+                         where metadata_json->>'eval_replay_handoff' = $1
+                           and producer = 'proactive_notifier')select follow_up_id, delivery_submission_id, state,
+                            metadata_json->>'eval_replay' as phase,
+                            metadata_json->>'eval_replay_submission' as recorded
+                     from self_improvement.follow_up_queue
+                     where metadata_json->>'eval_replay_handoff' = $1
+                       and producer = 'proactive_notifier'
+                       and metadata_json ? 'eval_replay_submission'
+                     order by created_at, follow_up_id
+                     limit 1
+                     for updatefollow_up_idphasedelivery_submission_idupdate self_improvement.follow_up_queue
+                         set not_before = $2,
+                             metadata_json = jsonb_set(metadata_json, '{eval_replay}', '"released"'),
+                             updated_at = now()
+                         where follow_up_id = $1select operation_id from self_improvement.proactivity_operations
+                where operation_id=$1 for updateselection belongs to a retired flowselect exists (
+                select 1 from self_improvement.proactive_editions where edition_id=$1)with holds as (
+                select distinct on (candidate->>'candidate_id') candidate, disposition, t.created_at
+                from background_workers.turns t
+                join self_improvement.proactive_editions e
+                  on e.edition_id='run:' || (t.context_json#>>'{packet,run_id}')
+                cross join lateral jsonb_array_elements(
+                  coalesce(t.output_json->'unselected', t.output_json->'held', '[]'::jsonb)) disposition
+                cross join lateral (
+                  select value as candidate from jsonb_array_elements(
+                    t.context_json#>'{packet,inputs,prepare_composition,candidates}') with ordinality c(value, number)
+                  where case when t.output_json ? 'unselected' then
+                    disposition->>'decision'='hold' and (
+                      (t.context_json#>>'{packet,inputs,prepare_composition,selection_refs}'='item'
+                        and disposition->>'key'='item:' || number::text)
+                      or disposition->>'key'=coalesce(
+                        value#>>'{evidence,prepared_work,opportunity_key}', value->>'candidate_id'))
+                    else disposition->>'candidate'=number::text end
+                ) c
+                where t.worker='proactivity' and t.kind='compose' and t.state='submitted'
+                  and t.created_at >= $4 - interval '7 days'
+                  and e.research_flow=$1 and e.flow_generation=$2 and e.allocation=$3
+                  and t.context_json->>'proactivity_profile'='prepared_research'
+                order by candidate->>'candidate_id', t.created_at desc, t.turn_id desc
+            ) select jsonb_build_object('candidate', candidate,
+                'held_at', created_at, 'disposition', disposition) as preparation from holds
+              where (candidate->>'created_at')::timestamptz >= $4 - interval '7 days'
+                and not exists (select 1 from self_improvement.attention_ledger a
+                  where a.lane=candidate->>'lane' and a.candidate_key=candidate->>'candidate_key')
+              order by created_at, candidate->>'candidate_id'update self_improvement.follow_up_queue
+                set state='pending', priority=$3, not_before=$4, claimed_at=null,
+                    delivery_submission_id=null, updated_at=now(),
+                    metadata_json=metadata_json - 'proactivity_changes',
+                    disposition_reason='proactivity_revalidation_deferred'
+                where follow_up_id=$1 and delivery_submission_id=$2
+                    and producer='proactive_notifier' and state='delivering'
+                    and not (metadata_json ? 'proactivity_admitted')select distinct other.state, claim.key
+    from self_improvement.follow_up_queue other
+    cross join lateral jsonb_array_elements(
+        coalesce(other.metadata_json->'delivery_items', '[]'::jsonb)) item
+    cross join lateral jsonb_array_elements_text(
+        coalesce(item->'deduplication_keys', '[]'::jsonb)) claim(key)
+    where other.producer='proactive_notifier'
+        and other.follow_up_id <> $1
+        and (other.state='delivering' or
+            (other.state='delivered' and other.terminal_at >= now() - interval '7 days'))
+        and (other.metadata_json->'selected_item_ids') ? (item->>'item_id')update self_improvement.follow_up_queue
+                 set metadata_json=(metadata_json - 'message_prefenced') || $3,
+                     priority=$4, updated_at=now(),
+                     message=$5, delivery_instructions=$6, allowed_tools=$7
+                 where follow_up_id=$1 and producer='proactive_notifier'
+                   and state in ('pending','delivering')
+                   and delivery_submission_id is not distinct from $2
+                   and not (metadata_json ? 'proactivity_admitted')
+                   and $4 <= priority
+                   and coalesce($3->'removed_items', '{}'::jsonb)
+                       @> coalesce(metadata_json->'removed_items', '{}'::jsonb)
+                   and not exists (
+                     select 1 from jsonb_array_elements($3->'delivery_items') next_item
+                     where metadata_json ? 'delivery_items' and not exists (
+                       select 1 from jsonb_array_elements(metadata_json->'delivery_items') prior_item
+                       where prior_item->>'item_id'=next_item->>'item_id'))
+                 returning metadata_json->>'edition_id'update self_improvement.attention_ledger
+                    set state='dropped', reason=$3,
+                        outcome=case when $4 then 'missed' else outcome end, updated_at=now()
+                    where decision_id=any($1) and edition_id=$2 and state='pending_delivery'select exists(select 1 from self_improvement.follow_up_queue
+                 where follow_up_id=$1 and delivery_submission_id=$2
+                   and producer='proactive_notifier'
+                   and metadata_json->'selected_item_ids'='[]'::jsonb)update self_improvement.follow_up_queue
+                 set metadata_json=jsonb_set(metadata_json,'{delivery_items}',$3)
+                 where follow_up_id=$1 and delivery_submission_id=$2
+                   and producer='proactive_notifier' and state='delivering'
+                   and (not (metadata_json ? 'delivery_items') or $3 <@ (metadata_json->'delivery_items'))update self_improvement.follow_up_queue set priority=$2, updated_at=now()
+                where follow_up_id=$1 and producer='proactive_notifier' and state='pending'select pg_advisory_xact_lock(hashtextextended('proactivity.delivery_selection', 0))select metadata_json, expires_at from self_improvement.follow_up_queue
+                 where follow_up_id=$1 and delivery_submission_id=$2
+                   and producer='proactive_notifier' and state='delivering'
+                   and expires_at > clock_timestamp()
+                 for updatedelivery_itemsproactivity_profileprepared_researchdeferred_untiledition_idupdate self_improvement.follow_up_queue set metadata_json=$3
+                 where follow_up_id=$1 and delivery_submission_id=$2defer_after_expirydefer_againexpiredin_another_deliveryalready_deliveredupdate self_improvement.attention_ledger
+                     set state = 'dropped', updated_at = $2
+                     where decision_id = any($1) and state = 'pending_delivery'update self_improvement.attention_ledger
+                     set surfaced_at = $3,
+                         state = 'surfaced',
+                         handoff_message_id = coalesce(handoff_message_id, $2),
+                         updated_at = $3
+                     where decision_id = any($1) and surfaced_at is nullselect exists(select 1 from self_improvement.proactive_editions
+                        where edition_id=$1 and state='pending_delivery' and research_flow=$2 and flow_generation=$3)attention decision belongs to a retired flowattention edition is no longer currentdecision_id, lane, candidate_key, goal_id, outcome, reason, message, handoff_message_id, decided_at, surfaced_at, created_at, updated_at, state, source, suggestion_id, presentation, edition_id

@@ -1,0 +1,18 @@
+update device.geofences
+                     set state = 'removed', removed_reason = $3, updated_at = $4
+                     where node_id = $1 and device_geofence_id = $2 and state = 'active'select exists(select 1 from device.geofences where node_id = $1) as presentpresentdelete from device.geofences where state = 'removed' and updated_at < $1update device.geofences
+                     set last_triggered_at = $2, trigger_count = trigger_count + 1,
+                         cooldown_until = case when owner = $6 then $3 else $5 end,
+                         updated_at = $2,
+                         state = case
+                           when geofence_id = $4 and not persistent then 'removed'
+                           else state
+                         end,
+                         removed_reason = case
+                           when geofence_id = $4 and not persistent then 'one-time region fired'
+                           else removed_reason
+                         end
+                     where geofence_id = any($1::text[])
+                       and state = 'active'
+                       and (cooldown_until is null or cooldown_until <= $2)
+                     returning geofence_idserendipity

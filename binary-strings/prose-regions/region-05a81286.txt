@@ -1,0 +1,119 @@
+delete from health.samples
+                 where provider = $1
+                   and node_id is not distinct from $2
+                   and start_at <= $4
+                   and coalesce(end_at, start_at) >= $3internal error: entered unreachable code: bundle-specific clear always includes a sample typedelete from health.samples
+                 where provider = $1
+                   and node_id is not distinct from $2
+                   and sample_type = $3
+                   and bundle_id is null
+                   and start_at <= $5
+                   and coalesce(end_at, start_at) >= $4delete from health.samples
+                 where provider = $1
+                   and node_id is not distinct from $2
+                   and sample_type = $3
+                   and bundle_id is not distinct from $4
+                   and start_at <= $6
+                   and coalesce(end_at, start_at) >= $5delete from health.sample_values where sample_id = any($1)insert into health.events (
+                   provider, node_id, bundle_id, timezone, event_type, event_at, event_end_at
+                 )
+                 values ($1, $2, $3, $4, $5, $6, $7)
+                 returning health_event_idinsert into health.events (
+                   provider, node_id, external_event_id, bundle_id, timezone, event_type,
+                   event_at, event_end_at
+                 )
+                 values ($1, $2, $3, $4, $5, $6, $7, $8)
+                 returning health_event_idstart_epoch_secend_epoch_secbundle_idevent_typehealth.eventsinsert into health.sample_values (
+               sample_id, value_name, unit, numeric_value, text_value
+             )  on conflict (sample_id, value_name)
+              do update set
+                unit = excluded.unit,
+                numeric_value = excluded.numeric_value,
+                text_value = excluded.text_valuesleep_awake_duration_secsleep_core_duration_secsleep_deep_duration_secsleep_rem_duration_secsleep_asleep_unspecified_duration_secinsert into health.sleep_sessions (
+               provider, node_id, external_sleep_id, bundle_id, timezone, start_at, end_at,
+               quality_score, awake_seconds, core_seconds, deep_seconds, rem_seconds,
+               asleep_unspecified_seconds, asleep_seconds, in_bed_seconds
+             )
+             values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+             returning sleep_session_idquality_scoresleep_in_bed_duration_sechealth.sleep_sessionsaggregatesinsert into health.samples (
+               provider, node_id, external_sample_id, bundle_id, timezone, sample_type,
+               start_at, end_at, unit, numeric_value, text_value
+             )  returning sample_iddelete from health.record_values where record_table = $1 and record_id = $2insert into health.record_values (
+               record_table, record_id, value_name, unit, numeric_value, text_value
+             )  on conflict (record_table, record_id, value_name)
+              do update set
+                unit = excluded.unit,
+                numeric_value = excluded.numeric_value,
+                text_value = excluded.text_valueinsert into health.workouts (
+               provider, node_id, external_workout_id, bundle_id, timezone, workout_type,
+               start_at, end_at, active_seconds, energy_kcal, distance_meters,
+               hr_max_bpm, hr_average_bpm
+             )
+             values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+             returning workout_idactive_duration_secsenergy_burned_kcaldistance_metershr_max_bpmhr_average_bpmworkout_typehealth.workoutsinsert into health.aggregates (
+               provider, node_id, timezone, aggregate_type, period_start, period_end,
+               numeric_value, unit
+             ) with ns as (
+             select tstzrange($4::timestamptz, $5::timestamptz) as s
+         ),
+         matched as (
+             delete from health.synced_ranges
+             where provider = $1
+               and node_id is not distinct from $2::text
+               and category = $3
+               and (span && (select s from ns) or span -|- (select s from ns))
+             returning lower(span) as lo, upper(span) as hi
+         ),
+         bounds as (
+             select min(lo) as lo, max(hi) as hi from matched
+         )
+         insert into health.synced_ranges (provider, node_id, category, span)
+         select $1, $2::text, $3, tstzrange(
+             least(lower(ns.s), coalesce((select lo from bounds), lower(ns.s))),
+             greatest(upper(ns.s), coalesce((select hi from bounds), upper(ns.s)))
+         )
+         from nsselect pg_advisory_xact_lock_shared(hashtext($1))health.records.writedelete from health.samples
+         where node_id = $1
+           and start_at <= $3
+           and coalesce(end_at, start_at) >= $2select distinct provider from health.synced_ranges where node_id = $1delete from health.samples
+         where provider = $1
+           and node_id is not distinct from $2
+           and sample_type = $3
+           and start_at <= $5
+           and coalesce(end_at, start_at) >= $4active reconciliation changed while its staging was lockedfenced invalid device reconciliation attempt
+    update device.nodes
+    set health_last_received_at = $1,
+        health_last_sync_status = 'success',
+        health_last_sync_error = null
+    where node_id = $2
+    sweep of open step attempts after terminal transition failedobjective state read failed; recurring window uses its first-run lookbackcoalesced_into_existing_incomplete_runworkflow-skills-v1content_schemawindow_lower_boundenqueuecoalescedrequest_idleaseactive_runwait_cancelledqueuedobjective_not_registeredcoalesced_into_existing_occurrence
+WITH inserted AS (
+INSERT INTO chat.chats (
+  chat_id,
+  origin,
+  lifecycle,
+  status,
+  thread_title,
+  source_session_id,
+  source_prompt_seq_upper_bound,
+  source_message_id_boundary,
+  created_at,
+  updated_at
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $12, $12)
+RETURNING chat_id
+)
+INSERT INTO chat_private.bindings(chat_id, provider, conversation_key, delivery_target)
+SELECT chat_id, $9, $10, $11 FROM inserted WHERE $9::text IS NOT NULL
+persistentactivedeleted sessions.updated events require an owner-visible deletion proofsession row unavailable for sessions.updated payloadfailed to hydrate sessions.updated payloadload proactive worker terminal follow-up evidencebackground job has an unsupported content localechat_historygoalsspacesconnector inventory read failedfeed prompt text is empty; the cold-start gate abstainsfeed cold-start verdict cache read failed; reclassifyingfeed cold-start verdict cache write failed; the next fire reclassifiespropertiesneeds_interpretationstringadditionalPropertiesfeed:cold_startfeed_generatethe prompt's scope depends on the reader's own signalsfeed prompt scope classification answered off-schema; the fire generatesfeed prompt scope classification failed; the fire generatesfeed prompt scope classification timed out; the fire generatesfeed prompt read failed for the tier-1 visit arm; the arm abstainsfeed step died to execution infrastructure; retrying after backoffagentattempt lost its executorattempt deadline elapsed across restartexecutor lost across restart without a durable submissionremoved a prior attempt's leftover selection file before a fresh editor attemptleftover selection file removal failed; the fresh editor attempt may reject writescancelledfeed visit-run preemption could not terminalize; the preempting work collapses onto the visit run insteadadhoc reading day clamped forward to the active dayactive-day anchor read failed; adhoc keeps its basin dayscheduled slot already failed a run; admission skipped as spentscheduled feed fire preempted an open visit runpreempted by a scheduled feed runfeed edition admission unexpectedly hit the fill backstopfeed generation is remotely disabled (hatch_feed_generation_disabled); declining admissionfeed generation is paused by DEFCON 3; declining admissionfeed activity tier 1 from a recent feed visit (QE visit arm)gatekeeperfeed activity tier overwritten to tier 1chat_turns_72hfeed_activity_72hview_sessions_48hengagement_48hvisit_windowchat_turns_5dengagement_5dfeed activity tier downgraded from tier 1 to tier 2 (non-US capacity lever)token_optimization:v1feed connector inventory read failedfeed generation-queue drain could not read the adhoc lanefeed generation-queue drain could not list candidatesfeed generation-queue drain could not read the picked promptcorrupt Feed queue context is rebuilding under the current job authoritycorrupt Feed queue context cannot recover its job authority; retaining the stampfeed generation queue drained a prompt-change runfeed generation-queue drain hit a scheduled occurrence outcomefeed generation-queue drain admission failed; the stamp stays queuedfeed generation-queue stamp clear failed after admissionPopular topics with readers## Using the popular topics
+"Popular topics with readers" lists the reader's own signal topics first, then the topics many readers respond to.
+- Write from the reader's prompt and own signals first. A story they call for beats a popular topic whatever the figures say.
+- On web and social, when no story on their own signals fits this hour, use the popular topics to find another story that already belongs in their paper. If the prompt names a subject, stay inside it. Among stories that fit about equally, prefer the higher figure.
+- On tracking, health, and schedule, the figures only help choose among items on the assigned beat. They never replace its quiet close.
+- A figure never licenses a subject the reader ruled out. An example subtopic is a starting point, not an assignment: skip one this beat cannot serve, such as bills or orders the reader has not connected.
+For example:
+- The reader has shared only that they cook on weekends: write a Food & Nutrition story built on that signal.
+- Nothing on their cooking is fresh this hour and Entertainment is the top popular topic: write about a new cooking show, not the weekend box office.
+- The prompt names no subject and the reader has shared only their city: take the best popular-topic story that happens in or affects that city.
+engagement breakdown read failed; composing without itfeed maintenance coalesce could not read prompts; leaving the slot to its cron firemaintenance_coalesceden-USfeed maintenance coalesce could not open the schedulerfeed maintenance coalesce could not queue the slotfeed maintenance coalesce slot did not start within the wait boundfeed maintenance coalesce slot startedfeed maintenance coalesce could not read the slot statusfeed pulse pick-history read failed; picker sees no historyidea lane not offered this hourfeed_model:avocrono-fast-testipnext/avocrono-fast-testfeed pulse picker unit read failed; picker sees no recent unitsin_holdout_2026h2:truethe only lane this reader's paper can workfeed pulse: adhoc run on an empty feed; the first paper prints news, not an ideaRequired when beat is "ideas": the id of the                                 chosen idea.prompt_fitreader_signalsstory_valuelane_figuresmedia_varietypolicy_defaultWhat most separated your lane from the runner-up: the reader's prompt, what the reader has shared, the stronger story, the lane figures, media variety, or nothing, so the hour went where your policy sends an hour nothing separates.decided_by
+€Š

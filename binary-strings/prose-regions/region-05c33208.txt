@@ -1,0 +1,67 @@
+errorsuccesswrite_admissionwritepostgres write completed slowlypostgres write failedretrying idempotent postgres writeone-shot postgres write invoked more than onceclaim_id, run_id, kind, salience, claim_text, quote, speaker, evidence_handles, supersedes_claim_id, status, confidence, first_seen, reinforced_at, valid_until, source_path, source_line, created_at, updated_atselect e.memory_entry_id, e.body_text
+                       from memory.entries e
+                      where e.source_type = 'memory_md'
+                        and e.status = 'active'
+                        and not exists (
+                            select 1 from memory.entry_attributes a
+                             where a.memory_entry_id = e.memory_entry_id
+                               and a.attribute_name = 'claim_id')
+                      order by e.created_at desc
+                      limit $1select n.memory_entry_id,
+                            max(substring(d.citation_path
+                                from '([0-9]{4}-[0-9]{2}-[0-9]{2})[.]md$')) as day
+                       from unnest($1::bigint[]) as n(memory_entry_id)
+                       join memory.embeddings ne on ne.memory_entry_id = n.memory_entry_id
+                       cross join lateral (
+                            select de.memory_entry_id,
+                                   1.0::double precision - (ne.embedding <=> de.embedding)
+                                       as similarity
+                              from memory.embeddings de
+                              join memory.entries e
+                                on e.memory_entry_id = de.memory_entry_id
+                             where e.source_type = 'daily'
+                               and e.status = 'active'
+                               and de.embedding_model_id = ne.embedding_model_id
+                             order by ne.embedding <=> de.embedding
+                             limit $3) m
+                       join memory.entries d on d.memory_entry_id = m.memory_entry_id
+                      where m.similarity >= $2
+                      group by n.memory_entry_idselect exists(
+                        select 1 from memory.embeddings where memory_entry_id = $1)select c.claim_id, c.claim_text,
+                            1.0::double precision - (note.embedding <=> emb.embedding)
+                                as similarity
+                       from memory.embeddings note
+                       join memory.embeddings emb
+                         on emb.embedding_model_id = note.embedding_model_id
+                       join memory.entry_attributes a
+                         on a.memory_entry_id = emb.memory_entry_id
+                        and a.attribute_name = 'claim_id'
+                       join memory.entries e
+                         on e.memory_entry_id = emb.memory_entry_id
+                        and e.status = 'active'
+                       join memory.claims c
+                         on c.claim_id = a.scalar_value
+                        and c.status = 'active'
+                      where note.memory_entry_id = $1
+                      order by note.embedding <=> emb.embedding
+                      limit $2
+select e.memory_uri,
+       e.chunk_id,
+       e.body_text as text,
+       e.source_type,
+       e.status,
+       e.privacy_class,
+       e.confidence,
+       e.reason_text as reason,
+       coalesce(e.citation_path, '') as citation_path,
+       e.line_start,
+       e.line_end,
+       e.created_at::text as created_at,
+       e.created_at_unix,
+       coalesce((
+         select jsonb_object_agg(a.attribute_name, a.scalar_value order by a.attribute_name)::text
+         from memory.entry_attributes a
+         where a.memory_entry_id = e.memory_entry_id
+       ), '{}'::text) as metadata_json,
+       1.0::double precision as rank_score
+from memory.entries eÀ€¿

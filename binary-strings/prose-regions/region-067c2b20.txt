@@ -1,0 +1,255 @@
+gave up waiting for a socket-activated service to answerstill waiting for a socket-activated service to answersocket-activated service answered after waitingall branches are disabled and there is no else branchbackground task failedsuccesscompletion_result_context_seqfinal_response_context_seqcompletion publication lookup exceeded descendant boundwrite_admissionwritepostgres write completed slowlypostgres write failedretrying idempotent postgres writehatch:db:operationen-USone-shot postgres write invoked more than onceinvalid_paramsegress frame length overflowunknownscheduler.cronbrowser invocation is missingbrowser parent is missingCHECKPOINTselect pg_current_wal_lsn()select b.*, a.connection_id as current_connection_id,
+                    a.revoked as account_revoked
+                from chat_private.binding_authorizations b
+                join chat_private.accounts a using(provider, account_id)
+                where b.provider = $1 and b.binding_id = $2account_revokedcurrent_connection_idinvocation_id, task_id, planner_agent_id, parent_invocation_id, caller_agent_id, caller_submission_id, call_id, agent_id, submission_id, runtime_work_id, input_digest, kind, state, input_json, context_json, result_json, wait_call_id, ordinal, tab_id, (extract(epoch from created_at) * 1000)::bigint as created_at_ms, (extract(epoch from stop_requested_at) * 1000)::bigint as stop_requested_at_ms, terminal_reason, handoff_state, (extract(epoch from finished_at) * 1000)::bigint as finished_at_msselect exists(select 1 from runtime.browser_invocations i
+                join runtime.browser_tasks t on t.task_id = i.task_id
+                left join runtime.browser_executions e on e.task_id = t.task_id
+                  and e.planner_agent_id = t.owner_agent_id
+                where i.invocation_id = $1 and i.result_json is null
+                  and i.planner_agent_id = t.owner_agent_id
+                  and t.status in ('running', 'user_controlled')
+                  and (t.status = 'running' or (t.outcome_status is null and e.control_revision = t.state_revision)))update spaces.action_invocations
+                     set status = $2,
+                         settled_at_text = $3,
+                         settled_at_unix_ms = $4,
+                         finished_at = coalesce($10, now()),
+                         duration_ms = $5,
+                         result_preview = $6,
+                         error = $7,
+                         stream_protocol_messages = $8,
+                         stream_data_messages = $9
+                     where invocation_id = $1active execute-resolve recovery row has no worker owneractive self-improvement recovery owner has no agent idactive feed step recovery owner has no agent id
+        with activity as (
+            select state, wait_event_type, query_start
+            from pg_stat_activity
+            where datname = current_database()
+              and pid <> pg_backend_pid()
+        ),
+        client_io as (
+            select
+                coalesce(sum(reads), 0)::bigint as reads,
+                coalesce(sum(read_time), 0)::double precision as read_time_ms,
+                coalesce(sum(writes), 0)::bigint as writes,
+                coalesce(sum(write_time), 0)::double precision as write_time_ms,
+                coalesce(sum(evictions), 0)::bigint as evictions
+            from pg_stat_io
+            where backend_type = 'client backend'
+              and object = 'relation'
+              and context = 'normal'
+        ),
+        checkpointer_io as (
+            select
+                coalesce(sum(writes), 0)::bigint as writes,
+                coalesce(sum(write_time), 0)::double precision as write_time_ms,
+                coalesce(sum(fsyncs), 0)::bigint as fsyncs,
+                coalesce(sum(fsync_time), 0)::double precision as fsync_time_ms
+            from pg_stat_io
+            where backend_type = 'checkpointer'
+              and object = 'relation'
+              and context = 'normal'
+        )
+        select
+            current_setting('max_connections')::bigint as max_connections,
+            current_setting('superuser_reserved_connections')::bigint
+                as superuser_reserved_connections,
+            count(*)::bigint as connections_total,
+            count(*) filter (where state = 'active')::bigint as active,
+            count(*) filter (where state = 'idle')::bigint as idle,
+            count(*) filter (where state = 'idle in transaction')::bigint
+                as idle_in_transaction,
+            count(*) filter (where wait_event_type is not null)::bigint as waiting,
+            count(*) filter (where wait_event_type = 'IO')::bigint as io_waiting,
+            count(*) filter (where wait_event_type = 'Lock')::bigint as lock_waiting,
+            count(*) filter (where wait_event_type = 'LWLock')::bigint as lwlock_waiting,
+            coalesce(max((extract(epoch from clock_timestamp() - query_start) * 1000)::bigint)
+                filter (where state = 'active' and query_start is not null), 0)::bigint
+                as longest_active_ms,
+            (select reads from client_io) as client_reads,
+            (select read_time_ms from client_io) as client_read_time_ms,
+            (select writes from client_io) as client_writes,
+            (select write_time_ms from client_io) as client_write_time_ms,
+            (select evictions from client_io) as client_evictions,
+            (select writes from checkpointer_io) as checkpointer_writes,
+            (select write_time_ms from checkpointer_io) as checkpointer_write_time_ms,
+            (select fsyncs from checkpointer_io) as checkpointer_fsyncs,
+            (select fsync_time_ms from checkpointer_io) as checkpointer_fsync_time_ms,
+            (select wal_records from pg_stat_wal)::bigint as wal_records,
+            (select wal_fpi from pg_stat_wal)::bigint as wal_fpi,
+            (select wal_bytes::bigint from pg_stat_wal) as wal_bytes,
+            (select wal_buffers_full from pg_stat_wal)::bigint as wal_buffers_full,
+            (select buffers_alloc from pg_stat_bgwriter)::bigint as buffers_alloc,
+            (select buffers_clean from pg_stat_bgwriter)::bigint as buffers_clean,
+            (select maxwritten_clean from pg_stat_bgwriter)::bigint as maxwritten_clean,
+            (select blks_hit from pg_stat_database where datname = current_database())::bigint
+                as db_blks_hit,
+            (select blks_read from pg_stat_database where datname = current_database())::bigint
+                as db_blks_read,
+            (select blk_read_time from pg_stat_database
+                where datname = current_database())::double precision as db_blk_read_time_ms
+        from activity
+        maxmax_connectionssuperuser_reservedsuperuser_reserved_connectionsconnections_totalactiveidle_in_transactionwaitingio_waitinglock_waitinglwlock_waitinglongest_active_msioclient_backendrelation_normalreadsclient_readsread_time_msclient_read_time_mswritesclient_writeswrite_time_msclient_write_time_msevictionscheckpointercheckpointer_writescheckpointer_write_time_msfsyncscheckpointer_fsyncsfsync_time_mscheckpointer_fsync_time_mswalrecordswal_recordswal_fpibyteswal_bytesbuffers_fullbuffers_allocbuffers_cleandb_blks_hitblks_readdb_blks_readdb_blk_read_time_msunrecoverable_owner_sweep_acquireunrecoverable_owner_sweep_lookupsselect 1 from runtime.browser_tasks where task_id = $1 for updatewith recursive branch as (
+                    select invocation_id from runtime.browser_invocations where invocation_id = $1
+                    union all select child.invocation_id from runtime.browser_invocations child
+                    join branch parent on child.parent_invocation_id = parent.invocation_id)
+                    update runtime.browser_invocations set state = $3, suspended_state = null, result_json = $2,
+                    terminal_reason = $4, finished_at = now(), updated_at = now(),
+                    handoff_state = case when parent_invocation_id is null then $5::text end,
+                    handoff_submission_id = case when parent_invocation_id is null then $6::text end
+                    where invocation_id in (select invocation_id from branch)
+                    and result_json is null returning invocation_idselect exists(select 1 from runtime.browser_tasks t
+                join runtime.browser_executions e on e.task_id = t.task_id and e.planner_agent_id = t.owner_agent_id
+                where t.task_id = $1 and t.status = 'user_controlled' and t.outcome_status is null
+                  and e.control_revision = t.state_revision)attemptjob_idspace_build_completedstartup media safety dispatch unavailablerun_idstep_idmessage_idweb artifact was not founddaemon state dropped during recovery owner validationdaemon state dropped during recovery owner terminalizationinference-proxy returned an invalid model selection routeparent terminalizedterminalization_deferred..wait for upload descriptor socketsend upload SCM_RIGHTSlist ideas by idsshopping_results_v2navigationnavigation.scheduled_tasknode_card.notification_opt_inGatekeeper response omitted requested gate; using defaultinternal_errorload goal by idlist goal suggestionslist goal briefingslist goal updateslist goalsload goal session mapping by root goal idresolve root goal parentcloudflare share origin lookupread cloudflare share origin lookuphttp_original_subscribe_body_readhttpscompletion_resultthe review gave no reasonload goal for Space linkpg_system_identifiergetresume index maintainer is not installed/seenchat_id is requiredchat_id must be a chat UUIDmessage_id is requiredinvalid chat querymessengerpoppy/run/systemd/journal/io.systemd.journalpresentation_root_session_idsession_idrunninginvalid session_idnot_foundmessage not foundinvalid legacy chat queryinvalid legacy URIinvalid thread_idchat not foundexpected a JSON object`params` is requiredWWW did not confirm the Cloudflare share originShared action response omitted its result; check stored state before retryingrepaired terminal runtime work whose terminal timestamp was missingactivity_monitor ignoring invalid assigned agent iddaemon state dropped during Muse Mail handoffdaemon state dropped during Muse Mail outbound reviewdaemon state dropped during inherited authority validationdaemon state unavailableaxum::extract::connect_info::ConnectInfo<hatch_daemon_core::listeners::PeerIdentity>runtime config state retains the completion senderexecute_checkpoint_best_effortrestart.verify_wal_lsnBUG: we do not expose the `.close()` methodload_chat_bindingevents.verify_for_restartbackground_workersturnsruntimebrowser_tasksbrowser.invocationbrowser.invocation_for_agentbrowser.invocation_is_current
+select calls.call_id, calls.run_id, calls.replay_key,
+       calls.child_agent_id, calls.child_message_id, calls.status
+from runtime.workflow_agent_calls calls
+join runtime.workflow_runs runs on runs.run_id = calls.run_id
+left join runtime.workflow_phase_runs phases on phases.phase_run_id = calls.phase_run_id
+where calls.child_agent_id = $1
+  and calls.status in ('pending', 'running')
+  and runs.status in ('queued', 'running', 'paused')
+  and (calls.phase_run_id is null or phases.status in ('pending', 'running', 'paused'))
+order by calls.updated_at desc, calls.call_id asc
+limit 2
+multiple active workflow calls name the same recovery ownerUDS HTTP request path must start with '/'user_state.touch_recentcancelledactions.update_settlementsucceededacquired connection, but time to acquire exceeded slow thresholdacquired connectionselect run_id, worker_generation, worker_phase,
+                                worker_agent_id, worker_started_at,
+                                execute_message_id, resolve_message_id
+                         from runtime.execute_resolve_runs
+                         where status in ('pending', 'notify_pending')
+                           and worker_agent_id = $1
+                         order by updated_at desc, run_id
+                         limit 2multiple active execute-resolve runs name the same recovery agentselect run_id, worker_phase, worker_phase_attempt,
+                                worker_agent_id, worker_boot_generation,
+                                worker_claimed_at_utc, worker_execution_timed_out,
+                                worker_history_agent_id
+                         from scheduler.job_runs
+                         where status in ('queued', 'running')
+                           and worker_agent_id = $1
+                         order by run_id
+                         limit 2multiple active scheduler runs name the same recovery agentselect * from agent.delegate_requests where worker_agent_id = $1
+sp.parent_message_id AS parent_message_id,
+       sp.parent_request_id AS parent_request_id,
+       sp.root_request_id AS root_request_id,
+       (
+         SELECT root_request.request_origin
+         FROM runtime.requests AS root_request
+         WHERE root_request.request_id = sp.root_request_id
+       ) AS root_request_origin,
+       sp.root_message_execution_id AS root_message_execution_id,
+       sp.parent_agent_id AS parent_agent_id,
+       sp.child_agent_id AS agent_id,
+       sp.child_depth::bigint AS depth,
+       sp.created_at AS created_at,
+       sp.completed_at AS completed_at,
+       sp.seen_at AS seen_at,
+       sp.status AS status,
+       sp.deferred_terminal_status AS deferred_terminal_status,
+       sp.requester_source AS requester_source,
+       sp.final_response AS final_response,
+       sp.prompt AS prompt,
+       sp.requester_chat_context_json AS requester_chat_context_json,
+       sp.agent_type AS agent_type,
+       sp.metadata_json AS metadata_json,
+       (
+         SELECT child.originating_location_context_json
+         FROM agents AS child
+         WHERE child.id = sp.child_agent_id
+       ) AS originating_location_context_json
+subagent_status_rows_for_parent_agent_scopesubagent_status_exists_for_parent_agent_scope
+sp.parent_message_id AS parent_message_id,
+       sp.parent_request_id AS parent_request_id,
+       sp.root_request_id AS root_request_id,
+       sp.root_message_execution_id AS root_message_execution_id,
+       sp.parent_agent_id AS parent_agent_id,
+       sp.child_agent_id AS agent_id,
+       sp.child_depth::bigint AS depth,
+       sp.created_at AS created_at,
+       sp.completed_at AS completed_at,
+       sp.seen_at AS seen_at,
+       sp.status AS status,
+       sp.deferred_terminal_status AS deferred_terminal_status,
+       sp.requester_source AS requester_source,
+       sp.agent_type AS agent_type
+subagent_status_lean_rows_for_parent_agent_scopeverify_runtime_databases_for_restartselect run_id, step_id, attempt, agent_id
+                     from self_improvement.run_steps
+                     where agent_id = $1 and status = 'running'
+                     order by updated_at desc, run_id, step_id, attempt
+                     limit 2multiple active self-improvement steps name the same recovery agentselect run_id, step_id, attempt, agent_id, message_id
+                     from feed.run_steps
+                     where agent_id = $1 and status = 'running'
+                     order by updated_at_ms desc, run_id, step_id, attempt
+                     limit 2multiple active feed steps name the same recovery agentsort_order asc, goal_id asccase attention_kind when 'user_action_required' then 0 when 'action_required' then 0 when 'new_information' then 1 else 2 end asc, case when next_due_at is not null and next_due_at <= now() + interval '30 days' then next_due_at else timestamptz '9999-12-31' end asc, coalesce(last_activity_at_ts, updated_at_ts, updated_at::timestamptz) desc, sort_order asc, goal_id ascgoal_id, source, attention_kind, attention_updated_at::text as attention_updated_at, next_due_at::text as next_due_at, escalation, slug, title, summary, description, momentum, momentum_status, emoji, image_relpath, icon_generation_status, status, created_at, updated_at, last_activity_at, pushable, parent_goal_id, sort_order, fixed_position, category, goal_kind, value_alignment, review_cadence, completed_atfixed_position asc nulls last, case when fixed_position is not null then goal_id end ascgoals.list_render_by_sourceMuse Mail owner inventory exceeded its page limitMuse Mail repeated an owner-page cursorinvalid Muse Mail thread IDMuse Mail returned an invalid owner IDmailboxinvalid Muse Mail message IDMuse Mail full-message response omitted its bodyMuse Mail returned a different message
+SELECT agents.session_id, checkpoint.execution_config_json
+FROM agent.chat_preferences preferences
+JOIN agent.agents agents ON agents.id = preferences.active_root_id
+JOIN agent.runtime_restart_checkpoints checkpoint ON checkpoint.agent_id = agents.id
+WHERE preferences.id = 1
+  AND agents.id = $1
+  AND agents.agent_id = $1
+  AND agents.kind = 'root'
+  AND agents.parent_id IS NULL
+  AND agents.parent_agent_id IS NULL
+  AND agents.depth = 0
+  AND agents.agent_type IS NULL
+  AND agents.status = 'completed'
+  AND agents.session_id IS NOT NULL
+  AND checkpoint.mode = 'idle'
+  AND checkpoint.payload_json IS NULL
+  AND checkpoint.recovery_class = 'foreground_root'
+  AND checkpoint.recovery_owner_id = $1
+  AND checkpoint.execution_config_json IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM agent.message_mailbox
+    WHERE agent_id = $1 AND state IN ('accepted', 'attached')
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM agent.mail_conversations WHERE agent_id = $1
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM agent.chat_workers WHERE agent_id = $1
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM agent.delegate_requests WHERE worker_agent_id = $1
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM agent.recovery_owners
+    WHERE agent_id = $1 AND terminal_at IS NULL
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM runtime.workflow_agent_calls calls
+    JOIN runtime.workflow_runs runs ON runs.run_id = calls.run_id
+    LEFT JOIN runtime.workflow_phase_runs phases
+      ON phases.phase_run_id = calls.phase_run_id
+    WHERE calls.child_agent_id = $1
+      AND calls.status IN ('pending', 'running')
+      AND runs.status IN ('queued', 'running', 'paused')
+      AND (calls.phase_run_id IS NULL OR phases.status IN ('pending', 'running', 'paused'))
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM self_improvement.run_steps
+    WHERE agent_id = $1 AND status = 'running'
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM background_workers.turns
+    WHERE agent_id = $1 AND state = 'running'
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM feed.run_steps
+    WHERE agent_id = $1 AND status = 'running'
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM scheduler.job_runs
+    WHERE worker_agent_id = $1 AND status IN ('queued', 'running')
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM runtime.execute_resolve_runs
+    WHERE worker_agent_id = $1 AND status IN ('pending', 'notify_pending')
+  )
+execution_config_jsonterminal primary-root checkpoint needs generic session cleanupterminal primary-root checkpoint needs generic config cleanup
+select recovery_class, owner_id, generation, agent_id, message_id,
+       active_at, terminal_at, terminal_status
+from agent.recovery_owners
+where agent_id = $1
+  and terminal_at is null
+select * from agent.mail_conversations where agent_id = $1load_postgres_health_metricssourceshutting down all space worker generationsspace worker manager is shutting downevicting idle space worker to free capacityspace worker capacity eviction completedskipping space worker warmup because no capacity was availablewaiting for space worker slot

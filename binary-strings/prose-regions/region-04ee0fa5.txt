@@ -1,0 +1,339 @@
+browser page audio was not transcribedbrowser revocation was not acknowledgednested browser result source URLs could not be readbrowser invocation disappearedfailed to finalize terminal subagent evidence during restart reconciliationfailed to read wearable announcements; omitting turn contextwearable announcement read timed out; omitting turn contextfailed to load RL spawn referencefailed to load RL relay referencesupdate runtime.browser_invocations set suspended_state = 'running'
+                 where invocation_id = $1 and suspended_state = 'waiting_child'select 1 from runtime.browser_invocations where invocation_id = $1 for updateinsert into runtime.browser_seat_inputs
+         (input_id, task_id, invocation_id, revision, kind, source_id, detail_json, shown_at)
+         select $1, $2, $3, coalesce(max(revision), 0) + 1, $4, $5, $6,
+           case when $7::boolean then now() end
+         from runtime.browser_seat_inputs where invocation_id = $3
+         on conflict (input_id) do nothinginsert into runtime.browser_seat_inputs
+         (input_id, task_id, kind, source_id, detail_json)
+         values ($1, $2, $3, $4, $5) on conflict (input_id) do nothingselect owner_agent_id, root_session_id
+        from runtime.browser_tasks where task_id = $1 and status = 'running' for updateselect epoch, control_revision from runtime.browser_executions
+        where task_id = $1 and planner_agent_id = $2 for updatebrowser seat changedbrowser service authority changedbrowser invocation authority changedaccepted dance recipe does not match its assetadvanced motion input framepublished avatar asset in placeskipped avatar asset publish: activation supersededdefault reference avatar activatedkept avatar imagewardrobe avatar worn againmain avatar imageavatar activated image-first (no clips yet)recorded avatar asset generation failurebundled look imagebundled look activatedreopened avatar asset give-ups for their delayed retrye9eb5ca1bec57ad5a6d3c3216cb1b667843bf164f4c3e0a37fcd24560f8760a0pool-b6e5f4afdbf0media-generation did not return valid JSON outputremove staging dircreate staging dir--media-subagent-output-type--conversation-json--orientation--output-dir--task-typeremove superseded Atlas icon state
+INSERT INTO requests (
+  request_id, root_request_id, parent_request_id, request_origin,
+  transcript_surface, root_work_class
+)
+VALUES ($1, $2, $3, $4, $5::runtime.transcript_surface, $6)
+ON CONFLICT (request_id) DO UPDATE SET
+  root_request_id = COALESCE(requests.root_request_id, excluded.root_request_id),
+  parent_request_id = COALESCE(requests.parent_request_id, excluded.parent_request_id),
+  request_origin = CASE
+    WHEN requests.request_origin = 'internal.runtime_replay' THEN excluded.request_origin
+    ELSE requests.request_origin
+  END,
+  transcript_surface = excluded.transcript_surface,
+  root_work_class = CASE
+    WHEN requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing'
+      THEN excluded.root_work_class
+    ELSE requests.root_work_class
+  END
+WHERE (requests.root_request_id IS NULL AND excluded.root_request_id IS NOT NULL)
+   OR (requests.parent_request_id IS NULL AND excluded.parent_request_id IS NOT NULL)
+   OR (requests.request_origin = 'internal.runtime_replay'
+       AND excluded.request_origin <> 'internal.runtime_replay')
+   OR requests.transcript_surface IS DISTINCT FROM excluded.transcript_surface
+   OR (requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing')
+call_id
+INSERT INTO tool_outputs (event_seq, call_id, status, output_text, error_text, created_at)
+VALUES ($1, $2, $3, $4, $5, to_timestamp($6::double precision / 1000.0))
+ON CONFLICT (event_seq) DO UPDATE SET
+  call_id = excluded.call_id,
+  status = excluded.status,
+  output_text = excluded.output_text,
+  error_text = excluded.error_text
+
+INSERT INTO tool_calls (event_seq, call_id, tool_name, status, arguments_json, created_at)
+VALUES ($1, $2, $3, 'started', $4, to_timestamp($5::double precision / 1000.0))
+ON CONFLICT (call_id) DO UPDATE SET
+  event_seq = excluded.event_seq,
+  tool_name = excluded.tool_name,
+  status = excluded.status,
+  arguments_json = excluded.arguments_json
+
+INSERT INTO chat_event_derived_write_backlog (event_seq, resources_json)
+VALUES ($1, $2)
+ON CONFLICT (event_seq) DO UPDATE SET
+  resources_json = excluded.resources_json,
+  updated_at = now()
+UPDATE chat_private.peer_conversations SET requester_chat_id = NULL
+         WHERE conversation_id = $1 AND requester_revision = $2
+           AND requester_chat_id = $3 AND NOT requester_unavailable
+           AND chat_id = $5
+           AND EXISTS (SELECT 1 FROM agent.agents
+                       WHERE id = $4 AND session_id = $3)peer handoff disagrees with its asking-chat claimpeer handoff requester changed before admission
+SELECT json_build_object(
+         'accepted_ordinal', accepted_ordinal,
+         'state', state,
+         'checkpoint_custody', checkpoint_custody,
+         'submission_json', submission_json
+       )::text
+FROM agent.message_mailbox
+WHERE agent_id = $1
+  AND state IN ('accepted', 'attached')
+ORDER BY accepted_ordinal, submission_id
+FOR UPDATE
+SELECT payload_json FROM runtime_restart_checkpoints WHERE agent_id = $1
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = 'executing',
+    stream_owner_message_id = $3,
+    attached_at = now()
+WHERE submission_id = $1
+  AND agent_id = $2
+  AND state = 'accepted'
+  AND stream_owner_message_id IS NULL
+
+SELECT agent_id, state, stream_owner_message_id, submission_json,
+       accepted_ordinal
+FROM agent.message_mailbox
+WHERE submission_id = $1
+FOR UPDATE
+
+SELECT EXISTS (
+  SELECT 1
+  FROM agent.message_mailbox
+  WHERE agent_id = $1
+    AND state = 'accepted'
+    AND accepted_ordinal < $2
+    AND (NOT $3 OR submission_kind <> 'internal_handoff')
+)
+tracked mailbox successor unexpectedly lost custodymessage mailbox successor promotion cannot overtake an older priority peer
+UPDATE agent.message_mailbox
+SET state = CASE WHEN $4 THEN 'completed' ELSE 'aborted' END,
+    checkpoint_custody = coalesce(checkpoint_custody, 'executing'),
+    terminalized_at = now()
+WHERE agent_id = $1
+  AND stream_owner_message_id = $2
+  AND submission_id = ANY($3)
+  AND state = 'attached'
+
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = 'executing',
+    stream_owner_message_id = $2,
+    attached_at = coalesce(attached_at, now())
+WHERE agent_id = $1
+  AND submission_id = ANY($3)
+  AND (
+    (state = 'accepted' AND stream_owner_message_id IS NULL)
+    OR (state = 'attached' AND stream_owner_message_id = $2)
+  )
+
+UPDATE agent.message_mailbox
+SET checkpoint_custody = 'queued'
+WHERE agent_id = $1
+  AND stream_owner_message_id = $2
+  AND submission_id = ANY($3)
+  AND state = 'attached'
+
+UPDATE agent.message_mailbox
+SET state = CASE
+      WHEN state = 'attached' AND $2 THEN 'completed'
+      ELSE 'aborted'
+    END,
+    terminalized_at = now()
+WHERE agent_id = $1
+  AND state IN ('accepted', 'attached')
+SELECT session_id, COALESCE(prompt_floor_seq, -1) AS prompt_floor_seq,
+                kind = 'root' AND parent_agent_id IS NULL
+                AND ephemeral IS DISTINCT FROM TRUE
+                AND status NOT IN ('shutdown', 'not_found') AS eligible
+         FROM agent.agents WHERE agent_id = $1 FOR UPDATEstartup_root_changedSELECT EXISTS(SELECT 1 FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND accepted_ordinal < $2)startup mailbox promotion cannot overtake an earlier accepted input
+SELECT payload_json
+FROM agent.runtime_restart_checkpoints
+WHERE agent_id = $1
+FOR UPDATE
+message mailbox attachment cannot overtake an older priority peer
+INSERT INTO agent.runtime_restart_checkpoints (
+  agent_id, mode, recovery_class, recovery_owner_id, execution_config_json,
+  payload_json, created_at, updated_at
+) SELECT $1, $2, $3, $4, $5, $6, $7, $7
+WHERE EXISTS (
+  SELECT 1
+  FROM agent.agents
+  WHERE agent_id = $1
+    AND status NOT IN ('shutdown', 'not_found')
+)
+ON CONFLICT (agent_id) DO NOTHING
+SELECT EXISTS (SELECT 1 FROM agent.agents WHERE agent_id = $1 AND status NOT IN ('shutdown', 'not_found'))conversation epoch
+INSERT INTO agent.message_mailbox (
+  submission_id, agent_id, conversation_epoch, submission_kind,
+  routing_scope, state, checkpoint_custody, stream_owner_message_id,
+  submission_json, transcript_event_seq, attached_at
+) VALUES (
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+  CASE WHEN $6 = 'attached' THEN now() ELSE NULL END
+)
+ON CONFLICT (submission_id) DO NOTHING
+RETURNING accepted_ordinal, accepted_at
+startup mailbox promotion requires its previously accepted input
+SELECT agent_id, conversation_epoch, submission_kind, routing_scope,
+       state, stream_owner_message_id, submission_json,
+       transcript_event_seq, accepted_ordinal, accepted_at
+FROM agent.message_mailbox
+WHERE submission_id = $1
+FOR UPDATE
+update chat.message_bindings set admitted_at = coalesce(admitted_at, now())
+                    where jarvis_message_id = $1 and chat_id = $2 and binding_epoch = $3 and transport = $4binding epochconversation_epochsubmission_kindrouting_scope
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = $5,
+    stream_owner_message_id = $2,
+    submission_json = $3,
+    transcript_event_seq = coalesce($4, transcript_event_seq),
+    attached_at = now()
+WHERE submission_id = $1
+  AND state = 'accepted'
+  AND stream_owner_message_id IS NULL
+mailbox stream ownerselect a.account_id from chat_private.accounts a
+             join chat_private.binding_authorizations b on b.provider = a.provider and b.account_id = a.account_id
+             where b.provider = $1 and b.binding_id = $2
+               and a.connection_id = $3 and not a.revoked for share of adirect input has no captured binding epochaccount_retiredselect connection_id, generation, transport_json, delivery_target
+             from chat_private.binding_authorizations
+             where provider = $1 and binding_id = $2 and chat_id = $3
+               and account_id = $4 and external_kind = 'direct' and participation = 'active'
+             for shareaccount_authorization_retiredtransport_jsontransport_authorization_absentconnection_iddelivery_targetselect epoch from chat_private.bindings
+         where chat_id = $1 and provider = $2 and not revoked for sharetransport_authorization_changedbinding_retired
+INSERT INTO agent.volatile_context_pins
+  (agent_id, variant_hash, variant_json, prompt_floor_seq, checkpoint_seq, body)
+SELECT $1, $2, $3, $4, $5, NULL
+WHERE EXISTS (SELECT 1 FROM agent.agents WHERE id = $1)
+ON CONFLICT (agent_id, variant_hash) DO UPDATE SET
+  variant_json = excluded.variant_json,
+  prompt_floor_seq = excluded.prompt_floor_seq,
+  checkpoint_seq = excluded.checkpoint_seq,
+  created_at = now()
+SELECT pg_advisory_xact_lock(hashtextextended('activity-monitor-root-carrier:' || $1, 0))
+WITH lineage(message_id) AS (
+    SELECT $1::text
+    UNION
+    SELECT user_message_id
+    FROM activity_monitor_carrier_user_messages
+    WHERE carrier_message_id = $1
+      AND (root_agent_id IS NULL OR root_agent_id = $2)
+    UNION
+    SELECT $3::text
+    WHERE $3 IS NOT NULL AND $4
+)
+INSERT INTO activity_monitor_message_threads (
+    message_id, activity_thread_id, created_at, updated_at
+)
+SELECT message_id, $5, $6, $6
+FROM lineage
+ON CONFLICT(message_id) DO UPDATE SET
+    activity_thread_id = excluded.activity_thread_id,
+    updated_at = excluded.updated_at
+WHERE activity_monitor_message_threads.activity_thread_id
+    IS DISTINCT FROM excluded.activity_thread_id
+
+SELECT activity_thread_id
+FROM activity_monitor_message_threads
+WHERE message_id = $1
+LIMIT 1
+
+INSERT INTO activity_monitor_agent_threads (agent_id, activity_thread_id, created_at, updated_at)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT(agent_id) DO UPDATE SET
+    activity_thread_id = excluded.activity_thread_id,
+    updated_at = excluded.updated_at
+WHERE activity_monitor_agent_threads.activity_thread_id IS DISTINCT FROM excluded.activity_thread_id
+activity_monitor_upsert_activity_thread_actionactivity_monitor_list_thread_actionsactivity_monitor_action_by_idactivity_monitor_list_recent_thread_actionsactivity_monitor_carrier_user_messagesactivity_monitor_message_thread_lookupactivity_monitor_read_threadactivity_monitor_list_active_threadsactivity_monitor_create_activity_threaddatabase write admission gate closedadmission_timeoutassert_table_existstable_presence.querybrowser steer ended before terminal status settled after interruptautomaticmissing 'data' argumentvoice call-control dispatch did not completeImage capture is not enabled on this voice session.Image capture is unavailable on the current device. Continue without capturing a frame.The current turn already includes an image. Use the attached image instead of capturing another frame.Camera frame requested. End this turn without delegating or speaking; the image arrives in a follow-up turn.browser task owner fence changed while failing reserved inputbrowser task owner fence changed after unpublished input failurebrowser task owner is not resumablefailed to hard-cut BrowserTask after reserved input settlement failurefailed to cancel BrowserTask after reserved input settlement failureThis window closed before it had any work to continue. Start a new window with browser.browse and task_id "new".the previous browser viewer has not disconnected yetan internal browser recovery is waiting for the previous viewer to disconnectInvalid browser.profiles arguments.Only a named profile can be deleted; the default profile stays.Cyber-tool-call JEV request timed outrequest did not serializeno registry wire serves the cyber_tool_call rolefail_open_model_unavailablepolicy failed its published hash or shape checkno answer within the review timeoutcyber_tool_call_jev_reviewfailed to generate local video thumbnail; continuing without thumbnailvideo FileRef MIME type cannot be canonicalized; preserving original referencevideo FileRef could not be materialized; preserving original referencevideo FileRef store task failed; preserving original referencehatch-engine/crates/hatch-agent/src/session/impl_session/message_execution/message_abort.rs:118hatch-engine/crates/hatch-agent/src/session/impl_session/message_execution/message_abort.rs:238hatch-engine/crates/hatch-agent/src/session/impl_session/message_execution/restart_state.rs:747compaction stream timed out waiting for first model output chunkcompaction stream timed out waiting for next model output chunkstream_ended_without_donecompaction produced empty text outputpresentation policy unavailable; keeping links in textconnector consent card presentation failedconnector consent card presentation outcome unknowninput_gateway_policybrowser look failed verification before input classificationbrowser look verification worker failed before input classificationbrowser input gateway rejected a model-visible tool outputThe browser observation could not be safely made available.tool_inputbrowser_phasescomputer_control_action_summarytool_dispatch_timeouttool_dispatchapproval_correlation_failedapproval_correlationbackground_exec_completion_undeliveredbackground_exec_reconciliation_failedbackground exec completion fence closedhidden submission arrived after its stream was terminally cancelledinsert into runtime.browser_task_tabs (task_id, tab_id, alias)
+         select $1, $2, 't' || (coalesce(max(substring(alias from 2)::integer), 0) + 1)
+         from runtime.browser_task_tabs where task_id = $1
+         on conflict (task_id, tab_id) do nothinginsert into runtime.browser_task_tabs (task_id, tab_id, alias)
+         select $1, listed.tab_id, 't' || (seen.highest + row_number() over (order by listed.position))
+         from unnest($2::text[]) with ordinality as listed(tab_id, position)
+         cross join (select coalesce(max(substring(alias from 2)::integer), 0) as highest
+                     from runtime.browser_task_tabs where task_id = $1) seen
+         where not exists (select 1 from runtime.browser_task_tabs known
+                           where known.task_id = $1 and known.tab_id = listed.tab_id)
+         on conflict (task_id, tab_id) do nothingupdate runtime.browser_task_tabs set actor_invocation_id = $3, actor_agent_id = $4
+             where task_id = $1 and tab_id = $2 and holder_invocation_id is not nullupdate runtime.browser_task_tabs set holder_invocation_id = null,
+                 actor_invocation_id = null, actor_agent_id = null, held_at = null
+                 where task_id = $1 and tab_id = $2update runtime.browser_task_tabs set holder_invocation_id = $3,
+                 actor_invocation_id = $4, actor_agent_id = $5, held_at = now()
+                 where task_id = $1 and tab_id = $2 and holder_invocation_id is nullbrowser tab hold changedupdate runtime.browser_task_tabs set holder_invocation_id = null,
+             actor_invocation_id = null, actor_agent_id = null, held_at = null
+             where task_id = $1 and tab_id = any($2)update runtime.browser_task_tabs set actor_invocation_id = $3, actor_agent_id = $4
+             where task_id = $1 and tab_id = any($2) and holder_invocation_id is not nullSELECT payload_json FROM runtime_restart_checkpoints WHERE agent_id = $1 FOR UPDATESELECT submission_json, octet_length(submission_json)::bigint AS serialized_bytes
+         FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND submission_id <> $2startup_queue_fullThe message does not belong to this chat.This is not an available personal chat.hatch-engine/crates/hatch-agent/src/session/impl_session/message_execution/restart_state/late_follow_up.rs:8OC gate: Restart (recycle folds queued follow-up)OC gate: ContinueQueued (promote queued follow-up, no strand)OC gate: Closed (cancellation owns stream)OC gate: Closed (no pending follow-up)hatch-engine/crates/hatch-agent/src/session/impl_session/message_execution/restart_state/late_follow_up.rs:95shareshare_invocation_tool_unavailableurl--project-dirsubagent_publication_prohibitedfailed to acknowledge uploaded-content foreground restrictionSELECT event_seq, event_name, source, role::text AS role,
+                    visibility::text AS visibility, message_id, agent_id,
+                    parent_agent_id, parent_message_id, reply_to_message_id,
+                    transcript_surface::text AS transcript_surface, payload_json,
+                    request_id, root_request_id, parent_request_id,
+                    extract(epoch from created_at)::bigint AS created_at
+             FROM runtime.events WHERE idempotency_key = $1SELECT ci.item_json, ci.message_source,
+                        extract(epoch from ci.created_at)::bigint AS created_at,
+                        p.client_context_json
+                 FROM agent.context_items ci
+                 LEFT JOIN agent.context_item_resume_projection p
+                   ON p.agent_id = ci.agent_id AND p.seq = ci.seq
+                 WHERE ci.agent_id = $1 AND ci.seq = $2subagent bootstrap ownership transfer was cancelled after reservationowner approval for chat work failedproductionimage_genericvideo_genericicon_genericicon_spacespaces_builderideas_builderself_improvement_stepspaces_published_mediaspaces_bootstrap_iconspaces_regenerate_iconpodcast_coveravatar_imageavatar_animateavatar_uploadatlas_selectionpeer_connection_portraitspace_iconboot_prefetchidle_admissioninteractive_enforcementspace_action_interactive_enforcementenabledsampledoverflow in Duration::newcalled `Result::unwrap()` on an `Err` valuerecent_3drecent_14drecent_90drecent_180dCRSCybertransportspacesmemory_search_embeddingmemory_search_rerankvoice_library_rerankmemory_reindex_embeddingmemory_runtime_readinessfeed_search_embeddingfeed_index_embeddingfeed_idea_slot_embeddingicon_index_embeddingicon_query_embeddingideas_index_embeddingideas_semantic_dedup_embeddingip_blockedrate_limitedsign_incaptchamissing_informationsite_blockedpersonal_agent_protocolruntime.proactivityruntime.flight_trackingruntime.peer_syncproactive_notification_workerflight_tracking_workerunsafe_contentagent_instructionspeer_chat_rootgroup_chat_rootexternal_party_chat_rootmail_conversationdelegate_main_requestworkflow_subagentspaces_builder_litespaces_builder_editspaces_builder_python_editbrowser_taskdeep_researchspace_taskflight_tracking_steppeer_sync_stepfeed_workflow_stepephemeral_agent_stepscheduler_cron_executescheduler_cron_resolveexecute_resolve_workersystem_cron_productvoice_delegaterealtime_voicecompanionvisualCBRN_TOOL_CALLCYBER_PROMPTassistantinternal error: entered unreachable code: invalid Once statecleanflagged_highflagged_lownoyeshome_files_v4_darkavailableforbidden_passthroughinvalid_urlrefused_hostrequest_timeoutrequest_connectnon_200_statusbyte_cap_exceededundecodable_imageinvalid_spawn_inputinvalid_spawn_metadataagent_type_policy_deniedfile_grants_no_task_scopefile_grants_storage_unavailablefile_grants_task_unavailablefile_grants_changedfile_grant_unavailablefile_grant_not_uploadfile_grant_unnamedavatar_reference_path_rejectedavatar_reference_not_foundavatar_reference_workspace_unavailablereference_image contains a traversal componentreference_image is outside the workspacereference_image was not foundreference_image is not a filereference_image workspace is unavailableimage_options_widgetemptyquadrupedavianwinged_animalserpentineother_articulatedform_agnosticconstructingsucceededinternal_wakemanualthresholdafter_inferenceawaiting_approvalafter_tool_dispatchdroppeddescendantsrevokefinishobservecaptureactprepare_filesubmit_purchaseshopify_cartprepare_inputpayment_inputreceiptresolve_effectbrowser_session_codebrowser_session_submitbrowserassistant_trackingqueue_state_unavailabletransport_detachedextra_slot_release_inconclusiveactive_reconciliation_inconclusiveidle_preview_release_inconclusivequeue_emptyexecution_authority_deferredsite_policy_unavailableno_capacitycapacity_fullcapacity_eviction_inconclusiveslot_ensure_inconclusivecapacity_rejection_inconclusiveslot_not_startableslot_inventory_unavailableslot_release_inconclusiverejected_schemarejected_draft_validationproduct_try_onproduct_try_on_head_and_shouldersexternal_turnside_agentno_foreground_seatproactive_turnuser_disabledconfig_read_failedcontrol_armStripe LinkMerchant Cardskillmuse.skill_searchmuse.connector_searchCONNECTOR.mdnot_runningrestart_ownedenumeration_failedtask_endedsuppresseddeferred_validationnew_generationsnapshot_continuationreply_snapshot_editreply_path_editfresh_from_promptno_public_session_rowpath_deniedread_failedstore_failedtask_failedend_call_media_unavailableend_call_response_unavailableend_call_caller_speechend_call_media_closedend_call_response_unsettledend_call_playback_timeoutend_call_already_requestedhtml_filenavigationlocal_mapoptionalready_ownedproject_into_currentdefer_until_promotionpending_initnot_foundinvocation_waitingmediumlowdeclared_mimefilename_extensionleading_signatureembedded_zip_signaturetrailing_dataunreadablemalformed_framingavatar_generationterminal_fence_checkdelivery_claimfollow_up_submissionmark_delivereddeliveredterminal_builder_suppressedorphaned_success_suppressedkill_claimed_suppressedrestart_interruptedrestart_interrupted_suppressedterminal_recipient_suppressedterminal_fence_check_faileddelivery_claim_failedagent_unavailablesubmit_failedmark_delivered_failedwaiting_for_inferencewaiting_for_tool_dispatchwaiting_for_user_confirmationcheckpointedcancellingpreemptingterminalizingpreemptedmergedineligiblecompaction_summary_prefixfull_projected_transcriptperiodic_cumulative/empty_namemalformed_nameunrecognized_namespaced_namefinancepersonal_productivityhome_automationfamilyconnect_devicescreation_mediaentertainmentgoal_scopedavatar_improvementadmissionsubmission_commitafter_inference_persistedafter_tool_dispatch_persistedterminalizationinvalid_requestpausedretireduser_contextself_fencedchat_messagesinference_in_flightcommentary_output_in_flightafter_commentary_persistedafter_commentary_boundarytool_dispatch_in_flightcandidatedismissedbuiltbrowser_bot_challenge_guidesagent_to_agentartifact_icon_generationavatar_wardrobeserendipitymuse_mailphonephone_self_testshop_pay_wallet_selectionproactivity_source_readshare_ideas_skillsmb_product_shots_skillvoice_designvoice_modevoice_spoken_previewbuiltin_artifactscandy_runartifact_versionsbrowser_open_live_checkswelcome_to_muse_tutorialmuse_townstateful_artifact_sharingartifact_exit_driven_buildartifact_view_referencepreapprovalmodel_resolution_failedprompt_failedschema_failedinvalid_iconallowhard_blocksteer_sensitiveSUCCEEDEDno_clientssend_failedanimalmissing_grantstale_workerabsentunresolvedmissing_currentcurrent_not_committedpending_fifo_barriercurrent_tool_prefillsuccessor_tool_prefillcancellation_promotionrestart_capture_frozenunsafe_restart_phasedifferent_routing_scopemetadata_incompatibleat_riskbehindask_for_informationcart-snapshot/opt/hatch/bin/instacartYour owner was asked privately to approve this, and its result will come back to you once they answer. If the chat is waiting on you, send one short message with `mailbox.send_message` saying you're checking with your owner, and then end your turn. Don't describe the command or the approval.
+An approval card is already waiting for the user privately. Its result will return here after they answer. Do not ask again or reveal the private request or decision to the other Muse. Continue any independent work. If the delay changes what the other Muse can expect, send one brief factual update with `mailbox.send_message`, without exposing the approval or claiming the pending action has begun. When only the answer remains, end the turn and wait for it to return.
+
+guacamole_26b_safety_cronpolicyguard-nvfp4-cronasync_darkcbrne_returned_text_context_v2cbrne_returned_text_context_v3idea_share_disabledIdea sharing is disabled by the operatoridea_share_private_environmentIdea sharing is unavailable on confidential VMsa search responsea get responsea maintenance responsea health responseunseenAsk firstAct freelyinvalid_outputupstream_unavailableavatar_compile_failedinput_not_foundlocal_frame_unreadablelocal_timeoutmuse.ideas_build_hand_off
+task_id,
+broker_instance,
+node_id,
+node_name,
+browser_harness_kind,
+browser_harness_version,
+browser_session_id,
+root_session_id,
+owner_agent_id,
+root_message_id,
+stream_owner_message_id,
+status,
+title,
+step_count,
+chat_context_json,
+latest_action_id,
+latest_tab_json,
+latest_screenshot_json,
+admission_seq,
+presentation_root_session_id,
+parent_agent_id,
+tool_call_id,
+request_trace_context_json,
+requester_source,
+requester_transport,
+requester_model,
+requester_effective_model,
+request_mode_json,
+max_training_tier_json,
+run_presentation_locale,
+run_location_context_json,
+is_task_card_visible,
+owner_kind,
+initial_instruction,
+history_source_agent_id,
+wallet_selection_provider,
+wallet_selection_payment_method_id,
+wallet_choice_revision,
+continuation_root_task_id,
+browser_navigation_attempted,
+browser_route,
+egress_profile,
+profile_id,
+card_generation,
+run_number,
+(extract(epoch from run_started_at) * 1000)::bigint as run_started_at_ms,
+state_revision,
+(extract(epoch from deadline_at) * 1000)::bigint as deadline_at_ms,
+(extract(epoch from created_at) * 1000)::bigint as created_at_ms,
+(extract(epoch from updated_at) * 1000)::bigint as updated_at_ms,
+(extract(epoch from completed_at) * 1000)::bigint as completed_at_ms,
+(extract(epoch from terminal_user_update_due_at) * 1000)::bigint as terminal_user_update_due_at_ms,
+terminal_reason,
+terminal_interrupt_subtype,
+outcome_status,
+outcome_reason,
+(extract(epoch from outcome_at) * 1000)::bigint as outcome_at_ms,
+retention_end_reason,
+(extract(epoch from relocation_hold_until) * 1000)::bigint as relocation_hold_until_ms,
+relocating_to,
+relocated_from,
+on_shared_tab
+audit_nondeliveryaudit_capture_infragoals.update_parentgoals.update_metadata_if_existsartifact_icon_not_publishedoutcome-free user control reported a restored parked outcomeoutcome-origin user control reported a synthesized needs-user outcomeoutcome-origin user control lost its stored outcomeThe Idea was not published: it names a person or includes other identifying details. Tell the user it cannot be shared with those details. If they want a generic version, share it as a new Idea with a different title and summary, without names, contact details, exact venues, dates, or other identifying details. Do not offer the held copy.The Idea was not published: its content cannot be shared publicly. Tell the user it cannot be shared, and do not retry it.The Idea was not published: it would direct another person's agent to act outside their own data and choices. Tell the user it cannot be shared as written. If they want a safe version, share it as a new Idea with a different title and summary, with steps that use only the recipient's own data, accounts, and chosen tools. Do not offer the held copy.idea_share_held_unsafe_contentidea_share_held_agent_instructionsThe current turn cannot start work on the originating browser.this build was spawned by another agent, not the user's chat, so the question has nobody to reach. Decide open design choices yourself and name them in `summary`; for missing user data or sources, finish as the Completion section of your system prompt says, naming them in `verification_notes`.this build runs without a user present (scheduled, workflow, or internal lineage), so there is nobody to ask. Decide open design choices yourself and name them in `summary`; for missing user data or sources, finish as the Completion section of your system prompt says, naming them in `verification_notes`.status "needs_user_input" is only available while creating a new web artifact. Decide open design choices yourself and name them in `summary`; for missing user data or sources, finish as the Completion section of your system prompt says, naming them in `verification_notes`.creating a forked side chat from a side chat is not permittedFix what the feedback names. Prepare the revised command with mail_task.prepare_action under the same step_id, then run the returned command, which is reviewed again. Do not change the recipients to get around the review. If only the user can resolve the feedback, for example with their approval or information, do not send. Put your question for the user in your mail_task.finish_turn notification.local_cellno_compactionsync_compactedforce_no_compactionforce_sync_compactedfollow_upinterrupt_waitcredential_updateanswertask_updateaccountRIFFph

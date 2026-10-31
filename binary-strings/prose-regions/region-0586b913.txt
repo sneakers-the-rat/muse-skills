@@ -1,0 +1,435 @@
+forward_audiocommit_audioclear_audiorealtime input is paused for a voice updateprivate realtime execution cleanup task failedfailed to reset local input while suppressing caller audiofailed to resolve public session id for live user transcriptload_root_conversation_candidate_by_session_id
+SELECT event_seq, event_name, source, role::text AS role, visibility::text AS visibility,
+       message_id, agent_id, parent_agent_id, parent_message_id, reply_to_message_id,
+       transcript_surface::text AS transcript_surface, payload_json,
+       (extract(epoch from created_at))::bigint AS created_at
+FROM runtime.events WHERE idempotency_key = $1
+runtime.cancellation
+SELECT ci.item_json, ci.message_source,
+       (extract(epoch from ci.created_at))::bigint AS created_at,
+       projection.client_context_json
+FROM agent.context_items AS ci
+LEFT JOIN agent.context_item_resume_projection AS projection
+  ON projection.agent_id = ci.agent_id AND projection.seq = ci.seq
+WHERE ci.agent_id = $1 AND ci.seq = $2
+cancellation retry does not match its committed identity
+SELECT
+  GREATEST(
+    (SELECT COALESCE(MAX(seq), -1) FROM context_items WHERE agent_id = $1),
+    (SELECT COALESCE(MAX(seq), -1) FROM context_item_resume_projection WHERE agent_id = $1),
+    COALESCE((SELECT handoff_context_high_water_seq FROM agent.agents WHERE agent_id = $1), -1),
+    (SELECT COALESCE(MAX(root_seq), -1) FROM agent.companion_trace_imports WHERE root_agent_id = $1),
+    (SELECT COALESCE(MAX(producer_seq), -1) FROM agent.companion_trace_imports WHERE producer_agent_id = $1),
+    COALESCE((SELECT settled_seq FROM agent.companion_trace_sources WHERE producer_agent_id = $1), -1)
+  ) AS max_item_seq,
+  COALESCE((SELECT prompt_floor_seq FROM agents WHERE id = $1), -1)
+    AS prompt_floor_seq,
+  (SELECT COALESCE(MAX(checkpoint_seq), -1)
+     FROM agent_compactions
+     WHERE agent_id = $1
+       AND checkpoint_seq IS NOT NULL
+       AND has_replacement_history)
+    AS checkpoint_seq
+max_item_seqcheckpoint_seqcontext_seqlegacy completion has no verifiable batch ownerUPDATE agent.agents SET handoff_context_high_water_seq =
+                GREATEST(COALESCE(handoff_context_high_water_seq, -1), $2)
+             WHERE agent_id = $1SELECT state, submission_json, accepted_at, transcript_event_seq,
+                    stream_owner_message_id FROM agent.message_mailbox
+             WHERE agent_id = $1 AND submission_id = $2 FOR UPDATEstartup_submission_missingsubmission_jsonreply_to_targetlegacy startup cancellation changed its replyaccepted_atstateinvalid startup mailbox statestartup_submission_terminalstartup_execution_ownedstartup_already_cancelledtranscript_event_seqstream_owner_message_idstartup cancellation input already has execution custodystartup_submission_changedUPDATE agent.message_mailbox SET state = 'aborted', terminalized_at = now(),
+                    transcript_event_seq = $3
+             WHERE agent_id = $1 AND submission_id = $2 AND state = 'accepted'
+               AND stream_owner_message_id IS NULL AND transcript_event_seq IS NULLstartup cancellation custody changed before commitSELECT state, submission_json, accepted_at, transcript_event_seq,
+                    stream_owner_message_id, checkpoint_custody FROM agent.message_mailbox
+             WHERE agent_id = $1 AND submission_id = $2 FOR UPDATElegacy startup quota rejection changed its replycheckpoint_custodypending startup input already has a transcript eventstartup_quota_rejectionUPDATE agent.message_mailbox SET state = 'completed', terminalized_at = now(),
+                    transcript_event_seq = $3
+             WHERE agent_id = $1 AND submission_id = $2 AND state = 'accepted'
+               AND stream_owner_message_id IS NULL AND checkpoint_custody IS NULL
+               AND transcript_event_seq IS NULLstartup quota rejection custody changed before commitvoice_rtc_join_promptvoice_rtc_join_location_waitvoice_rtc_join_cosmos_joinvoice_rtc_join_agent_ready_waitvoice_rtc_join_session_configvoice_rtc_join_seed/v1/model/getmodel.get returned an empty selectioncredentials/v1/auth-file/getx-hatch-gk-assignment-confirmedselect b.chat_id, e.event_name, e.visibility::text AS visibility, e.payload_json, e.display_text_ready,
+        exists(select 1 from chat_private.publications p where p.event_seq = e.event_seq) as captured
+        from runtime.events e
+        join agent.agents root on root.id = coalesce(e.parent_agent_id, e.agent_id)
+        join chat_private.bindings b on b.chat_id = root.session_id
+        where e.event_seq = $1 and e.event_name in ('message.assistant', 'delta.presentation')
+          and root.kind = 'root' and root.parent_agent_id is null
+          and b.chat_id = $2 and b.provider = $3display_text_readyinsert into chat_private.publications
+        (message_id, event_seq, chat_id, context_json, request_trace_json, body, execution_id, state, content_state, display_ready)
+        select e.message_id, e.event_seq, $2, $3, $4, m.body, $5, $6, $7, $8
+        from runtime.events e join runtime.messages m using (event_seq)
+        where e.event_seq = $1 on conflict (message_id) do nothingwith content as (
+          select case when event_name = 'delta.presentation' and $3
+            then 'terminal' else $2 end as state from runtime.events where event_seq = $1
+        ) update chat_private.publications p set
+        body = m.body, content_state = content.state, display_ready = $3,
+        state = case
+          when t.disposition = 'quiet' or (t.phase = 'aborted' and (content.state <> 'terminal' or not $3))
+            or (t.phase = 'completed' and content.state = 'streaming') then 'retired'
+          when t.disposition = 'publish' and $3
+            and (content.state = 'terminal' or (t.phase = 'completed' and content.state = 'static'))
+            then case when length(trim(m.body)) = 0 then 'retired' else 'pending' end
+          else 'writing' end
+        from runtime.messages m, chat_private.publication_turns t, content
+        where p.event_seq = $1 and m.event_seq = p.event_seq
+          and t.execution_id = p.execution_id and p.state = 'writing'select case when pg_try_advisory_xact_lock_shared(hashtextextended($1, 0))
+         then pg_try_advisory_xact_lock_shared(hashtextextended($2, 0)) else false endchat creation overlaps retirementselect exists(select 1 from chat_private.retired_chat_ids where chat_id = $1)select exists(select 1 from chat.chats where chat_id = $1)chat owner is absent or being retiredconfidential provider capture call is unavailableconfidential provider capture has no source turnconfidential provider capture has no active callconfidential Companion capture has no active callfailed to deliver confidential image to realtime providerconfidential Companion capture was not accepted`session_id` cannot be emptysession not foundroot session has no durable public-session classificationfailed to classify root session visibilityfailed to load root session visibilitydefaulthttp://localhost/hatch/check_gatekeepersGatekeeper response was invalid; using defaultGatekeeper check failed; using defaultfailed to read effective model for session creation; falling back to registry defaultvideo call has no JOIN avatar; using the current avatar's prepared referencereply_to_textemit_widget_for_session requires a request idfailed to persist delta.presentation event for session widget
+    select
+        node_id,
+        coalesce(display_name, node_id) as display_name,
+        platform,
+        enabled_permissions_json,
+        commands_json,
+        data_sources_json,
+        version,
+        device_family,
+        model_id,
+        metadata_json,
+        is_wakeup_supported,
+        delivery_app,
+        invoke_protocol,
+        coalesce(paired_at_text, created_at::text) as paired_at,
+        coalesce(last_seen_at_text, last_seen_at::text, created_at::text) as last_seen_at,
+        status,
+        pairing_status
+    from device.nodes
+pairing_status <> 'revoked'
+DELETE FROM search_documents
+WHERE owner_table = 'runtime.events'
+  AND owner_key = $1
+DELETE FROM resources WHERE event_seq = $1INSERT INTO resources (event_seq, ordinal, resource_kind, resource_key, label, mime_type, size_bytes, metadata_json) VALUES /__hatch/chat_context_jsonstring/__hatch/display_text_updated_at_msnumberSELECT field_path, scalar_type, scalar_value, text_value FROM event_payload_fields WHERE event_seq = $1 FOR UPDATEDELETE FROM event_payload_fields WHERE event_seq = $1 AND field_path = ANY($2::text[])field_pathscalar_typescalar_valuetext_valueINSERT INTO event_payload_fields (event_seq, field_path, scalar_type, scalar_value, text_value) VALUES  ON CONFLICT (event_seq, field_path) DO UPDATE SET scalar_type = excluded.scalar_type, scalar_value = excluded.scalar_value, text_value = excluded.text_valueruntime.search_documents.search_text
+INSERT INTO search_documents (owner_table, owner_key, search_text, language, search_vector)
+VALUES ('runtime.events', $1, $2, 'simple', to_tsvector('simple', $3))
+ON CONFLICT (owner_table, owner_key) DO UPDATE SET
+  search_text = excluded.search_text,
+  language = excluded.language,
+  search_vector = excluded.search_vector,
+  updated_at = now()
+WHERE search_documents.search_text IS DISTINCT FROM excluded.search_text
+   OR search_documents.language IS DISTINCT FROM excluded.language
+
+SELECT coalesce(f.text_value, f.scalar_value)
+FROM event_payload_fields f
+WHERE f.event_seq = $1
+  AND f.field_path = '/__hatch/chat_context_json'
+LIMIT 1
+
+UPDATE widgets
+SET state_bundle_json = $2,
+    state_version = $3,
+    state_updated_at_ms = $4,
+    updated_at_ms = $4
+WHERE widget_id = $1
+  AND state_version = $5
+RETURNING state_version
+
+SELECT state_bundle_json, state_version
+FROM widgets
+WHERE widget_id = $1
+state_bundle_jsonwidget state bundle must be a JSON objectstate_version
+INSERT INTO context_items (
+  agent_id, seq, item_kind, text_content, role, call_id, tool_name, success,
+  message_source, created_at, item_json,
+  data_fbids, data_message_ids, data_thread_ids, data_expires_at
+) VALUES  RETURNING context_item_id, seq::agent.context_item_kind, ::runtime.message_role, , to_timestamp(::double precision), ::bigint[], ::text[], ::timestamptz)context_item_id
+SELECT pg_advisory_xact_lock(hashtextextended(agent_id, $2))
+FROM unnest($1::text[]) AS locked(agent_id)
+ORDER BY agent_id
+
+WITH inserted AS (
+INSERT INTO chat.chats (
+  chat_id,
+  origin,
+  lifecycle,
+  status,
+  thread_title,
+  source_session_id,
+  source_prompt_seq_upper_bound,
+  source_message_id_boundary,
+  created_at,
+  updated_at
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $12, $12)
+RETURNING chat_id
+)
+INSERT INTO chat_private.bindings(chat_id, provider, conversation_key, delivery_target)
+SELECT chat_id, $9, $10, $11 FROM inserted WHERE $9::text IS NOT NULL
+persistentactive
+WITH producer AS MATERIALIZED (
+  SELECT target.id AS agent_id,
+    CASE WHEN a.id IS NULL THEN NULL ELSE COALESCE(
+-- Highest seq of an agent's rows that no public voice import reads, or NULL
+-- when the import never reads any of them. Reads aliases `a` (the agent) and
+-- `root` (its presentation root). exempt_non_producer_rows.sql repeats it.
+CASE WHEN a.kind = 'root' AND a.depth = 0
+          AND a.agent_type = 'realtime_voice' THEN CASE
+    WHEN NOT pg_input_is_valid(a.spawn_metadata_json, 'jsonb') THEN -1
+    WHEN root.id IS NULL
+         OR a.spawn_metadata_json::jsonb #> '{realtime_voice,prompt_floor_seq}'
+            IS DISTINCT FROM to_jsonb(COALESCE(root.prompt_floor_seq, -1))
+        THEN NULL
+    WHEN pg_input_is_valid(
+        a.spawn_metadata_json::jsonb #>> '{realtime_voice,root_seed_context_seq}',
+        'bigint'
+    ) THEN GREATEST(
+        (a.spawn_metadata_json::jsonb #>> '{realtime_voice,root_seed_context_seq}')::bigint,
+        -1
+    )
+    ELSE -1
+END END
+    , 9223372036854775807) END AS exempt_through_seq
+  FROM (SELECT ::text AS id) target
+  LEFT JOIN agents a ON a.id = target.id
+  LEFT JOIN agents root ON root.id = a.presentation_root_session_id AND root.id <> a.id
+)
+INSERT INTO context_item_resume_projection (
+  agent_id, seq, context_item_id, created_at, message_source,
+  client_context_json, client_context_projected, public_import_exempt
+)
+SELECT producer.agent_id, v.seq, v.context_item_id, v.created_at, v.message_source,
+       v.client_context_json, v.client_context_projected,
+       CASE WHEN v.seq <= producer.exempt_through_seq THEN TRUE END
+FROM (VALUES ) AS v(seq, context_item_id, created_at, message_source, client_context_json,
+          client_context_projected)
+CROSS JOIN producer
+ON CONFLICT (agent_id, seq) DO UPDATE SET
+  context_item_id = excluded.context_item_id,
+  created_at = excluded.created_at,
+  message_source = COALESCE(excluded.message_source, context_item_resume_projection.message_source),
+  client_context_json = COALESCE(
+    excluded.client_context_json,
+    context_item_resume_projection.client_context_json
+  ),
+  client_context_projected = COALESCE(
+    context_item_resume_projection.client_context_projected,
+    FALSE
+  ) OR excluded.client_context_projected,
+  public_import_exempt = COALESCE(
+    context_item_resume_projection.public_import_exempt,
+    excluded.public_import_exempt
+  ),
+  updated_at = now()
+INSERT INTO context_item_resume_projection (
+  agent_id, seq, context_item_id, created_at, message_source,
+  client_context_json, reply_prefix, provenance_json,
+  client_context_projected, reply_prefix_projected, provenance_projected,
+  public_import_exempt
+)
+SELECT producer.agent_id, v.seq, v.context_item_id, v.created_at, v.message_source,
+       v.client_context_json, v.reply_prefix, v.provenance_json,
+       v.client_context_projected, v.reply_prefix_projected, v.provenance_projected,
+       CASE WHEN v.seq <= producer.exempt_through_seq THEN TRUE END
+FROM (VALUES ) AS v(seq, context_item_id, created_at, message_source, client_context_json,
+          reply_prefix, provenance_json, client_context_projected, reply_prefix_projected,
+          provenance_projected)
+CROSS JOIN producer
+ON CONFLICT (agent_id, seq) DO UPDATE SET
+  context_item_id = excluded.context_item_id,
+  created_at = excluded.created_at,
+  message_source = COALESCE(excluded.message_source, context_item_resume_projection.message_source),
+  client_context_json = excluded.client_context_json,
+  reply_prefix = excluded.reply_prefix,
+  provenance_json = excluded.provenance_json,
+  client_context_projected = excluded.client_context_projected,
+  reply_prefix_projected = excluded.reply_prefix_projected,
+  provenance_projected = excluded.provenance_projected,
+  public_import_exempt = COALESCE(
+    context_item_resume_projection.public_import_exempt,
+    excluded.public_import_exempt
+  ),
+  updated_at = now()
+
+INSERT INTO context_item_resume_projection (
+  agent_id, seq, message_source, client_context_json, reply_prefix, provenance_json,
+  client_context_projected, reply_prefix_projected, provenance_projected
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+ON CONFLICT (agent_id, seq) DO UPDATE SET
+  message_source = COALESCE(context_item_resume_projection.message_source, excluded.message_source),
+  client_context_json = excluded.client_context_json,
+  reply_prefix = excluded.reply_prefix,
+  provenance_json = excluded.provenance_json,
+  client_context_projected = excluded.client_context_projected,
+  reply_prefix_projected = excluded.reply_prefix_projected,
+  provenance_projected = excluded.provenance_projected,
+  updated_at = now()
+SELECT pg_advisory_xact_lock_shared(hashtextextended($1, 0))agent.volatile_context_pins.lifecycleSELECT pg_advisory_xact_lock(hashtextextended($1, 0))
+WITH owners AS MATERIALIZED (
+    SELECT DISTINCT agent_id COLLATE "C" AS agent_id
+    FROM unnest($1::text[]) AS input(agent_id)
+)
+SELECT pg_advisory_xact_lock(hashtextextended($2 || agent_id, 0))
+FROM owners ORDER BY agent_id COLLATE "C"
+agent.volatile_context_pins:SELECT agent_id FROM agent.agents WHERE agent_id = $1SELECT handoff_state_json -> $2::text AS state,
+                (extract(epoch FROM clock_timestamp()) * 1000)::bigint AS now_ms
+         FROM agent.subagent_spawns WHERE child_agent_id = $1 FOR UPDATEnow_msagent.subagent_spawns.handoff_state_jsonUPDATE agent.subagent_spawns
+         SET handoff_state_json = jsonb_set(COALESCE(handoff_state_json, '{}'::jsonb),
+                                           ARRAY[$2]::text[], $3::jsonb)
+         WHERE child_agent_id = $1insert into chat_private.publication_turns (execution_id, chat_id, disposition, phase)
+        select $1, $2, $3, $4 where pg_try_advisory_xact_lock_shared(hashtextextended($5, 0))
+        on conflict(execution_id) do nothing returning trueselect chat_id, phase, disposition from chat_private.publication_turns
+        where execution_id = $1 for updatechat_iddispositionphasepublication execution belongs to another chatJARVIS_TIERrealtime: visual capture has no call identityrealtime: sidecar visual capture has no adopted live callrealtime: dropped visual capture outside adopted sidecar mediarealtime: sidecar capture has no admitted contextrealtime: dropped cancelled device visual capturerealtime: rejected camera capture without a live device connectionvoice_visual_capture_no_connection_rejectedimage/jpegrealtime: dropped stale device visual capture resultrealtime: dropped provider image without a capture IDrealtime: device visual capture failed for Cosmos image capturerealtime: device visual capture failed; speaking camera failurerealtime: confidential device image deliveredrealtime: device image delivered to the pending Companion capturerealtime: failed to retain device image in private voice historyrealtime: dropped device image without its pending provider capturerealtime: dropped device image without an active Cosmos runtimerealtime: dropped device image without a pending Cosmos image capturerealtime: device image fulfilled the pending Cosmos image capturerealtime: failed to fulfill Cosmos image capture with device imagedeleted sessions.updated events require an owner-visible deletion proofsession row unavailable for sessions.updated payloadfailed to hydrate sessions.updated payloadrefusing to publish a chat frame without an owning chatfailed to resolve public session id for streamed framedropped companion progress frame after its voice call changed
+INSERT INTO requests (
+  request_id, root_request_id, parent_request_id, request_origin,
+  transcript_surface, root_work_class
+)
+VALUES ($1, $2, $3, $4, $5::runtime.transcript_surface, $6)
+ON CONFLICT (request_id) DO UPDATE SET
+  root_request_id = COALESCE(requests.root_request_id, excluded.root_request_id),
+  parent_request_id = COALESCE(requests.parent_request_id, excluded.parent_request_id),
+  request_origin = CASE
+    WHEN requests.request_origin = 'internal.runtime_replay' THEN excluded.request_origin
+    ELSE requests.request_origin
+  END,
+  transcript_surface = excluded.transcript_surface,
+  root_work_class = CASE
+    WHEN requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing'
+      THEN excluded.root_work_class
+    ELSE requests.root_work_class
+  END
+WHERE (requests.root_request_id IS NULL AND excluded.root_request_id IS NOT NULL)
+   OR (requests.parent_request_id IS NULL AND excluded.parent_request_id IS NOT NULL)
+   OR (requests.request_origin = 'internal.runtime_replay'
+       AND excluded.request_origin <> 'internal.runtime_replay')
+   OR requests.transcript_surface IS DISTINCT FROM excluded.transcript_surface
+   OR (requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing')
+statusoutput
+INSERT INTO tool_outputs (event_seq, call_id, status, output_text, error_text, created_at)
+VALUES ($1, $2, $3, $4, $5, to_timestamp($6::double precision / 1000.0))
+ON CONFLICT (event_seq) DO UPDATE SET
+  call_id = excluded.call_id,
+  status = excluded.status,
+  output_text = excluded.output_text,
+  error_text = excluded.error_text
+arguments
+INSERT INTO tool_calls (event_seq, call_id, tool_name, status, arguments_json, created_at)
+VALUES ($1, $2, $3, 'started', $4, to_timestamp($5::double precision / 1000.0))
+ON CONFLICT (call_id) DO UPDATE SET
+  event_seq = excluded.event_seq,
+  tool_name = excluded.tool_name,
+  status = excluded.status,
+  arguments_json = excluded.arguments_json
+
+INSERT INTO chat_event_derived_write_backlog (event_seq, resources_json)
+VALUES ($1, $2)
+ON CONFLICT (event_seq) DO UPDATE SET
+  resources_json = excluded.resources_json,
+  updated_at = now()
+UPDATE chat_private.peer_conversations SET requester_chat_id = NULL
+         WHERE conversation_id = $1 AND requester_revision = $2
+           AND requester_chat_id = $3 AND NOT requester_unavailable
+           AND chat_id = $5
+           AND EXISTS (SELECT 1 FROM agent.agents
+                       WHERE id = $4 AND session_id = $3)peer handoff disagrees with its asking-chat claimpeer handoff requester changed before admissionSELECT session_id, COALESCE(prompt_floor_seq, -1) AS prompt_floor_seq,
+                kind = 'root' AND parent_agent_id IS NULL
+                AND ephemeral IS DISTINCT FROM TRUE
+                AND status NOT IN ('shutdown', 'not_found') AS eligible
+         FROM agent.agents WHERE agent_id = $1 FOR UPDATEstartup_root_changedSELECT EXISTS(SELECT 1 FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND accepted_ordinal < $2)startup mailbox promotion cannot overtake an earlier accepted input
+SELECT payload_json
+FROM agent.runtime_restart_checkpoints
+WHERE agent_id = $1
+FOR UPDATE
+
+SELECT EXISTS (
+  SELECT 1
+  FROM agent.message_mailbox
+  WHERE agent_id = $1
+    AND state = 'accepted'
+    AND accepted_ordinal < $2
+    AND (NOT $3 OR submission_kind <> 'internal_handoff')
+)
+message mailbox attachment cannot overtake an older priority peer
+INSERT INTO agent.runtime_restart_checkpoints (
+  agent_id, mode, recovery_class, recovery_owner_id, execution_config_json,
+  payload_json, created_at, updated_at
+) SELECT $1, $2, $3, $4, $5, $6, $7, $7
+WHERE EXISTS (
+  SELECT 1
+  FROM agent.agents
+  WHERE agent_id = $1
+    AND status NOT IN ('shutdown', 'not_found')
+)
+ON CONFLICT (agent_id) DO NOTHING
+SELECT EXISTS (SELECT 1 FROM agent.agents WHERE agent_id = $1 AND status NOT IN ('shutdown', 'not_found'))conversation epoch
+INSERT INTO agent.message_mailbox (
+  submission_id, agent_id, conversation_epoch, submission_kind,
+  routing_scope, state, checkpoint_custody, stream_owner_message_id,
+  submission_json, transcript_event_seq, attached_at
+) VALUES (
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+  CASE WHEN $6 = 'attached' THEN now() ELSE NULL END
+)
+ON CONFLICT (submission_id) DO NOTHING
+RETURNING accepted_ordinal, accepted_at
+startup mailbox promotion requires its previously accepted input
+SELECT agent_id, conversation_epoch, submission_kind, routing_scope,
+       state, stream_owner_message_id, submission_json,
+       transcript_event_seq, accepted_ordinal, accepted_at
+FROM agent.message_mailbox
+WHERE submission_id = $1
+FOR UPDATE
+update chat.message_bindings set admitted_at = coalesce(admitted_at, now())
+                    where jarvis_message_id = $1 and chat_id = $2 and binding_epoch = $3 and transport = $4binding epochconversation_epochsubmission_kindrouting_scope
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = $5,
+    stream_owner_message_id = $2,
+    submission_json = $3,
+    transcript_event_seq = coalesce($4, transcript_event_seq),
+    attached_at = now()
+WHERE submission_id = $1
+  AND state = 'accepted'
+  AND stream_owner_message_id IS NULL
+mailbox stream ownerselect a.account_id from chat_private.accounts a
+             join chat_private.binding_authorizations b on b.provider = a.provider and b.account_id = a.account_id
+             where b.provider = $1 and b.binding_id = $2
+               and a.connection_id = $3 and not a.revoked for share of adirect input has no captured binding epochaccount_retiredselect connection_id, generation, transport_json, delivery_target
+             from chat_private.binding_authorizations
+             where provider = $1 and binding_id = $2 and chat_id = $3
+               and account_id = $4 and external_kind = 'direct' and participation = 'active'
+             for shareaccount_authorization_retiredtransport_jsontransport_authorization_absentconnection_idgenerationdelivery_targetselect epoch from chat_private.bindings
+         where chat_id = $1 and provider = $2 and not revoked for sharetransport_authorization_changedbinding_retireddatabase write admission gate closedadmission_timeoutCosmos voice profile configuration is not loadedstandaloneSELECT payload_json FROM runtime_restart_checkpoints WHERE agent_id = $1 FOR UPDATESELECT submission_json, octet_length(submission_json)::bigint AS serialized_bytes
+         FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND submission_id <> $2startup_queue_fullcall_id must be non-emptyYou've used all your credits for this period. Upgrade your plan or wait for your credits to refill.rtc_session_id must be non-empty when providedvoice start-call rejected because the Cosmos product gate denied admissionSome(CosmosS2s)Not foundvoice start-call using recent last-seen device locationvoice start-call request received<none>cachevoicevoice start-call reused completed JOIN admissionRTC Media Bridge start-call has no authenticated claimsvoice start-call adopted Cosmos RTC Media Bridge session identityrefused a JOIN for a call whose restart rejoin offer endedrestart_rejoin_endedthe call ended at a planned restart and can no longer be rejoinedvoice JOIN abandoned: the caller ended the call before admissionvoice JOIN refused: another attempt owns the call idvoice start-call refused: the call is endingprepared bridge owns its call start permitfailed to publish admitted RTC Media Bridge call startRTC Media Bridge admission rollback lost its lifecycle fenceRTC Media Bridge runtime lost its admitted callvoice start-call superseded by a newer call; not installingvoice_call_startedvoice start-call reconnected to active callvoice start-call preempted prior active call; will end-call the preempted client(s) once the new call establishesruntime.voice_call_markervoice start-call broadcasting end-call to preempted clientsstart-of-call greeting disabled by clientcall_lifecycle_changedout_of_creditscall_admissionactive voice resolution failed during call admission; starting without onboardingpreempted-session end-call widget emit failedvoice call catalog boundary was published without a persistence ownerCosmos RTC Media Bridge accepted server-owned session identityCosmos RTC Media Bridge runtime setup failedCosmos RTC Media Bridge runtime ended before its handshake responseCosmos RTC Media Bridge runtime handshake timed outfailed to spawn voice companion subagentspawn_failedacceptance_onlycompanion_unavailablecompanion_spawnvoice companion setup skipped after call lifecycle changedspawnedreusedread_only_sessionthis conversation is view-onlyvoice device pairing lookup failed; requiring the requested devicevoice script admittedunknown voice script id or unsupported versionvoice script deniedscript_unavailablevoice script is not available for this callerrealtime admission record exceeds 65536 bytessession-less realtime requests must begin with a newline-terminated hatch.voice.call.start recordfailed to resolve public session id for direct realtime voice trace contextvoice_realtime_startvoice_realtime_start_admissionvoice_realtime_start_root_loadvoice_realtime_start_mediarealtime media no longer owns the active voice callapplication/x-ndjson; charset=utf-8invalid_voice_selectionsend either voice_id, or saved_voice_id with profile_idinvalid_voicertc_media_bridge_admission_pendingthe call's admission is still pending{"type":"error","code":"encode_failed","message":"failed to encode a dictation event"}SELECT event_seq, event_name, source, role::text AS role,
+                    visibility::text AS visibility, message_id, agent_id,
+                    parent_agent_id, parent_message_id, reply_to_message_id,
+                    transcript_surface::text AS transcript_surface, payload_json,
+                    request_id, root_request_id, parent_request_id,
+                    extract(epoch from created_at)::bigint AS created_at
+             FROM runtime.events WHERE idempotency_key = $1SELECT ci.item_json, ci.message_source,
+                        extract(epoch from ci.created_at)::bigint AS created_at,
+                        p.client_context_json
+                 FROM agent.context_items ci
+                 LEFT JOIN agent.context_item_resume_projection p
+                   ON p.agent_id = ci.agent_id AND p.seq = ci.seq
+                 WHERE ci.agent_id = $1 AND ci.seq = $2called `Result::unwrap()` on an `Err` valueforeground_rootpeer_chat_rootgroup_chat_rootexternal_party_chat_rootmail_conversationdelegate_main_requestworkflow_subagentspaces_builderspaces_builder_litespaces_builder_editspaces_builder_python_editbrowser_taskdeep_researchideas_builderspace_taskself_improvement_stepflight_tracking_steppeer_sync_stepfeed_workflow_stepephemeral_agent_stepscheduler_cron_executescheduler_cron_resolveexecute_resolve_workersystem_cron_productvoice_delegaterealtime_voicecompaniondeveloperassistantinternal error: entered unreachable code: invalid Once stateinternal_wakeworkerafter_inferenceawaiting_approvalafter_tool_dispatchgatekeeperdev_vm_operatorcreatedrenamedunarchiveddeletedpinnedrecord_call_not_activerecord_already_claimedrecord_already_deliveredrecord_conflicting_idclaim_hitclaim_slot_absentclaim_repeatclaim_no_active_callclaim_media_unboundrealtime admission call_id must match the query call_idsession-less realtime requests must begin with hatch.voice.call.startonboardingabandoned_mid_utterancefinal_unreachedpending_initrunninginterruptederroredvoice_rtc_join_admission_handshakevoice_rtc_join_commitvoice_rtc_join_agent_spawnvoice_rtc_join_cosmos_setupvoice_rtc_joinvoice_rtc_join_admissionlive_switch_errorvoice_updatedvoice_saved_no_live_switchvoice_preference_mutation/api/voice/active-voiceArc counter overflowrealtime: Carbon-only device visual capture selected
+INSERT INTO events (
+  event_kind, event_name, request_id, root_request_id, parent_request_id,
+  transcript_surface, visibility, source, role, chat_kind, stream_lane,
+  message_id, parent_message_id, reply_to_message_id, reply_target_message_id,
+  parent_agent_id, agent_id, idempotency_key, display_text_ready, payload_json,
+  chat_context_json, created_at
+)
+VALUES ($1::runtime.event_kind, $2, $3, $4, $5, $6::runtime.transcript_surface,
+        $7::runtime.visibility, $8, $9::runtime.message_role, $10, $11,
+        $12, $13, $14, $15, $16, $17, $18, $19,
+        $20, $21, to_timestamp($22::double precision / 1000.0))
+ON CONFLICT (idempotency_key) WHERE idempotency_key IS NOT NULL DO NOTHING
+RETURNING event_seq
+
+INSERT INTO events (
+  event_seq, event_kind, event_name, request_id, root_request_id, parent_request_id,
+  transcript_surface, visibility, source, role, chat_kind, stream_lane,
+  message_id, parent_message_id, reply_to_message_id, reply_target_message_id,
+  parent_agent_id, agent_id, idempotency_key, display_text_ready, payload_json,
+  chat_context_json, created_at
+)
+VALUES ($1, $2::runtime.event_kind, $3, $4, $5, $6, $7::runtime.transcript_surface,
+        $8::runtime.visibility, $9, $10::runtime.message_role, $11, $12,
+        $13, $14, $15, $16, $17, $18, $19, $20,
+        $21, $22, to_timestamp($23::double precision / 1000.0))
+ON CONFLICT (event_seq) DO NOTHING
+RETURNING event_seq
+task_statustool_donetool_startios.agentic_system_tools.request_visual_contextandroid.agentic_system_tools.request_visual_contextproactive_greeting_disableddaemon_voice_realtimeStream direct Realtime voice eventsRequires x-app-id for new admission: a positive signed 64-bit integer or hatch-web (1358015658191005). Missing/invalid IDs return 400 voice_app_id_required; an exact admitted call may retain its validated ID on omission, while conflicts return 409 voice_app_id_conflict or voice_session_conflict before media registration. Streams OpenAI-Realtime client events as newline-delimited JSON in the request body and returns OpenAI-Realtime server events as newline-delimited JSON in the response body. When session_id is omitted, the request must begin with a hatch.voice.call.start record carrying call admission metadata; Jarvis completes admission before initializing Cosmos. This authenticated Noise adapter exercises the engine-backed realtime media boundary used by remote WebRTC relays.Voicenot_startedunknown_voicevoice is not an available catalog or saved voicesaved voice library could not be read for a voice savesaved_voice_storage_errorsaved voice library is unavailablesaved_voice_read_errorvoice selection could not be savedvoice_selection_storage_errorstorage_errordaemon_voice_active_voice_saveSave the active voiceSaves an explicit voice choice in `user/voice.json`. Send either a catalog `voice_id`, or a saved custom voice as `saved_voice_id` with `profile_id`. An optional `source` of `onboarding` marks a pick from the onboarding list for telemetry; other values are ignored. The server takes the voice name from the catalog or the saved-voice library. Invalid or unknown input returns 400 and writes nothing. The route returns 200 whenever the choice is saved. During an active call, the call switches to the saved voice. The response waits up to 5 seconds for that switch and reports it in `live_switch`: `pending` means the switch continues after the response; `superseded` means a later save replaced it.voice,avataravatarsettledstale_landednot_animatablejudge_rejectedfailed_beforesettle_caprefusedtimed_outvoice_call_updateevent hatch-engine/crates/hatch-daemon-http-voice/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/voice/realtime.rs:488hatch_server::daemon::http_api::routes::voice::realtimeroot_session_idhatch_daemon_http_voice::daemon::http_api::routes::voice::realtimehatch-engine/crates/hatch-daemon-http-voice/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/voice/realtime.rsevent hatch-engine/crates/hatch-daemon-http-voice/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/voice/realtime.rs:493event hatch-engine/crates/hatch-daemon-http-voice/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/voice/profile_readiness.rs:12hatch_server::daemon::http_api::routes::voice::profile_readinesshatch_daemon_http_voice::daemon::http_api::routes::voice::profile_readinesshatch-engine/crates/hatch-daemon-http-voice/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/voice/profile_readiness.rsevent hatch-engine/crates/hatch-daemon-http-voice/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/voice/realtime.rs:762event hatch-engine/crates/hatch-daemon-http-voice/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/voice/selection.rs:240hatch_server::daemon::http_api::routes::voice::selectionhatch_daemon_http_voice::daemon::http_api::routes::voice::selectionhatch-engine/crates/hatch-daemon-http-voice/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/voice/selection.rsevent hatch-engine/crates/hatch-daemon-http-voice/src/../../hatch-server/src/daemon/voice/reply_pending.rs:177hatch_server::daemon::voice::reply_pendingtokenreasonhatch_daemon_http_voice::voice::reply_pendinghatch-engine/crates/hatch-daemon-http-voice/src/../../hatch-server/src/daemon/voice/reply_pending.rsevent hatch-engine/crates/hatch-daemon-http-voice/src/../../hatch-server/src/daemon/voice/reply_pending.rs:136event hatch-engine/crates/hatch-daemon-http-voice/src/../../hatch-server/src/daemon/voice/reply_pending.rs:41event hatch-engine/crates/hatch-daemon-http-voice/src/../../hatch-server/src/daemon/voice/reply_pending.rs:48event hatch-engine/crates/hatch-daemon-http-voice/src/../../hatch-server/src/daemon/voice/reply_pending.rs:84event hatch-engine/crates/hatch-daemon-http-voice/src/../../hatch-server/src/daemon/voice/reply_pending.rs:106event hatch-engine/crates/hatch-daemon-http-voice/src/../../hatch-server/src/daemon/voice/device_visual_capture.rs:235hatch_server::daemon::voice::device_visual_capturehatch_daemon_http_voice::voice::device_visual_capturehatch-engine/crates/hatch-daemon-http-voice/src/../../hatch-server/src/daemon/voice/device_visual_capture.rsevent hatch-engine/crates/hatch-daemon-http-voice/src/../../hatch-server/src/daemon/voice/device_visual_capture.rs:254event hatch-engine/crates/hatch-daemon-http-voice/src/../../hatch-server/src/daemon/voice/device_visual_capture.rs:268event hatch-engine/crates/hatch-daemon-http-voice/src/../../hatch-server/src/daemon/voice/device_visual_capture.rs:335node_idownerevent hatch-engine/crates/hatch-daemon-http-voice/src/../../hatch-server/src/daemon/voice/device_visual_capture.rs:352event hatch-engine/crates/hatch-daemon-http-voice/src/../../hatch-server/src/daemon/voice/device_visual_capture.rs:360eventevent hatch-engine/crates/hatch-daemon-http-voice/src/../../hatch-server/src/daemon/voice/device_visual_capture.rs:391event hatch-engine/crates/hatch-daemon-http-voice/src/../../hatch-server/src/daemon/voice/device_visual_capture.rs:408event hatch-engine/crates/hatch-daemon-http-voice/src/../../hatch-server/src/daemon/voice/device_visual_capture.rs:411event hatch-engine/crates/hatch-daemon-http-voice/src/../../hatch-server/src/daemon/voice/device_visual_capture.rs:434event hatch-engine/crates/hatch-daemon-http-voice/src/../../hatch-server/src/daemon/voice/device_visual_capture.rs:442event hatch-engine/crates/hatch-daemon-http-voice/src/../../hatch-server/src/daemon/voice/device_visual_capture.rs:247event hatch-engine/crates/hatch-daemon-http-voice/src/../../hatch-server/src/daemon/voice/device_visual_capture.rs:453event hatch-engine/crates/hatch-daemon-http-voice/src/../../hatch-server/src/daemon/voice/device_visual_capture.rs:464event hatch-engine/crates/hatch-daemon-http-voice/src/../../hatch-server/src/daemon/voice/device_visual_capture.rs:467event hatch-engine/crates/hatch-daemon-http-voice/src/../../hatch-server/src/daemon/voice/device_visual_capture.rs:470event hatch-engine/crates/hatch-daemon-http-voice/src/../../hatch-server/src/daemon/voice/device_visual_capture.rs:479event hatch-engine/crates/hatch-daemon-http-voice/src/../../hatch-server/src/daemon/voice/device_visual_capture.rs:484event hatch-engine/crates/hatch-daemon-http-voice/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/voice/companion_startup.rs:156hatch_server::daemon::http_api::routes::voice::companion_startuphatch_daemon_http_voice::daemon::http_api::routes::voice::companion_startuphatch-engine/crates/hatch-daemon-http-voice/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/voice/companion_startup.rsevent hatch-engine/crates/hatch-daemon-http-voice/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/voice/companion_startup.rs:169event hatch-engine/crates/hatch-daemon-http-voice/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/voice/realtime.rs:840event hatch-engine/crates/hatch-daemon-http-voice/src/../../hatch-server/src/daemon/voice/device_visual_capture.rs:126device_familycommand_registeredlate_binding_availablerequired_arg_countevent hatch-engine/crates/hatch-daemon-http-voice/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/voice/selection.rs:282event hatch-engine/crates/hatch-daemon-http-voice/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/voice/selection.rs:293en-US The chat header's call button.description A `hatch://voice/start` button in the transcript, such as a reply option. A Muse notification that opened `hatch://voice/start`. Another Meta app, such as a Facebook or Instagram QP, that opened
+ `hatch://voice/start`. The surface that started a call. Clients send the value they already log as
+ `entry_point`. Admission treats an unknown or malformed value as absent and
+ never fails the call because of it.additionalProperties Root session id for an already-admitted call. Omit it when the request
+ begins with a `hatch.voice.call.start` admission record. Client-minted active call id. The client surface that made the choice. Only `onboarding` is
+ recognized; any other value is ignored and logged as a settings save.a tuple of size 2a sequence[internal exception] blocking task ran twice.struct RealtimeCallStartstruct SaveActiveVoiceRequestBUG: inner connection already taken!DecodeCompanionfuture still here when droppingtracing::spana Display implementation returned an error unexpectedlyErrorCallButtonChatCtaNotificationMetaAppIoSyntaxEof

@@ -1,0 +1,491 @@
+
+SELECT metadata_json FROM subagent_spawns WHERE child_agent_id = $1
+completion_resultagent.subagent_spawns.metadata_json
+UPDATE subagent_spawns
+SET metadata_json = $1
+WHERE child_agent_id = $2
+  AND EXISTS (
+    SELECT 1 FROM agents
+    WHERE agents.id = subagent_spawns.child_agent_id
+      AND agents.status NOT IN ('shutdown', 'not_found')
+  )
+
+UPDATE agents
+SET updated_at = $1,
+    status = $2
+WHERE id = $3
+  AND status NOT IN ('shutdown', 'not_found')
+select 1 from runtime.browser_tasks where task_id = $1 for updatewith recursive branch as (
+                    select invocation_id from runtime.browser_invocations where invocation_id = $1
+                    union all select child.invocation_id from runtime.browser_invocations child
+                    join branch parent on child.parent_invocation_id = parent.invocation_id)
+                    update runtime.browser_invocations set state = $3, suspended_state = null, result_json = $2,
+                    terminal_reason = $4, finished_at = now(), updated_at = now(),
+                    handoff_state = case when parent_invocation_id is null then $5::text end,
+                    handoff_submission_id = case when parent_invocation_id is null then $6::text end
+                    where invocation_id in (select invocation_id from branch)
+                    and result_json is null returning invocation_id
+SELECT mode, recovery_class, recovery_owner_id, payload_json
+FROM runtime_restart_checkpoints
+WHERE agent_id = $1
+FOR UPDATE
+
+UPDATE runtime_restart_checkpoints
+SET mode = $2, payload_json = $3, updated_at = $4
+WHERE agent_id = $1
+internal_errorprovisional_db_upsertlegacy-unversionedfailed to resolve owning root session from chat event recordspace_build_completedselect clock_timestamp()reconciliation retry time must be after database finalization timecontacts reconciliation cannot emit a device-sync ledger eventcalendar snapshot falls outside its claimed rangecalendar reconciliation cannot emit a device-sync ledger eventHealth snapshot falls outside its claimed rangeHealth reconciliation snapshot belongs to another deviceinvalid reconciliation source snapshotsummaryHealth reconciliation ledger id already existsHealth reconciliation completion presentation was not retainedactive reconciliation changed while its state row was lockedselect pairing_status, contacts_content_sha256 from device.nodes
+                 where node_id = $1 for updateokpersisted canonical device-source changeselect node_id from device.nodes order by node_id for updatedelete from device.contactsdelete from device.calendar_eventsinternal error: entered unreachable code: source validated abovedelete from ingest.data_source_events where source = $1delete from device.upload_sessions where datatype = $1delete from device.data_sync_state where data_source = $1update device.nodes
+                     set contacts_last_synced_at = null,
+                         contacts_last_received_at = null,
+                         contacts_last_sync_status = 'never',
+                         contacts_last_sync_error = null,
+                         contacts_contact_count = 0,
+                         contacts_content_sha256 = null
+                     where contacts_last_synced_at is not null
+                        or contacts_last_received_at is not null
+                        or contacts_last_sync_status <> 'never'
+                        or contacts_last_sync_error is not null
+                        or contacts_contact_count <> 0
+                        or contacts_content_sha256 is not null
+SELECT status
+FROM activity_monitor_threads
+WHERE activity_thread_id = $1
+LIMIT 1
+FOR UPDATE
+SELECT status FROM activity_monitor_threads WHERE activity_thread_id = $1 LIMIT 1active
+INSERT INTO activity_monitor_agent_threads (agent_id, activity_thread_id, created_at, updated_at)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT(agent_id) DO UPDATE SET
+    activity_thread_id = excluded.activity_thread_id,
+    updated_at = excluded.updated_at
+WHERE activity_monitor_agent_threads.activity_thread_id IS DISTINCT FROM excluded.activity_thread_id
+
+SELECT a.activity_thread_id
+FROM activity_monitor_agent_threads a
+JOIN activity_monitor_threads g ON g.activity_thread_id = a.activity_thread_id
+WHERE a.agent_id = $1
+  AND g.status = $2
+
+SELECT a.agent_id
+FROM activity_monitor_agent_threads a
+JOIN activity_monitor_threads g ON g.activity_thread_id = a.activity_thread_id
+WHERE a.activity_thread_id = $1
+  AND g.status = $2
+ORDER BY a.created_at ASC, a.agent_id ASC
+SELECT activity_thread_id, action_index FROM activity_monitor_thread_actions WHERE action_id = $1 LIMIT 1
+SELECT status, finish_status
+FROM activity_monitor_threads
+WHERE activity_thread_id = $1
+LIMIT 1
+FOR UPDATE
+
+SELECT a.activity_thread_id
+FROM activity_monitor_agent_threads a
+JOIN activity_monitor_threads g ON g.activity_thread_id = a.activity_thread_id
+WHERE a.agent_id = $1
+  AND g.status = $2
+LIMIT 1
+FOR UPDATE OF g
+
+UPDATE activity_monitor_threads
+SET status = $2,
+    finished_at = NULL,
+    finish_message = NULL,
+    finish_status = NULL,
+    finish_status_reason = NULL
+WHERE activity_thread_id = $1
+
+SELECT COALESCE(MAX(action_index), 0) + 1
+FROM activity_monitor_thread_actions
+WHERE activity_thread_id = $1
+activity_thread_id is required when no current activity_thread is set
+INSERT INTO activity_monitor_thread_actions (
+    action_id, activity_thread_id, action_index, agent_id, agent_depth, icon, title, subtitle, report, status, created_at
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+ON CONFLICT(action_id) DO UPDATE SET
+    activity_thread_id = excluded.activity_thread_id,
+    action_index = excluded.action_index,
+    agent_id = excluded.agent_id,
+    agent_depth = COALESCE(excluded.agent_depth, activity_monitor_thread_actions.agent_depth),
+    icon = excluded.icon,
+    title = excluded.title,
+    subtitle = excluded.subtitle,
+    report = excluded.report,
+    status = excluded.status,
+    created_at = LEAST(activity_monitor_thread_actions.created_at, excluded.created_at)
+RETURNING action_index, action_seq, action_id, activity_thread_id, agent_id, agent_depth, icon, title, subtitle, report, status, created_at, nextval(pg_get_serial_sequence('activity.activity_monitor_thread_actions', 'action_seq'))::bigint AS write_ordinal
+action_seqwrite_ordinal
+DELETE FROM activity_monitor_thread_actions
+WHERE action_id = $1
+RETURNING activity_thread_id
+
+SELECT action_index, action_seq, action_id, activity_thread_id, agent_id, agent_depth, icon, title, subtitle, report, status, created_at
+FROM activity_monitor_thread_actions
+WHERE activity_thread_id = $1
+ORDER BY action_index ASC, action_seq ASC
+
+SELECT action_index, action_id, activity_thread_id, agent_id, agent_depth, icon, title, subtitle, report, status, created_at
+FROM activity_monitor_thread_actions
+WHERE action_id = $1
+LIMIT 1
+
+SELECT COUNT(*)::bigint
+FROM activity_monitor_thread_actions
+WHERE activity_thread_id = $1
+
+SELECT activity_thread_id
+FROM activity_monitor_thread_actions
+WHERE agent_id = $1
+ORDER BY action_index DESC, action_seq DESC
+LIMIT 1
+
+SELECT action_index, action_id, activity_thread_id, agent_id, agent_depth, icon, title, subtitle, report, status, created_at
+FROM (
+    SELECT
+        action_index,
+        action_id,
+        activity_thread_id,
+        agent_id,
+        agent_depth,
+        icon,
+        title,
+        subtitle,
+        report,
+        status,
+        created_at,
+        action_seq AS insertion_order
+    FROM activity_monitor_thread_actions
+    WHERE activity_thread_id = $1
+    ORDER BY action_index DESC, insertion_order DESC
+    LIMIT $2
+)
+ORDER BY action_index ASC, insertion_order ASC
+
+SELECT action_index, action_id, activity_thread_id, agent_id, agent_depth, icon, title, subtitle, report, status, created_at
+FROM activity_monitor_thread_actions
+WHERE agent_id = $1
+  AND status = $2
+ORDER BY action_index ASC, action_seq ASC
+
+SELECT agent_id
+FROM activity_monitor_thread_actions
+WHERE status = $1
+  AND agent_id IS NOT NULL
+  AND TRIM(agent_id) <> ''
+GROUP BY agent_id
+ORDER BY MIN(action_index) ASC, MIN(action_seq) ASC
+
+INSERT INTO activity_monitor_carrier_user_messages (
+  carrier_message_id, user_message_id, root_agent_id
+)
+VALUES ($1, $2, $3)
+ON CONFLICT (carrier_message_id, user_message_id) DO UPDATE SET
+  root_agent_id = COALESCE(
+    activity_monitor_carrier_user_messages.root_agent_id,
+    excluded.root_agent_id
+  )
+
+SELECT user_message_id
+FROM activity_monitor_carrier_user_messages
+WHERE carrier_message_id = $1
+  AND ($2::text IS NULL OR root_agent_id IS NULL OR root_agent_id = $2)
+ORDER BY link_seq ASC
+SELECT status FROM activity_monitor_threads WHERE activity_thread_id = $1 LIMIT 1 FOR UPDATE
+INSERT INTO activity_monitor_message_threads (message_id, activity_thread_id, created_at, updated_at)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT(message_id) DO UPDATE SET
+    activity_thread_id = excluded.activity_thread_id,
+    updated_at = excluded.updated_at
+WHERE activity_monitor_message_threads.activity_thread_id IS DISTINCT FROM excluded.activity_thread_id
+
+WITH bound_carriers AS (
+    SELECT DISTINCT b.message_id
+    FROM activity_monitor_message_threads b
+    WHERE b.activity_thread_id = $1
+      AND EXISTS (
+          SELECT 1
+          FROM activity_monitor_carrier_user_messages carrier
+          WHERE carrier.carrier_message_id = b.message_id
+      )
+),
+carrier_events AS (
+    SELECT
+        bc.message_id AS carrier_message_id,
+        ev.event_seq AS user_event_seq,
+        ev.request_id AS user_request_id,
+        ev.root_request_id AS user_root_request_id,
+        ev.parent_request_id AS user_parent_request_id
+    FROM bound_carriers bc
+    JOIN activity_monitor_carrier_user_messages carrier
+      ON carrier.carrier_message_id = bc.message_id
+    JOIN runtime.events ev
+      ON ev.message_id = carrier.user_message_id
+)
+SELECT
+    bc.message_id AS message_id,
+    EXISTS (
+        SELECT 1 FROM runtime.events terminal
+        WHERE terminal.event_name IN ('message.assistant', 'message.internal')
+          AND (
+              -- Canonical message identity is authoritative across carrier sources;
+              -- keep the weaker request-lineage fallbacks runtime-only.
+              terminal.message_id = 'assistant-msg-' || bc.message_id
+              OR (
+                  terminal.source = 'runtime'
+                  AND (
+                      terminal.request_id = 'req:fallback:submission:' || bc.message_id
+                      OR EXISTS (
+                          SELECT 1
+                          FROM carrier_events ce
+                          WHERE ce.carrier_message_id = bc.message_id
+                            AND ce.user_request_id IS NOT NULL
+                            AND terminal.request_id = ce.user_request_id
+                            AND terminal.root_request_id = ce.user_root_request_id
+                            AND terminal.event_seq > ce.user_event_seq
+                      )
+                      OR EXISTS (
+                          SELECT 1
+                          FROM carrier_events ce
+                          WHERE ce.carrier_message_id = bc.message_id
+                            AND ce.user_parent_request_id IS NOT NULL
+                            AND terminal.request_id = ce.user_parent_request_id
+                            AND terminal.event_seq > ce.user_event_seq
+                      )
+                  )
+              )
+          )
+    ) OR EXISTS (
+        SELECT 1
+        FROM runtime.events settled
+        WHERE settled.event_name = 'message.internal'
+          AND EXISTS (
+              SELECT 1
+              FROM runtime.event_payload_fields f
+              WHERE f.event_seq = settled.event_seq
+                AND f.field_path = '/metadata/kind'
+                AND COALESCE(f.text_value, f.scalar_value) = 'follow_up_settlement'
+          )
+          AND EXISTS (
+              SELECT 1
+              FROM runtime.event_payload_fields f
+              WHERE f.event_seq = settled.event_seq
+                AND f.field_path = '/metadata/action'
+                AND COALESCE(f.text_value, f.scalar_value) = 'nothing_to_do'
+          )
+          AND EXISTS (
+              SELECT 1
+              FROM runtime.event_payload_fields f
+              WHERE f.event_seq = settled.event_seq
+                AND f.field_path = '/metadata/submission_message_id'
+                AND COALESCE(f.text_value, f.scalar_value) = bc.message_id
+          )
+    ) OR EXISTS (
+        -- A subagent completion is marked seen only after the relay has
+        -- deliberately consumed its handoff. This durable evidence closes the
+        -- exact carrier if the daemon restarted after marking the child seen
+        -- but before Activity Monitor observed its terminal lifecycle event.
+        SELECT 1
+        FROM activity_monitor_carrier_user_messages carrier
+        JOIN agent.subagent_spawns child
+          ON child.child_agent_id =
+             split_part(carrier.user_message_id, ':completion:', 2)
+         AND carrier.user_message_id =
+             'subagent-progress:' || child.parent_message_id
+             || ':completion:' || child.child_agent_id
+        WHERE carrier.carrier_message_id = bc.message_id
+          AND child.seen_at IS NOT NULL
+    ) AS terminal
+FROM bound_carriers bc
+ORDER BY bc.message_id ASC
+SELECT 1::bigint FROM activity_monitor_threads WHERE activity_thread_id = $1 LIMIT 1 FOR UPDATE
+SELECT b.activity_thread_id
+FROM activity_monitor_message_threads b
+WHERE b.message_id = $1
+
+SELECT b.activity_thread_id
+FROM activity_monitor_message_threads b
+JOIN activity_monitor_threads g ON g.activity_thread_id = b.activity_thread_id
+WHERE b.message_id = $1
+  AND g.status = $2
+
+SELECT action_id
+FROM activity_monitor_thread_actions
+WHERE starts_with(action_id, $1)
+   OR starts_with(action_id, $2)
+ORDER BY action_id ASC
+
+SELECT user_message_id
+FROM activity_monitor_carrier_user_messages
+WHERE carrier_message_id = $1
+  AND (root_agent_id IS NULL OR root_agent_id = $2)
+ORDER BY link_seq ASC
+
+SELECT action_id, activity_thread_id
+FROM activity_monitor_thread_actions
+WHERE action_id = ANY($1)
+ORDER BY activity_thread_id ASC, action_id ASC
+
+SELECT activity_thread_id
+FROM activity_monitor_message_threads
+WHERE message_id = $1
+LIMIT 1
+FOR UPDATE
+
+SELECT activity_thread_id
+FROM activity_monitor_threads
+WHERE activity_thread_id = ANY($1)
+ORDER BY activity_thread_id ASC
+FOR UPDATE
+
+SELECT action_id, activity_thread_id
+FROM activity_monitor_thread_actions
+WHERE action_id = ANY($1)
+ORDER BY activity_thread_id ASC, action_index ASC NULLS LAST, action_id ASC
+FOR UPDATE
+
+INSERT INTO activity_monitor_thread_actions (
+    action_id, activity_thread_id, action_index, agent_id, agent_depth,
+    icon, title, subtitle, report, status, created_at
+)
+VALUES ($1, $2, $3, $4, 0, $5, $6, $7, $8, $9, $10)
+ON CONFLICT(action_id) DO NOTHING
+
+UPDATE activity_monitor_thread_actions
+SET activity_thread_id = $2,
+    action_index = $3
+WHERE action_id = $1
+
+UPDATE activity_monitor_threads AS displaced
+SET status = $2,
+    finished_at = COALESCE(finished_at, $3),
+    finish_status = $4,
+    finish_status_reason = $5
+WHERE displaced.activity_thread_id = $1
+  AND displaced.status = $6
+  AND NOT EXISTS (
+      SELECT 1 FROM activity_monitor_message_threads messages
+      WHERE messages.activity_thread_id = displaced.activity_thread_id
+  )
+  AND NOT EXISTS (
+      SELECT 1 FROM activity_monitor_thread_actions actions
+      WHERE actions.activity_thread_id = displaced.activity_thread_id
+  )
+  AND NOT EXISTS (
+      SELECT 1 FROM activity_monitor_agent_threads agents
+      WHERE agents.activity_thread_id = displaced.activity_thread_id
+  )
+  AND NOT EXISTS (
+      SELECT 1 FROM activity_monitor_runtime_work_threads work
+      WHERE work.activity_thread_id = displaced.activity_thread_id
+  )
+RETURNING displaced.activity_thread_id
+DELETE FROM activity_monitor_runtime_work_threads WHERE work_id = $1 AND activity_thread_id = $2
+DELETE FROM activity_monitor_runtime_work_threads binding
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM runtime.work_items work
+    WHERE work.work_id = binding.work_id
+)
+  AND NOT (binding.work_id = ANY($1))
+
+INSERT INTO activity_monitor_runtime_work_threads (work_id, activity_thread_id, created_at, updated_at)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT(work_id) DO NOTHING
+RETURNING activity_thread_id
+SELECT activity_thread_id FROM activity_monitor_runtime_work_threads WHERE work_id = $1
+SELECT work_id
+FROM activity_monitor_runtime_work_threads
+WHERE activity_thread_id = $1
+ORDER BY created_at ASC, work_id ASC
+
+UPDATE activity_monitor_threads
+SET name = $2
+WHERE activity_thread_id = $1
+  AND status = $3
+  AND name IS DISTINCT FROM $2
+SELECT 1::bigint FROM activity_monitor_threads WHERE activity_thread_id = $1 LIMIT 1
+SELECT activity_thread_id, name, subtitle, icon, emoji, status, created_at, finished_at, finish_message,
+       finish_status, finish_status_reason, activity_thread_kind, space_slug, status_title,
+       expected_finish_description
+FROM activity_monitor_threads
+WHERE activity_thread_id = $1
+
+UPDATE activity_monitor_threads
+SET subtitle = $2,
+    status_title = CASE
+      WHEN $3 IS NULL OR TRIM($3) = '' THEN status_title
+      ELSE $3
+    END
+WHERE activity_thread_id = $1
+  AND status = $4
+  AND (
+      subtitle IS DISTINCT FROM $2
+      OR status_title IS DISTINCT FROM (
+          CASE WHEN $3 IS NULL OR TRIM($3) = '' THEN status_title ELSE $3 END
+      )
+  )
+
+SELECT activity_thread_id
+FROM activity_monitor_threads
+WHERE status = $1
+ORDER BY created_at DESC, activity_thread_id DESC
+
+UPDATE activity_monitor_threads
+SET status = $2,
+    finished_at = COALESCE(finished_at, $3),
+    finish_message = CASE
+      WHEN $4 IS NULL OR TRIM($4) = '' THEN finish_message
+      ELSE $4
+    END,
+    subtitle = CASE
+      WHEN $5 IS NULL OR TRIM($5) = '' THEN subtitle
+      ELSE $5
+    END,
+    status_title = CASE
+      WHEN $6 IS NULL OR TRIM($6) = '' THEN status_title
+      ELSE $6
+    END,
+    finish_status = COALESCE($7, finish_status),
+    finish_status_reason = COALESCE($8, finish_status_reason)
+WHERE activity_thread_id = $1
+
+DELETE FROM activity_monitor_message_threads mt
+WHERE mt.activity_thread_id = $1
+  AND NOT EXISTS (
+    SELECT 1
+    FROM activity_monitor_carrier_user_messages c
+    WHERE c.carrier_message_id = mt.message_id
+  )
+DELETE FROM activity_monitor_agent_threads WHERE activity_thread_id = $1
+INSERT INTO activity_monitor_threads (
+    activity_thread_id, name, subtitle, status_title, icon, emoji, activity_thread_kind, space_slug,
+    expected_finish_description, status, created_at, finished_at, finish_message
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NULL, NULL)
+
+SELECT activity_thread_id, name, subtitle, icon, emoji, status, created_at, finished_at, ''::text AS finish_message,
+       finish_status, finish_status_reason, activity_thread_kind, space_slug, status_title,
+       expected_finish_description
+FROM activity_monitor_threads
+WHERE status = $1
+  AND finished_at IS NOT NULL
+ORDER BY finished_at DESC, activity_thread_id DESC
+LIMIT $2
+
+UPDATE activity_monitor_threads
+SET finish_message = $2
+WHERE activity_thread_id = $1
+  AND status = $3
+  AND finish_message IS DISTINCT FROM $2
+
+UPDATE activity_monitor_threads
+SET finish_status = $2,
+    finish_status_reason = $3
+WHERE activity_thread_id = $1
+  AND status = $4
+  AND finish_status_reason = $5
+
+SELECT status, finish_status
+FROM activity_monitor_threads
+WHERE activity_thread_id = $1
+LIMIT 1
+prepared scheduled backendrealtime connection ended with errorfailed to retain captured image in private voice historycaptured image does not match the active Companion requestrefresh_in_progressvoice end marker has no retained call-history ownermain_chatactivity thread subtitle refresh produced no valid decisionnot_foundresolve pathpath escapes mount rootforbiddentimed out while writing egress approval mirror requesttimed out while reading egress approval mirror responserecovery owner validator is not configuredsafety quarantine could not finish copied-context cleanupexplicit chat event seqfailed to serialize localized activity.updated payload; falling back to canonical framevoice JOIN admission expired before sidecar media registrationadmission_timed_outThe app is being shared. Please try again shortly.scheduled worker already dispatchedSpace worker manager is unavailablespace worker exit timed out before publicationThe app is still stopping. Please retry sharing shortly.space worker exit confirmation channel closedCould not confirm the app stopped; sharing was cancelled.materialize_submissionprompt_optionsskill_snapshottool_snapshotrequest_overlayclient_context_snapshotdevice_snapshotgoals_snapshothistory_projectionsystem_prompt_composecompaction_decisionprovider_request_readyrecovery_phase_deferredd1_r2web artifact was not foundIdeas composer owner run is missingcachedrunningcompleted startup quota rejection has no eventnegative startup quota rejection event sequencecompleted startup quota rejection event is absentadmission_agent_queue_waitadmission_agent_submission_sendboundary or idle checkpointrealtime provider writer is closedinput failure lockretained restart checkpoint changed before final-sweep exact replacementrestart checkpoint upsert returned without a durable tokenruntime_restart_checkpoint_persist_failedinternal error: entered unreachable code: timeout must transition a pending admissioninference-proxy returned an invalid model selection routeprimary_root_checkpoint_retry_waitprimary_root_checkpoint_attemptprimary-root checkpoint authority was already consumedprimary root handle missing after readiness loadstorage-owned health PostgreSQL root unavailable; health sync will remain degradedverify activity feed tableavatar-state: authoritative DB row missing`DateTime + TimeDelta` overflowedfailed to load runtime work item recordterminalization_deferrednegative cancellation event sequencecontext item sequence space is exhaustedcommitted cancellation has no context sequencestartup quota rejection payload is not an objectstartup quota rejection metadata is not an objectproduct admission metadata must be an objectruntime work product admission timed outruntime work product admission owner stoppedruntime work product admission owner stopped before handofffailed to load activity monitor user reply prefixespublication has no chat ownerinvalid publication tracepublication owner does not match its transcript/metadata/message_kindpublication has no execution ownerinvalid publication authorityrecord idea dedupresolve embedding near-dup candidateresolve fingerprint bandview ideaview canonical idearesolve canonical on not-foundlist ideas by idsresolve idea source before mintingrefresh superseded idea contentattach idea sourceupsert idea sourcespawn find for fs query scanfind stderr pipe unavailableread find stdout for fs query scanwait for fs query scanread find stderr for fs query scanfind stdout pipe unavailableread directory entrystat directoryshopping_results_v2navigationnavigation.scheduled_tasknode_card.notification_opt_inGatekeeper response omitted requested gate; using defaultconnection_goneno active client accepted the ui_control commandenabledfailed to serialize idea for reply_to_target hydrationread file artifact stateread artifact placementread saved artifact stateread share linkread saved artifactmissing_proof_filemalformed_proof_fileschema_version_mismatchmigration_max_version_mismatchmigration_fingerprint_mismatchcluster_system_identifier_mismatchendpoint_mismatchinsert data source sync rowstream owner has no chatcloudflarependingdb_restoreaccess_revokecloudflare_takedownShare recovery lost its stored identityartifact_sharing_admission_unavailableCould not verify whether artifact sharing is enabled. Try again later.; Legacy share retirement lost its stored identityThis web artifact has no trusted Cloudflare build to share. Rebuild it and try again.invalid_paramsno Stefi ready update attempts were configuredEmojiTaglinecomplimentary_subscriptionepoch-scoped nutrition presentation could not load its root sessionnutrition presentation belongs to a stale conversation epochfailed to persist delta.presentation eventstartup root arbiter is unavailablestartup root arbiter staging response closedHealth deletion returned a negative countload goal by idlist goal suggestionslist goal briefingslist goal updateslist goalsload goal session mapping by root goal idresolve root goal parentgoal guide path has no parentavatar completion storage unavailablegoals_prompt_snapshotwallet BrowserTask has no durable statewallet spend request does not existcannot resolve the active avatar image pathavatar-choreography-classifier-unavailable-v8:avocrono-9bavatar choreography classification unavailable; preserving existing derived mediarefusing to replace a newer avatar choreography profile versionfailed to resolve avatar video start framesencode share audienceread stefi share_space responseStefi share registration attempts were exhaustedstefi share_space response missing space_idrequest share audienceread share audiencequiesce shared artifactolder runtime that cannot safely drain writesread shared artifact drain responsecloudflare share origin lookupread cloudflare share origin lookupcloudflare share lookupread cloudflare share lookupread owned share metadatashare metadata omitted its key stateshare metadata omitted its origindecode owned share metadataspace share VM identity is unavailable for shortcode creationshare response contained no shortcodecloudflare takedown request failedcloudflare publication requestcontrol plane returned an invalid deployment responsecf_origin_idparse published client manifestcreate cloudflare web artifact request failedcloudflare db snapshot request failedread cloudflare db snapshot response bodycloudflare blob manifest request failedserialize cloudflare blob manifestread cloudflare blob manifest response bodyparse prebuilt cloudflare deploy manifestcloudflare blob object request failedserialize trusted Cloudflare deploy manifeststefi update deployment_status request failedsourceStandardSha256read cloudflare blob snapshot response bodycloudflare blob snapshot response size overflowruntime.resources.metadata_jsonload admitted device-source changeload conflicting device-source changestat filestat fs.find scan segmentctaactivity monitor inference timed outhttpsdecode artifact sharingread artifact sharingserialize sharing summaryserialize sharing profilessave sharing summaryatomically ingest device-source changevalidate paired source-change producervalidate data source event replaycreated device data-sync state row disappearedstored reconciliation chunk index is negativereconciliation received chunk count is invalidload goal for Space linkcompare_and_advancepg_system_identifiergetsubagent_progressroot_public_streamroot_follow_upcron worker published subagent handoff lifecycle eventsettlednode_id is requiredproducer_id is requiredsource is requiredtimed out while reading checkout spend requestidle detector could not read recent transcript for session thresholdideassession disappeared before snapshottimed out reading enter-tool-environment requestavatar finalize root handle has an incompatible owneravatar-state: authoritative DB row missing after seedinvalid Cloudflare staged asset targetidle_session:unknownobjective execution gate is closedtool_call_ididtool_namerequesttool_idstream_owner_message_idlocked mailbox successor row has no agent identitylocked mailbox successor row has no custody statesession_idattached mailbox input has no stream ownerstagedqueuedexecutinginput chat is absentinvalid input binding epochConversationTransportStatelink_idneeds_reconciliationpending_cancellationinput provider is absentcarrier_message_id is requiredactivity_thread_id is requiredagent_id is requiredfailed to read current activity thread for agentfailed to list assigned agents for activity threadaction_id is requiredtitle is requiredreport is requiredroot carrier_message_id is requiredroot carrier root_agent_id is requiredfailed to read next activity thread action indexfailed to read activity thread action from storefailed to load latest activity thread action for agent from storefailed to query running activity thread actions from storefailed to query running activity thread action agents from storefailed to read activity monitor carrier/user mappingmessage_id is requiredfailed to read activity thread binding for messageroot_agent_id is requiredrecovery_action_anchor.action_id is requiredrecovery_action_anchor.title is requiredrecovery_action_anchor.subtitle is requiredrecovery_action_anchor.report is requiredtarget_activity_thread_id is requireddisplaced_finish_reason is requiredowner_agent_id is requiredwork_id is requiredfailed to read activity thread binding for runtime worksubtitle is requiredfailed to list active activity thread ids from storepartialunclearstoppedfailed to read activity thread snapshotfailed to list recently finished activity threads from storefinish_message is requiredfailed to read activity thread snapshot with actionsfailed to read activity thread actionsload_table_presenceassert_required_columnsassert_required_indexesassert_required_enum_valuesassert_migration_version/run/hatch/auth/authd.sockroot admission cancellation ended without a resultload reconciliation chunksjoin reconciliation record assemblyhealthcomms_announcementsjoin device reconciliation snapshot parsingload device platform for contacts reconciliationideas_locale_supersededIdeas generation was superseded by a language change.eval_fixturepending_initerroredworkerwallet BrowserTask does not existOpenTable approved terms lookup failedWWW did not confirm the Cloudflare share originShared action response omitted its result; check stored state before retryingsaved share was not founddeciding client context response carried no resultbundled new-user catalog refresh failed¡ 

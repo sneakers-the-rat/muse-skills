@@ -1,0 +1,29 @@
+select generation from self_improvement.connector_sync_accounts where connector=$1 and account_id=$2 for updateselect d.ingest_id from ingest.data_source_events d join ingest.device_context_records dc on dc.ingest_id=d.ingest_id where dc.event_id=any($1) for share of dselect id from context.events where id=any($1) for shareselect id from context.subscriptions where id=$1 for updateselect e.id from context.group_cursors g
+                join context.events e on e.source_id=g.source_id and e.group_id=g.group_id
+                where g.subscription_id=$1 and g.lease_token=$2 and g.lease_expires_at>clock_timestamp()
+                and g.source_id=$3 and e.group_key is not distinct from $4
+                and (e.expires_at is null or e.expires_at>statement_timestamp())
+                and e.append_position>g.acknowledged_position and e.append_position<=g.batch_position order by e.append_positionflight group lease lost or mismatchedflight source evidence changed before settlementselect validated_json from background_workers.turns where turn_id=$1 and worker='flight_tracking' and state='submitted' and validated_json is not nullevent_idschangesflight result does not match its leased evidenceflight context lease lostupdate background_workers.turns set state='failed',failure_reason=$5,updated_at=now()
+                 where turn_id=$1 and attempt=$2 and agent_id=$3 and message_id=$4 and state='running'insert into background_workers.turns
+                 (turn_id,kind,attempt,agent_id,message_id,request_id,state,context_json,deadline_at,worker)
+                 values ($1,$2,1,$3,$4,$5,'running',$6,$7,$8)
+                 on conflict (turn_id) do nothingflight_trackingcontext_classificationrecovery_attempt_floorclassification recovery changed its source assignmentbackground worker turn identity changed kinddelete from background_workers.staging_receipts
+                     where turn_id=$1 and attempt<$2update background_workers.turns set state='failed',
+                failure_reason='deadline expired',updated_at=now()
+                where state='running' and deadline_at <= now()
+                and turn_id in (select turn_id from background_workers.turns
+                    where state='running' and deadline_at <= now()
+                    order by deadline_at,turn_id limit 100 for update skip locked)
+                select t.turn_id from background_workers.turns t
+                where t.state <> 'running' and t.updated_at < now() - interval '7 days'
+                and not exists(select 1 from self_improvement.classified_context_groups c where c.run_id=t.turn_id)
+                order by t.updated_at,t.turn_id limit 100 for update of t skip lockeddelete from background_workers.staging_receipts where turn_id=any($1)delete from background_workers.turns where turn_id=any($1)update background_workers.turns set state='failed',failure_reason=$5,updated_at=now()
+                where turn_id=$1 and attempt=$2 and agent_id=$3 and message_id=$4
+                  and state='submitted' and validated_json is nullupdate background_workers.turns set state='submitted',output_json=$5,updated_at=now()
+                 where turn_id=$1 and attempt=$2 and agent_id=$3 and message_id=$4
+                   and deadline_at > clock_timestamp()
+                   and (context_json->>'input_text' is null or
+                     input_read_bytes >= octet_length(context_json->>'input_text'))
+                   and (state='running' or (state='submitted' and output_json=$5))update background_workers.turns set validated_json=$5,updated_at=now()
+                 where turn_id=$1 and attempt=$2 and agent_id=$3 and message_id=$4
+                   and state='submitted' and (validated_json is null or validated_json=$5)unsupported source workerclassifier source lease does not match assignmentworker_retries_exhausted

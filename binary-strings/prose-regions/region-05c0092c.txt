@@ -1,0 +1,313 @@
+select note.update_id,note.goal_id,note.title,note.summary,note.description,
+                        note.effective_at,note.created_at,note.updated_at,note.author_source
+                 from unnest($1::text[]) as requested(goal_id)
+                 cross join lateral (
+                   select * from goals.updates where goal_id=requested.goal_id
+                     and title in ('Tracking completed','Tracking resumed','Goal completed','Goal reactivated')
+                     and updated_at_ts <= $2
+                   order by effective_at_ts desc nulls last,updated_at_ts desc nulls last,update_id desc limit 1
+                 ) noteselect update_id, goal_id, title, summary, description,
+                effective_at, created_at, updated_at, author_source from goals.updates
+                where updated_at_ts > $1 and updated_at_ts <= $2 and update_id > $3
+                order by update_id limit 100select briefing_id, goal_id, path, hero_image_path,
+                created_at, updated_at, null::text as last_delivered_at, last_opened_at from goals.briefings
+                where updated_at_ts > $1 and updated_at_ts <= $2 and briefing_id > $3
+                order by briefing_id limit 100
+select b.briefing_id,
+       b.goal_id,
+       b.path,
+       b.hero_image_path,
+       b.created_at,
+       b.updated_at,
+       delivered.last_delivered_at,
+       b.last_opened_at
+from goals.briefings b
+left join lateral (
+  select to_char(max(ev.created_at) at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+           as last_delivered_at
+  from goals.engagement_events ev
+  where ev.goal_id = b.goal_id
+    and ev.surface = 'goal_briefing_push'
+    and ev.metadata->>'briefing_id' = b.briefing_id
+) delivered on true
+where b.briefing_id = $1
+
+select b.briefing_id,
+       b.goal_id,
+       b.path,
+       b.hero_image_path,
+       b.created_at,
+       b.updated_at,
+       delivered.last_delivered_at,
+       b.last_opened_at
+from goals.briefings b
+left join lateral (
+  select to_char(max(ev.created_at) at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+           as last_delivered_at
+  from goals.engagement_events ev
+  where ev.goal_id = b.goal_id
+    and ev.surface = 'goal_briefing_push'
+    and ev.metadata->>'briefing_id' = b.briefing_id
+) delivered on true
+where b.goal_id = $1
+  and (b.created_at < $2 or (b.created_at = $2 and b.briefing_id < $3))
+order by b.created_at desc, b.briefing_id desc
+limit $4
+
+select b.briefing_id,
+       b.goal_id,
+       b.path,
+       b.hero_image_path,
+       b.created_at,
+       b.updated_at,
+       delivered.last_delivered_at,
+       b.last_opened_at
+from goals.briefings b
+left join lateral (
+  select to_char(max(ev.created_at) at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+           as last_delivered_at
+  from goals.engagement_events ev
+  where ev.goal_id = b.goal_id
+    and ev.surface = 'goal_briefing_push'
+    and ev.metadata->>'briefing_id' = b.briefing_id
+) delivered on true
+where b.goal_id = $1
+order by b.created_at desc, b.briefing_id desc
+limit $2
+select distinct on (goal_id)
+                            briefing_id, goal_id, path, hero_image_path, created_at, updated_at,
+                            null::text as last_delivered_at, last_opened_at
+                     from goals.briefings
+                     where goal_id = any($1::text[])
+                     order by goal_id, created_at desc, briefing_id descselect briefing_id, goal_id, path, hero_image_path, created_at, updated_at,
+                            null::text as last_delivered_at, last_opened_at
+                     from goals.briefings
+                     where briefing_id = $1
+                     for updatedelete from goals.briefings where briefing_id = $1insert into goals.briefings
+                       (briefing_id, goal_id, path, hero_image_path, created_at, updated_at, last_opened_at,
+                        created_at_ts, updated_at_ts, last_opened_at_ts)
+                     values ($1, $2, $3, $4, $5, $6, null, $7, $8, null)
+                     on conflict (goal_id, path)
+                     do update set
+                       briefing_id = excluded.briefing_id,
+                       hero_image_path = coalesce(excluded.hero_image_path, goals.briefings.hero_image_path),
+                       created_at = excluded.created_at,
+                       updated_at = excluded.updated_at,
+                       last_opened_at = null,
+                       created_at_ts = excluded.created_at_ts,
+                       updated_at_ts = excluded.updated_at_ts,
+                       last_opened_at_ts = null
+                     returning briefing_id, goal_id, path, hero_image_path, created_at, updated_at,
+                               null::text as last_delivered_at, last_opened_at
+with ranked as (
+  select b.briefing_id, b.goal_id, b.path, b.hero_image_path, b.created_at,
+         b.updated_at, b.last_opened_at,
+         row_number() over (
+           partition by b.goal_id order by b.created_at desc, b.briefing_id desc
+         ) as rn
+  from goals.briefings b
+  where b.goal_id = any($1::text[])
+),
+top as (
+  select * from ranked where rn <= $2
+)
+select t.briefing_id, t.goal_id, t.path, t.hero_image_path, t.created_at,
+       t.updated_at, delivered.last_delivered_at, t.last_opened_at
+from top t
+left join lateral (
+  select to_char(max(ev.created_at) at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+           as last_delivered_at
+  from goals.engagement_events ev
+  where ev.goal_id = t.goal_id
+    and ev.surface = 'goal_briefing_push'
+    and ev.metadata->>'briefing_id' = t.briefing_id
+) delivered on true
+order by t.goal_id, t.created_at desc, t.briefing_id desc
+update goals.briefings
+                     set last_opened_at = $3, last_opened_at_ts = $4
+                     where goal_id = $1 and briefing_id = $2
+                     returning briefing_id, goal_id, path, hero_image_path, created_at, updated_at,
+                               null::text as last_delivered_at, last_opened_at
+with candidate_ids as (
+  select briefing_id, ordinality
+  from unnest($1::text[]) with ordinality as input(briefing_id, ordinality)
+),
+candidate_briefings as (
+  select ids.ordinality,
+         b.briefing_id as briefing_briefing_id,
+         b.goal_id as briefing_goal_id,
+         b.path as briefing_path,
+         b.hero_image_path as briefing_hero_image_path,
+         b.created_at as briefing_created_at,
+         b.updated_at as briefing_updated_at,
+         delivered.last_delivered_at as briefing_last_delivered_at,
+         b.last_opened_at as briefing_last_opened_at,
+         g.goal_id as goal_goal_id,
+         g.slug as goal_slug,
+         g.title as goal_title,
+         g.pushable as goal_pushable
+  from candidate_ids ids
+  join goals.briefings b on b.briefing_id = ids.briefing_id
+  join goals.goals g on g.goal_id = b.goal_id and g.source = 'user_goal'
+  left join lateral (
+    select to_char(max(ev.created_at) at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+             as last_delivered_at
+    from goals.engagement_events ev
+    where ev.goal_id = b.goal_id
+      and ev.surface = 'goal_briefing_push'
+      and ev.metadata->>'briefing_id' = b.briefing_id
+  ) delivered on true
+)
+-- These delivery and open aggregates are engagement telemetry only; briefing
+-- eligibility is controlled by the goal's explicit `pushable` preference. A
+-- briefing is "delivered in window" only if it carries a
+-- `goal_briefing_push` impression within the lookback.
+-- The `'goal_briefing_push'` surface literal must match
+-- GOAL_BRIEFING_PUSH_SURFACE in the letter widget presentation writer and
+-- `hatch_goals::GOAL_BRIEFING_PUSH_SURFACE` (edition delivery recording).
+select cb.*,
+       coalesce(agg.delivered_briefings_in_window, 0)::bigint as delivered_briefings_in_window,
+       coalesce(agg.opened_delivered_in_window, 0)::bigint as opened_delivered_in_window,
+       coalesce(agg.opened_briefings_in_window, 0)::bigint as opened_briefings_in_window
+from candidate_briefings cb
+left join lateral (
+  select count(distinct prior.briefing_id) filter (where ev.goal_id is not null)::bigint
+           as delivered_briefings_in_window,
+         count(distinct prior.briefing_id) filter (
+           where ev.goal_id is not null and prior.last_opened_at_ts >= $2
+         )::bigint as opened_delivered_in_window,
+         count(distinct prior.briefing_id) filter (
+           where prior.last_opened_at_ts >= $2
+         )::bigint as opened_briefings_in_window
+  from goals.briefings prior
+  left join goals.engagement_events ev
+    on ev.goal_id = prior.goal_id
+   and ev.surface = 'goal_briefing_push'
+   and ev.metadata->>'briefing_id' = prior.briefing_id
+   and ev.created_at >= $2
+  where prior.goal_id = cb.briefing_goal_id
+    and prior.briefing_id <> cb.briefing_briefing_id
+    and not (prior.briefing_id = any($1::text[]))
+) agg on true
+order by cb.ordinality asc
+update goals.briefings
+                     set hero_image_path = $2, updated_at = $3, updated_at_ts = $4
+                     where briefing_id = $1
+                     returning briefing_id, goal_id, path, hero_image_path, created_at, updated_at,
+                               null::text as last_delivered_at, last_opened_at
+with candidate_briefings as (
+  select b.briefing_id as briefing_briefing_id,
+         b.goal_id as briefing_goal_id,
+         b.path as briefing_path,
+         b.hero_image_path as briefing_hero_image_path,
+         b.created_at as briefing_created_at,
+         b.updated_at as briefing_updated_at,
+         null::text as briefing_last_delivered_at,
+         b.last_opened_at as briefing_last_opened_at,
+         b.created_at_ts as briefing_created_at_ts,
+         g.goal_id as goal_goal_id,
+         g.slug as goal_slug,
+         g.title as goal_title,
+         g.pushable as goal_pushable
+  from goals.briefings b
+  join goals.goals g
+    on g.goal_id = b.goal_id and g.source = 'user_goal' and g.pushable
+  where b.created_at_ts >= $1
+    and not exists (
+      select 1
+      from goals.engagement_events ev
+      where ev.goal_id = b.goal_id
+        and ev.surface = 'goal_briefing_push'
+        and ev.metadata->>'briefing_id' = b.briefing_id
+    )
+  order by b.created_at_ts desc, b.briefing_id desc
+  limit $2
+)
+-- Same engagement telemetry as the current-run pushability read, with the
+-- candidate itself excluded from its goal's prior-briefing aggregates.
+select cb.*,
+       coalesce(agg.delivered_briefings_in_window, 0)::bigint as delivered_briefings_in_window,
+       coalesce(agg.opened_delivered_in_window, 0)::bigint as opened_delivered_in_window,
+       coalesce(agg.opened_briefings_in_window, 0)::bigint as opened_briefings_in_window
+from candidate_briefings cb
+left join lateral (
+  select count(distinct prior.briefing_id) filter (where ev.goal_id is not null)::bigint
+           as delivered_briefings_in_window,
+         count(distinct prior.briefing_id) filter (
+           where ev.goal_id is not null and prior.last_opened_at_ts >= $1
+         )::bigint as opened_delivered_in_window,
+         count(distinct prior.briefing_id) filter (
+           where prior.last_opened_at_ts >= $1
+         )::bigint as opened_briefings_in_window
+  from goals.briefings prior
+  left join goals.engagement_events ev
+    on ev.goal_id = prior.goal_id
+   and ev.surface = 'goal_briefing_push'
+   and ev.metadata->>'briefing_id' = prior.briefing_id
+   and ev.created_at >= $1
+  where prior.goal_id = cb.briefing_goal_id
+    and prior.briefing_id <> cb.briefing_briefing_id
+) agg on true
+order by cb.briefing_created_at_ts desc, cb.briefing_briefing_id desc
+select goal_id, source, attention_kind, attention_updated_at::text as attention_updated_at, next_due_at::text as next_due_at, escalation, slug, title, summary, description, momentum, momentum_status, emoji, image_relpath, icon_generation_status, status, created_at, updated_at, last_activity_at, pushable, parent_goal_id, sort_order, fixed_position, category, goal_kind, value_alignment, user_words, assistant_distillation, woop, implementation_intentions, monitoring_signal, review_cadence, next_review_question, momentum_dimensions, adjustment_recommendation, provenance, completed_at from goals.goalsselect goal_id, source, attention_kind, attention_updated_at::text as attention_updated_at, next_due_at::text as next_due_at, escalation, slug, title, summary, description, momentum, momentum_status, emoji, image_relpath, icon_generation_status, status, created_at, updated_at, last_activity_at, pushable, parent_goal_id, sort_order, fixed_position, category, goal_kind, value_alignment, user_words, assistant_distillation, woop, implementation_intentions, monitoring_signal, review_cadence, next_review_question, momentum_dimensions, adjustment_recommendation, provenance, completed_at from goals.goals order by sort_order asc, goal_id ascdelete from goals.goals where goal_id = $1select exists(select 1 from goals.goals where goal_id = $1)select exists(select 1 from goals.goals where slug = $1)delete from goals.goals where goal_id = any($1)select parent_goal_id, source from goals.goals where goal_id = $1parent_goal_idsourceselect goal_id
+                     from goals.goals
+                     where parent_goal_id is not distinct from $1
+                       and goal_id <> $2
+                       and source = $3
+                     order by sort_order asc, goal_id ascselect goal_id
+                     from goals.goals
+                     order by sort_order asc, goal_id ascselect title from goals.goals where goal_id = $1select source from goals.goals where goal_id = $1select coalesce(max(sort_order), -1)::double precision + 1
+                     from goals.goals
+                     where parent_goal_id is not distinct from $1
+                       and source = $2update goals.goals
+                     set image_relpath = $2, icon_generation_status = $3, updated_at = $4, updated_at_ts = $5
+                     where goal_id = $1update goals.goals
+                     set goal_kind = coalesce($2, goal_kind),
+                         value_alignment = coalesce($3, value_alignment),
+                         updated_at = $4,
+                         updated_at_ts = $5
+                     where goal_id = $1update goals.goals
+                     set attention_kind = $2,
+                         attention_updated_at = $3,
+                         next_due_at = $4
+                     where goal_id = $1
+                       and source = 'assistant_tracking'select exists (select 1 from goals.goals where status = 'active')update goals.goals
+                     set escalation = $2,
+                         escalation_due_at = $3,
+                         updated_at = $4::text,
+                         updated_at_ts = $4
+                     where goal_id = $1
+with recursive ancestors(goal_id, parent_goal_id, depth, path) as (
+  select goal_id, parent_goal_id, 0, array[goal_id]
+  from goals.goals
+  where goal_id = $1
+  union all
+  select parent.goal_id,
+         parent.parent_goal_id,
+         ancestors.depth + 1,
+         ancestors.path || parent.goal_id
+  from goals.goals parent
+  join ancestors on parent.goal_id = ancestors.parent_goal_id
+  where ancestors.parent_goal_id is not null
+    and ancestors.depth < 100
+    and not parent.goal_id = any(ancestors.path)
+)
+select goal_id
+from ancestors
+where parent_goal_id is null
+order by depth desc
+limit 1
+update goals.goals
+                     set category = $2, updated_at = $3, updated_at_ts = $4
+                     where goal_id = $1update goals.goals
+                     set momentum = $2,
+                         momentum_status = $3,
+                         updated_at = $4,
+                         updated_at_ts = $5
+                     where goal_id = $1select source from goals.goals where slug = $1select goal_id
+                     from goals.goals
+                     where source = $1
+                     order by sort_order asc, goal_id ascgoal_id, source, attention_kind, attention_updated_at::text as attention_updated_at, next_due_at::text as next_due_at, escalation, slug, title, summary, description, momentum, momentum_status, emoji, image_relpath, icon_generation_status, status, created_at, updated_at, last_activity_at, pushable, parent_goal_id, sort_order, fixed_position, category, goal_kind, value_alignment, user_words, assistant_distillation, woop, implementation_intentions, monitoring_signal, review_cadence, next_review_question, momentum_dimensions, adjustment_recommendation, provenance, completed_atselect goal.source
+                     from goals.updates update_entry
+                     join goals.goals goal on goal.goal_id = update_entry.goal_id
+                     where update_entry.update_id = $1select goal_id, status, momentum_status, updated_at from goals.goals where source = 'user_goal' order by sort_order asc, goal_id asc and source =  and parent_goal_id is null and parent_goal_id =  and status =  and (fixed_position is null or fixed_position >  or (fixed_position =  and goal_id > )) and fixed_position is null and ( >  or () or ( <  and sort_order >  and fixed_position is null and (sort_order, goal_id) > () order by fixed_position asc nulls last, case when fixed_position is not null then goal_id end ascsort_order asc, goal_id asc limit case attention_kind when 'user_action_required' then 0 when 'action_required' then 0 when 'new_information' then 1 else 2 end asc, case when next_due_at is not null and next_due_at <= now() + interval '30 days' then next_due_at else timestamptz '9999-12-31' end asc, coalesce(last_activity_at_ts, updated_at_ts, updated_at::timestamptz) desc, sort_order asc, goal_id asc limit select exists (select 1 from goals.goals where source = $1 and status = 'active')sort_order asc, goal_id ascselect max(coalesce(updated_at_ts, updated_at::timestamptz)) from goals.goals where source = $1

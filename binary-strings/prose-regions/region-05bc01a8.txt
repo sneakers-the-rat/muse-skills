@@ -1,0 +1,151 @@
+errorsuccesswrite_admissionwritepostgres write completed slowlypostgres write failedretrying idempotent postgres writeone-shot postgres write invoked more than oncecompleted device upload session missing cached responseconcurrent device upload chunk conflict missinglocked active device full sync is missing its idactive reconciliation state is missing its acceptance expiryregistry.get_deviceregistry.device_existsregistry.list_pairedregistry.revoke_devicerevoke_deviceregistry.upsert_deviceupsert_deviceregistry.get_device_metaregistry.update_last_seenregistry.get_device_familyregistry.list_device_indexregistry.mark_disconnectedmark_disconnectedpaired-device cache refresh after write was superseded by a newer writefailed to refresh paired-device cache after device write; invalidating cache so the next read re-queries Postgresregistry.record_health_sync_failureregistry.record_health_sync_successnotification_opt_in_offers.getnotification_opt_in_offers.putupload_sessions.delete_uploadupload_sessions.stage_chunkupload_sessions.load_sessionupload_sessions.cache_responseupload_sessions.cleanup_expiredupload_sessions.begin_finalizationupload_sessions.completed_responseupload_sessions.load_chunk_payloadsupload_sessions.in_progress_datatypeupload_sessions.release_finalizationacquired connection, but time to acquire exceeded slow thresholdacquired connection
+        insert into device.upload_sessions (
+            upload_session_id,
+            route_kind,
+            node_id,
+            request_id,
+            datatype,
+            sync_mode,
+            chunk_count,
+            status,
+            response,
+            created_at_text,
+            updated_at_text,
+            expires_at_text,
+            expires_at
+        )
+        values (
+            $1, $2, $3, $4, $5, null, $6, $7, null,
+            $8, $8, $9, coalesce($10, now())
+        )
+        on conflict (upload_session_id) do nothing
+        invoke_resultdevice upload chunk_countpartial
+        select
+            s.route_kind,
+            s.node_id,
+            s.request_id,
+            s.datatype,
+            s.chunk_count,
+            s.status,
+            s.response as response_json
+        from device.upload_sessions s
+        where s.upload_session_id = $1
+        for update of s
+        statusroute_kindnode_idrequest_idchunk_countcompletedfinalizingupdate device.upload_sessions
+             set updated_at_text = $1,
+                 expires_at_text = $2,
+                 expires_at = coalesce($4, expires_at)
+             where upload_session_id = $3update device.upload_sessions
+             set expires_at_text = $1,
+                 expires_at = coalesce($2, expires_at)
+             where upload_session_id = $3response_jsondevice.upload_chunks.payload_jsondevice.upload_chunks.payload
+            insert into device.upload_chunks (
+                upload_session_id,
+                chunk_index,
+                payload,
+                payload_digest,
+                created_at_text
+            )
+            values ($1, $2, $3, $4, $5)
+            on conflict (upload_session_id, chunk_index) do nothing
+            device upload chunk_index
+        select
+            count(*)::bigint as received_chunks,
+            coalesce(sum(octet_length(c.payload)), 0)::bigint as total_bytes
+        from device.upload_chunks c
+        where c.upload_session_id = $1
+        received_chunkstotal_bytesdevice upload received_chunksselect datatype
+         from device.upload_sessions
+         where upload_session_id = $1delete from device.upload_sessions where upload_session_id = $1device.upload_sessions.response_jsondevice.upload_sessions.response
+        update device.upload_sessions
+        set status = $1,
+            response = $2,
+            updated_at_text = $3,
+            expires_at_text = $4,
+            expires_at = coalesce($6, expires_at)
+        where upload_session_id = $5
+        delete from device.upload_chunks where upload_session_id = $1delete from device.upload_sessions
+         where expires_at <= $1
+           and route_kind = $2
+        select
+            s.status,
+            s.response as response_json,
+            s.updated_at_text,
+            s.chunk_count
+        from device.upload_sessions s
+        where s.upload_session_id = $1
+        for update of s
+        updated_at_textselect count(*)::bigint from device.upload_chunks where upload_session_id = $1updated_at
+                    update device.upload_sessions
+                    set status = $1,
+                        updated_at_text = $2,
+                        expires_at_text = $3,
+                        expires_at = coalesce($7, expires_at)
+                    where upload_session_id = $4 and status in ($5, $6)
+                    claimed device upload finalizationdevice upload is already finalizing; waiting for completion or lease expiry
+        select
+            s.route_kind,
+            s.node_id,
+            s.request_id,
+            s.chunk_count,
+            s.status,
+            s.response as response_json
+        from device.upload_sessions s
+        where s.upload_session_id = $1
+          and s.expires_at > $2
+        insert into device.nodes (node_id, node_kind, last_seen_at)
+         values ($1, 'device', now())
+         on conflict (node_id) do update set
+           node_kind = excluded.node_kind,
+           last_seen_at = excluded.last_seen_at
+        select c.chunk_index, c.payload as payload_json
+        from device.upload_chunks c
+        where c.upload_session_id = $1
+        order by c.chunk_index asc
+        
+        select c.payload as payload_json, c.payload_digest
+        from device.upload_chunks c
+        where c.upload_session_id = $1
+          and c.chunk_index = $2
+        
+        select route_kind, node_id, request_id, chunk_count, status, datatype
+        from device.upload_sessions
+        where upload_session_id = $1
+          and expires_at > $2
+        
+        update device.upload_sessions
+        set status = $1,
+            updated_at_text = $2,
+            expires_at_text = $3,
+            expires_at = coalesce($6, expires_at)
+        where upload_session_id = $4 and status = $5
+        select offer_count, last_offered_at, notifications_seen_on
+         from device.notification_opt_in_offers
+         where client_id = $1offer_countlast_offered_atnotifications_seen_oninsert into device.notification_opt_in_offers
+           (client_id, offer_count, last_offered_at, notifications_seen_on, updated_at)
+         values ($1, $2, $3, $4, now())
+         on conflict (client_id) do update set
+           offer_count = excluded.offer_count,
+           last_offered_at = excluded.last_offered_at,
+           notifications_seen_on = excluded.notifications_seen_on,
+           updated_at = now()
+    select
+        node_id,
+        coalesce(display_name, node_id) as display_name,
+        platform,
+        enabled_permissions_json,
+        commands_json,
+        data_sources_json,
+        version,
+        device_family,
+        model_id,
+        metadata_json,
+        is_wakeup_supported,
+        delivery_app,
+        invoke_protocol,
+        coalesce(paired_at_text, created_at::text) as paired_at,
+        coalesce(last_seen_at_text, last_seen_at::text, created_at::text) as last_seen_at,
+        status,
+        pairing_status
+    from device.nodes
+pairing_status = 'ok'pairing_status <> 'revoked'select pairing_status from device.nodes where node_id = $1 for updateokupdate device.nodes set pairing_status = $1 where node_id = $2€E
