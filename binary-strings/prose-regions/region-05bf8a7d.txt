@@ -1,0 +1,172 @@
+insert into feed.deleted_units
+                       (unit_id, run_id, prompt_id, origin, category,
+                        edition_local_date, activity_tier, beat, source_idea_id, use_cases,
+                        unit_created_at_ms, seen_at_ms, last_seen_at_ms, timespent_ms,
+                        deleted_at_ms)
+                     select u.unit_id, u.run_id, u.prompt_id, u.origin, u.category,
+                            u.edition_local_date, u.activity_tier, u.beat,
+                            u.source_idea_id,
+                            coalesce(
+                              (select uc.use_cases from feed.unit_use_cases uc
+                                where uc.unit_id = u.unit_id),
+                              '{}'),
+                            u.created_at_ms, u.seen_at_ms, u.last_seen_at_ms,
+                            u.timespent_ms, $2
+                       from feed.units u
+                      where u.unit_id = $1
+                     on conflict (unit_id) do nothingselect distinct candidate.path
+                     from unnest($1::text[]) as candidate(path)
+                     where exists (
+                         select 1 from feed.units u
+                         where u.header_image_path = candidate.path
+                            or u.video_media_path = candidate.path
+                            or candidate.path = any(u.image_urls)
+                            or candidate.path = any(u.carousel_clip_paths)
+                     )select unit_id from feed.units
+                     where origin = 'fill' and run_id = $1 and position = $2with active as (
+                       select greatest(
+                         coalesce((select max(edition_local_date) from feed.units
+                                   where prompt_id = $1 and origin = 'generated'),
+                                  $2::date),
+                         $2::date) as day
+                     )
+                     select active.day, min(u.edition_generated_at_ms)
+                     from active
+                     left join feed.units u
+                       on (u.prompt_id = $1 or u.prompt_id is null)
+                      and u.edition_local_date = active.day
+                     group by active.dayfrom feed.units
+                     where (prompt_id = $1 or prompt_id is null)
+                       and run_id <> $2
+                       and edition_local_date >= $3
+                     order by edition_local_date desc, edition_generated_at_ms desc, position asc, unit_id asc
+                     limit $4select max(edition_local_date) from feed.units
+                     where prompt_id = $1 and origin = 'generated'update feed.units u
+                         set image_urls = case
+                                 when kept.survivors >= 2 then kept.arr
+                                 else null
+                             end,
+                             carousel_clip_paths = case
+                                 when kept.survivors >= 2
+                                      and u.carousel_clip_paths is not null
+                                     then kept.clips
+                                 else null
+                             end,
+                             attachment_kind = case
+                                 when kept.survivors >= 2 then u.attachment_kind
+                                 else 'none'
+                             end,
+                             -- A surviving rail keeps its stamped ratio (a
+                             -- changed lead tile leaves it approximate — a
+                             -- layout hint, accepted); a whole-degrade
+                             -- clears it because a `none` row has no leading
+                             -- image for the ratio to describe.
+                             social_thumbnail_aspect_ratio = case
+                                 when kept.survivors >= 2
+                                     then u.social_thumbnail_aspect_ratio
+                                 else null
+                             end,
+                             updated_at_ms = $2
+                         from (
+                             select unit_id,
+                                    coalesce(
+                                        array_agg(item.value order by item.ord)
+                                            filter (where item.value <> all($1)),
+                                        '{}'
+                                    ) as arr,
+                                    coalesce(
+                                        array_agg(
+                                            coalesce(carousel_clip_paths[item.ord], '')
+                                            order by item.ord)
+                                            filter (where item.value <> all($1)),
+                                        '{}'
+                                    ) as clips,
+                                    count(*) filter (where item.value <> all($1))
+                                        as survivors
+                             from feed.units,
+                                  unnest(image_urls) with ordinality
+                                      as item(value, ord)
+                             where attachment_kind = 'carousel'
+                               and image_urls && $1
+                             group by unit_id
+                         ) as kept
+                         where u.unit_id = kept.unit_idselect units.category as category,
+                            count(*) as posts
+                     from feed.units as units
+                     where (units.prompt_id = $1 or units.prompt_id is null)
+                       and units.run_id <> $2
+                       and units.edition_local_date >= $3
+                     group by units.category
+                     order by count(*) desc, units.category ascselect greatest(
+                       (select max(edition_generated_at_ms) from feed.units
+                        where prompt_id = $1),
+                       (select max(edition_generated_at_ms) from feed.units
+                        where prompt_id is null)
+                     )from feed.units
+                     where (prompt_id = $1 or prompt_id is null)
+                       and run_id <> $2
+                       and edition_local_date >= $3
+                       and source_url_keys is not null
+                       and cardinality(source_url_keys) > 0
+                     order by edition_local_date desc, edition_generated_at_ms desc, position asc, unit_id asc
+                     limit $4select units.run_id,
+                            units.kicker,
+                            units.category,
+                            units.created_at_ms,
+                            runs.search_query_keys
+                     from feed.units as units
+                     left join feed.runs as runs on runs.run_id = units.run_id
+                     where (units.prompt_id = $1 or units.prompt_id is null)
+                       and units.run_id <> $2
+                       and units.edition_local_date >= $3
+                     order by units.edition_local_date desc,
+                              units.edition_generated_at_ms desc,
+                              units.position asc,
+                              units.unit_id asc
+                     limit $4update feed.units
+                         set attachment_kind = 'none',
+                             header_image_path = null,
+                             video_media_path = null,
+                             social_thumbnail_aspect_ratio = null,
+                             updated_at_ms = $2
+                         where header_image_path = any($1)
+                            or video_media_path = any($1)select outcome, offer_digest
+                       from feed.proactive_seed_offers
+                      where prompt_id = $1
+                        and ((outcome = 'declined' and local_date = $2)
+                             or (outcome = 'seeded' and decided_at_ms >= $3))outcomeoffer_digestdelete from feed.proactive_seed_offers
+                      where prompt_id = $1 and decided_at_ms < $2insert into feed.proactive_seed_offers
+                         (prompt_id, outcome, offer_digest, local_date, decided_at_ms)
+                     select $1, $2, digest, $4, $5
+                       from unnest($3::text[]) as digest
+                     on conflict (prompt_id, outcome, offer_digest, local_date) do nothingacquired connection, but time to acquire exceeded slow thresholdacquired connectionfeed.replace_run_signalsfeed.delete_run_signals_beforefeed.delete_run_signals_for_sourcesfeed.prompt_scope_verdictfeed.record_unit_signalsfeed.recent_unit_signal_usesfeed.count_units_citing_no_signalfeed.delete_unit_signals_for_sourcesfeed.live_derived_claimsfeed.clear_derived_claimsfeed.expire_derived_claimsfeed.claim_fleet_fetch_receiptsfeed.fleet_records_already_seenfeed.queue_locale_refreshfeed.prompt_query_planfeed.upsert_prompt_query_planfeed.signal_enrichmentfeed.apply_note_enrichmentfeed.apply_signal_enrichmentfeed.clear_signal_enrichmentfeed.queue_signal_enrichmentfeed.sweep_signal_enrichmentfeed.engagement_breakdownfeed.preferences_projectionfeed.commit_preferences_projectionfeed.get_runfeed.admit_runfeed.finish_runfeed.latest_runfeed.list_open_runsfeed.mark_run_runningfeed.open_adhoc_edition_runfeed.latest_run_created_at_msfeed.append_run_search_queriesfeed.set_pulse_run_input_envelopefeed.proactive_pulse_admitted_sincefeed.latest_generation_finished_at_msfeed.terminalize_run_and_cancel_stepsfeed.latest_edition_run_finished_at_msfeed.recent_sibling_run_search_queriesfeed.sibling_run_search_queries_for_dayfeed.last_succeeded_scheduled_occurrencefeed.failed_scheduled_occurrence_run_countfeed.set_unit_icon_keyfeed.fill_unit_icon_key_if_absentfeed.search_units_ftsfeed.set_unit_embeddingfeed.search_units_semanticfeed.list_units_missing_embeddingfeed.list_recent_units_in_categoryfeed.list_published_source_idea_idsfeed.list_recent_published_idea_embeddingsfeed.list_recent_unit_embeddings_for_promptfeed.get_promptfeed.list_promptsfeed.delete_promptfeed.update_promptfeed.default_promptfeed.prompt_seed_statefeed.null_state_seed_statefeed.upsert_singleton_promptfeed.write_prompt_seed_markerfeed.adopt_null_state_seed_markerfeed.queued_generation_candidatesfeed.clear_prompt_generation_queuedfeed.prompt_generation_queued_at_msfeed.stamp_prompt_generation_queuedfeed.list_run_stepsfeed.append_wire_unitfeed.open_step_attemptfeed.record_step_startfeed.step_attempt_countfeed.step_attempt_outcomefeed.list_run_step_statusesfeed.record_step_submissionfeed.cached_step_outputfeed.latest_step_output_jsonfeed.fail_run_for_step_ownerfeed.mark_units_seenfeed.record_unit_viewsfeed.set_unit_reactionfeed.record_interactionfeed.reader_engagementfeed.reader_last_engagementfeed.list_interaction_summariesfeed.unit_first_view_timesfeed.get_unitfeed.feed_has_any_unitfeed.list_units_by_idsfeed.list_units_for_runfeed.update_unit_contentfeed.delete_unit_for_readerfeed.referenced_media_pathsfeed.materialized_fill_unit_idfeed.fill_day_anchor_for_promptfeed.list_recent_units_for_feedfeed.newest_edition_day_for_promptfeed.remove_expired_carousel_itemsfeed.list_recent_categories_for_feedfeed.recent_category_counts_for_feedfeed.freshest_edition_generated_atfeed.list_recent_source_uses_for_feedfeed.list_recent_post_questions_for_feedfeed.clear_units_referencing_header_imagesfeed.record_proactive_seed_offersfeedback.entity_feedback_eventsfeedback.entity_feedback_stateupdate runtime.background_content_jobs set refresh_pending = false
+         where job_id = $1 and locale_revision = $2 and refresh_pendingselect locale_revision from runtime.background_content_jobs where job_id = $1select pg_advisory_xact_lock(hashtext('background_content_jobs.locale'), hashtext($1))insert into feed.interactions
+           (interaction_id, unit_id, kind, value, created_at_ms)
+         values ($1, $2, $3, $4, $5)delete from feed.unit_signals where unit_id = any($1)update feed.runs
+         set status = $2,
+             failure_reason = $3,
+             finished_at_ms = $4,
+             updated_at_ms = $4
+         where run_id = $1 and status in ('queued', 'running')update feed.run_steps
+         set status = 'cancelled',
+             finished_at_ms = $2,
+             updated_at_ms = $2
+         where run_id = $1 and status = 'running'delete from feed.units where unit_id = $1update feed.run_steps
+             set status = 'failed',
+                 error = $5,
+                 finished_at_ms = $6,
+                 updated_at_ms = $6
+             where run_id = $1 and step_id = $2 and attempt = $3
+               and agent_id = $4
+               and status = 'running'
+               and output_json = '{}'::jsonb
+             returning run_idupdate feed.runs
+             set status = $4,
+                 failure_reason = $2,
+                 finished_at_ms = $3,
+                 updated_at_ms = $3
+             where run_id = $1 and status in ('queued', 'running')select status from feed.runs where run_id = $1update feed.run_steps
+             set status = 'cancelled',
+                 finished_at_ms = $2,
+                 updated_at_ms = $2
+           where run_id = $1 and status = 'running'database write admission gate closedadmission_timeoutcalled `Result::unwrap()` on an `Err` valueideasheartbeatserendipityproactive_notifierdevice_syncreferral_invitationconfidential_vm_upsellinternal_messagesquota_noticesmuse_mail_owner_verifiedscheduledadhoc_useradhoc_agentadhoc_visitproactive_pulseingestagent_unitseededdislikereaction_setdiscussfeedback_reasondeletedingest_receivedtap_imagetap_videotap_social_sourcemorningmiddayeveningadhocBUG: inner connection already taken!ConfigurationInvalidArgumentIoTlsRowNotFoundTypeNotFoundtype_nameColumnIndexOutOfBoundsindexlenColumnNotFoundColumnDecodesourceEncodeDecodeAnyDriverErrorPoolTimedOutPoolClosedWorkerCrashedMigrateInvalidSavePointStatementBeginFailed
