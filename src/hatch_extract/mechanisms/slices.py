@@ -1,28 +1,20 @@
-"""Mechanism 2 — content slices: a heuristic-found file whose
-content address is the target of a relocation slice gets the
-slice's authoritative length (confirming or correcting the
-heuristic length).
+"""RETIRED 2026-11-01 — compatibility shim (module alias).
 
-Ported from the merge loop of scripts/extract_binary_files.py in
-the 2026-10-31 package restructure.
+The implementation lives in the binary-inspect library as
+binary_inspect.extract.mechanisms.slices. This module aliases itself to
+that module object, so existing imports (hatch_extract.mechanisms.slices)
+and attribute patches behave exactly as they did against the
+original single implementation. The original implementation is
+preserved beside this file as slices.py.bak-20261101 and in git
+history.
 """
-from ..elftools import _text_ok
+import pathlib as _pathlib
+import sys as _sys
 
+_BI_SRC = _pathlib.Path.home() / "workspace" / "binary-inspect" / "src"
+if str(_BI_SRC) not in _sys.path:
+    _sys.path.insert(0, str(_BI_SRC))
 
-def confirm_slices(found, put, by_target, data, o2v):
-    """For every file found so far, if its content address is a
-    slice target: when the found length is among the slice lengths
-    the file is confirmed at slice authority; when there is exactly
-    one slice length and the re-sliced bytes are valid text, the
-    length is corrected to the slice's."""
-    for s, (cs, body, _v) in list(found.items()):
-        v = o2v(cs)
-        if v is not None and v in by_target:
-            lens = by_target[v]
-            if len(body) in lens:
-                put(s, cs, body, "slice")
-            elif len(lens) == 1:
-                nl = next(iter(lens))
-                nb = data[cs:cs + nl]
-                if _text_ok(nb):
-                    put(s, cs, nb, "slice")
+import binary_inspect.extract.mechanisms.slices as _impl
+
+_sys.modules[__name__] = _impl

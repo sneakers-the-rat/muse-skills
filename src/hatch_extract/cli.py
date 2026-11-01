@@ -1,20 +1,25 @@
-"""hatch-extract CLI: a thin wrapper over the library, shaped like
-binary-inspect's CLI (one tool, verbs over one binary).
+"""RETIRED 2026-11-01 — compatibility shim.
 
-Verbs:
-  extract            run the full extraction pipeline (mechanisms 1-13)
-  curate <topic>     run a topical string curation (bot_challenge,
-                     browser_persona)
-  topics             rebuild the topical views under topics/
-  verify [repo]      the archive content census (verify_archive)
-  mechanisms         list the mechanism registry
+The implementation lives in the binary-inspect library
+(binary_inspect.extract, verbs extract / extract-curate /
+extract-topics / extract-verify / extract-mechanisms on the
+binary-inspect CLI). This module preserves the historical
+hatch-extract CLI surface (verbs extract / curate / topics /
+verify / mechanisms) by delegating to it. The original
+implementation is preserved beside this file as
+cli.py.bak-20261101 and in git history.
 """
 
 import argparse
+import pathlib
 import sys
 
-from .core import DEFAULT_BIN, REPO
-from .mechanisms import REGISTRY
+_BI_SRC = pathlib.Path.home() / "workspace" / "binary-inspect" / "src"
+if str(_BI_SRC) not in sys.path:
+    sys.path.insert(0, str(_BI_SRC))
+
+from binary_inspect.extract.core import DEFAULT_BIN, REPO  # noqa: E402
+from binary_inspect.extract.mechanisms import REGISTRY  # noqa: E402
 
 
 def main(argv=None) -> int:
@@ -33,21 +38,21 @@ def main(argv=None) -> int:
     args = ap.parse_args(argv)
 
     if args.verb == "extract":
-        from .pipeline import run_extract
+        from binary_inspect.extract.pipeline import run_extract
         from pathlib import Path
         return run_extract(repo=Path(args.repo),
                            bin_path=Path(args.bin))
     if args.verb == "curate":
         if args.topic == "bot_challenge":
-            from .curations.bot_challenge import main as c_main
+            from binary_inspect.extract.curations.bot_challenge import main as c_main
         else:
-            from .curations.browser_persona import main as c_main
+            from binary_inspect.extract.curations.browser_persona import main as c_main
         return c_main()
     if args.verb == "topics":
-        from .topics import main as t_main
+        from binary_inspect.extract.topics import main as t_main
         return t_main()
     if args.verb == "verify":
-        from . import verify
+        from binary_inspect.extract import verify
         if args.repo is not None:
             sys.argv = [sys.argv[0], args.repo]
         return verify.main()

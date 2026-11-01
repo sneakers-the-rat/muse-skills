@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """SHIM — this file is a compatibility entry point.
 
-The implementation lives in the hatch_extract package
-(src/hatch_extract/); this shim preserves the historical CLI so
+The implementation lives in the binary-inspect library
+(binary_inspect.extract); this shim preserves the historical CLI so
 existing callers (sync-skills.sh, the skills-nightly-checkin cron)
 keep working unchanged. The original implementation is preserved
 beside this file as verify_archive.py.bak-20261031-080942 and in git history.
@@ -10,10 +10,10 @@ beside this file as verify_archive.py.bak-20261031-080942 and in git history.
 import pathlib
 import sys
 
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "src"))
+sys.path.insert(0, str(pathlib.Path.home() / "workspace" / "binary-inspect" / "src"))
 
 
-from hatch_extract.verify import main
+from binary_inspect.extract.verify import main
 
 if __name__ == "__main__":
     sys.exit(main())

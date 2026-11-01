@@ -1,40 +1,20 @@
-"""Mechanism 12 — NUL-terminated strings (reference form e):
-FFI-facing C strings are delimited by their terminator, not by a
-length. Enumerate every printable run of >= MIN_LEN bytes closed
-by a NUL in the given sections, validating UTF-8 like every other
-string class. The span excludes the terminator.
+"""RETIRED 2026-11-01 — compatibility shim (module alias).
 
-Implementation note: the run pattern must NOT carry the \\x00
-requirement itself. With the terminator inside the regex, every
-unterminated run of L allowed bytes costs O(L^2) backtracking
-(the engine retries at every offset of the run) — .rodata holds
-megabyte-scale non-string blobs, and that shape took minutes-to-
-hours on the live binary. Finding maximal runs is linear; the
-terminator is then a one-byte check after each run. The match
-set is identical: a NUL-terminated string is exactly a maximal
-allowed-class run immediately followed by a NUL.
+The implementation lives in the binary-inspect library as
+binary_inspect.extract.mechanisms.nul_strings. This module aliases itself to
+that module object, so existing imports (hatch_extract.mechanisms.nul_strings)
+and attribute patches behave exactly as they did against the
+original single implementation. The original implementation is
+preserved beside this file as nul_strings.py.bak-20261101 and in git
+history.
 """
-import re
+import pathlib as _pathlib
+import sys as _sys
 
-MIN_LEN = 4
-RUN = re.compile(rb"[\x09\x0a\x0d\x20-\x7e\x80-\xff]{%d,}" % MIN_LEN)
+_BI_SRC = _pathlib.Path.home() / "workspace" / "binary-inspect" / "src"
+if str(_BI_SRC) not in _sys.path:
+    _sys.path.insert(0, str(_BI_SRC))
 
+import binary_inspect.extract.mechanisms.nul_strings as _impl
 
-def nul_strings(data, spans):
-    """spans: [(section_offset, section_size)]. Returns
-    [{offset, len, refs, form}] with refs=1 per occurrence."""
-    out = []
-    for off, size in spans:
-        region = bytes(data[off:off + size])
-        for m in RUN.finditer(region):
-            end = m.end()
-            if end >= len(region) or region[end] != 0:
-                continue  # not closed by a NUL inside the section
-            blob = m.group(0)
-            try:
-                blob.decode("utf-8")
-            except UnicodeDecodeError:
-                continue
-            out.append({"offset": off + m.start(), "len": len(blob),
-                        "refs": 1, "form": "NUL-terminated C string"})
-    return out
+_sys.modules[__name__] = _impl

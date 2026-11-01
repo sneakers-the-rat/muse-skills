@@ -1,25 +1,20 @@
-"""Mechanism 9 — static fat-pointer references (reference form b):
-every (ptr, len) pair stored in a data section whose ptr lands in
-a string section and whose span validates as text — the standard
-Rust &str constant in statics, vtables and fmt piece arrays
-(form g rides this form: core::fmt piece arrays are statics of
-exactly these pairs, so their spans fall out of this census).
+"""RETIRED 2026-11-01 — compatibility shim (module alias).
 
-Built on mechanism 1's relocation slice census: each slice slot is
-one stored fat pointer. Spans are deduplicated by (offset, len)
-with a reference count.
+The implementation lives in the binary-inspect library as
+binary_inspect.extract.mechanisms.static_refs. This module aliases itself to
+that module object, so existing imports (hatch_extract.mechanisms.static_refs)
+and attribute patches behave exactly as they did against the
+original single implementation. The original implementation is
+preserved beside this file as static_refs.py.bak-20261101 and in git
+history.
 """
-from collections import Counter
+import pathlib as _pathlib
+import sys as _sys
 
+_BI_SRC = _pathlib.Path.home() / "workspace" / "binary-inspect" / "src"
+if str(_BI_SRC) not in _sys.path:
+    _sys.path.insert(0, str(_BI_SRC))
 
-def static_refs(slices, v2o):
-    """slices: {slot_vaddr: (target_vaddr, len, content)} from
-    build_slices. Returns [{offset, len, refs, form}]."""
-    counts = Counter()
-    for _slot, (target, length, _content) in slices.items():
-        off = v2o(target)
-        if off is not None:
-            counts[(off, length)] += 1
-    return [{"offset": off, "len": length, "refs": n,
-             "form": "static fat-pointer (ptr,len)"}
-            for (off, length), n in sorted(counts.items())]
+import binary_inspect.extract.mechanisms.static_refs as _impl
+
+_sys.modules[__name__] = _impl
