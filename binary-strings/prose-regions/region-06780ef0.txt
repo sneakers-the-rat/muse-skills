@@ -1,0 +1,99 @@
+gave up waiting for a socket-activated service to answerstill waiting for a socket-activated service to answersocket-activated service answered after waitingall branches are disabled and there is no else branchbackground task failedsuccesscompletion_result_context_seqfinal_response_context_seqcompletion publication lookup exceeded descendant boundwrite_admissionwritepostgres write completed slowlypostgres write failedretrying idempotent postgres writehatch:db:operationen-USone-shot postgres write invoked more than oncescheduler.cronegress frame length overflowbrowser invocation is missingbrowser parent is missingCHECKPOINTselect pg_current_wal_lsn()select b.*, a.connection_id as current_connection_id,
+                    a.revoked as account_revoked
+                from chat_private.binding_authorizations b
+                join chat_private.accounts a using(provider, account_id)
+                where b.provider = $1 and b.binding_id = $2account_revokedcurrent_connection_idinvocation_id, task_id, planner_agent_id, parent_invocation_id, caller_agent_id, caller_submission_id, call_id, agent_id, submission_id, runtime_work_id, input_digest, kind, state, input_json, context_json, result_json, wait_call_id, ordinal, tab_id, (extract(epoch from created_at) * 1000)::bigint as created_at_ms, (extract(epoch from stop_requested_at) * 1000)::bigint as stop_requested_at_ms, terminal_reason, handoff_state, (extract(epoch from finished_at) * 1000)::bigint as finished_at_msselect exists(select 1 from runtime.browser_invocations i
+                join runtime.browser_tasks t on t.task_id = i.task_id
+                left join runtime.browser_executions e on e.task_id = t.task_id
+                  and e.planner_agent_id = t.owner_agent_id
+                where i.invocation_id = $1 and i.result_json is null
+                  and i.planner_agent_id = t.owner_agent_id
+                  and t.status in ('running', 'user_controlled')
+                  and (t.status = 'running' or (t.outcome_status is null and e.control_revision = t.state_revision)))active execute-resolve recovery row has no worker owneractive self-improvement recovery owner has no agent idactive feed step recovery owner has no agent idupdate runtime.browser_invocations set
+                state='running',wait_call_id=null,updated_at=now()
+                where invocation_id=$1 and state='waiting_user' and wait_call_id=$2
+                and result_json is null
+                and not exists (select 1 from runtime.browser_calls question
+                    where question.invocation_id=$1 and question.kind='interaction'
+                    and question.result_json is null)
+        with activity as (
+            select state, wait_event_type, query_start
+            from pg_stat_activity
+            where datname = current_database()
+              and pid <> pg_backend_pid()
+        ),
+        client_io as (
+            select
+                coalesce(sum(reads), 0)::bigint as reads,
+                coalesce(sum(read_time), 0)::double precision as read_time_ms,
+                coalesce(sum(writes), 0)::bigint as writes,
+                coalesce(sum(write_time), 0)::double precision as write_time_ms,
+                coalesce(sum(evictions), 0)::bigint as evictions
+            from pg_stat_io
+            where backend_type = 'client backend'
+              and object = 'relation'
+              and context = 'normal'
+        ),
+        checkpointer_io as (
+            select
+                coalesce(sum(writes), 0)::bigint as writes,
+                coalesce(sum(write_time), 0)::double precision as write_time_ms,
+                coalesce(sum(fsyncs), 0)::bigint as fsyncs,
+                coalesce(sum(fsync_time), 0)::double precision as fsync_time_ms
+            from pg_stat_io
+            where backend_type = 'checkpointer'
+              and object = 'relation'
+              and context = 'normal'
+        )
+        select
+            current_setting('max_connections')::bigint as max_connections,
+            current_setting('superuser_reserved_connections')::bigint
+                as superuser_reserved_connections,
+            count(*)::bigint as connections_total,
+            count(*) filter (where state = 'active')::bigint as active,
+            count(*) filter (where state = 'idle')::bigint as idle,
+            count(*) filter (where state = 'idle in transaction')::bigint
+                as idle_in_transaction,
+            count(*) filter (where wait_event_type is not null)::bigint as waiting,
+            count(*) filter (where wait_event_type = 'IO')::bigint as io_waiting,
+            count(*) filter (where wait_event_type = 'Lock')::bigint as lock_waiting,
+            count(*) filter (where wait_event_type = 'LWLock')::bigint as lwlock_waiting,
+            coalesce(max((extract(epoch from clock_timestamp() - query_start) * 1000)::bigint)
+                filter (where state = 'active' and query_start is not null), 0)::bigint
+                as longest_active_ms,
+            (select reads from client_io) as client_reads,
+            (select read_time_ms from client_io) as client_read_time_ms,
+            (select writes from client_io) as client_writes,
+            (select write_time_ms from client_io) as client_write_time_ms,
+            (select evictions from client_io) as client_evictions,
+            (select writes from checkpointer_io) as checkpointer_writes,
+            (select write_time_ms from checkpointer_io) as checkpointer_write_time_ms,
+            (select fsyncs from checkpointer_io) as checkpointer_fsyncs,
+            (select fsync_time_ms from checkpointer_io) as checkpointer_fsync_time_ms,
+            (select wal_records from pg_stat_wal)::bigint as wal_records,
+            (select wal_fpi from pg_stat_wal)::bigint as wal_fpi,
+            (select wal_bytes::bigint from pg_stat_wal) as wal_bytes,
+            (select wal_buffers_full from pg_stat_wal)::bigint as wal_buffers_full,
+            (select buffers_alloc from pg_stat_bgwriter)::bigint as buffers_alloc,
+            (select buffers_clean from pg_stat_bgwriter)::bigint as buffers_clean,
+            (select maxwritten_clean from pg_stat_bgwriter)::bigint as maxwritten_clean,
+            (select blks_hit from pg_stat_database where datname = current_database())::bigint
+                as db_blks_hit,
+            (select blks_read from pg_stat_database where datname = current_database())::bigint
+                as db_blks_read,
+            (select blk_read_time from pg_stat_database
+                where datname = current_database())::double precision as db_blk_read_time_ms
+        from activity
+        max_connectionssuperuser_reservedsuperuser_reserved_connectionsconnections_totalidle_in_transactionio_waitinglock_waitinglwlock_waitinglongest_active_msioclient_backendrelation_normalreadsclient_readsread_time_msclient_read_time_mswritesclient_writeswrite_time_msclient_write_time_msevictionscheckpointercheckpointer_writescheckpointer_write_time_msfsyncscheckpointer_fsyncsfsync_time_mscheckpointer_fsync_time_mswalrecordswal_recordswal_fpibyteswal_bytesbuffers_fullbuffers_allocbuffers_cleandb_blks_hitblks_readdb_blks_readdb_blk_read_time_msunrecoverable_owner_sweep_acquireunrecoverable_owner_sweep_lookupsselect 1 from runtime.browser_tasks where task_id = $1 for updatewith recursive branch as (
+                    select invocation_id from runtime.browser_invocations where invocation_id = $1
+                    union all select child.invocation_id from runtime.browser_invocations child
+                    join branch parent on child.parent_invocation_id = parent.invocation_id)
+                    update runtime.browser_invocations set state = $3, suspended_state = null, result_json = $2,
+                    terminal_reason = $4, finished_at = now(), updated_at = now(),
+                    handoff_state = case when parent_invocation_id is null then $5::text end,
+                    handoff_submission_id = case when parent_invocation_id is null then $6::text end
+                    where invocation_id in (select invocation_id from branch)
+                    and result_json is null returning invocation_idselect exists(select 1 from runtime.browser_tasks t
+                join runtime.browser_executions e on e.task_id = t.task_id and e.planner_agent_id = t.owner_agent_id
+                where t.task_id = $1 and t.status = 'user_controlled' and t.outcome_status is null
+                  and e.control_revision = t.state_revision)job_idspace_build_completedstartup media safety dispatch unavailablelibraryavatar.set reply could not read the avatarrun_idstep_idattemptmessage_idThe app is being shared. Please try again shortly.scheduled worker already dispatchedSpace worker manager is unavailableweb artifact was not founddaemon state dropped during recovery owner validationdaemon state dropped during recovery owner terminalizationinference-proxy returned an invalid model selection routeavatar-state: authoritative DB row missingparent terminalizedterminalization_deferredwait for upload descriptor socketsend upload SCM_RIGHTSlist ideas by idsGatekeeper response omitted requested gate; using defaultshopping_results_v2navigationnavigation.scheduled_tasknode_card.notification_opt_inload goal by idlist goal suggestionslist goal briefingslist goal updateslist goalsload goal session mapping by root goal idresolve root goal parenthttpscompletion_resultthe review gave no reasoncontentcloudflare share origin lookupread cloudflare share origin lookuppg_system_identifiergetresume index maintainer is not installedpoppy/run/systemd/journal/io.systemd.journalload goal for Space linkrunninguncertainpresentation_root_session_idWWW did not confirm the Cloudflare share originShared action response omitted its result; check stored state before retrying¡ 
