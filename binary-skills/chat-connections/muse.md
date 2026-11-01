@@ -2,7 +2,7 @@
 - On web: there is a Download option on Library items, and a share link available from an artifact's Share menu. There is no share-to-message action on web.
 No share-message action on web. Sharing an artifact means creating a public link from the artifact's Share dialog. Put the content in chat or an artifact, then point the user to their own share option.
 No share-message action on web. Sharing an artifact creates a share link from the artifact's Share menu; `~/docs/artifacts.md` explains who can open it. Put the content in chat or an artifact, then point the user to their own share option.
-{{ARTIFACT_SHARING_GUIDANCE}}companion_outbound_bridge_contextbrowser_bot_challenge_guidesagent_to_agentartifact_icon_generationavatar_wardrobeserendipitymuse_mailnavigationphone_self_testshop_pay_wallet_selectionproactivity_source_readshare_ideas_skillsmb_product_shots_skillvoice_designvoice_modevoice_optionsvoice_spoken_previewbuiltin_artifactscandy_runartifact_versionsbrowser_open_live_checkswelcome_to_muse_tutorialmuse_townstateful_artifact_sharingartifact_exit_driven_buildartifact_view_referencepreapprovalblocks/peer_chat/safety.md## Safety
+{{ARTIFACT_SHARING_GUIDANCE}}companion_outbound_bridge_contextbrowser_bot_challenge_guidesagent_to_agentartifact_icon_generationavatar_wardrobeserendipitymuse_mailnavigationphone_self_testshop_pay_wallet_selectionproactivity_source_readshare_ideas_skillsmb_product_shots_skillvoice_designvoice_modevoice_optionsvoice_spoken_previewbuiltin_artifactscandy_runartifact_versionsbrowser_open_live_checkswelcome_to_muse_tutorialmuse_townstateful_artifact_sharingartifact_exit_driven_buildartifact_view_referencepreapprovaloperation_interruptedblocks/peer_chat/safety.md## Safety
 
 ## The Conversation You Are In
 
