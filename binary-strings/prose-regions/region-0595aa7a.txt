@@ -1,0 +1,30 @@
+deletedINSERT INTO agents (agent_id, id, session_id, kind, parent_id, parent_agent_id, root_session_id, depth, created_at, updated_at, model, status, last_assistant_message, ephemeral, agent_type, presentation_root_session_id, spawn_metadata_json, originating_location_context_json)
+             VALUES ($1, $1, $2, $3, $4, $4, $5, $6, $7, $8, $9, $10, NULL, $11, $12, $13, $14, $15)
+INSERT INTO agent_ancestors (descendant_id, ancestor_id, distance)
+VALUES ($1, $1, 0)
+ON CONFLICT (descendant_id, ancestor_id) DO NOTHING
+
+INSERT INTO agent_ancestors (descendant_id, ancestor_id, distance)
+SELECT $1, ancestor_id, distance + 1
+FROM agent_ancestors
+WHERE descendant_id = $2
+ON CONFLICT (descendant_id, ancestor_id) DO NOTHING
+
+INSERT INTO agent_ancestors (descendant_id, ancestor_id, distance)
+VALUES ($1, $2, 1)
+ON CONFLICT (descendant_id, ancestor_id) DO NOTHING
+freshupdate feed.runs
+                         set status = 'succeeded',
+                             finished_at_ms = $2,
+                             updated_at_ms = $2
+                         where run_id = $1 and status = 'running'update feed.units
+                         set manual_order = null,
+                             updated_at_ms = $3
+                         where prompt_id = $1
+                           and edition_local_date = $2
+                           and manual_order is not nulldelete from feed.promptless_unit_orders
+                         where prompt_id = $1 and local_date = $2insert into feed.null_state_seed (seeded_at_ms)
+                         values ($1)
+                         on conflict do nothing
+                         on conflict (run_id, position) where origin = 'fill' do nothing
+                         on conflict (unit_id) do nothingavatar music lookup failedmetadata_buildskipping preview resource after metadata build failedskipping attachment signing after metadata build failedFeed run has an invalid background locale revisionjob_idfailed to resolve approval Idea titlefailed to resolve approval subthread title

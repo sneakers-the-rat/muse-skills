@@ -1,0 +1,196 @@
+select 1 from runtime.browser_tasks where task_id = $1 for updatewith recursive branch as (
+                    select invocation_id from runtime.browser_invocations where invocation_id = $1
+                    union all select child.invocation_id from runtime.browser_invocations child
+                    join branch parent on child.parent_invocation_id = parent.invocation_id)
+                    update runtime.browser_invocations set state = $3, suspended_state = null, result_json = $2,
+                    terminal_reason = $4, finished_at = now(), updated_at = now(),
+                    handoff_state = case when parent_invocation_id is null then $5::text end,
+                    handoff_submission_id = case when parent_invocation_id is null then $6::text end
+                    where invocation_id in (select invocation_id from branch)
+                    and result_json is null returning invocation_idselect exists(select 1 from runtime.browser_tasks t
+                join runtime.browser_executions e on e.task_id = t.task_id and e.planner_agent_id = t.owner_agent_id
+                where t.task_id = $1 and t.status = 'user_controlled' and t.outcome_status is null
+                  and e.control_revision = t.state_revision)
+SELECT
+  agents.id,
+  agents.session_id,
+  agents.created_at,
+  agents.updated_at,
+  agents.status,
+  metadata.status AS session_metadata_status,
+  agents.seen_at_ms,
+  COALESCE(metadata.pinned, false) AS pinned,
+  metadata.pinned_order,
+  metadata.thread_title AS session_title,
+  transport.provider AS channel,
+  metadata.origin,
+  CASE WHEN transport.provider = 'peer' THEN transport.delivery_target END AS peer_muse
+FROM agents AS agents
+
+WHERE agents.kind = 'root'
+  AND agents.parent_agent_id IS NULL
+  AND agents.session_id IS NOT NULL
+  AND agents.ephemeral IS DISTINCT FROM TRUE
+  AND 
+  AND transport.provider IS NULL
+  AND transport.provider IS NOT NULL
+  AND (agents.updated_at, agents.created_at, agents.session_id) < ()
+legacy pinned sessions.list cursor was not resolved  AND metadata.pinned_order IS NULL
+  AND (agents.updated_at, agents.created_at, agents.session_id) < (  AND (metadata.pinned_order >  OR (metadata.pinned_order =  AND (agents.updated_at, agents.created_at, agents.session_id) < ()) OR metadata.pinned_order IS NULL)
+
+ORDER BY agents.updated_at DESC, agents.created_at DESC, agents.session_id DESC
+
+ORDER BY metadata.pinned_order ASC NULLS LAST,
+         agents.updated_at DESC, agents.created_at DESC, agents.session_id DESC
+LIMIT must be one of `active`, `paused`, `retired`, or `completed`failed to resolve owning root session from chat event recordspace_build_completedapproval_type
+SELECT a.agent_id
+FROM activity_monitor_agent_threads a
+JOIN activity_monitor_threads g ON g.activity_thread_id = a.activity_thread_id
+WHERE a.activity_thread_id = $1
+  AND g.status = $2
+ORDER BY a.created_at ASC, a.agent_id ASC
+
+SELECT action_index, action_seq, action_id, activity_thread_id, agent_id, agent_depth, icon, title, subtitle, report, status, created_at
+FROM activity_monitor_thread_actions
+WHERE activity_thread_id = $1
+ORDER BY action_index ASC, action_seq ASC
+
+SELECT action_index, action_id, activity_thread_id, agent_id, agent_depth, icon, title, subtitle, report, status, created_at
+FROM (
+    SELECT
+        action_index,
+        action_id,
+        activity_thread_id,
+        agent_id,
+        agent_depth,
+        icon,
+        title,
+        subtitle,
+        report,
+        status,
+        created_at,
+        action_seq AS insertion_order
+    FROM activity_monitor_thread_actions
+    WHERE activity_thread_id = $1
+    ORDER BY action_index DESC, insertion_order DESC
+    LIMIT $2
+)
+ORDER BY action_index ASC, insertion_order ASC
+
+SELECT user_message_id
+FROM activity_monitor_carrier_user_messages
+WHERE carrier_message_id = $1
+  AND ($2::text IS NULL OR root_agent_id IS NULL OR root_agent_id = $2)
+ORDER BY link_seq ASC
+
+SELECT b.activity_thread_id
+FROM activity_monitor_message_threads b
+WHERE b.message_id = $1
+
+SELECT b.activity_thread_id
+FROM activity_monitor_message_threads b
+JOIN activity_monitor_threads g ON g.activity_thread_id = b.activity_thread_id
+WHERE b.message_id = $1
+  AND g.status = $2
+
+SELECT work_id
+FROM activity_monitor_runtime_work_threads
+WHERE activity_thread_id = $1
+ORDER BY created_at ASC, work_id ASC
+
+SELECT activity_thread_id, name, subtitle, icon, emoji, status, created_at, finished_at, finish_message,
+       finish_status, finish_status_reason, activity_thread_kind, space_slug, status_title,
+       expected_finish_description
+FROM activity_monitor_threads
+WHERE activity_thread_id = $1
+
+UPDATE activity_monitor_threads
+SET status = $2,
+    finished_at = COALESCE(finished_at, $3),
+    finish_message = CASE
+      WHEN $4 IS NULL OR TRIM($4) = '' THEN finish_message
+      ELSE $4
+    END,
+    subtitle = CASE
+      WHEN $5 IS NULL OR TRIM($5) = '' THEN subtitle
+      ELSE $5
+    END,
+    status_title = CASE
+      WHEN $6 IS NULL OR TRIM($6) = '' THEN status_title
+      ELSE $6
+    END,
+    finish_status = COALESCE($7, finish_status),
+    finish_status_reason = COALESCE($8, finish_status_reason)
+WHERE activity_thread_id = $1
+SELECT 1::bigint FROM activity_monitor_threads WHERE activity_thread_id = $1 LIMIT 1
+DELETE FROM activity_monitor_message_threads mt
+WHERE mt.activity_thread_id = $1
+  AND NOT EXISTS (
+    SELECT 1
+    FROM activity_monitor_carrier_user_messages c
+    WHERE c.carrier_message_id = mt.message_id
+  )
+DELETE FROM activity_monitor_agent_threads WHERE activity_thread_id = $1resolve pathpath escapes mount rootforbiddendefaulttimed out while writing egress approval mirror requesttimed out while reading egress approval mirror responseboundary_seqchat history anchor has a negative sequenceexplicit chat event seqmain_chatchats tool read cursorpeer conversation read cursorgroup chat read cursorruntime_chatruntimefailed to serialize localized activity.updated payload; falling back to canonical framecompleted startup quota rejection has no eventnegative startup quota rejection event sequencecompleted startup quota rejection event is absentrealtime provider writer is closedinput failure lockinference-proxy returned an invalid model selection routeverify activity feed tableavatar-state: authoritative DB row missing`DateTime + TimeDelta` overflowedterminalization_deferrednegative cancellation event sequencecontext item sequence space is exhaustedcommitted cancellation has no context sequencestartup quota rejection payload is not an objectstartup quota rejection metadata is not an objectsession_idfieldvaluefailed to synchronize onboarding name widget selectionvoice_optionsactivity monitor finish coordinator unavailable; finishing without generated terminal presentationconfirmed browser Stop completed with unsettled cleanupbrowser Stop owner did not settle; withholding acknowledgement and summaryfailed to record the first media handoff after advanced media admissionavatar_video_completionfailed to seed avatar completion after advanced media admissionfailed to record the first media handoff after a bundled look was wornavatar_bundled_look_wornfailed to seed avatar completion after a bundled look was worninvalid reaction epochinvalid reaction follow-upinvalid reaction binding epochpublication has no chat ownerinvalid publication tracepublication owner does not match its transcript/metadata/message_kindpublication has no execution ownerinvalid publication authorityview ideaview canonical idearesolve canonical on not-foundlist ideas by idsbrowser inventory timed outshopping_results_v2navigationnavigation.scheduled_tasknode_card.notification_opt_inGatekeeper response omitted requested gate; using defaultconnection_goneno active client accepted the ui_control command{}widget_state_event_persist_failedfailed to serialize idea for reply_to_target hydrationEmojiTaglinediscretion host unavailablegroup reaction has no discretion policybrowser task not foundretained browser slot remained present after releasecomplimentary_subscriptionepoch-scoped nutrition presentation could not load its root sessionnutrition presentation belongs to a stale conversation epochfailed to persist delta.presentation eventensure goal workspaceload goal by idlist goal suggestionslist goal briefingslist goal updateslist goalsupdate goalupdate goal escalationload tracking goal for lifecycle transitionset tracking goal lifecyclemust be `active` or `completed` for a tracking lifecycle transitioncompare and set tracking goal with lifecycle copycompare and set tracking goalclear goal escalation on completionload goal session mapping by root goal idresolve root goal parentmark goal briefing openedgoal guide path has no parentlist authoritative cron definitionsread authoritative cron definitionretire authoritative cron definitionschedule does not exist in the authoritative storefailed to canonicalize authoritative cron definitionauthoritative cron timezone validation failedauthoritative cron path resolution failedfailed to parse authoritative cron definitionfailed to snapshot authoritative cron definitionauthoritative cron definition validation failedfailed to render authoritative cron definitionfailed to resolve avatar video start framesruntime.resources.metadata_jsonctaruntime-orphan approval resolution failedruntime-orphan approval response missing approvalfailed to load group chat roomshttpscompletion_resultmessage.assistantsuspended browser worker has no valid agent idlost browser viewer did not drain; retry releaseletterskills.updatedload goal for Space linkheartbeattool_call_ididtool_nametool_idattached mailbox input has no stream ownerstagedqueuedexecutinginput chat is absentinvalid input binding epochConversationTransportStatelink_idneeds_reconciliationpending_cancellationinput provider is absentfailed to list assigned agents for activity threadfailed to read activity monitor carrier/user mappingfailed to read activity thread binding for messageactivity_thread_id is requiredpartialfailedunclearstoppedfailed to read activity thread snapshotfailed to read activity thread snapshot with actionsfailed to read activity thread actionsNeeds userCompletedFailed/data/preview_available/data/statusSupersededpersisted browser task tombstone payload is invalidpersisted browser task tombstone payload is missingdurable browser task tombstone could not update its compatibility carddurable browser task tombstone compatibility update failedinternal_errorstartup input size exceeds i64startup queue size exceeds i64startup media size overflowThe message is not available.Chat is no longer available.The message is not available in this chat.turn_deletion_repairfailed to persist conversation clear acknowledgementchat no longer existsfailed to create session`origin=fork` requires explicit `session_id`; in fork mode this is the new target session id, while the source is always the main/root sessionchat_id is requiredfailed to resolve `session_id`browser task presence bootstrap repair failedvisibilityparent_message_idreply_to_message_idtranscript_surfacerequest_idroot_request_idparent_request_idcreated_atitem_jsonmessage_sourceclient_context_jsonregistry.list_pairedload_chat_bindingpath is not accessibleavailable_plansgetputthe store reported an absence for a putdelete/definitions/deletethe cron definition does not exist/definitions/listthe store reported an absence for a listingideas.list_idea_publication_holdsbrowser_tasksbrowser.invocationbrowser.invocation_for_agentUDS HTTP request path must start with '/'user_state.touch_recentacquired connection, but time to acquire exceeded slow thresholdacquired connectionset_message_reactionmessage_id cannot be emptyset_group_message_reaction
+sp.parent_message_id AS parent_message_id,
+       sp.parent_request_id AS parent_request_id,
+       sp.root_request_id AS root_request_id,
+       (
+         SELECT root_request.request_origin
+         FROM runtime.requests AS root_request
+         WHERE root_request.request_id = sp.root_request_id
+       ) AS root_request_origin,
+       sp.root_message_execution_id AS root_message_execution_id,
+       sp.parent_agent_id AS parent_agent_id,
+       sp.child_agent_id AS agent_id,
+       sp.child_depth::bigint AS depth,
+       sp.created_at AS created_at,
+       sp.completed_at AS completed_at,
+       sp.seen_at AS seen_at,
+       sp.status AS status,
+       sp.deferred_terminal_status AS deferred_terminal_status,
+       sp.requester_source AS requester_source,
+       sp.final_response AS final_response,
+       sp.prompt AS prompt,
+       sp.requester_chat_context_json AS requester_chat_context_json,
+       sp.agent_type AS agent_type,
+       sp.metadata_json AS metadata_json,
+       (
+         SELECT child.originating_location_context_json
+         FROM agents AS child
+         WHERE child.id = sp.child_agent_id
+       ) AS originating_location_context_json
+subagent_status_rows_for_parent_agent_scopesubagent_status_exists_for_parent_agent_scope
+sp.parent_message_id AS parent_message_id,
+       sp.parent_request_id AS parent_request_id,
+       sp.root_request_id AS root_request_id,
+       sp.root_message_execution_id AS root_message_execution_id,
+       sp.parent_agent_id AS parent_agent_id,
+       sp.child_agent_id AS agent_id,
+       sp.child_depth::bigint AS depth,
+       sp.created_at AS created_at,
+       sp.completed_at AS completed_at,
+       sp.seen_at AS seen_at,
+       sp.status AS status,
+       sp.deferred_terminal_status AS deferred_terminal_status,
+       sp.requester_source AS requester_source,
+       sp.agent_type AS agent_type
+subagent_status_lean_rows_for_parent_agent_scopewrite egress approval mirror requestread egress approval mirror responseapproval mirror omitted runtime waiter generationapproval mirror returned a different approval idsend runtime-orphan approval resolution to Sentinelengagement.recordgoal engagement event requires a non-empty request_id for run-grounding attributionsort_order asc, goal_id asccase attention_kind when 'user_action_required' then 0 when 'action_required' then 0 when 'new_information' then 1 else 2 end asc, case when next_due_at is not null and next_due_at <= now() + interval '30 days' then next_due_at else timestamptz '9999-12-31' end asc, coalesce(last_activity_at_ts, updated_at_ts, updated_at::timestamptz) desc, sort_order asc, goal_id ascfixed_position asc nulls last, case when fixed_position is not null then goal_id end ascgoals.list_render_by_sourcegoals.compare_and_set_metadataunconditional goal metadata patch returned a guarded CAS outcomegoals.compare_and_set_metadata_and_insert_activitygoals.update_metadata_and_insert_activity_if_changedchat event payload seqload_event_payloads_by_seqchat event resource seq AND e.event_name IN ('message.user', 'message.assistant') AND 
+SELECT
+  e.seq,
+  e.event_name
+FROM (SELECT e.*, e.event_seq AS seq FROM runtime.events AS e) AS e
+WHERE  AND e.seq = chat history anchor_seq AND e.message_id =  ORDER BY e.seq DESC LIMIT 1chat_history_window_anchor
+SELECT e.event_seq AS boundary_seq
+FROM (SELECT e.*, e.event_seq AS seq FROM runtime.events AS e) AS e
+ AND e.parent_agent_id =  AND e.event_seq <  ORDER BY e.event_seq DESC LIMIT chat_history_window_older_boundaries AND e.event_seq > chat_history_window_newer_boundaries
+SELECT
+  e.*
+FROM event_transcript_rows AS e
+ AND e.seq >=  AND e.seq <=  ORDER BY e.seq ASCchat_history_window_eventsruntime.events.payload_jsoninsert_chat_eventchat_event insert requires non-empty event_name, source, message_id, and idempotency_keycancellation context cannot accompany another transitionmessage.userruntime.voice_audiofailed to refresh latest public runtime user timezone cache after user message insertwidget state transition committed without a widget update
+SELECT MAX(e.event_seq)
+FROM runtime.events AS e
+e.visibility = 'public' AND ( AND e.reply_to_message_id =  AND e.agent_id =  AND e.parent_message_id =  AND e.transcript_surface = ::runtime.transcript_surfacechat replay after_seq
+SELECT
+  *
+FROM event_transcript_rows AS replay_event
+replay_event AND seq >  AND message_id =  AND reply_to_message_id =  AND parent_agent_id =  AND parent_message_id =  AND transcript_surface =  ORDER BY seq ASC LIMIT replay_chat_events_with_filterwidget.state_updateddelta.message_removed€‚

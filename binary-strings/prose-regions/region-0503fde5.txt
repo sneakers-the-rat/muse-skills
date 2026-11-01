@@ -1,0 +1,37 @@
+
+SELECT metadata_json FROM subagent_spawns WHERE child_agent_id = $1
+completion_resultcompletion_result_context_seqagent.subagent_spawns.metadata_json
+UPDATE subagent_spawns
+SET metadata_json = $1
+WHERE child_agent_id = $2
+  AND EXISTS (
+    SELECT 1 FROM agents
+    WHERE agents.id = subagent_spawns.child_agent_id
+      AND agents.status NOT IN ('shutdown', 'not_found')
+  )
+
+UPDATE agents
+SET updated_at = $1,
+    status = $2
+WHERE id = $3
+  AND status NOT IN ('shutdown', 'not_found')
+with recursive branch as (
+                    select invocation_id from runtime.browser_invocations where invocation_id = $1
+                    union all select child.invocation_id from runtime.browser_invocations child
+                    join branch parent on child.parent_invocation_id = parent.invocation_id)
+                    update runtime.browser_invocations set state = $3, suspended_state = null, result_json = $2,
+                    terminal_reason = $4, finished_at = now(), updated_at = now(),
+                    handoff_state = case when parent_invocation_id is null then $5::text end,
+                    handoff_submission_id = case when parent_invocation_id is null then $6::text end
+                    where invocation_id in (select invocation_id from branch)
+                    and result_json is null returning invocation_id
+SELECT mode, recovery_class, recovery_owner_id, payload_json
+FROM runtime_restart_checkpoints
+WHERE agent_id = $1
+FOR UPDATE
+
+UPDATE runtime_restart_checkpoints
+SET mode = $2, payload_json = $3, updated_at = $4
+WHERE agent_id = $1
+failed to load subagent message source map during resumelegacy-unversioned
+Contacts: À
