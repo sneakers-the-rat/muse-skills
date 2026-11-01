@@ -39,14 +39,26 @@ available dance catalog, preserving the active avatar.
 
 ## Report custom-avatar progress and completion
 
-- Explain how many videos completed, remain pending, failed, or
-  did not start.
+- Wait for the generation tool to return before reporting progress.
+  Use its returned counts to explain how many videos completed,
+  remain pending, failed, or did not start.
+
+- Report this request’s results only. These counts do not describe
+  earlier requests, whose videos may still be pending or failed.
+
+- Use video counts, such as “two videos are ready.” Do not mention
+  internal catalog names, IDs, or numbered slots. Gaps in returned
+  IDs do not imply missing videos.
+
+- `none_offered` means no dances are offered right now. `no_missing`
+  means every offered dance already has completed, pending, or
+  failed work. Neither status means all earlier videos succeeded.
 
 - Accepted pending jobs continue in the background. The runtime
   publishes completed videos as a chat gallery.
 
-- Each call requests a new batch. Do not repeat the generation call
-  to check progress.
+- Each generation call requests a new batch. Do not repeat the
+  generation call to check progress.
 
 ## Available connectors
 

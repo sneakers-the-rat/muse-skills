@@ -1,0 +1,90 @@
+internal error: entered unreachable code}false{insert_compactioncompaction summary cannot be emptyerrorsuccesswrite_admissionwritepostgres write completed slowlypostgres write failedretrying idempotent postgres writeSELECT agent_id, submission_id, accepted_ordinal, state, checkpoint_custody, submission_json
+         FROM agent.message_mailbox WHERE submission_id = ANY($1)
+         ORDER BY accepted_ordinal, submission_idstartup pending checkpoint lookup exceeds bounded pagestartup pending identity appears in multiple checkpoint positionsstartup checkpoint input has no canonical mailbox rowsubmission_idsubmission_jsonstateabortedcompletedinvalid startup mailbox statecheckpoint_custodystartup checkpoint mailbox identity changedunexpected startup mailbox identityone-shot postgres write invoked more than once
+INSERT INTO agent_compactions (
+  agent_id, summary, first_kept_seq, checkpoint_seq,
+  tokens_before, tokens_after, details_json, has_replacement_history, trigger, will_retry, created_at
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+RETURNING id, agent_id, summary, first_kept_seq, checkpoint_seq,
+          tokens_before, tokens_after, details_json, trigger, will_retry, created_at
+invalid canonical publication contextinvalid native message epochinvalid chat binding epochcontext_jsonprior_presentation_pendingexecution_idwritingpendingretiredeffectsdelivereduncertainfailedchat_idbinding_epochjarvis_message_iddelivery_targetinvalid binding epochtransport_message_idhas_earlier_itemsprovenance_jsonsequence_completecontext item sequence space is exhaustedpublic voice import projection is incompletepublic history reply-prefix resolution requires ideas storagepolicy revision exhaustedtool recovery sequence overflowbrowser_task_idinvalid public message timeoccurred_at_msretained_context_seqscheckpoint_seqconversation sequence space is exhaustedmail task does not belong to this workerthat task is not pending; read the task index with mail_task.read and select a pending taskmail answer names a task from another conversationmail input is absent from this lifetimemail action requires a pending task in this conversationinvalid delivery attempt countexternal receipt claim changedexternal receipt projection missingexternal receipt owner missingexternal approval has no conversationexternal conversation admission failedexternal conversation disappearedstatusevent_seqcontext_seqmessage_iddisplay_textroot_message_execution_idroot_message_execution_id_is_legacycan_broadcast_sharegroup is inactiveselect exists (select 1 from agent.recovery_owners where terminal_at is null)subagent metadata owner is missingartifact dispatch metadata is not an objectspace_build_idnot_foundupdate chat_private.reactions set next_attempt_at_utc = $2
+                         where reaction_id = $1 and state = 'pending'update chat_private.reactions set state = $2, work_json = null
+                         where reaction_id = $1 and state = 'pending'select min(next_attempt_at_utc) from chat_private.reactions r
+                where state = 'pending' and r.chat_id <> all($1)
+                  and not exists (select 1 from chat_private.reactions prior
+                    where prior.chat_id = r.chat_id and prior.sequence < r.sequence
+                      and prior.state = 'pending')select reaction_id, chat_id, work_json from chat_private.reactions r
+                 where state = 'pending' and next_attempt_at_utc <= $1
+                   and r.chat_id <> all($2)
+                   and not exists (select 1 from chat_private.reactions prior
+                     where prior.chat_id = r.chat_id and prior.sequence < r.sequence
+                       and prior.state = 'pending')
+                 order by sequence limit 8update chat_private.publications set next_attempt_at_utc = $2
+                where message_id = $1 and state = 'pending'update chat_private.publications set state = $2, body = '',
+                prepared_at_utc = extract(epoch from clock_timestamp())::bigint
+                where message_id = $1 and state = 'pending'update chat_private.deliveries set state = 'failed',
+                    last_error = 'canonical publication retired before dispatch',
+                    terminal_at_utc = extract(epoch from clock_timestamp())::bigint,
+                    updated_at_utc = extract(epoch from clock_timestamp())::bigint
+                    where publication_message_id = $1 and state = 'pending'
+                      and (publication_terminal or delivery_kind = 'foreground_reply')select current.context_json, current.execution_id,
+                     case when $2 then exists(select 1 from chat_private.publications prior
+                       join runtime.events e on e.event_seq = prior.event_seq
+                       where prior.chat_id = current.chat_id and prior.event_seq < current.event_seq
+                         and prior.state in ('writing', 'pending')
+                         and e.event_name = 'delta.presentation') else false end as prior_presentation_pending
+                     from chat_private.publications current where current.message_id = $1select next_attempt_at_utc from chat_private.publications p
+                where state = 'pending' and not exists (
+                    select 1 from chat_private.publications prior where prior.chat_id = p.chat_id
+                      and prior.state in ('writing', 'pending') and prior.event_seq < p.event_seq)
+                order by next_attempt_at_utc, event_seq limit 1select p.state, count(d.delivery_key) as effects,
+                count(*) filter(where d.state = 'delivered') as delivered,
+                count(*) filter(where d.state = 'uncertain') as uncertain,
+                count(*) filter(where d.state = 'failed') as failed,
+                count(*) filter(where d.state = 'pending' and d.last_error is not null) as retrying
+                from chat_private.publications p left join chat_private.deliveries d
+                  on d.publication_message_id = p.message_id and d.chat_id = p.chat_id
+                  and (d.publication_terminal or d.delivery_kind in ('background_reply','scheduler_cron'))
+                where p.message_id = $1 and p.chat_id = $2 group by p.message_idselect message_id, event_seq, chat_id, context_json,
+                request_trace_json, body from chat_private.publications p
+                where state = 'pending' and next_attempt_at_utc <= $1
+                  and not exists (select 1 from chat_private.publications prior
+                    where prior.chat_id = p.chat_id and prior.state in ('writing', 'pending')
+                      and prior.event_seq < p.event_seq)
+                order by next_attempt_at_utc, event_seq limit $2select e.event_seq, e.payload_json, e.display_text_ready
+                from runtime.events e join runtime.messages m using(event_seq)
+                where e.message_id = $1 for update of e, mpayload_jsondisplay_text_readyreply publication requires terminal transcript evidenceupdate chat_private.publication_turns t set
+                    disposition = case when disposition = 'pending' then 'publish' else disposition end,
+                    phase = 'completed',
+                    settled_at_utc = extract(epoch from clock_timestamp())::bigint
+                    from chat_private.publications p where p.event_seq = $1
+                      and t.execution_id = p.execution_id and t.phase = 'active'select exists(select 1 from chat_private.deliveries
+                where publication_message_id = $1 and chat_id = $2
+                  and delivery_kind in ('background_reply', 'scheduler_cron'))select message_id from chat_private.publications
+                 where message_id = $1 and chat_id = $2 and state = 'pending' for updateupdate chat_private.publications p set next_attempt_at_utc = $3
+                 where p.message_id = $1 and p.state = 'pending' and exists (
+                   select 1 from chat_private.deliveries d where d.delivery_key = $2
+                     and d.publication_message_id = p.message_id and d.chat_id = p.chat_id
+                     and d.state in ('pending', 'dispatching'))select result_json from chat_private.deliveries
+                where publication_message_id = $1 and chat_id = $2 and state = 'delivered'
+                  and (publication_terminal or delivery_kind in ('background_reply','scheduler_cron'))
+                  and result_json is not null order by sequenceselect exists(select 1 from chat_private.deliveries d
+                where d.publication_message_id = $1 and d.chat_id = $2 and d.state = 'uncertain'
+                  and not ($3 and d.delivery_kind = 'foreground_reply'
+                           and not d.publication_terminal))select r.chat_id, r.binding_epoch, r.jarvis_message_id,
+                        b.conversation_key, b.delivery_target
+                 from chat.message_bindings r join chat_private.bindings b
+                   on b.chat_id = r.chat_id and b.provider = r.transport
+                 where r.transport = $1 and r.transport_message_id = $2
+                   and r.chat_id is not null and not b.revoked and r.binding_epoch = b.epoch
+                   and (b.conversation_key = $3 or ($4::text is not null
+                     and starts_with(b.conversation_key, $3 || $4))) limit 2native message has ambiguous chat ownershipselect exists(select 1 from chat.message_bindings
+                where jarvis_message_id = $1 and chat_id = $2 and binding_epoch = $3
+                  and transport = $4 and admitted_at is not null)select distinct jarvis_message_id
+                from chat.message_bindings where chat_id = $1 and binding_epoch = $2
+                  and transport = $3 and transport_message_id = any($4::text[]) limit 2inbound bundle spans existing logical messagesconcurrent native reference ownership changedselect jarvis_message_id from chat.message_bindings
+                where chat_id = $1 and binding_epoch = $2 and transport = $3 and transport_message_id = $4select r.transport_message_id from chat.message_bindings r
+                join chat_private.bindings b on b.chat_id = r.chat_id and b.provider = r.transport
+                where r.jarvis_message_id = $1 and r.transport = $2 and not b.revoked
+                  and (r.binding_epoch = b.epoch or (r.transport = 'peer' and r.binding_epoch = 0))
+                order by r.created_at_ms desc nulls last, r.binding_id desc limit 1€›

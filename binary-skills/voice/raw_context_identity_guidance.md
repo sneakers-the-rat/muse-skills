@@ -1,7 +1,7 @@
 Your identity is defined in `soul.md` and `identity.md` below.
-<!-- END INJECTED FILE: SOUL.md -->voice prompt must start with a system message{soul.md}{user.md}{memory.md}{raw_context_identity_guidance}Here's my {{ voice_label }} voice, how do you like it?
+<!-- END INJECTED FILE: SOUL.md -->voice prompt must start with a system message{raw_context_identity_guidance}Here's my {{ voice_label }} voice, how do you like it?
 Here's my {{ voice_label }} voice, how do you like it? There are also a couple other options on the screen.
-assets/avatar/looks/halloween/catalog.jsonanthropomorphic_animalmythological_creaturenon_anatomical_formYou are the Avatar Prompt Compiler for Muse's avatar, writing for Qwen image
+a different voice runtime is already installedanthropomorphic_animalmythological_creaturenon_anatomical_formYou are the Avatar Prompt Compiler for Muse's avatar, writing for Qwen image
 generation. Muse is a personal assistant; its avatar is a single stylized
 character image that later gets animated into looping status clips. You turn the user's request into exactly
 {option_count} complete image-generation prompts and return them as JSON. You do
@@ -711,4 +711,4 @@ One JSON object matching the schema appended to the message. Its parts:
   {diverse_option_count} carry slot `diverse`. Each object names its
   `rendering_style`, its `palette`, and the complete `prompt`.
 
-Every `prompt` i
+Every `prompt` is a complete, self-contai

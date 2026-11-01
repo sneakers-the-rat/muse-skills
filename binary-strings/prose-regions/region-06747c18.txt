@@ -1,0 +1,221 @@
+reconciliation upload no longer has its exact sealed chunk setdelete from device.calendar_events
+         where node_id = $1 and start_at < $3 and end_at > $2
+           and not (external_event_id = any($4::text[]))delete from device.calendar_events
+             where node_id = $1 and start_at < $2 and end_at <= $2insert into device.calendar_events as stored (
+           node_id, external_event_id, title, start_at, end_at, is_all_day,
+           external_calendar_id, calendar_name, availability, location, notes,
+           time_zone, start_local_date, end_local_date, is_recurring, url,
+           event_status, calendar_color
+         )
+         select $1, rows.* from unnest(
+           $2::text[], $3::text[], $4::timestamptz[], $5::timestamptz[],
+           $6::boolean[], $7::text[], $8::text[], $9::text[], $10::text[],
+           $11::text[], $12::text[], $13::date[], $14::date[], $15::boolean[],
+           $16::text[], $17::text[], $18::text[]
+         ) as rows
+         on conflict (node_id, external_event_id) do update set
+           title = excluded.title, start_at = excluded.start_at,
+           end_at = excluded.end_at, is_all_day = excluded.is_all_day,
+           external_calendar_id = excluded.external_calendar_id,
+           calendar_name = excluded.calendar_name,
+           availability = excluded.availability, location = excluded.location,
+           notes = excluded.notes, time_zone = excluded.time_zone,
+           start_local_date = excluded.start_local_date,
+           end_local_date = excluded.end_local_date,
+           is_recurring = excluded.is_recurring, url = excluded.url,
+           event_status = excluded.event_status,
+           calendar_color = excluded.calendar_color
+         where row(
+           stored.title,
+           stored.start_at,
+           stored.end_at,
+           stored.is_all_day,
+           stored.external_calendar_id,
+           stored.calendar_name,
+           stored.availability,
+           stored.location,
+           stored.notes,
+           stored.time_zone,
+           stored.start_local_date,
+           stored.end_local_date,
+           stored.is_recurring,
+           stored.url,
+           stored.event_status,
+           stored.calendar_color
+         ) is distinct from row(
+           excluded.title,
+           excluded.start_at,
+           excluded.end_at,
+           excluded.is_all_day,
+           excluded.external_calendar_id,
+           excluded.calendar_name,
+           excluded.availability,
+           excluded.location,
+           excluded.notes,
+           excluded.time_zone,
+           excluded.start_local_date,
+           excluded.end_local_date,
+           excluded.is_recurring,
+           excluded.url,
+           excluded.event_status,
+           excluded.calendar_color
+         )
+         returning (xmax = 0) as inserteddelete from device.calendar_events
+         where node_id = $1 and external_event_id = any($2::text[])insert into device.call_log as stored (
+           producer_id, external_id, phone_number, contact_name,
+           call_type, occurred_at_unix_ms, duration_seconds, platform
+         )
+         select $1, rows.*, $8 from unnest(
+           $2::text[], $3::text[], $4::text[], $5::text[],
+           $6::bigint[], $7::bigint[]
+         ) as rows
+         on conflict (producer_id, external_id) do update set
+           phone_number = excluded.phone_number, contact_name = excluded.contact_name,
+           call_type = excluded.call_type,
+           occurred_at_unix_ms = excluded.occurred_at_unix_ms,
+           duration_seconds = excluded.duration_seconds, platform = excluded.platform
+         where row(
+           stored.phone_number, stored.contact_name, stored.call_type,
+           stored.occurred_at_unix_ms, stored.duration_seconds, stored.platform
+         ) is distinct from row(
+           excluded.phone_number, excluded.contact_name, excluded.call_type,
+           excluded.occurred_at_unix_ms, excluded.duration_seconds, excluded.platform
+         )
+         returning (xmax = 0) as insertedcall_log upsert into device.call_loginsert into device.contact_emails (contact_id, label, email)
+             select * from unnest($1::bigint[], $2::text[], $3::text[])insert into device.contact_phones (contact_id, label, phone_raw, phone_e164)
+             select * from unnest($1::bigint[], $2::text[], $3::text[], $4::text[])insert into device.contact_addresses (
+               contact_id, label, street, city, state, postal_code, country
+             )
+             select * from unnest(
+               $1::bigint[], $2::text[], $3::text[], $4::text[],
+               $5::text[], $6::text[], $7::text[]
+             )update device.contacts
+         set deleted_at = now(), updated_at = now()
+         where node_id = $1 and deleted_at is null
+           and not (external_contact_id = any($2::text[]))insert into device.contacts (
+           node_id, platform, external_contact_id, display_name, organization,
+           job_title, birthday_text, note, thumbnail,
+           synced_at_text, deleted_at, updated_at
+         )
+         select $1, $2, rows.*, $9, null, now()
+         from unnest(
+           $3::text[], $4::text[], $5::text[], $6::text[], $7::text[],
+           $8::text[], $10::text[]
+         ) as rows
+         on conflict (node_id, external_contact_id) do update set
+           platform = excluded.platform,
+           display_name = excluded.display_name,
+           organization = excluded.organization,
+           job_title = excluded.job_title,
+           birthday_text = excluded.birthday_text,
+           note = excluded.note,
+           thumbnail = excluded.thumbnail,
+           synced_at_text = excluded.synced_at_text,
+           deleted_at = null,
+           updated_at = excluded.updated_at
+         returning contact_id, external_contact_id, (xmax = 0) as inserteddelete from device.contact_phones where contact_id = any($1)external_contact_idcontact_iddelete from device.contact_emails where contact_id = any($1)delete from device.contact_addresses where contact_id = any($1)
+        update device.nodes
+        set platform = $1,
+            contacts_last_synced_at = $2,
+            contacts_last_received_at = $3,
+            contacts_last_sync_status = 'success',
+            contacts_last_sync_error = null,
+            contacts_contact_count = $4,
+            contacts_content_sha256 = $5
+        where node_id = $6
+        device node disappeared while recording contacts snapshot metadataupdate device.contacts
+             set deleted_at = now(), updated_at = now()
+             where node_id = $1 and deleted_at is null
+               and external_contact_id = any($2::text[])update device.nodes n
+         set platform = $1,
+             contacts_last_synced_at = $2,
+             contacts_last_received_at = $3,
+             contacts_last_sync_status = 'success',
+             contacts_last_sync_error = null,
+             contacts_contact_count = (
+               select count(*)
+               from device.contacts c
+               where c.node_id = $4 and c.deleted_at is null
+             ),
+             contacts_content_sha256 = case
+               when $5 then null
+               else contacts_content_sha256
+             end
+         where n.node_id = $4device node disappeared while recording contacts mutation metadata-f1-lthumbnail: pdftoppm rendering failed.screenshotthumbnail: failed to rename pdftoppm outputpngthumbnail: pdftoppm did not produce expected PNGthumbnail: pdftoppm not availablethumbnail: pdftoppm timed out (30s)thumbnail: libreoffice PDF conversion failedlibreoffice--headless--convert-tothumbnail: libreoffice conversion failedthumbnail: libreoffice did not produce expected outputthumbnail: libreoffice not availablethumbnail: libreoffice HTML conversion failedthumbnail: ffmpeg sandbox unavailable
+thumbnail: ffmpeg frame extraction failedthumbnail: ffmpeg completed but output file missingthumbnail: ffmpeg not availablethumbnail: ffmpeg timed outthumbnail: image decode task panickedthumbnail: image decode timed outthumbnail: image chrome unavailable; expected /opt/meta-chromium/chromethumbnail: failed to read native Chromium policy; refusing browser launchthumbnail: Xvfb not available, skipping CDP screenshotthumbnail: native browser admission failedhatch-thumb-browser---remote-debugging-port=0--no-sandbox--disable-gpu--force-color-profile=srgb--disable-dev-shm-usage--disable-background-networking--disable-default-apps--disable-extensions--disable-sync--disable-translate--no-first-run--hide-scrollbars--host-resolver-rules=MAP * ^NOTFOUND--disable-remote-fonts--disable-file-access-from-file-urlsDBUS_SESSION_BUS_ADDRESSdisabled:DISPLAY:99thumbnail: browser profile creation failedthumbnail: CDP local admission failedthumbnail: owned browser render failed.pdf?; auth status row concurrency limiter closedauth status row task failedfailed to load paired devices for healthkit skill statusUnable to load paired device permissionsselect owner_agent_id, root_session_id
+        from runtime.browser_tasks where task_id = $1 and status = 'running' for updateselect epoch, control_revision from runtime.browser_executions
+        where task_id = $1 and planner_agent_id = $2 for updatebrowser seat changedbrowser service authority changedbrowser invocation authority changedagent_status broadcast presence statusfailed to resolve root session for presence updatebroker_failedadopt_failedbrowser node download failed verification
+SELECT json_build_object(
+         'accepted_ordinal', accepted_ordinal,
+         'state', state,
+         'checkpoint_custody', checkpoint_custody,
+         'submission_json', submission_json
+       )::text
+FROM agent.message_mailbox
+WHERE agent_id = $1
+  AND state IN ('accepted', 'attached')
+ORDER BY accepted_ordinal, submission_id
+FOR UPDATE
+SELECT payload_json FROM runtime_restart_checkpoints WHERE agent_id = $1
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = 'executing',
+    stream_owner_message_id = $3,
+    attached_at = now()
+WHERE submission_id = $1
+  AND agent_id = $2
+  AND state = 'accepted'
+  AND stream_owner_message_id IS NULL
+
+SELECT agent_id, state, stream_owner_message_id, submission_json,
+       accepted_ordinal
+FROM agent.message_mailbox
+WHERE submission_id = $1
+FOR UPDATE
+
+SELECT EXISTS (
+  SELECT 1
+  FROM agent.message_mailbox
+  WHERE agent_id = $1
+    AND state = 'accepted'
+    AND accepted_ordinal < $2
+    AND (NOT $3 OR submission_kind <> 'internal_handoff')
+)
+tracked mailbox successor unexpectedly lost custodymessage mailbox successor promotion cannot overtake an older priority peer
+UPDATE agent.message_mailbox
+SET state = CASE WHEN $4 THEN 'completed' ELSE 'aborted' END,
+    checkpoint_custody = coalesce(checkpoint_custody, 'executing'),
+    terminalized_at = now()
+WHERE agent_id = $1
+  AND stream_owner_message_id = $2
+  AND submission_id = ANY($3)
+  AND state = 'attached'
+
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = 'executing',
+    stream_owner_message_id = $2,
+    attached_at = coalesce(attached_at, now())
+WHERE agent_id = $1
+  AND submission_id = ANY($3)
+  AND (
+    (state = 'accepted' AND stream_owner_message_id IS NULL)
+    OR (state = 'attached' AND stream_owner_message_id = $2)
+  )
+
+UPDATE agent.message_mailbox
+SET checkpoint_custody = 'queued'
+WHERE agent_id = $1
+  AND stream_owner_message_id = $2
+  AND submission_id = ANY($3)
+  AND state = 'attached'
+
+UPDATE agent.message_mailbox
+SET state = CASE
+      WHEN state = 'attached' AND $2 THEN 'completed'
+      ELSE 'aborted'
+    END,
+    terminalized_at = now()
+WHERE agent_id = $1
+  AND state IN ('accepted', 'attached')
+activity_monitor_current_agent_threadsactivity_monitor_list_thread_actionsactivity_monitor_list_recent_thread_actionsactivity_monitor_read_threaddatabase write admission gate closedadmission_timeoutassert_table_existstable_presence.queryeventscontext_snapshotsdeliveriesskill_invalidation_stateskill_invalidation_receiptsdev_notice_watermarkinvite_badge_seen_stateagentscontext_itemsrecovery_ownersschedulerdelivery_outboxassert_required_tableschat_idevent_seqstream_lanepayload_jsonchat_context_jsonmessage_idsearch_vectorsearch_textwork_idsnapshot_kindstate_jsondelivery_keynext_attempt_at_utcskill_namepending_invalidation_hashlast_seen_version_idlast_seen_badge_versioncontext_item_idtext_contentitem_jsonrecovery_classjob_idrun_idretired_chat_ids_pkeyruntime_search_documents_events_fts_idxruntime_search_documents_media_fts_idxruntime_search_documents_memory_fts_idxruntime_events_main_history_seq_desc_idxruntime_events_main_history_parent_kind_seq_idxruntime_events_main_public_root_message_uidxruntime_events_public_runtime_user_seq_idxruntime_work_items_active_idxruntime_work_items_terminalized_idxdeliveries_retry_idxdeliveries_terminal_retention_idxruntime_chat_event_derived_write_backlog_created_idxruntime_chat_event_derived_write_backlog_ready_idxagent_subagent_progress_message_child_pending_idxagent_subagent_spawns_open_global_created_idxagent_agents_spawn_metadata_gin_idxagent_agents_active_subagent_liveness_idxagent_context_item_derived_write_backlog_created_idxagent_context_item_derived_write_backlog_ready_idxagent_runtime_restart_checkpoints_updated_idxagent_recovery_owners_active_scan_idxagent_recovery_owners_terminal_retention_idxagent_recovery_owners_terminal_status_idxscheduler_jobs_due_idxscheduler_runs_status_scheduled_utc_idxscheduler_delivery_outbox_retry_idxscheduler_delivery_outbox_retention_idxself_improvement_runs_queue_idle_gated_idxself_improvement_runs_queue_non_idle_gated_idxmediamedia_items_description_retry_idxmedia_items_ready_media_idxmedia_locations_geocode_retry_idxvisibilitypublichiddentranscript_surfacemessage_rolesystemdeveloperassistantevent_kindmessagetool_starttool_donetask_statuscontext_item_kindmessage_texttext_segmentstool_calltool_outputrun_statussucceededskippedapplied_migration_max_versioncredential_resolutionshared_pool_mutexresolve_database_urlshared_pool_reuse_checkpool_connectshared_pool_reusedHATCH_DATABASE_URLenvironment_overridecredential_task_queuecredential_decodeavatar-state: adopted a concurrently seeded DB rowavatar-state: seeded the authoritative DB rowstandalonedelivery_modechunkedfinalization_fencedreconciliation_storage_failedfinalization_failedclaim reconciliation finalizationfinalization_ignored_staleinvalid_stream_uploadfinalization_fence_failedfence invalid reconciliation uploadinvalid_source_snapshotsettle invalid device reconciliation for retrydevice_sync_stateHealth reconciliation applied but device-sync worker wake failedfinalize device reconciliationrejecting malformed restart replay fence transitionfailed to persist replay fence before successor activationfailed to persist restart replay fencereplay-forbidden checkpoint had no durable payload fingerprintrejecting malformed replay-forbidden checkpointfailed to reconcile durable cancellation handoff before checkpoint replayfailed to read durable cancellation handoff evidencereplay-forbidden checkpoint changed before successor activationrestart checkpoint changed before successor activationfailed to persist replay-forbidden checkpoint successorfailed to persist restart checkpoint successorrejecting restart checkpoint with contradictory tool output evidencefailed to reconcile checkpoint tool outputs with the durable transcriptfailed to read durable tool output evidencefailed to terminalize invalid restart checkpoint ownerfailed to check for a live session before closing a refused browser checkpointbrowser_input_unsupported_kindbrowser_input_classification_failedbrowser_input_refusedclosing browser restart checkpoint refused by browser input admissionrestart checkpoint payload was invalidfailed to decode runtime restart checkpoint payloadpayload_decode_failedruntime restart checkpoint payload was missingpayload_missingrestart checkpoint payload version was invalidunsupported runtime restart checkpoint version was invalidunsupported_payload_versionruntime restart checkpoint required the retired voice executorlegacy_voice_execution_unsupportedruntime restart execution config was invalidexecution_config_invalidexplicit restart recovery identity had no execution configexplicit_execution_config_missingruntime restart approval correlation was invalidapproval_wait_invalidremoving invalid runtime restart checkpoint without executing itprimary_root_checkpoint_owner_terminalizationprimary_root_checkpoint_closefailed to terminalize owner of invalid restart checkpointprimary_root_checkpoint_metadata_readprimary_root_checkpoint_envelope_validationvalidprimary_root_checkpoint_terminal_cleanupterminal restart checkpoint classification lacked conversation metadataprimary_root_checkpoint_owner_validationprimary_root_checkpoint_invalid_cleanupfailed to load conversation meta before restart envelope validationfailed to resolve restart recovery policy inputsfailed to terminalize owner of terminal restart checkpointclosing legacy checkpoint without an exact execution configprimary_root_checkpoint_legacy_cleanupprimary_root_checkpoint_replay_preparationclosing runtime restart checkpoint without resume: recovery class has no proven live owner workprimary_root_checkpoint_owner_cleanupprimary_root_checkpoint_deferred_marker_storeprimary_root_checkpoint_agent_resumefailed to resume agent for runtime restart checkpointprimary_root_checkpoint_active_message_readvalidated restart checkpoint is missing its durable payload tokenprimary_root_checkpoint_message_activationcheckpoint agent is running a different message; leaving row unresolvedfailed to inspect active message during checkpoint rehydrateprimary_root_checkpoint_deletefailed to resume message from runtime restart checkpointfailed to delete runtime restart checkpoint after successful rehydratefailed to generate local video thumbnail; continuing without thumbnailvideo FileRef MIME type cannot be canonicalized; preserving original referencevideo FileRef could not be materialized; preserving original referencevideo FileRef store task failed; preserving original referencecommittedunknown_checkpoint_kindcommitted_handoffstandby_checkpointstartup media safety dispatch interrupted by shutdownpurchasesfile path missingfile length missingpartiala browser service is waiting for the userThis browser only reads and navigates. Skip steps that click, type or submit.This action's view does not match its tab. Observe the tab, then act from that view.Browser actions take element references or look descriptions, not coordinates.not a public browser mutationOpen the requested webpagepage.gotoprotected image descriptor is missingprotected image bundle is missing.hatch-browserprotected image name is missingprotected image path is invalidprotected image MIME type is missingprotected image digest is missingprotected image length is missingbrowser_visual_groundingbrowser source is missingbrowser source trace is missingbrowser task is missingresearch trace is missingnotifications[redacted-url]runtime.background_execfeed published-unit completion handoff suppressed; feed.updated is the only announcementrequesterfeed run completion handoff deliveredfeed run completion handoff failed; the feed itself already shows the outcomecheckpointed work lost its restart checkpoint owner during daemon restartskipping checkpointed RuntimeWork retirement: retained checkpoint evidence is incompletereconciled checkpointed RuntimeWork at startupretrying checkpointed RuntimeWork orphan retirementideas_catalog_config_cacheIdeas catalog last-known-good snapshot is invalidIdeas catalog last-known-good metadata is invalidfailed to read Ideas catalog last-known-good snapshotresume_epoch_installresume_verdict_reportingresume_maintainer_scheduleresume epoch installedrequest_timeout_secscore_loop_runtime.orchestrator_startup.required_pre_readyrequired orchestrator startup work failedfailed to migrate legacy goal association into goal workspaceinspect goal workspace migration markergoal workspace consolidation already completed; skipping legacy migrationlist goals for workspace reconciliationstage legacy goal rootsinspect legacy goal cron associations for shared schedules%migrate legacy associations for goal À

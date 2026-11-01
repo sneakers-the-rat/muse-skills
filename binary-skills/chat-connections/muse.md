@@ -2,4 +2,4 @@
 - On web: there is a Download option on Library items, and a share link available from an artifact's Share menu. There is no share-to-message action on web.
 No share-message action on web. Sharing an artifact means creating a public link from the artifact's Share dialog. Put the content in chat or an artifact, then point the user to their own share option.
 No share-message action on web. Sharing an artifact creates a share link from the artifact's Share menu; `~/docs/artifacts.md` explains who can open it. Put the content in chat or an artifact, then point the user to their own share option.
-{{ARTIFACT_SHARING_GUIDANCE}}companion_outbound_bridge_contextrestore canonical artifact 
+{{ARTIFACT_SHARING_GUIDANCE}}

@@ -1,0 +1,95 @@
+The runtime restarted while your research run was in progress and has resumed you from your last checkpoint. {directory_clause} Your remaining time budget for this run is about {remaining_minutes} minutes; finish with `finish_research` as usual. Any browser state from before the restart is gone; reopen pages you still need.
+{directory_clause}{remaining_minutes}primary_root_checkpoint_deferred_marker_cleanupprimary_root_checkpoint_malformed_cleanupremoving malformed runtime restart checkpoint identityfailed to resolve malformed checkpoint conversationfailed to terminalize owner of malformed checkpointfailed to delete malformed checkpoint by its exact raw keyfailed to delete checkpoint with invalid raw agent idcheckpoint carried duplicate pending tool identitiescheckpoint reused a tool call id for contradictory callscheckpoint carried an incomplete pending tool identitycheckpoint carried duplicate tool output identitiescheckpoint carried an incomplete tool identitydurable tool call disagreed with checkpoint evidencedurable tool call projection was malformeddurable tool call identity was not uniquedurable tool output existed without its function calldurable tool output projection was malformeddurable tool output identity was not uniquecheckpoint tool identity map was inconsistentresume_fallback_epochresume_index_readresume_index_read_queueresume_index_read_workerresume_index_boundsresume_index_verifyresume_index_verify_queueresume_index_verify_workerfailed to read resume indexresume index read task failedresume_index_item_countresume_index_assemblyresume index envelope rejectedresume index verify task failedresume_epoch_reportingno clean resume handoff; PostgreSQL-derived recovery will runclean handoff marker consumed; resume index installedresume_index_installhandoff_marker_readhandoff_marker_queuehandoff_marker_workerpg_clean_proofhandoff marker committed but PostgreSQL stop is unproven; quarantiningresume_cluster_identityhandoff marker rejected; quarantininghandoff marker read task failedno_markermarker_iohandoff marker PG identity mismatch; quarantiningresume_current_epochresume epoch source unavailable; marker left in placeepoch_source_unavailablepg_identity_mismatchresume_epoch_validationresume_epoch_advanceepoch_gaphandoff marker epoch does not extend the installed epoch; quarantiningresume epoch compare-and-advance lost; quarantining markerhandoff_marker_retirehandoff_retire_queuehandoff_retire_workerepoch_cas_lostfailed to retire consumed handoff markerhandoff marker retire task failedcleanclean handoff marker consumed but resume index unusablefailed to load durable checkpoint row during index reconstructionfailed to list durable checkpoint ids for resume index proofresume index reconstruction task failedresume index reconstruction finishedworkspace/ts-spacesdevice data source deletedsourcedevice data deletion response must serializedevice data source deletion failed{"ok":false,"error":"device data deletion failed"}sensitive sources do not support reconciliation admissionfull_snapshotdatatype is requirednodes.notify route does not match its admission metadatachunked /nodes/sync uploads are no longer supported; send a full payloadephemeral payload handle is requiredproactive{"redacted":true,"redaction_reason":"notification and sms payloads are not stored raw"}node notification admitted but worker wake failedunauthorized; authenticated ingress request is missing verified identitybrowser sensitive-site system update exceeds policy capacitybrowser sensitive-site settings synchronization deferredqueueduser_controlledparked_outcomeneeds_userderivedrelationshipderived claimsrun signal snapshotsunit signal citationssignal labelscleared feed derived claims after confirmed forgetfailed to clear feed reader-signal state after confirmed forgetopen self-improvement store for startup recoveryrequeue interrupted self-improvement runs before checkpoint recoverystartup:self_improvement_recoveryrequeued interrupted self-improvement run in place after daemon restarthealth: runtime-cell process observation is unknowndevice node_idfull_sync_idreconciliation.finalizeHealth source snapshot belongs to another devicereconciliation.ingest_source_changereconciliation.delete_all_source_dataselect data_source, next_full_sync_at, current_full_sync_id,
+            current_full_sync_requester_root_session_id,
+            current_full_sync_requester_presentation_locale,
+            current_full_sync_expires_at, current_full_sync_range_start,
+            current_full_sync_range_end, changed_during_full_sync,
+            last_full_sync_at, last_full_sync_range_start, last_full_sync_range_end
+     from device.data_sync_stateselect pairing_status, data_sources_json
+         from device.nodes where node_id = $1 for updatepairing_statusdata_sources_jsonupdate device.data_sync_state
+         set next_full_sync_at = $4, search_trigger_pending = false,
+             current_full_sync_id = null,
+             current_full_sync_requester_root_session_id = null,
+             current_full_sync_requester_presentation_locale = null,
+             current_full_sync_expires_at = null,
+             current_full_sync_range_start = null,
+             current_full_sync_range_end = null,
+             changed_during_full_sync = false
+         where node_id = $1 and data_source = $2 and current_full_sync_id = $3update device.data_sync_state
+         set next_full_sync_at = null, last_full_sync_at = $4,
+             last_full_sync_range_start = current_full_sync_range_start,
+             last_full_sync_range_end = current_full_sync_range_end,
+             current_full_sync_id = null,
+             current_full_sync_requester_root_session_id = null,
+             current_full_sync_requester_presentation_locale = null,
+             current_full_sync_expires_at = null,
+             current_full_sync_range_start = null,
+             current_full_sync_range_end = null,
+             changed_during_full_sync = false
+         where node_id = $1 and data_source = $2 and current_full_sync_id = $3update device.data_sync_state set changed_during_full_sync = true
+         where node_id = $1 and data_source = $2
+           and current_full_sync_id is not nullupdate device.data_sync_state
+         set next_full_sync_at = null, current_full_sync_id = null,
+             current_full_sync_requester_root_session_id = null,
+             current_full_sync_requester_presentation_locale = null,
+             current_full_sync_expires_at = null,
+             current_full_sync_range_start = null,
+             current_full_sync_range_end = null,
+             changed_during_full_sync = false
+         where node_id = $1 and data_source = $2 and current_full_sync_id = $3insert into device.data_sync_state (node_id, data_source)
+         values ($1, $2) on conflict (node_id, data_source) do nothinginsert into device.comms_announcements as stored (
+           producer_id, received_at_unix_ms, first_received_at_unix_ms,
+           announcing_device_id, event_id,
+           provider, kind, occurred_at_unix_ms, announced_at_unix_ms,
+           outcome, reason, producer, announced_ms_ago
+         )
+         select $1, $2, $2, rows.* from unnest(
+           $3::text[], $4::text[], $5::text[], $6::text[],
+           $7::bigint[], $8::bigint[], $9::text[], $10::text[],
+           $11::text[], $12::bigint[]
+         ) as rows
+         on conflict (producer_id, announcing_device_id, event_id) do update set
+           provider = excluded.provider, kind = excluded.kind,
+           occurred_at_unix_ms = excluded.occurred_at_unix_ms,
+           announced_at_unix_ms = excluded.announced_at_unix_ms,
+           outcome = excluded.outcome, reason = excluded.reason,
+           producer = excluded.producer,
+           announced_ms_ago = excluded.announced_ms_ago,
+           -- `first_received_at_unix_ms` is deliberately NOT in this list. It
+           -- is the retention clock, and refreshing it on replay is what let a
+           -- republished event outlive retention forever: the producer
+           -- naturally re-delivers the same event id minutes apart, each
+           -- delivery moving the only expiry anchor forward, so an
+           -- announcement from hours ago could still be sitting in the table.
+           -- The row ages from when Hatch FIRST saw it, which no later publish
+           -- can change.
+           -- Refreshed with `announced_ms_ago`, never without it. The anchor is
+           -- `received_at_unix_ms - announced_ms_ago`, so the two halves have to
+           -- come from the SAME publish: a producer measures the duration
+           -- relative to the delivery that carries it. Leaving the receipt at
+           -- the first delivery while refreshing the duration anchors a replay
+           -- roughly one replay-gap too far into the past, which then reads as
+           -- an aged-out referent. Re-deliveries of the same event id about
+           -- eleven minutes apart were observed on device, so this is the
+           -- ordinary path rather than a rare one.
+           received_at_unix_ms = excluded.received_at_unix_ms
+         where row(
+           stored.provider, stored.kind, stored.occurred_at_unix_ms,
+           stored.announced_at_unix_ms, stored.outcome, stored.reason,
+           stored.producer, stored.announced_ms_ago
+         ) is distinct from row(
+           excluded.provider, excluded.kind, excluded.occurred_at_unix_ms,
+           excluded.announced_at_unix_ms, excluded.outcome, excluded.reason,
+           excluded.producer, excluded.announced_ms_ago
+         )
+         returning (xmax = 0) as inserted, announcing_device_id, event_idannouncing_device_idselect count(*)::bigint as received_chunks,
+                max(c.chunk_index) as max_chunk_index,
+                coalesce(sum(octet_length(c.payload)), 0)::bigint as total_bytes
+         from device.upload_chunks c
+         where c.upload_session_id = $1max_chunk_indexreceived_chunkstotal_bytesselect node_id, route_kind, request_id, datatype, sync_mode,
+                chunk_count, status, updated_at_text, expires_at
+         from device.upload_sessions
+         where upload_session_id = $1
+         for updatedelete from device.upload_sessions
+         where upload_session_id = $1
+           and route_kind = 'data_source_reconciliation'conflicting reconciliation upload session identityreconciliation upload phase conflicts with finalizationreconciliation upload is missing during finalization
