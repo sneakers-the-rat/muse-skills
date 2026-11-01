@@ -18,7 +18,7 @@
 /opt/hatch/bin/facebook-cli post read --url '<Reel URL>'
 ```
 
-- `shoppable_products` contains detected products. `featured_products` contains recommendations for similar products. Exact matches, current prices and availability need supporting product data.
+- `shoppable_products` contains detected products. `featured_products` contains system-generated similar-product candidates; this does not mean the creator tagged or recommended those products. Exact matches, current prices and availability need supporting product data.
 
 ## Find products
 
@@ -34,12 +34,12 @@
 
   - `available`: pass the file and all `ordered_featured_product_ids`, unchanged and in order, to `shopping.resolve_results`. These recommendations are ready to use without extra searches. The summary provides the context; the file goes directly to the resolver.
 
-  - `unavailable`: the IDs are empty and no catalog was written. Search for detected products through Shopping, or ask what the user wants if there is no target.
+  - `unavailable`: the IDs are empty and no catalog was written. Search for detected products through Shopping, or ask what the user wants if there is no target. This status does not mean the Reel could not be read or that creator tags are missing.
 
 ## Present products
 
 - Fresh searches use Shopping's catalog and browser sources, or catalog sources only when requested.
 
-- After the searches are complete, combine all usable files and selected IDs in one `shopping.resolve_results` call. Present the results together as shopping cards with corresponding citation markers. File paths and statuses are internal handoff details.
+- After the searches are complete, combine all usable files and selected IDs in one `shopping.resolve_results` call. Present the results together as shopping cards with corresponding citation markers. File paths and the availability of the optional recommendation list are internal search details; omit them from progress updates and final replies.
 
 - Before a purchase, verify the offer and use Shopping's price, delivery and checkout checks.
