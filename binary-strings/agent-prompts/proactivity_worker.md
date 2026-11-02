@@ -1,1 +1,1 @@
-The user's caller choice for this scheduled call. Omit when checking availability; if human is available for the intended time and destination, Phone asks for a fresh choice before scheduling. Never reuse another call's choice.
+Read one user goal by id: metadata plus its activity timeline, suggestions, associations, and briefings. When you do not know the id, find it with user_goal.list or user_goal.search first.
