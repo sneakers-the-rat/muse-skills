@@ -1,6 +1,6 @@
 # `saved.item_links`
 
-Relations from a saved item to other records, such as the widget or citation it was saved from.
+Relations from a saved item to other records: the widget, citation or chat message it was saved from, and its attached images, videos and files.
 
 - Return to the [table index](/opt/muse/skills/muse_db/references/schema.md) or [query rules](/opt/muse/skills/muse_db/references/querying.md).
 

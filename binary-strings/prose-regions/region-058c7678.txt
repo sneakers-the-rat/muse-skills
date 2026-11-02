@@ -1,0 +1,68 @@
+peer_id, muse_id, x25519_pub, key_epoch, binding, binding_expires_at_ms, fqdn, vm_id, endpoint_hints, display_name, agent_name, account_claim, relationship_generation_id, relationship_direction, relationship_started_at_ms, request_expires_at_ms, request_terminal_cause, relationship_revision, remote_confirmed_ceremony_id, remote_confirmed_at_ms, status, trust_preset, sas_confirmed_local, active_sas_ceremony_id, attested, person_slug, provenance, paired_at_ms, last_activity_ms, created_at_ms, updated_at_msINSERT INTO agents (agent_id, id, session_id, kind, parent_id, parent_agent_id, root_session_id, depth, created_at, updated_at, model, status, last_assistant_message, ephemeral, agent_type, presentation_root_session_id, spawn_metadata_json, originating_location_context_json)
+             VALUES ($1, $1, $2, $3, $4, $4, $5, $6, $7, $8, $9, $10, NULL, $11, $12, $13, $14, $15)
+INSERT INTO agent_ancestors (descendant_id, ancestor_id, distance)
+VALUES ($1, $1, 0)
+ON CONFLICT (descendant_id, ancestor_id) DO NOTHING
+
+INSERT INTO agent_ancestors (descendant_id, ancestor_id, distance)
+SELECT $1, ancestor_id, distance + 1
+FROM agent_ancestors
+WHERE descendant_id = $2
+ON CONFLICT (descendant_id, ancestor_id) DO NOTHING
+
+INSERT INTO agent_ancestors (descendant_id, ancestor_id, distance)
+VALUES ($1, $2, 1)
+ON CONFLICT (descendant_id, ancestor_id) DO NOTHING
+fresh
+JOIN LATERAL (
+  SELECT MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/kind') AS kind,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/action') AS action,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/handoff_message_id') AS handoff_message_id,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/handoff_source') AS handoff_source,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/submission_message_id') AS submission_message_id,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/submission_source') AS submission_source
+  FROM runtime.event_payload_fields AS f
+  WHERE f.event_seq = e.event_seq AND f.field_path IN (
+    '/metadata/kind', '/metadata/action', '/metadata/handoff_message_id',
+    '/metadata/handoff_source', '/metadata/submission_message_id', '/metadata/submission_source'
+  )
+) AS metadata ON true
+failedinterruptedfollow_up_settlementnothing_to_doabortedINSERT INTO runtime.maintenance_markers (marker_key, detail_json) VALUES ('event_hook_admissions_v1', '{}') ON CONFLICT (marker_key) DO NOTHINGINSERT INTO runtime.event_hook_admissions (hook_id, revision, definition_sha256, script_sha256, enabled)  ON CONFLICT (hook_id) DO NOTHING
+SELECT
+  agents.id,
+  agents.session_id,
+  agents.created_at,
+  agents.updated_at,
+  agents.status,
+  metadata.status AS session_metadata_status,
+  agents.seen_at_ms,
+  COALESCE(metadata.pinned, false) AS pinned,
+  metadata.pinned_order,
+  metadata.thread_title AS session_title,
+  transport.provider AS channel,
+  metadata.origin,
+  CASE WHEN transport.provider = 'peer' THEN transport.delivery_target END AS peer_muse
+FROM agents AS agents
+
+WHERE agents.kind = 'root'
+  AND agents.parent_agent_id IS NULL
+  AND agents.session_id IS NOT NULL
+  AND agents.ephemeral IS DISTINCT FROM TRUE
+  AND 
+  AND transport.provider IS NULL
+  AND transport.provider IS NOT NULL
+  AND (agents.updated_at, agents.created_at, agents.session_id) < (, )
+legacy pinned sessions.list cursor was not resolved  AND metadata.pinned_order IS NULL
+  AND (agents.updated_at, agents.created_at, agents.session_id) < (  AND (metadata.pinned_order >  OR (metadata.pinned_order =  AND (agents.updated_at, agents.created_at, agents.session_id) < ()) OR metadata.pinned_order IS NULL)
+
+ORDER BY agents.updated_at DESC, agents.created_at DESC, agents.session_id DESC
+
+ORDER BY metadata.pinned_order ASC NULLS LAST,
+         agents.updated_at DESC, agents.created_at DESC, agents.session_id DESC
+LIMIT background_sync_disabledspacetext/event-streamnosniffname must be non-emptytimed out while writing egress approval mirror requesttimed out while reading egress approval mirror responseartifact body length overflowavatar-state: authoritative DB row missinginvalid `session_id`session not foundremote media download request failed<unknown>remote media download body read failedread file artifact stateread artifact placementread saved artifact stateread share linkread saved artifactJARVIS_STEFI_PROXY_SOCKEmojiTaglineconnector_consent_requiredmemory clear failedhost cron definition store integration is unavailableshopping_results_v2navigationnavigation.scheduled_tasknode_card.notification_opt_inclear onboarding starter ideasGatekeeper response omitted requested gate; using defaultCould not read hooksHook admission failedbuilt-in IDENTITY.md template is missinghttpsread shared Spaceread shared Space statedecode artifact sharingread artifact sharingMissing preview attachmentinvalid prepared attachmentThey receive a copy of this item. Later changes are not shared automatically.They can open this Space and use its shared actions, including future changes, until access is removed.They can view and edit this goal and its tasks, including future changes, until access is removed.Connection has no conversationno 1:1 conversationnotion-cligranola-clibox-cli/opt/hatch/binbin-skills.updatedfailed to resolve avatar video start framesThis message was not approved.read circleresolve local muse identityself-consent for circle genesissign circle genesis rosteradopt circle genesis rosterread created circledecode local staticstored roster hashassemble final roster entriessign final rosteradopt final rosterretire local circlesign roster versionadopt roster versionre-read circleassemble roster entriesread contactlist circlesconsent_unavailablebinary_unavailableprobe_timeoutprobe_failedupdated_atauthenticateddefault reference avatar bundle is unavailableauthd socket not configuredauthd did not return an OAuth authorize URLauthd did not return a Plaid Hosted Link URLStefi product_details response could not be compactedoauth_authorize_url_unavailableconnector id must not be emptyoauthapi_keyconsent_onlymessengertailscale control unavailableTailscale is unavailable. Please try again.Error shown when the Tailscale connector cannot reach its local serviceemail_monitoring_reset_failedemail_monitoring_unavailablemailbox deletion is temporarily unavailable; retry laterwidget_id is required for cart checkoutdisplayed_cart is required for cart checkoutCould not read shopping widgetShopping cart widget not foundShopping cart has no providerCart read already in progressCould not encode cartShopping connector is unavailableCould not encode cart attributionCould not refresh cart; check the connector connection and try againproduct_details_busyToo many product details reads in progressShopping provider missingShopping product ID missingShopping widget not foundShopping citation message not foundcached Marketplace listing is not an object

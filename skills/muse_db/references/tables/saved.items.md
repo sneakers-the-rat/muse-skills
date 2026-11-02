@@ -1,6 +1,6 @@
 # `saved.items`
 
-Entities the user saved, each once, with notes saying what it was saved for, purchase state and the agent, chat and turn that saved it.
+Anything the user saved (a product, link, post, chat message or note), each once, with notes saying what it was saved for, its status and the agent, chat and turn that saved it.
 
 - Return to the [table index](/opt/muse/skills/muse_db/references/schema.md) or [query rules](/opt/muse/skills/muse_db/references/querying.md).
 
@@ -22,7 +22,7 @@ Entities the user saved, each once, with notes saying what it was saved for, pur
 
 - `title` uses `text` and is required.
 
-- `url` uses `text` and is required.
+- `url` uses `text` and is nullable.
 
 - `image_url` uses `text` and is nullable.
 
@@ -31,8 +31,6 @@ Entities the user saved, each once, with notes saying what it was saved for, pur
   Short phrases, one per line, saying what the item was saved for.
 
 - `raw_input` uses `text` and is nullable.
-
-- `purchased_at` uses `timestamp with time zone` and is nullable.
 
 - `agent_id` uses `text` and is nullable.
 
@@ -57,6 +55,16 @@ Entities the user saved, each once, with notes saying what it was saved for, pur
 - `updated_at` uses `timestamp with time zone` and is required.
 
   Default: `now()`.
+
+- `body` uses `text` and is nullable.
+
+  The saved content itself when it is the thing saved: a note's text, a chat message, a post's caption.
+
+- `status` uses `text` and is nullable.
+
+  What became of the item (purchased, reserved, attended, done); null while it is still wanted.
+
+- `status_at` uses `timestamp with time zone` and is nullable.
 
 ## Keys and relationships
 

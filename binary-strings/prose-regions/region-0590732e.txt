@@ -1,0 +1,218 @@
+Share a Feed item, Idea, Space, Goal, or file.The file path has no file nameChoose a file in the workspace using its path or sandbox URI.Feed item not foundvideoIdea not foundSpace not foundGoal not foundprovider connection identity is no longer currentread provider connection ruleswhatsapp_companionhatch.circle-resource.v1quota_exhaustedToo many resource requestsconnections_disabledConnections are disabledinvalid_signatureInvalid resource request signatureinvalid_request_windowExpired or invalid resource requestinvalid_targetInvalid resource targetnot_a_memberNot a current circle memberinvalid_routeThe resource request did not come through its circlerelayinvalid_relayOnly the circle host can relay a member requestinvalid_contentResource content does not match its signaturespace_not_foundThe shared Space has changedresource_not_sharedThe resource is no longer shared with this circlesdk_scopeUse the Space's published actionsThis request has already been admittedreceivehumanruntime.skillsruntime.skills.paced_probeconnector_call_reasonJARVIS_TRACE_CONTEXTJARVIS_HOMEJARVIS_VAR_LIB_DIRCREDENTIALS_DIRECTORYJARVIS_RUNTIME_CONTEXT_TOKENskill command runtime context registration failedbackground job has an unsupported content localefailed to resolve public session id for streamed framedropped companion progress frame after its voice call changedupdate goals.shared_update_state
+         set generation = generation + 1, pending = true, actor_muse = $2
+         where goal_id = any($1)for sharefor updateselect task_id,title,assigned_to,completed,updated_by,updated_at_ms from goals.shared_tasks where goal_id=$1 order by task_id limit 201select exists(select 1 from spaces.user_state
+         where sharing_state is null or accessed_at_ms is not null
+           or last_opened_at_ms is not null or frequency_score is not null
+           or favorite_order is not null)insert into spaces.user_state (space_slug, favorite_order, is_favorite) values  on conflict (space_slug) do update set
+            favorite_order = excluded.favorite_order, is_favorite = true
+          where spaces.user_state.sharing_state is not null
+            and spaces.user_state.accessed_at_ms is null
+            and spaces.user_state.last_opened_at_ms is null
+            and spaces.user_state.frequency_score is null
+            and spaces.user_state.favorite_order is null, true)select goal_id from goals.goals where goal_id=$1 for updateselect count(*) from peer.goal_grants where goal_id=$1 and grantee_muse<>$2 and revoked_at_ms is nullshared goal not foundinsert into peer.goal_grants
+                (goal_id,grantee_muse,relationship_generation_id,granted_at_ms)
+                values ($1,$2,$3,$4) on conflict(goal_id,grantee_muse) do update set
+                relationship_generation_id=excluded.relationship_generation_id,
+                granted_at_ms=excluded.granted_at_ms,revoked_at_ms=nulla goal supports at most 50 connectionsinsert into goals.shared_update_state (goal_id,generation,pending) values ($1,0,false) on conflict(goal_id) do nothingselect pg_advisory_xact_lock(hashtextextended('peer.space_grants:' || $1, 0))insert into peer.space_grants
+             (slug, grantee_muse, space_id, relationship_generation_id, granted_at_ms, revoked_at_ms)  on conflict (slug, grantee_muse) do update set
+            space_id=excluded.space_id, relationship_generation_id=excluded.relationship_generation_id,
+            granted_at_ms=excluded.granted_at_ms, revoked_at_ms=null
+INSERT INTO requests (
+  request_id, root_request_id, parent_request_id, request_origin,
+  transcript_surface, root_work_class
+)
+VALUES ($1, $2, $3, $4, $5::runtime.transcript_surface, $6)
+ON CONFLICT (request_id) DO UPDATE SET
+  root_request_id = COALESCE(requests.root_request_id, excluded.root_request_id),
+  parent_request_id = COALESCE(requests.parent_request_id, excluded.parent_request_id),
+  request_origin = CASE
+    WHEN requests.request_origin = 'internal.runtime_replay' THEN excluded.request_origin
+    ELSE requests.request_origin
+  END,
+  transcript_surface = excluded.transcript_surface,
+  root_work_class = CASE
+    WHEN requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing'
+      THEN excluded.root_work_class
+    ELSE requests.root_work_class
+  END
+WHERE (requests.root_request_id IS NULL AND excluded.root_request_id IS NOT NULL)
+   OR (requests.parent_request_id IS NULL AND excluded.parent_request_id IS NOT NULL)
+   OR (requests.request_origin = 'internal.runtime_replay'
+       AND excluded.request_origin <> 'internal.runtime_replay')
+   OR requests.transcript_surface IS DISTINCT FROM excluded.transcript_surface
+   OR (requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing')
+call_idoutput
+INSERT INTO tool_outputs (event_seq, call_id, status, output_text, error_text, created_at)
+VALUES ($1, $2, $3, $4, $5, to_timestamp($6::double precision / 1000.0))
+ON CONFLICT (event_seq) DO UPDATE SET
+  call_id = excluded.call_id,
+  status = excluded.status,
+  output_text = excluded.output_text,
+  error_text = excluded.error_text
+arguments
+INSERT INTO tool_calls (event_seq, call_id, tool_name, status, arguments_json, created_at)
+VALUES ($1, $2, $3, 'started', $4, to_timestamp($5::double precision / 1000.0))
+ON CONFLICT (call_id) DO UPDATE SET
+  event_seq = excluded.event_seq,
+  tool_name = excluded.tool_name,
+  status = excluded.status,
+  arguments_json = excluded.arguments_json
+
+INSERT INTO chat_event_derived_write_backlog (event_seq, resources_json)
+VALUES ($1, $2)
+ON CONFLICT (event_seq) DO UPDATE SET
+  resources_json = excluded.resources_json,
+  updated_at = now()
+
+UPDATE events
+SET display_text_ready = $2,
+    reply_target_message_id = $3,
+    payload_json = $4
+WHERE event_seq = $1
+
+INSERT INTO messages (message_id, event_seq, role, body, created_at)
+SELECT e.message_id, e.event_seq, e.role, $2, e.created_at
+FROM events e
+WHERE e.event_seq = $1
+  AND e.message_id IS NOT NULL
+  AND e.role IS NOT NULL
+ON CONFLICT (message_id) DO UPDATE SET
+  body = excluded.body
+UPDATE chat_private.peer_conversations SET requester_chat_id = NULL
+         WHERE conversation_id = $1 AND requester_revision = $2
+           AND requester_chat_id = $3 AND NOT requester_unavailable
+           AND chat_id = $5
+           AND EXISTS (SELECT 1 FROM agent.agents
+                       WHERE id = $4 AND session_id = $3)peer handoff disagrees with its asking-chat claimpeer handoff requester changed before admissionSELECT session_id, COALESCE(prompt_floor_seq, -1) AS prompt_floor_seq,
+                kind = 'root' AND parent_agent_id IS NULL
+                AND ephemeral IS DISTINCT FROM TRUE
+                AND status NOT IN ('shutdown', 'not_found') AS eligible
+         FROM agent.agents WHERE agent_id = $1 FOR UPDATEstartup_root_changedSELECT EXISTS(SELECT 1 FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND accepted_ordinal < $2)startup mailbox promotion cannot overtake an earlier accepted input
+SELECT payload_json
+FROM agent.runtime_restart_checkpoints
+WHERE agent_id = $1
+FOR UPDATE
+
+SELECT EXISTS (
+  SELECT 1
+  FROM agent.message_mailbox
+  WHERE agent_id = $1
+    AND state = 'accepted'
+    AND accepted_ordinal < $2
+    AND (NOT $3 OR submission_kind <> 'internal_handoff')
+)
+message mailbox attachment cannot overtake an older priority peer
+INSERT INTO agent.runtime_restart_checkpoints (
+  agent_id, mode, recovery_class, recovery_owner_id, execution_config_json,
+  payload_json, created_at, updated_at
+) SELECT $1, $2, $3, $4, $5, $6, $7, $7
+WHERE EXISTS (
+  SELECT 1
+  FROM agent.agents
+  WHERE agent_id = $1
+    AND status NOT IN ('shutdown', 'not_found')
+)
+ON CONFLICT (agent_id) DO NOTHING
+SELECT EXISTS (SELECT 1 FROM agent.agents WHERE agent_id = $1 AND status NOT IN ('shutdown', 'not_found'))conversation epoch
+INSERT INTO agent.message_mailbox (
+  submission_id, agent_id, conversation_epoch, submission_kind,
+  routing_scope, state, checkpoint_custody, stream_owner_message_id,
+  submission_json, transcript_event_seq, attached_at
+) VALUES (
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+  CASE WHEN $6 = 'attached' THEN now() ELSE NULL END
+)
+ON CONFLICT (submission_id) DO NOTHING
+RETURNING accepted_ordinal, accepted_at
+startup mailbox promotion requires its previously accepted input
+SELECT agent_id, conversation_epoch, submission_kind, routing_scope,
+       state, stream_owner_message_id, submission_json,
+       transcript_event_seq, accepted_ordinal, accepted_at
+FROM agent.message_mailbox
+WHERE submission_id = $1
+FOR UPDATE
+update chat.message_bindings set admitted_at = coalesce(admitted_at, now())
+                    where jarvis_message_id = $1 and chat_id = $2 and binding_epoch = $3 and transport = $4binding epochconversation_epochsubmission_kindrouting_scope
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = $5,
+    stream_owner_message_id = $2,
+    submission_json = $3,
+    transcript_event_seq = coalesce($4, transcript_event_seq),
+    attached_at = now()
+WHERE submission_id = $1
+  AND state = 'accepted'
+  AND stream_owner_message_id IS NULL
+mailbox stream ownerselect a.account_id from chat_private.accounts a
+             join chat_private.binding_authorizations b on b.provider = a.provider and b.account_id = a.account_id
+             where b.provider = $1 and b.binding_id = $2
+               and a.connection_id = $3 and not a.revoked for share of adirect input has no captured binding epochaccount_retiredselect connection_id, generation, transport_json, delivery_target
+             from chat_private.binding_authorizations
+             where provider = $1 and binding_id = $2 and chat_id = $3
+               and account_id = $4 and external_kind = 'direct' and participation = 'active'
+             for shareaccount_authorization_retiredtransport_jsontransport_authorization_absentgenerationdelivery_targetselect epoch from chat_private.bindings
+         where chat_id = $1 and provider = $2 and not revoked for sharetransport_authorization_changedbinding_retiredtoo many group attachment snapshotsinvalid group attachment snapshot referenceinvalid group attachment MIME typeduplicate group attachment snapshot referencegroup attachment snapshots exceed limitBackground participation is temporarily unavailableOnly Internal announcements accept fallback copyInternal announcement requires public fallback copyinternal_fallback_messageInternal fallback exceeds message limitWWW messages require agent-written deliveryInternal announcement requires delivery instructionsInternalWorker priority is reserved for worker owner noticesInternal priority is reserved for code-owned main-chat deliveriesfollow-up metadata must be a JSON objectfollow-up must expire after it becomes deliverablefollow-up message must not be emptyfollow-up key must not be emptyfollow-up producer must not be emptyhardcoded product campaign producer is retiredpresentation_localeenqueue follow-upfollow_up_queue_deliveryenqueuefollow-up enqueued but the delivery worker could not be kickedspace_preview_repairspace preview repair: handler not registeredspace preview repair: handler registry unavailablespace_preview_missingspace preview repair: runtime work store unavailablequeued Space preview repairspace preview repair: seeding failedspace preview repair: catalog read failed on viewNo rule fully covers this message.owner_request saved message disappearedconnection not foundSaved message integrity check failedThe conversation or its rules changed. Prepare the message again using the current context.An attachment changed after this message was prepared. Prepare a new message.The main Muse decision does not match the saved messagethe connection is no longer activeconnection message reviewedallowconnection approval has no durable identityThe user did not approve this message. Leave it unsent.The conversation changed before delivery.connection message queuedSharing rule review timed outinvalid connection review; requesting one correctionSharing rule review retry timed outbundled Ideas localization catalog is unavailablefailed to load bundled Ideas localization provenancefailed to load bundled Ideas dogfood provenanceIdea catalog sharing context read failedIdea share variant projection read failedIdea share revision projection read failedIdea direct sharing read failedIdea publication hold read failedfiles can only be shared in a direct peer conversationcontent_truncatedrequired_review_imageShared items must refer to local files before sendingWhatsApp directory read timed outCircle is no longer activeInvalid catalog requestcontent-typeResource metadata is too largeconnector_status_cacheclient rendering snapshot read failed; keeping lifts inline this turndatabase write admission gate closedadmission_timeoutassert_table_existstable_presence.query/internal/permissions/inventorySentinel permission inventory read failedartifact catalog unavailable for permission inventoryscheduled-task definitions unavailable for permission inventoryscheduled-task permission predictions unavailable: catalog read failedmuse_mailemail_invalid_thread_idthread id has an unexpected shapehttp://localhost/hatch/email/threadsthread reademail_not_enabledMuse mail is not enabled for this accounthttp://localhost/hatch/email/mailboxmailbox reademail_invalid_message_idmessage id has an unexpected shapehttp://localhost/hatch/email/messagesmessage readthread listingmessage listingattachment readSELECT payload_json FROM runtime_restart_checkpoints WHERE agent_id = $1 FOR UPDATESELECT submission_json, octet_length(submission_json)::bigint AS serialized_bytes
+         FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND submission_id <> $2startup_queue_fulldue-occurrence coalesce check failed; seeding immediate occurrence anywaymailbox identity reademail: mailbox identity read returned an invalid identitymailbox identity read returned a malformed identityattempts_remainingemail_invalid_challenge_idchallenge id has an unexpected shapehttp://localhost/hatch/email/addresses/owners/challengesowner verificationthe live mailbox address is unavailableThe user also just verified their own email address, so email from it now
+reaches you as theirs. Write the forwarding bullet above without "once you
+verify your own email address", because forwarding already works, and do not
+say they still need to verify. A welcome email to that address goes out right
+after this turn. In the same reply, tell them in one short sentence that their
+address is verified and a welcome email is on its way, without saying it was
+sent.
+owner challengemailbox updateconversation resource request refusedconversation_resource_unavailableA share needs an operation ID and item IDverified_email_addressmuse_mail_addressThe user just verified their own email address in Muse Mail settings, and you
+already told them a welcome email is on its way. Send it now.
+
+Write a short, friendly email to `verified_email_address` below in the
+delivery language specified for this turn: say email from that address now
+reaches you, name two or three things you can do by email, and say you only
+email people when the user asks. Your own Muse Mail address is exactly
+`muse_mail_address` below; never use one from memory or earlier conversation.
+
+Send it with `mail.handoff`, loading the `mail` namespace first if its schema
+is not in context, and call no other tool. When the handoff is accepted, say
+nothing to the user in this turn; its result tells them once it is sent. When
+it fails, tell the user in one short sentence that you couldn't send the
+welcome email.
+email_owner_verifiedmaintenance_occurrencemaintenance_attemptrequest_generationgeneric_maintenancejitter_offset_secsjitter_window_secsmaintenance occurrence collided with terminalized work itemSELECT event_seq, event_name, source, role::text AS role,
+                    visibility::text AS visibility, message_id, agent_id,
+                    parent_agent_id, parent_message_id, reply_to_message_id,
+                    transcript_surface::text AS transcript_surface, payload_json,
+                    request_id, root_request_id, parent_request_id,
+                    extract(epoch from created_at)::bigint AS created_at
+             FROM runtime.events WHERE idempotency_key = $1SELECT ci.item_json, ci.message_source,
+                        extract(epoch from ci.created_at)::bigint AS created_at,
+                        p.client_context_json
+                 FROM agent.context_items ci
+                 LEFT JOIN agent.context_item_resume_projection p
+                   ON p.agent_id = ci.agent_id AND p.seq = ci.seq
+                 WHERE ci.agent_id = $1 AND ci.seq = $2called `Result::unwrap()` on an `Err` valueavatar_sharelocal_mapoptionimage_optionsdiscovery_pool_idea_idletterhotel_resultsshopping_cartspace_build_completednode_cardinternal_link_action_cardgeneric_listexternal_linkaudioslidesimpressionclickengagementfeedback_upfeedback_downOPTIONSPUTDELETETRACECONNECTPATCHforeground_rootpeer_chat_rootexternal_party_chat_rootmail_conversationdelegate_main_requestworkflow_subagentspaces_builderspaces_builder_litespaces_builder_editspaces_builder_python_editbrowser_taskdeep_researchideas_builderspace_taskself_improvement_stepflight_tracking_steppeer_sync_stepfeed_workflow_stepephemeral_agent_stepscheduler_cron_executescheduler_cron_resolveexecute_resolve_workersystem_cron_productvoice_delegaterealtime_voicecompaniondeveloperassistantinternal error: entered unreachable code: invalid Once stateafter_inferenceawaiting_approvalafter_tool_dispatchuser_goalassistant_trackingopportunisticcomplete_when_awakeobjectiveproactive_notificationflight_trackingvoice_persistencewebhook_fetchsteady_phasecadence_then_splayoverdue_catchupretryimmediateInstagramThreadspreemptible_retryableprimarysecondaryinternal_wakefull_cadence_phaseimagesvideosinstagramthreads
+INSERT INTO events (
+  event_kind, event_name, request_id, root_request_id, parent_request_id,
+  transcript_surface, visibility, source, role, chat_kind, stream_lane,
+  message_id, parent_message_id, reply_to_message_id, reply_target_message_id,
+  parent_agent_id, agent_id, idempotency_key, display_text_ready, payload_json,
+  chat_context_json, created_at
+)
+VALUES ($1::runtime.event_kind, $2, $3, $4, $5, $6::runtime.transcript_surface,
+        $7::runtime.visibility, $8, $9::runtime.message_role, $10, $11,
+        $12, $13, $14, $15, $16, $17, $18, $19,
+        $20, $21, to_timestamp($22::double precision / 1000.0))
+ON CONFLICT (idempotency_key) WHERE idempotency_key IS NOT NULL DO NOTHING
+RETURNING event_seq
+
+INSERT INTO events (
+  event_seq, event_kind, event_name, request_id, root_request_id, parent_request_id,
+  transcript_surface, visibility, source, role, chat_kind, stream_lane,
+  message_id, parent_message_id, reply_to_message_id, reply_target_message_id,
+  parent_agent_id, agent_id, idempotency_key, display_text_ready, payload_json,
+  chat_context_json, created_at
+)
+VALUES ($1, $2::runtime.event_kind, $3, $4, $5, $6, $7::runtime.transcript_surface,
+        $8::runtime.visibility, $9, $10::runtime.message_role, $11, $12,
+        $13, $14, $15, $16, $17, $18, $19, $20,
+        $21, $22, to_timestamp($23::double precision / 1000.0))
+ON CONFLICT (event_seq) DO NOTHING
+RETURNING event_seq
+task_statustool_donetool_startfailed to encode navigation subscribe event/navigation/subscribe/navigation/recents/touch/navigation/pinned/setdaemon_permission_inventoryRead the backend-owned permission inventoryReturns the five-category permission hierarchy. Scheduled-task owners are included only while their scheduler job is enabled; validated authoring-time connector-method predictions are marked predicted and remain advisory until observed or configured. Completed or retired one-time tasks remain in audit history but do not contribute rows or counts./permissions/inventoryemail_upstream_rejecteddetailemail_invalid_limitlimit must be between 1 and 100daemon_email_get_threadGet an email conversation403 `email_not_enabled` on confidential VMs or when the Muse Mail rollout is off or unresolved. Returns the upstream thread `summary` and full `messages` array, oldest first, including incoming and outgoing messages beyond the loaded mailbox pages. Thread detail is not paginated. The thread belongs to this Hatch's mailbox; callers cannot choose another environment. 400 `email_invalid_thread_id` for an invalid identifier and 404 `email_upstream_rejected` for an unknown thread. Upstream responses larger than 16 MiB or requests exceeding 15 seconds return 502 `email_upstream_unavailable`.emailthe VM's environment identity is not available yet; retry laterdaemon_email_get_mailboxGet this Hatch's email mailbox403 `email_not_enabled` on confidential VMs or when the Muse Mail rollout is off or unresolved. Returns the mailbox assigned to this Hatch (mailbox_id, environment_id, handle, full email address, display name) as the upstream mailbox service reports it. A deprecated id compatibility alias may also be present. Optional `restriction` is `SENDER_NAME_CHANGE_REQUIRED` (sending blocked until a rename) or `TAKEN_DOWN` (other mail routes return 403 `emailMailboxTakenDown`; deletion works, and creation replaces the mailbox); absent or null means none. While it is set, `display.restriction_notice` carries the notice to render in the Accept-Language locale: `title`, `body`, and `action` (`label`, `kind` `edit_sender_name` or `create_email`). 404 `email_upstream_rejected` when no mailbox exists yet.daemon_email_get_messageGet one mailbox message403 `email_not_enabled` on confidential VMs or when the Muse Mail rollout is off or unresolved. Returns one full message from this Hatch's mailbox, with optional message-specific `agent_activity`. Missing or unavailable activity is null and does not prevent reading mail. 400 `email_invalid_message_id` for an invalid identifier and 404 `email_upstream_rejected` for an unknown message. Upstream responses larger than 16 MiB or requests exceeding 15 seconds return 502 `email_upstream_unavailable`.daemon_email_list_threadsList mailbox conversations403 `email_not_enabled` on confidential VMs or when the Muse Mail rollout is off or unresolved. Returns globally ordered thread summaries in `data`, newest first, with each thread's id, subject, participants, message_count, last_message, and optional conversation-wide has_inbound, has_outbound, and has_warnings flags. Absent flags are unknown, not false. Pass `paging.cursors.after` unchanged as `cursor` for the next page; its absence ends pagination. Optional `limit` is 1-100 and defaults to 50. Invalid limits return 400. Callers cannot select another environment. Upstream responses larger than 16 MiB or requests exceeding 15 seconds return 502 `email_upstream_unavailable`. Read the thread detail route for the conversation's full messages.daemon_email_list_messagesList mailbox messages403 `email_not_enabled` on confidential VMs or when the Muse Mail rollout is off or unresolved. Returns the mailbox's globally ordered message feed, newest first, as the upstream mailbox service reports it: full messages carrying direction, sender authentication, recommended destination/handling, bodies, and attachment metadata in `data`. When `paging.cursors.after` is present, pass that service token unchanged as `cursor` for the next page. Its absence ends pagination. Requests at most 25 messages per batch; upstream responses larger than 16 MiB return 502 `email_upstream_unavailable`. Clients derive sent/received views from each message's `direction`. Each message adds optional `agent_activity`: the latest recorded processing status, summary, processing_id, updated_at (Unix seconds), and action_count. Null means no available record, never handled.daemon_email_create_mailboxCreate this Hatch's email mailbox403 `email_not_enabled` on confidential VMs or when the Muse Mail rollout is off or unresolved. Creates the mailbox for this Hatch with the requested handle (the email local part) and display name. Creation is idempotent by Hatch identity upstream; a handle already in use fails with 409 `email_upstream_rejected`. The assistant announces its new address in the main chat; `announce: false` holds that message until an owner verification in the same setup or `POST /api/email/mailbox/setup/end`.
