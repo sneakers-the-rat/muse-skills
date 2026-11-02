@@ -1,0 +1,16 @@
+with recursive branch as (
+                    select invocation_id from runtime.browser_invocations where invocation_id = $1
+                    union all select child.invocation_id from runtime.browser_invocations child
+                    join branch parent on child.parent_invocation_id = parent.invocation_id)
+                    update runtime.browser_invocations set state = $3, suspended_state = null, result_json = $2,
+                    terminal_reason = $4, finished_at = now(), updated_at = now(),
+                    handoff_state = case when parent_invocation_id is null then $5::text end,
+                    handoff_submission_id = case when parent_invocation_id is null then $6::text end
+                    where invocation_id in (select invocation_id from branch)
+                    and result_json is null returning invocation_idselect exists(select 1 from runtime.browser_tasks t
+                join runtime.browser_executions e on e.task_id = t.task_id and e.planner_agent_id = t.owner_agent_id
+                where t.task_id = $1 and t.status = 'user_controlled' and t.outcome_status is null
+                  and e.control_revision = t.state_revision)c.operation_id,c.task_id,c.agent_id,c.invocation_id,
+    c.request_digest,c.command_json as request_json,c.result_json as answer_json,
+    t.owner_agent_id as planner_agent_id,coalesce(t.parent_agent_id,t.root_session_id) as recipient_agent_id,t.root_session_id,
+    (extract(epoch from c.created_at) * 1000)::bigint as asked_at_ms

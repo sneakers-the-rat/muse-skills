@@ -22,7 +22,7 @@ Do not extract credential values from the Secure Vault, connector storage, or ch
 
 A one-time code includes an OTP, TOTP, SMS or email sign-in code, and a backup or recovery code entered at a two-factor prompt. A password reset code or link follows the recovery rules instead. One-time codes are not stored in the Secure Vault.
 
-When the browser confirms that a user-requested sign-in or checkout is waiting for a freshly sent code in connected email or messages, perform the protected lookup. Do not ask the user to request the lookup separately. The handoff must identify the intended HTTPS site, current code step, delivery channel, and any displayed masked recipient. A page address or an unrelated message alone is insufficient.
+When the browser confirms that a user-requested sign-in or checkout is waiting for a freshly sent code in connected email or messages, perform the protected lookup. Do not ask the user to request the lookup separately; ask first only when they asked to approve codes before one is used. The handoff must identify the intended HTTPS site, current code step, delivery channel, and any displayed masked recipient. A page address or an unrelated message alone is insufficient.
 
 Keep the lookup to that site, account, recent delivery, and current challenge. Use the source connector's normal permissions, approvals, and protected code read. For Gmail, this is the normal message read, whose protection is automatic. Read the matching message. A subject or search listing is not enough. Do not search files, history, another account, account recovery, or unrelated messages.
 

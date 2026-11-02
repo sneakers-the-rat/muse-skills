@@ -1,0 +1,216 @@
+connector_call_reasonJARVIS_TRACE_CONTEXTJARVIS_HOMEJARVIS_VAR_LIB_DIRCREDENTIALS_DIRECTORYJARVIS_RUNTIME_CONTEXT_TOKENskill command runtime context registration failedstandalonedatabase write admission gate closedadmission_timeoutassert_table_existstable_presence.queryactivity_monitor_list_thread_actionsactivity_monitor_list_recent_thread_actionsactivity_monitor_carrier_user_messagesactivity_monitor_message_thread_lookupactivity_monitor_read_threadagent_status broadcast presence statusagent_status cleared activity-thread presenceupdate self_improvement.connector_context_records set current = false
+        where connector = $1 and account_id = $2 and generation = $3 and subject_id = $4
+        and current and ($5::text is null or suggestion_id <> $5) returning suggestion_idupdate self_improvement.follow_up_queue set state = 'cancelled',
+        disposition_reason = 'connector_source_deleted', terminal_at = now(), updated_at = now()
+        where follow_up_id = any($1) and state = 'pending'connector context contribution does not match its checkpointdeletedselect e.group_key from self_improvement.connector_context_records r
+                join context.events e on e.id = r.event_id
+                where e.source_id = $1 and r.subject_id = $2
+                  and (e.expires_at is null or e.expires_at > statement_timestamp()) order by e.append_position desc limit 1select count(*) from unnest($1::text[]) requested(event_id)
+        left join context.events e on e.id = requested.event_id
+        where e.id is nullconnector context publication event is unavailableinsert into self_improvement.connector_context_records
+            (connector,account_id,generation,subject_id,suggestion_id,event_id,current,
+             source_id,group_id,append_position)
+            select $1,$2,$3,$4,$5,$6,true,e.source_id,e.group_id,e.append_position
+            from context.events e where e.id = $6 on conflict do nothingupdate self_improvement.connector_mailbox_state m
+        set responded_seen_at = $7
+        from unnest($4::text[], $5::text[], $6::bigint[]) as s(thread_id, message_id, position)
+        where m.connector = $1 and m.account_id = $2 and m.generation = $3
+          and m.thread_id = s.thread_id and m.source_id <> s.message_id
+          and m.arrival_position < s.position and m.responded_seen_at is nullinsert into self_improvement.connector_mailbox_state as existing
+        (connector, account_id, generation, source_id, thread_id,
+         arrival_position, position, facts, recorded_at, expires_at)
+        select $1, $2, $3, s.source_id, s.thread_id, s.arrival, s.position, s.facts, $9, $10
+        from unnest($4::text[], $5::text[], $6::bigint[], $7::bigint[], $8::jsonb[])
+          as s(source_id, thread_id, arrival, position, facts)
+        on conflict (connector, account_id, generation, source_id) do update
+        set arrival_position = least(existing.arrival_position, excluded.arrival_position),
+            position = greatest(existing.position, excluded.position),
+            facts = case when excluded.position > existing.position
+                then excluded.facts else existing.facts end,
+            recorded_at = case when excluded.position > existing.position
+                then excluded.recorded_at else existing.recorded_at end
+        where excluded.position > existing.position
+           or excluded.arrival_position < existing.arrival_positionselect source_id, position, facts from self_improvement.connector_mailbox_state
+        where connector = $1 and account_id = $2 and generation = $3
+          and source_id = any($4)
+        for updateupdate self_improvement.connector_mailbox_state m
+        set position = c.position, facts = c.facts, recorded_at = $7
+        from unnest($4::text[], $5::bigint[], $6::jsonb[]) as c(source_id, position, facts)
+        where m.connector = $1 and m.account_id = $2 and m.generation = $3
+          and m.source_id = c.source_idsource_idfactsgmaildelete from self_improvement.connector_mailbox_state
+            where connector = $1 and account_id = $2delete from self_improvement.connector_mailbox_state
+            where connector = $1 and account_id = $2 and generation = $3
+              and source_id = any($4)space_preview_repairspace preview repair: handler not registeredspace preview repair: handler registry unavailablespace_preview_missingspace preview repair: runtime work store unavailablequeued Space preview repairspace preview repair: seeding failedspace preview repair: catalog read failed on viewbrowser_task_idcould not reconcile approval runtime waiterscheckout continuation will retry during maintenanceIdea catalog sharing context read failedIdea share variant projection read failedIdea share revision projection read failedIdea direct sharing read failedIdea publication hold read failedconnector_status_cacheinstagram_messagescredentialsrefresh_token_rejectedfailed to resolve local authd account status; keeping legacy statusfailed to resolve Plaid Item statuscheckmessenger-companion-auth-statusinvalid connector account identityconnector account inventory exceeds boundlegacy_unknownidea-execution doctor: idea grounding read failed; degradingselected_itemsidea-execution doctor: artifact-candidates read failed; degradingartifactsidea-execution doctor: provider-delivery read failed; degradingidea-execution doctor: declared-connectors read failed; degradingdeclared_connectorstranscript_rootidea-execution doctor: transcript window read failed; degradingtranscriptideas_build_failedidea lane read failed for the failed-build decision; recording it without oneactivation_idreconciled_outcomesourceideas.execution_reconcilefailed to record the failed-build decision; the optimistic built reward standsmaintenance_occurrencemaintenance_attemptrequest_generationgeneric_maintenancejitter_offset_secsjitter_window_secsmaintenance occurrence collided with terminalized work item/opt/hatch/bin/outlook-mailOutlook Mailinvalid Outlook Mail received timepreviewtois_readhas_attachmentscalendarsgetprimaryGoogle Calendar primary calendar unavailablechat follow-through admission read failed/opt/hatch/bin/instagram-messages-cliinvalid Instagram accounts response/opt/hatch/bin/outlook-calendarcould not checkpoint chat follow-through retry window after concurrent updatescould not checkpoint chat follow-through retry windowchat follow-through turn failedcould not checkpoint failed chat follow-through window for retryconnector_sync_pausedterminal_failuresabandoned_windowsconnector_sync_read_not_allowedchat follow-through cancelled/opt/hatch/bin/facebook-cli/opt/hatch/bin/hatch_gws_cliGoogle account inventory unavailableauthd unavailableGoogle account inventory exceeds boundconnectedaccount_iduserIdusersgetProfileGmail profile unavailableemailAddress/opt/hatch/bin/plaidPlaid read unavailableokPlaid connection status unavailablePlaid status read failedcredential_idconnector_syncconnector sync disabledJARVIS_TOOL_CALL_ID connector sync cancelledconnector sync requires interactive permissionconnector CLI timed outconnector CLI read failedinvalid connector CLI output continuation/opt/hatch/bin/hatch_wai_cliinvalid WhatsApp Companion statusWhatsApp Companion status omitted account identityWhatsApp Companion returned an empty account identity/opt/hatch/bin/instagram-cliInstagram read unavailableInstagram account inventory unavailable/opt/hatch/bin/hatch_messenger_cli/data/has_keys/data/user_idselection_handoffphone region identity missingapproval_cleanup_deferred_for_coalesced_ownercoalesced approval checkpoint ownership is unavailablestalledterminal_updates_claimedterminal_updates_settledspecialist_handoffs_owedspecialist_handoffs_settledspecialist_steers_duespecialist_steers_settledcheckouts_resumedcheckouts_withdrawncheckout_withdrawals_pendingcheckout_empty_waits_deferredemptybrowser_checkout_continuation_inconclusivebrowser_specialist_steer_inconclusivebrowser_specialist_handoff_inconclusivebrowser_task_terminal_update_inconclusivebrowser_task_reconciliation_inconclusivereconciliation_errorterminal_update_errorspecialist_handoff_errorspecialist_steer_errorcheckout_continuation_errortranscript.dbagent_state.dbdevice_data.dbclient_device_context.dbdevice_syncs.dbhealth.dbspaces.dbmemory/bank/memory.dbworkspace/user/media_library/media.dblegacy_sqlite_retirement_delete_failedconnector_sync_follow_through_failedconnector_sync_cancelledidea_execution_reconcile_store_unavailableno_opprunedidea_execution_reconcile_probe_failedidea_execution_reconcile_work_db_unavailableidea_execution_reconcile_batch_failedidea-execution reconcile: activation-scope recovery failed; affected rows remain explicitly unknownidea-execution reconcile: durable evidence lookup failed; affected rows remain explicitly degradedidea_execution_reconcile_carrier_batch_failedidea-execution reconcile: carrier lineage batch lookup failed; unresolved rows will publish explicit unknown lineageidea-execution reconcile: session click read failed; leaving its rows pendingidea-execution reconcile: cross-session carrier read failed; excluding only this batch's sessions' carriersmergedidea-execution reconcile: follow-up count failed; leaving row pendingidea-execution reconcile: follow-up count still failing past its retry window; finalizing unjudgedfollowup_countexecution never terminalized within max age; not judgedgrounding reads kept failing past the retry window; not judgedclickeddoctor_schema_versiondoctor_completion_statusdoctor_attempt_countdoctor_retry_reasonmeasurement_statusexecution_dispositionidea_card_idselected_item_idsuser_prompt_countintake_user_respondedno_terminal_timeoutexecution_request_idexecution_root_request_idexecution_request_originexecution_lineage_statusauthoring_request_iddoctor_request_idauthoring_evidence_statushatch_runtime_events by request_idartifact_candidatesrejected_correction_countresponse_deliveryprovider_delivered_countprovider_failed_countprovider_uncertain_countprovider_pending_countresponse_delivery_observedresponse_streamed_to_connectionevidence_capture_completeevidence_degradedgrounding_degradedidea_execution_reconciledidea-execution reconcile: claim marker failed; leaving row pending for retry (not marking reconciled)inference_deferredjudgedcalled `Result::unwrap()` on an `Err` valueassertion failed: self.is_char_boundary(new_len)internal error: entered unreachable code: invalid Once stateprovider_deliveredprovider_failedprovider_uncertainstreamed_to_connectionno_delivery_observedverdictmodel_unavailableinference_timeoutunusable_outputnot_judgedonlineout_of_creditsneeds_approvalcompactingrespondingwaiting_for_subagentsworkingawaiting_approvalcreatedrenamedunarchivedpinnedopportunisticcomplete_when_awakeobjectiveproactive_notificationflight_trackingvoice_persistencewebhook_fetchlightjudged_degradeddoctor_timeoutdoctor_failedexecution_stalledscope_unavailablescopeinvalid Instagram sync checkpointinvalid Instagram sync checkpoint fingerprintInstagram sync checkpoint exceeds tracking boundphone_transcripts/liveremove phone live transcriptphone live transcript identifier exceeds limitsteady_phasecadence_then_splayoverdue_catchupimmediateroot_user_turnroot_public_follow_uproot_internal_turnhandofftool_calltracked_subprocesscron_workercron_deliverymaintenance_jobchat_deliverymemory_flushdevice_syncavatar_generationonboarding_personalizationavatar_backfillobjective_stepwaiting_for_inferencewaiting_for_tool_dispatchwaiting_for_user_confirmationcheckpointedcancellingpreemptingterminalizingtimed_outdeliveredpartially_deliverednot_assesseddissatisfiedrevision_requestednone_observeddoctor returned no milestonesartifact milestone not returnedafter_inference_persistedtool_dispatchafter_tool_dispatch_persistedterminalizationInstagramThreadspreemptible_retryableclient_errordisconnectedestablishedpanicserver_errorstartedsuppressedtimeoutupdatedvideoactivefull_cadence_phaseopen phone transcript directory without following linksidea_execution_doctorJARVIS_IDEA_DOCTOR_INFERENCE_TIMEOUT_SECSimagesvideosaudioYou are the Muse idea-execution doctor: an offline evaluator grading a past
+execution. A user clicked "Let's do it" on an idea card; the material below is
+evidence to judge, not a live conversation to continue. You are not the
+assistant. Never reply to the user, offer to build anything, or write
+first-person prose. Your only output is a single call to the
+`muse.submit_idea_execution_verdict` tool.
+
+You must call `muse.submit_idea_execution_verdict` exactly once with a non-empty
+milestones array. Every idea has at least the final artifact milestone. Do not
+emit assistant text. If evidence is thin, empty, or off-topic, still call the
+tool and mark milestones `unknown` with a reason.
+
+"Built" (the code or capability exists) is a precondition, not a milestone.
+User engagement is not required for a milestone to succeed.
+
+## 1. Enumerate Milestones
+
+Read `install_markdown` in the Install / promise section:
+
+- For `selected_items`, use the Selected item promise as the deliverable
+  boundary and include only prerequisites relevant to those items. Ignore
+  unselected card outcomes. For `full_card`, use the full install promise.
+- For `legacy_unknown`, the accepted scope could not be reconstructed. Do not
+  assume full-card scope or selected-item scope. Mark promise-dependent
+  milestones and both alignment judgments `unknown`.
+- Emit one `prereq` milestone for each connector or configuration the prose
+  marks as required. Skip optional, personalization, and enrichment items.
+- Emit exactly one final `artifact` milestone for the promised deliverable.
+  Fold required user input into this artifact milestone.
+- The declared-connectors hint may corroborate the prose, but it cannot decide
+  requiredness. Never add or drop a milestone from that hint alone.
+
+## 2. Classify Milestones
+
+Read the activation-scoped transcript and artifact evidence. Judge the end
+state:
+
+- `success`: the milestone was achieved. A required connector connected or
+  its dependency was satisfied through a user-approved alternate path, or the
+  promised artifact was produced and faithful rather than hollow or merely
+  claimed.
+- `fail`: the milestone was attempted but not achieved. A connector attempt
+  failed, or all prerequisites were satisfied but the deliverable errored,
+  remained empty, or was claimed without being created.
+- `unknown`: the milestone was never attempted, the user declined or deferred,
+  the slice belongs to a different idea, or the evidence is unreadable.
+
+Set `unresolved_outcome_reason` to `not_applicable` when any milestone is
+`success` or `fail`. When every milestone is `unknown`, choose exactly one:
+
+- `not_attempted`: no work toward this idea is visible and no specific blocker
+  below is established.
+- `awaiting_user_no_response`: Muse visibly requested required input and the
+  user did not answer in the captured window. Do not infer abandonment merely
+  from a low turn count.
+- `user_declined`: the user explicitly declined or deferred a required step.
+- `user_cancelled`: the user explicitly cancelled the execution.
+- `evidence_mismatch`: the transcript or artifacts belong to a different idea
+  or activation.
+- `insufficient_evidence`: the relevant evidence is absent or unreadable and
+  none of the more specific cases is supported.
+
+The artifact cannot be `success` unless every required prerequisite is
+`success`. If any prerequisite is `unknown` or `fail`, the artifact is at most
+`unknown`; do not double-count one prerequisite gap as an artifact failure.
+
+## 3. Classify Connector Setup
+
+`connector_setup_reached` is a diagnostic funnel signal and must not change
+milestone status. Set it true only when the assistant actually presented a
+connect step, such as an OAuth link/button or an immediate request to authorize
+a connector. It remains true if the user then chose not to connect.
+
+Set it false when a connector was only mentioned during intake, the user went
+silent or declined before a connect prompt appeared, or the idea needs no
+connector. When unsure whether setup was presented or merely mentioned, choose
+false.
+
+## 4. Identify Corrections And Alignment
+
+- Return `corrections` only for user-authored turns that materially clarify,
+  constrain, reject, retry, fix, or cancel the work. Copy the turn's
+  `message_id` exactly and summarize the correction briefly. Never invent an
+  id.
+- Set `scope_change_kind` to the strongest overall change: `none`,
+  `clarification`, `constraint`, `expansion`, `pivot`, `cancellation`, or
+  `unknown`.
+- Compare the final outcome with the accepted activation scope in
+  `original_promise_alignment`. For `selected_items`, grade only the Selected
+  item promise; do not penalize work for unselected card items. For
+  `full_card`, grade the Original build summary. Score 0-100; use `exact` for
+  90-100, `mostly` for 70-89, `partial` for 30-69, `diverged` for 0-29, and
+  `unknown` when the outcome cannot be observed.
+- Compare the final outcome with the request after applying user corrections in
+  `revised_request_alignment`. With no material correction, use the same
+  judgment as the original promise. A user-directed pivot can score low against
+  the original promise and high against the revised request; that difference
+  alone is not a milestone failure.
+- When a correction replaces an original prerequisite with an alternate input
+  or source that successfully enables the revised artifact, classify that
+  prerequisite as `success` through the accepted alternate path. Do not leave
+  it `unknown` merely because the original connector was no longer attempted.
+  A cancellation without a delivered artifact remains `unknown`, not success.
+
+## 5. Diagnose The Failure Boundary And Completion Claim
+
+These fields are diagnostic and must not change milestone status.
+
+- Set `failure_stage` to the furthest boundary where the primary failure
+  occurred: `intake`, `connector_setup`, `external_action`,
+  `artifact_creation`, `artifact_verification`, or `recurring_delivery`. Use
+  `none` only when no failure is visible and `unknown` when evidence is too thin
+  to locate it.
+- Set `completion_claim_status` from the final user-facing statements and the
+  captured end state: `supported` when the claimed result has evidence,
+  `unsupported` when Muse claimed completion without matching evidence,
+  `partial_or_blocked` when Muse accurately disclosed unfinished or blocked
+  work, `no_claim` when it made no completion statement, and `unknown` when the
+  relevant statement or state is unavailable.
+- Return up to five ordered `failure_modes`, with the primary mode first. Use
+  only evidence visible here. `external_action_stalled` covers an approved
+  browser, cancellation, purchase, or similar action that did not reach
+  confirmation. `ungrounded_or_fabricated_evidence` requires a contradiction
+  between the claim and captured evidence; do not infer fabrication merely
+  because provenance is absent. `input_coverage_gap` requires a visible missed
+  source/window/filter corrected by the user or otherwise demonstrated in the
+  evidence. `recurring_delivery_unverified` applies only when later delivery is
+  part of the accepted promise but no executed delivery is evidenced; a saved
+  schedule alone is not delivery proof. Use an empty array when no failure is
+  visible.
+- Treat the deterministic response-delivery observation according to its
+  boundary. `provider_delivered` is evidence that the provider completed the
+  send. `streamed_to_connection` proves only that Muse streamed the response
+  to a connected client, not that the user rendered or read it.
+  `provider_uncertain` is not proof of either success or failure. Use
+  `no_delivery_observed` as supporting evidence for
+  `recurring_delivery_unverified` only when delivery was part of the accepted
+  promise; `unknown` cannot support that diagnosis by itself.
+
+The idea kind, artifact evidence, turns, and time are grounding inputs rather
+than a verdict. Do not reason aloud. Respond only with the tool call, including
+milestones with short evidence-based reasons, `connector_setup_reached`, and the
+failure-diagnosis fields.
+submit_idea_execution_verdictDeclared connectors hint: (none)
+, Idea and activation contextprompt_context_truncatedOriginal build summaryprompt_build_summary_truncatedSelected item ids: (none)
+Selected item promises: (none)
+Selected item promises:
+Selected activation scopeprompt_selected_scope_truncatedObserved activation artifactsprompt_observed_artifacts_truncatedArtifact candidates in windowprompt_artifact_candidates_truncatedResponse delivery observationprompt_delivery_observation_truncatedInstall / promise (install_markdown)prompt_install_truncatedExecution transcriptprompt_transcript_truncated
+[doctor input truncated at prompt byte limit]
+prompt_total_truncatedYour previous response did not submit a verdict. Do not reply to the user or
+offer to build anything; you are grading a past execution. Call
+`muse.submit_idea_execution_verdict` now with a non-empty milestones array. If the
+evidence is thin or off-topic, mark the milestones "unknown" with a reason;
+that is a valid verdict. Output only the tool call.
+(none)instagramthreads
+)
+SELECT
+  e.event_seq AS seq,
+  (extract(epoch from e.created_at) * 1000)::bigint AS occurred_at_ms,
+  e.created_at::text AS occurred_at_utc,
+  e.request_id,
+  e.event_name,
+  coalesce(e.role::text, m.role::text, 'system') AS role,
+  e.source,
+  e.transcript_surface::text AS transcript_surface,
+  coalesce(e.message_id, m.message_id, '') AS message_id,
+  e.agent_id,
+  e.parent_agent_id,
+  m.body AS display_text
+FROM selected_events e
+LEFT JOIN messages m ON m.event_seq = e.event_seq
+ORDER BY e.event_seq ASCobject_removal_dispatch_eventcandidates_attemptedcandidates_summarizedcandidates_nothing_to_summarizecandidates_rejectedcandidates_inference_errorcandidates_abortedcandidates_no_outputcandidates_written_backlookup_failednothing_matchedapplieddrain_failedrequestedreported_summarizedreported_no_action_requiredreported_not_foundshadow_summarizationJARVIS_RUNTIME_WORK_DB_PURGE_LIMITruntime work supervisor terminalizing stale workmaterialize_submissionprompt_optionsskill_snapshottool_snapshotrequest_overlayclient_context_snapshotdevice_snapshotgoals_snapshothistory_projectionsystem_prompt_composecompaction_decisionprovider_request_readyrecovery_phase_deferredJARVIS_RUNTIME_WORK_TERMINAL_RETENTION_SECSJARVIS_RUNTIME_WORK_DB_TERMINAL_RETENTION_SECSmaintenance_work_successor_preparedtelemetry_versionsuccessor_insertednext_deadline_at_msnext_suspend_policymaintenance_work_execution_interruptedbefore_cancellation_drainJARVIS_SUMMARIZATION_RECHECK_STALE_SECSJARVIS_IDEA_RECONCILE_MAX_AGE_SECSJARVIS_IDEA_DOCTOR_MAX_JUDGED_PER_RUNJARVIS_IDEA_RECONCILE_REACTION_GRACE_SECS`DateTime + TimeDelta` overflowedsession_readroot_readstream_owner_readJARVIS_IDEA_DOCTOR_ENRICHED_EVIDENCE_ENABLEDtranscript_truncatedideas_build_succeededideas_build_statusmaintenance.idea_execution_reconcileIdea build reconciliation did not succeedidea_build_failedidea_build_timeout`DateTime - TimeDelta` overflowedinvalid chat scan windowscan_afterscan_beforeretry_attemptfollow-through evidence omitted scan_afterfollow-through evidence omitted scan_beforeinvalid follow-through retry windowcannot retry a follow-through window on a reset cursor_hatch_tracking_ingest_failuresmissing Instagram account identityinvalid Instagram account identityEngagementPageinvalid Instagram engagement responsebounded_recent_windowterminal Instagram engagement page retains a cursorinvalid Instagram engagement paginationInstagram engagement page exceeds boundunsupported Instagram engagement response contractInstagram engagement page is missing next_cursorInstagram engagement changed during a bounded scaninvalid Instagram engagement identityunsupported Instagram engagement changefinancial_insights_permission_enabledstripe_financial_insights_permission_enabled1p_summarization_eventwriteback_enabledfields_summarizedsummarization_jobnothing_pendingselect_failedendpoint_failedmark_checked_failedproactive_notifierurgent:prepared_work
+
+geofence_trigger_funnelunknown_regionunverifiedgate_closedquiet_windowdaily_capexit_ignoredstorage_unavailablebookkeeping_failedenqueue_failedlocation_reportdata_source_publishenterdwellregistry_readcooldown_stampenqueuegeofence crossing not deliveredhistorymessagesAddedlabelsAddedlabelsRemovedmessagelabelsthread_idphone_transcriptsevent hatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/maintenance/handlers/browser_task_queue.rs:51hatch_server::daemon::runtime::maintenance::handlers::browser_task_queuehatch_daemon_workers::daemon::runtime::maintenance::handlers::browser_task_queuehatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/maintenance/handlers/browser_task_queue.rsevent hatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/maintenance/supervisor/seeding.rs:473hatch_server::daemon::runtime::maintenance::supervisor::seedinghatch_daemon_workers::daemon::runtime::maintenance::supervisor::seedinghatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/maintenance/supervisor/seeding.rsevent hatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/maintenance/supervisor/seeding.rs:293event hatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/maintenance/supervisor/seeding.rs:341event hatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/maintenance/supervisor/seeding.rs:349event hatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/maintenance/supervisor/seeding.rs:386startup_suspend_obligationevent hatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/maintenance/supervisor/seeding.rs:319event hatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/object_removal.rs:184hatch_daemon_workers::daemon::runtime::object_removalhatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/object_removal.rsevent hatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/object_removal.rs:222event hatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/object_removal.rs:304event hatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/work/supervisor.rs:269hatch_server::daemon::runtime::work::supervisorcorruptionhatch_daemon_workers::daemon::runtime::work::supervisorhatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/work/supervisor.rsevent hatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/work/supervisor.rs:173event hatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/work/supervisor.rs:210event hatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/work/supervisor.rs:182classevent hatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/work/supervisor.rs:408rehydratedevent hatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/work/supervisor.rs:425removedretention_secsevent hatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/maintenance/handlers/summarization_shadow.rs:202hatch_server::daemon::runtime::maintenance::handlers::summarization_shadowmatchedcaphatch_daemon_workers::daemon::runtime::maintenance::handlers::summarization_shadowhatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/maintenance/handlers/summarization_shadow.rsevent hatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/maintenance/handlers/summarization_shadow.rs:229event hatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/maintenance/handlers/summarization_shadow.rs:240event hatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/maintenance/handlers/summarization_shadow.rs:253event hatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/maintenance/handlers/summarization_shadow.rs:342context_item_iddimensionevent hatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/maintenance/handlers/summarization_shadow.rs:352event hatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/maintenance/handlers/summarization_shadow.rs:216event hatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/maintenance/handlers/idea_execution_reconcile.rs:260hatch_server::daemon::runtime::maintenance::handlers::idea_execution_reconcilehatch_daemon_workers::daemon::runtime::maintenance::handlers::idea_execution_reconcilehatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/maintenance/handlers/idea_execution_reconcile.rsevent hatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/maintenance/handlers/idea_execution_reconcile.rs:329event hatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/maintenance/handlers/idea_execution_reconcile.rs:379event hatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/maintenance/handlers/idea_execution_reconcile.rs:313event hatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/maintenance/handlers/idea_execution_reconcile.rs:447event hatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/maintenance/handlers/idea_execution_reconcile.rs:632event hatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/maintenance/handlers/idea_execution_reconcile.rs:668event hatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/maintenance/handlers/connector_sync/chat_follow_through.rs:198hatch_server::daemon::runtime::maintenance::handlers::connector_sync::chat_follow_throughconnectorhatch_daemon_workers::daemon::runtime::maintenance::handlers::connector_sync::chat_follow_throughhatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/maintenance/handlers/connector_sync/chat_follow_through.rsevent hatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/maintenance/handlers/connector_sync/chat_follow_through.rs:225event hatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/maintenance/handlers/connector_sync/chat_follow_through.rs:212event hatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/maintenance/handlers/shopping_context/admission.rs:83hatch_daemon_workers::daemon::runtime::maintenance::handlers::shopping_context::admissionconsecutive_renew_errorshatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/maintenance/handlers/shopping_context/admission.rsevent hatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/maintenance/handlers/proactive_delivery/feed_seeds.rs:70hatch_daemon_workers::daemon::runtime::maintenance::handlers::proactive_delivery::feed_seedsedition_idhatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/maintenance/handlers/proactive_delivery/feed_seeds.rsevent hatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/maintenance/handlers/idea_execution_reconcile.rs:1101event hatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/maintenance/handlers/idea_execution_reconcile.rs:1168event hatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/maintenance/handlers/idea_execution_reconcile.rs:1215event hatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/maintenance/handlers/idea_execution_reconcile.rs:1242event hatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/maintenance/handlers/idea_execution_reconcile.rs:1405event hatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/maintenance/handlers/idea_execution_reconcile.rs:1413event hatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/maintenance/handlers/idea_execution_reconcile.rs:1797event hatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/maintenance/handlers/idea_execution_reconcile.rs:1131event hatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/work/supervisor.rs:319phaseevent hatch-engine/crates/hatch-daemon-workers/src/daemon/../../../hatch-server/src/daemon/runtime/maintenance/handlers/idea_execution_reconcile.rs:814variant identifiera sequencea mapMessagestruct PromiseAlignmentstruct UserCorrectionstruct ExecutionVerdictstruct ScanWindowstruct WindowCursorstruct FollowThroughRetrystruct InitialScanstruct Cursorstruct EngagementPagestruct EngagementChangestruct EngagementSubjectBUG: inner connection already taken!ConfigurationInvalidArgumentIoTlsRowNotFoundTypeNotFoundtype_nameColumnIndexOutOfBoundsindexlenColumnNotFoundColumnDecodeEncodeDecodeAnyDriverErrorPoolTimedOutPoolClosedWorkerCrashedMigrateInvalidSavePointStatementBeginFaileda Display implementation returned an error unexpectedlyError`Ready` polled after completionAckHistoryActivePermissionsPayloadpayloadruntime_waitersruntime_waiter_generationHitlStatebackground_selectors_enabledConnectorPermissionsconnectorsConnectorAutomaticUseActivationactivationFeedEligibleConnectorschanges_at_msTaskPreapprovalRevokedrevoked

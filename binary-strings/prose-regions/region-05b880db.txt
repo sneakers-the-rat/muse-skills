@@ -1,0 +1,46 @@
+SELECT is_promoted FROM shell.user_state WHERE source='peer_space' AND item_key=$1 FOR UPDATEshared Space is no longer availablepeer_spaceINSERT INTO shell.user_state (source,item_key,is_promoted) VALUES ('peer_space',$1,$2)
+                 ON CONFLICT (source,item_key) DO UPDATE SET is_promoted=excluded.is_promoted,updated_at_ms=$3UPDATE shell.tab_order SET tabs=$1 WHERE singletonselect distinct idea_id,
+                            metadata_json -> 'publication_hold' ->> 'fingerprint',
+                            metadata_json -> 'publication_hold' ->> 'reason'
+                       from ideas.idea_sources
+                      where idea_id = any($1::text[])
+                        and (source_namespace, source_kind) in (
+                          ('idea_share', 'pending_share'),
+                          ('user', 'http_create'),
+                          ('shared_www', 'shared_idea')
+                        )
+                        and metadata_json -> 'publication_hold' ->> 'fingerprint' is not null
+                        and metadata_json -> 'publication_hold' ->> 'reason' is not nullwith previous as (
+                        select status
+                        from ideas.idea_build_status
+                        where source_namespace = $1
+                          and source_kind = $2
+                          and source_id = $3
+                        for update
+                     ),
+                     upserted as (
+                        insert into ideas.idea_build_status
+                        (source_namespace, source_kind, source_id, status, selected_item_ids, updated_at)
+                        values ($1, $2, $3, $4, $5::text[], now())
+                        on conflict (source_namespace, source_kind, source_id) do update set
+                           status = excluded.status,
+                           selected_item_ids = case
+                               when excluded.selected_item_ids is not null
+                                   then excluded.selected_item_ids
+                               when excluded.status = 'not_started'
+                                   then null
+                               else ideas.idea_build_status.selected_item_ids
+                           end,
+                           updated_at = now()
+                        returning source_namespace, source_kind, source_id, status,
+                                  selected_item_ids, updated_at::text as updated_at
+                     )
+                     select upserted.source_namespace,
+                            upserted.source_kind,
+                            upserted.source_id,
+                            upserted.status,
+                            upserted.selected_item_ids,
+                            upserted.updated_at,
+                            previous.status as previous_status
+                     from upserted
+                     left join previous on trueprevious_statuscircle_id, creator_muse, name, roster_version, roster, roster_hash, created_at_ms, updated_at_ms, left_at_ms, removed_by_roster

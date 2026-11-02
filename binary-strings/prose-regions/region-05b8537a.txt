@@ -1,0 +1,61 @@
+peer_id, muse_id, x25519_pub, key_epoch, binding, binding_expires_at_ms, fqdn, vm_id, endpoint_hints, display_name, agent_name, account_claim, relationship_generation_id, relationship_direction, relationship_started_at_ms, request_expires_at_ms, request_terminal_cause, relationship_revision, remote_confirmed_ceremony_id, remote_confirmed_at_ms, status, trust_preset, sas_confirmed_local, active_sas_ceremony_id, attested, person_slug, provenance, paired_at_ms, last_activity_ms, created_at_ms, updated_at_msconnection_id, provider, address, display_name, muse_id, agent_name, audience, active, rules_revision, person_paths, group_path, proactivity_enabled, proactivity_revisionselect b.chat_id, b.provider, b.conversation_key, b.delivery_target,
+                            b.epoch, owner.body ->> 'user_id' as owner_account_id
+                     from chat_private.bindings b
+                     join chat.chats c using(chat_id)
+                     join chat_private.transport_state config
+                       on config.provider=b.provider and config.name='config'
+                     join chat_private.transport_state owner
+                       on owner.provider=b.provider and owner.name='owner'
+                     where b.chat_id=any($1) and b.provider='telegram' and not b.revoked
+                       and c.status='active' and config.body -> 'enabled' = 'true'::jsonb
+                       and owner.body ->> 'user_id' is not nullselect exists (select 1 from agent.root_turn_queue where submission_id = $1)select exists(select 1 from agent.group_inputs
+                   where group_id=$1 and disposition='pending')
+                 or exists(select 1 from agent.group_inputs
+                   where group_id=$1 and disposition='unread')
+                 or exists(select 1 from agent.chat_worker_requests
+                   where chat_id=$1 and state in ('pending','running','reported','completed'))
+                 or exists(select 1 from agent.chat_workers worker
+                   join agent.message_mailbox message on message.agent_id=worker.agent_id
+                   where worker.group_id=$1 and message.state in ('accepted','attached'))select distinct work.group_id from (
+                   (select worker.group_id from (
+                        select agent_id from agent.message_mailbox where state='accepted'
+                        union
+                        select agent_id from agent.message_mailbox where state='attached'
+                    ) message join agent.chat_workers worker on worker.agent_id=message.agent_id
+                    where worker.active and worker.group_id > $1
+                    order by worker.group_id limit $2)
+                   union all
+                   (select distinct source.group_id from agent.group_inputs source
+                    where source.group_id > $1 and disposition = 'pending'
+                      and exists(select 1 from agent.chat_workers w where w.group_id=source.group_id and w.active)
+                    order by source.group_id limit $2)
+                   union all
+                   (select distinct source.group_id from agent.group_inputs source
+                    where source.group_id > $1 and disposition = 'unread'
+                      and exists(select 1 from agent.chat_workers w where w.group_id=source.group_id and w.active)
+                    order by source.group_id limit $2)
+                   union all
+                   (select distinct chat_id as group_id from agent.chat_worker_requests
+                    where chat_id > $1 and state in ('pending','running','reported','completed')
+                      and exists(select 1 from agent.chat_workers w where w.group_id=chat_id and w.active)
+                    order by chat_id limit $2)
+                   union all
+                   (select distinct source.group_id from agent.group_replies source
+                    where source.group_id > $1 and enqueued = false
+                      and exists(select 1 from agent.chat_workers w where w.group_id=source.group_id and w.active)
+                    order by source.group_id limit $2)
+                   union all
+                   (select connection_id::text as group_id from (select distinct connection_id from agent.connection_messages
+                    where connection_id > coalesce(nullif($1, '')::uuid, '00000000-0000-0000-0000-000000000000'::uuid)
+                      and state in ('proposed','awaiting_user','awaiting_muse')
+                      and exists(select 1 from agent.chat_workers w where w.group_id=connection_id::text and w.active)
+                    order by connection_id limit $2) pending)
+                   union all
+                   (select connection_id::text as group_id from (select distinct connection_id from agent.connection_messages
+                    where connection_id > coalesce(nullif($1, '')::uuid, '00000000-0000-0000-0000-000000000000'::uuid)
+                      and not outcome_notified and state in ('queued','delivered','uncertain','denied','cancelled')
+                      and exists(select 1 from agent.chat_workers w where w.group_id=connection_id::text and w.active)
+                    order by connection_id limit $2) outcomes)
+                 ) work order by work.group_id limit $2SELECT work_id FROM agent.connection_work WHERE connection_id=$1 AND work_id=ANY($2)select agent_id,generation,active from agent.chat_workers where group_id=$1 for updategenerationinsert into agent.chat_worker_requests (request_id,chat_id,generation,worker_agent_id,owner_chat_id,owner_agent_id,origin_json,instruction,created_at_ms,state,result_json,result_submission_id) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) on conflict(request_id) do nothingchat worker owner changedselect * from agent.chat_worker_requests where request_id=$1SELECT EXISTS(SELECT 1 FROM agent.connections WHERE connection_id=$1 AND active)chat worker request identity collisionThe work's connection is no longer activeINSERT INTO agent.connection_work (connection_id,work_id,coordinator,request_id)
+                     SELECT $1,work_id,$3,$4 FROM unnest($2::uuid[]) AS work_id
+                     ON CONFLICT (connection_id,work_id) DO NOTHINGSELECT count(*) FROM agent.connection_work WHERE connection_id=$1 AND work_id=ANY($2) AND request_id=$3This connection work has already been assigned€¬

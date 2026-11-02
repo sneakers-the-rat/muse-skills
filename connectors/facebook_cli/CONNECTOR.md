@@ -82,7 +82,7 @@
 
 - These commands return structured friends, profiles, timelines, posts, comments and reactions that `social.search` does not have. Use `social.search` for free-text search across the user's Facebook activity.
 
-- IDs chain from one command into the next. `me friends` gives profile IDs for `profile info` and `timeline fetch`, and timelines, feeds and group posts give `post_id` for `post read`, `post comments read` and `post reactions read`.
+- IDs chain from one command into the next. `me friends` gives profile IDs for `profile info` and `timeline fetch`, and timelines, feeds and group posts give `post_id` for `post read`, `post comments read` and `post reactions read`. `marketplace search` gives `listing_id` for `marketplace listing details` and `marketplace seller-info`.
 
 - Run a multistep chain, such as a friend lookup, their timeline and a post's comments, back to back, and present the result after the last command.
 

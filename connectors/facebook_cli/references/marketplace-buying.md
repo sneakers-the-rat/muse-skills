@@ -31,10 +31,10 @@
 - `listing details` reads full listings by `--listing-id`, or one item link with `--url`, and needs no linked account. It adds `currency`, `seller_name`, `created_at` and the primary photo, and uses `url` for the link. Show the full description, price, condition, seller name and creation date.
 
 ```sh
-/opt/hatch/bin/facebook-cli marketplace seller-info --listing-id '<listing_id>' [--listing-id '<listing_id>' ...]
+/opt/hatch/bin/facebook-cli marketplace seller-info (--listing-id '<listing_id>' ... | --url '<Marketplace item link>')
 ```
 
-- `seller-info` returns each seller's `name`, `followers`, `avg_rating`, `total_ratings`, and `good_attributes` and `bad_attributes` such as "Item as described (12)". Show the rating with its count and the feedback breakdown, because a name or a large following alone doesn't show a seller is trustworthy. When the user asks a follow-up about the same seller, reuse that result.
+- `seller-info` looks a seller up by the `listing_id` of any of their listings, or by one item link with `--url`. It doesn't take a `seller_id`. It returns each seller's `name`, `followers`, `avg_rating`, `total_ratings`, and `good_attributes` and `bad_attributes` such as "Item as described (12)". Show the rating with its count and the feedback breakdown, because a name or a large following alone doesn't show a seller is trustworthy. When the user asks a follow-up about the same seller, reuse that result.
 
 ```sh
 /opt/hatch/bin/facebook-cli marketplace saved [--keywords '<text>'] [--limit <up to 20>] [--after '<paging.cursors.after from the previous response>'] --out '<new file>'

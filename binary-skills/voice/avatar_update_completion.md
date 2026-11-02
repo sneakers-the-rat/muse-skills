@@ -1,1 +1,1 @@
-Here's my new look: {{ visual_description }}.
+I have a new physical avatar now, with the following appearance: {{ visual_description }}.
