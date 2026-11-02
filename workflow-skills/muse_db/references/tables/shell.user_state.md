@@ -34,6 +34,10 @@ User favorites, access history and ordering for shell items.
 
 - `last_opened_at_ms` uses `bigint` and is nullable.
 
+- `is_promoted` uses `boolean` and is required.
+
+  Default: `false`.
+
 ## Keys and relationships
 
 - PRIMARY KEY `user_state_pkey` covers `source`, `item_key`.

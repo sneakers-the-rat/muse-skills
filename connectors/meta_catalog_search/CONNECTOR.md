@@ -196,7 +196,7 @@ jq -r '
 
 - Some results also carry `seller_type` (`brand_direct`, `authorized_retailer`, `new_item_marketplace`, `secondhand_marketplace` or `gray_market`), `seller_quality` (`elite`, `good`, `acceptable`, `poor`, `not_a_seller` or `unrated`) and `shopify_product_id`.
 
-- Compare prices and budgets with `sale_price` when present, otherwise `price`, keeping the currency and exact variant together. Missing fields stay unknown, and a result is one snapshot, so check the variant, stock, delivery and total before purchase.
+- Compare prices and budgets with `sale_price` when present, otherwise `price`, keeping the currency and exact variant together. Treat a missing field as unknown. A products's details can change, so confirm the variant and stock as the next section describes, and treat any delivery estimate or total as unconfirmed until checkout.
 
 ## Confirm a variant
 

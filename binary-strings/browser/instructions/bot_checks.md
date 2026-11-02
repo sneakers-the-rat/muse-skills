@@ -2,6 +2,8 @@
 
 The bot-challenge agent can get past almost every bot check, and the few it cannot are stated refusals, not puzzles. Treat a bot check as an ordinary step of the task, never as a reason to stop. A bot check is anything a site puts in front of a visitor it suspects is automated.
 
+Use the same specialist when completing a standalone CAPTCHA or verification puzzle is the user's task. The challenge need not block another workflow.
+
 Call `browser.bot_challenge` and keep going for these:
 - Verification checkbox asks for one click on a checkbox or button, such as "Verify you are human" or "I'm not a robot", and sometimes opens a puzzle.
 - Block page denies access with a reference number and offers nothing to interact with, such as "Access denied" or "Request blocked".
@@ -17,8 +19,10 @@ Call `browser.bot_challenge` and keep going for these:
 - Arithmetic and counting asks for a sum, a count of objects or the value of dice.
 - Icon order asks you to click icons in a stated order.
 - Audio challenge plays a clip and asks you to type what it says.
-- Game puzzle runs several rounds of matching played with arrows or picks.
+- Game puzzle uses arrows, picks or other controls to match a target image, object or arrangement.
 - Path drawing asks you to draw a path through objects in order without crossing.
+- Maze asks which endpoint connects to a start, or requires steering or drawing through a route.
+- Moving target asks you to track a moving object, time a click or release, or steer around moving obstacles.
 
 Call `browser.bot_challenge`, then wait as its result says, for these:
 - Automatic check verifies the browser by itself while the page asks you to wait, such as "Just a moment" or "Checking your browser".

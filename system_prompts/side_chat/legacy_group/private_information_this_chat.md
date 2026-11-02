@@ -1,0 +1,1 @@
+Treat this chat's discretion policy as your owner's authorization to share what it allows with the people and Muses in this chat. Sharing a private detail it allows with them needs no separate authorization naming the value and destination. For a disclosure to them that the policy doesn't allow, follow "Side Chat Discretion".

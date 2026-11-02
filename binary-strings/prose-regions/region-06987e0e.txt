@@ -1,0 +1,124 @@
+ !"#$%&'()*+,-./0123ÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿcloudflare sqlite snapshot decoded to an empty file.hatch-space-worker-reloadapp.db.pre-restore.bak.app.db.cloudflare-restore.tmpspace.jsonread space.jsonlast_auditlast_buildlocal/hatch/share_artifactshare_typevm_idcf_origin_capabilityopaque_v1deployment_statusshortcoderetrying idempotent Stefi space-share registrationspace.share_urlx-hatch-artifact-audience-rolesShare service did not persist recipient permissionsspace-preview-card-og_1200x630.jpg/space-deploy/spacessharedStateVersioncontrol plane did not confirm shared artifact quiescencefailed to transcode OG preview card from source frame--space-dir--out-dir--checked-putkeyless cloudflare share lookup returned a keyed origincf_share_keyshare_urlshare metadata has an invalid key stateshare metadata did not confirm ownershipskipping share preview cardunavailablemanifest_deploythis share is keyed and cannot be published from a Tinker VMWWW reports a different origin or key for this share; publication stoppedshare registration returned no share key for a new shareclearRecipientsdeploy manifest has no clientFiles arrayasset upload session attempts exhaustedretrying transient Cloudflare asset upload session failureretrying transient Cloudflare deploy failurecontrol plane did not confirm the share's Cloudflare originrunWorkerFirstcontrol plane did not confirm the shared-state runtime and worker-first admissionsqlite dump SQLcontent_sha256cloudflare-db-snapshotscloudflare-blob-manifestsedge_ready_waitpreserved_existing_active_sharerevoke_and_takedown_successfailed to takedown Cloudflare deployment during post-access deploy cleanuprevoke_success_takedown_failedfailed to revoke Cloudflare share access during post-access deploy cleanuptakedown_success_revoke_failedfailed to cleanup Cloudflare deployment after post-access deploy failurerevoke_and_takedown_failedhatch-cloudflare-r2-manifest-v1ignoring untrusted prebuilt Cloudflare deploy manifestrevoke_accessenable_accessmissingtrusted Cloudflare deploy manifest is missing or no longer validhatchBuild<missing>failed to load idea quality rows for HTTP feed selectionfailed to read active feed for rotation; selecting without itfailed to load persisted idea bandit state for HTTP feed selectionfailed to read idea memory affinity; ranking without the affinity termfailed to fetch ideas explore policy for HTTP feed selectionactivity_monitor bumped activity epoch after direct finishactivity_monitor bumped activity epoch after finish summary updateactivity_monitor failed to repair stale non-terminal feed rowactivity_monitor repaired stale non-terminal feed rows for finished activity threadsactivity_monitor failed to read feed entry state during stale finished sweepactivity_monitor ignored finish verdict from live subtitle laneambiguous root sessions for activity thread projectionfailed to resolve root session for activity thread projectionThe activity finished when the conversation turn completed.activity_monitor finished-subtitle lane rendered finish verdictsuppressed new activity thread projection without visible rootpersisting existing activity thread projection without visible rootactivity_monitor_timing activity_thread_projection_persistedfailed to resolve public session id for agent.statusagent.statusselect exists(select 1 from spaces.user_state
+         where sharing_state is null or accessed_at_ms is not null
+           or last_opened_at_ms is not null or frequency_score is not null
+           or favorite_order is not null)insert into spaces.user_state (space_slug, favorite_order, is_favorite) values  on conflict (space_slug) do update set
+            favorite_order = excluded.favorite_order, is_favorite = true
+          where spaces.user_state.sharing_state is not null
+            and spaces.user_state.accessed_at_ms is null
+            and spaces.user_state.last_opened_at_ms is null
+            and spaces.user_state.frequency_score is null
+            and spaces.user_state.favorite_order is null, true)webhook hooks run only from verified event admissionfailed to prepare hook exec cgroup; continuing without cgroup attributionHATCH_HOOK_RUNTIME# shellcheck shell=bash
+
+_HATCH_HOOK_DISABLE_AFTER_RUN=false
+
+_hatch_hook_compact_json() {
+    local value="${1-}"
+    printf '%s' "$value" | jq -ce '.'
+}
+
+_hatch_hook_object_json() {
+    local value="${1-}"
+    printf '%s' "$value" | jq -ce 'select(type == "object")'
+}
+
+_hatch_hook_emit() {
+    local decision="$1"
+    local reason="${2-}"
+    local payload="${3-}"
+    local result
+
+    if [[ -n "$payload" ]]; then
+        payload="$(_hatch_hook_compact_json "$payload")" || return
+        result="$(
+            jq -cn \
+                --arg decision "$decision" \
+                --arg reason "$reason" \
+                --argjson payload "$payload" \
+                --argjson disable_after_run "$_HATCH_HOOK_DISABLE_AFTER_RUN" \
+                '{
+                    decision: $decision,
+                    reason: $reason,
+                    payload: $payload
+                } + if $disable_after_run then {disable_after_run: true} else {} end'
+        )" || return
+    else
+        result="$(
+            jq -cn \
+                --arg decision "$decision" \
+                --arg reason "$reason" \
+                --argjson disable_after_run "$_HATCH_HOOK_DISABLE_AFTER_RUN" \
+                '{
+                    decision: $decision,
+                    reason: $reason
+                } + if $disable_after_run then {disable_after_run: true} else {} end'
+        )" || return
+    fi
+
+    printf 'HATCH_HOOK_RESULT:%s\n' "$result"
+    exit 0
+}
+
+silent() {
+    _hatch_hook_emit "silent" "${1-}" "${2-}"
+}
+
+wake() {
+    _hatch_hook_emit "wake" "${1-}" "${2-}"
+}
+
+disable_after_run() {
+    _HATCH_HOOK_DISABLE_AFTER_RUN=true
+}
+
+log() {
+    local message="${1-}"
+    local fields="${2-}"
+    local entry
+
+    if [[ -z "$fields" ]]; then
+        fields='{}'
+    fi
+    fields="$(_hatch_hook_object_json "$fields")" || return
+    entry="$(
+        jq -cn \
+            --arg message "$message" \
+            --argjson fields "$fields" \
+            '$fields + {message: $message}'
+    )" || return
+    printf 'HATCH_HOOK_LOG:%s\n' "$entry" >&2
+}
+
+_hatch_hook_state_path() {
+    printf '%s/%s.json' "${HATCH_HOOK_STATE_DIR:?HATCH_HOOK_STATE_DIR is unset}" \
+        "${HATCH_HOOK_ID:?HATCH_HOOK_ID is unset}"
+}
+
+# Read this hook's persisted state object. Prints `{}` when nothing has been
+# stored yet or the stored file is unreadable/corrupt, so callers can pipe
+# straight into jq without a first-run special case.
+hook_state_get() {
+    local path
+    path="$(_hatch_hook_state_path)" || return
+    if [[ ! -f "$path" ]]; then
+        printf '{}'
+        return 0
+    fi
+    jq -ce 'select(type == "object")' <"$path" 2>/dev/null || printf '{}'
+}
+
+# Persist this hook's state object. The value is validated on every run, but
+# the write is SKIPPED on dry runs so testing a hook can never consume a
+# detection the next live poll still needs to make.
+hook_state_set() {
+    local value path temporary
+    value="$(_hatch_hook_object_json "${1-}")" || return
+    if [[ "${HATCH_HOOK_DRY_RUN-0}" == "1" ]]; then
+        return 0
+    fi
+    path="$(_hatch_hook_state_path)" || return
+    temporary="${path}.${HATCH_HOOK_INVOCATION_ID:-$$}.tmp"
+    printf '%s\n' "$value" >"$temporary" || return
+    mv -f "$temporary" "$path"
+}
+
+exec /bin/bash -- "$HATCH_HOOK_SCRIPT_PATH"No research directory is available for this mission; put the full detail in your `finish_research` summary.&Your research directory is intact at `À,` with these files from before the restart: À€“

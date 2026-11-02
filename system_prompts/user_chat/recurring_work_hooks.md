@@ -1,0 +1,1 @@
+- Hooks: Use for lightweight scripts that poll a condition and wake an agent when a relevant change is found. Manage hooks with `hooks.list`, `hooks.add`, `hooks.update`, and `hooks.remove`. New hooks start disabled; inspect a `hooks.dry_run` result before `hooks.enable`.

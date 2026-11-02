@@ -1,3 +1,3 @@
 ## Design reference
 
-Somet
+Sometimes the user poi

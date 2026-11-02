@@ -1,0 +1,120 @@
+feed hero image under the bar with no larger variant; shipping the best available renditionfeed hero image swapped for a larger variant of the same assetdropped_undersizedfeed hero image measured below the floor with no larger variant; dropping the imagedropped_gonefeed hero image address holds nothing at its origin; dropping the image rather than shipping a broken tilefeed hero image quality task panickedfeed social post enrichment task panickedcommitted handoff has no context sequencenegative handoff event sequenceone-shot postgres write invoked more than oncedaemon_shutdownquota_unblockednotice_supersededunknown output errorunknown validation errorpeer signing requires the authd socketegress frame length overflowuser_controlledinvalid evaluation responseconnection_link_followupchat.connection_followupchat.link_welcomeconnection followup message belongs to a different chatinvalid connection work chatwidget presentation disappeared during replacementevent_seqpayload_jsonevent_namemessage_idlocked chat event disappeared during payload updatePresent the shared Space firstcompletedfailedinterruptedactivepermissions_unavailableselect b.*, a.connection_id as current_connection_id,
+                    a.revoked as account_revoked
+                from chat_private.binding_authorizations b
+                join chat_private.accounts a using(provider, account_id)
+                where b.provider = $1 and b.binding_id = $2account_revokedcurrent_connection_idselect exists(select 1 from chat_private.message_deletions
+                     where chat_id = $1 and binding_epoch = $2 and transport = $3
+                       and external_message_id = $4 and sender_id = $5
+                       and deleted_at_ms is null)select exists(select 1 from runtime.private_client_uploads
+                    where state = 'writing' or state in ('staged', 'publishing'))select distinct idea_id,
+                            metadata_json -> 'publication_hold' ->> 'fingerprint',
+                            metadata_json -> 'publication_hold' ->> 'reason'
+                       from ideas.idea_sources
+                      where idea_id = any($1::text[])
+                        and (source_namespace, source_kind) in (
+                          ('idea_share', 'pending_share'),
+                          ('user', 'http_create'),
+                          ('shared_www', 'shared_idea')
+                        )
+                        and metadata_json -> 'publication_hold' ->> 'fingerprint' is not null
+                        and metadata_json -> 'publication_hold' ->> 'reason' is not nullwith previous as (
+                        select status
+                        from ideas.idea_build_status
+                        where source_namespace = $1
+                          and source_kind = $2
+                          and source_id = $3
+                        for update
+                     ),
+                     upserted as (
+                        insert into ideas.idea_build_status
+                        (source_namespace, source_kind, source_id, status, selected_item_ids, updated_at)
+                        values ($1, $2, $3, $4, $5::text[], now())
+                        on conflict (source_namespace, source_kind, source_id) do update set
+                           status = excluded.status,
+                           selected_item_ids = case
+                               when excluded.selected_item_ids is not null
+                                   then excluded.selected_item_ids
+                               when excluded.status = 'not_started'
+                                   then null
+                               else ideas.idea_build_status.selected_item_ids
+                           end,
+                           updated_at = now()
+                        returning source_namespace, source_kind, source_id, status,
+                                  selected_item_ids, updated_at::text as updated_at
+                     )
+                     select upserted.source_namespace,
+                            upserted.source_kind,
+                            upserted.source_id,
+                            upserted.status,
+                            upserted.selected_item_ids,
+                            upserted.updated_at,
+                            previous.status as previous_status
+                     from upserted
+                     left join previous on trueprevious_statusconnection_id, provider, address, display_name, muse_id, agent_name, audience, active, rules_revision, person_paths, group_path, proactivity_enabled, proactivity_revisionselect b.chat_id, b.provider, b.conversation_key, b.delivery_target,
+                            b.epoch, owner.body ->> 'user_id' as owner_account_id
+                     from chat_private.bindings b
+                     join chat.chats c using(chat_id)
+                     join chat_private.transport_state config
+                       on config.provider=b.provider and config.name='config'
+                     join chat_private.transport_state owner
+                       on owner.provider=b.provider and owner.name='owner'
+                     where b.chat_id=any($1) and b.provider='telegram' and not b.revoked
+                       and c.status='active' and config.body -> 'enabled' = 'true'::jsonb
+                       and owner.body ->> 'user_id' is not nullselect exists (select 1 from agent.root_turn_queue where submission_id = $1)select exists(select 1 from agent.group_inputs
+                   where group_id=$1 and disposition='pending')
+                 or exists(select 1 from agent.group_inputs
+                   where group_id=$1 and disposition='unread')
+                 or exists(select 1 from agent.chat_worker_requests
+                   where chat_id=$1 and state in ('pending','running','reported','completed'))
+                 or exists(select 1 from agent.chat_workers worker
+                   join agent.message_mailbox message on message.agent_id=worker.agent_id
+                   where worker.group_id=$1 and message.state in ('accepted','attached'))select distinct work.group_id from (
+                   (select worker.group_id from (
+                        select agent_id from agent.message_mailbox where state='accepted'
+                        union
+                        select agent_id from agent.message_mailbox where state='attached'
+                    ) message join agent.chat_workers worker on worker.agent_id=message.agent_id
+                    where worker.active and worker.group_id > $1
+                    order by worker.group_id limit $2)
+                   union all
+                   (select distinct source.group_id from agent.group_inputs source
+                    where source.group_id > $1 and disposition = 'pending'
+                      and exists(select 1 from agent.chat_workers w where w.group_id=source.group_id and w.active)
+                    order by source.group_id limit $2)
+                   union all
+                   (select distinct source.group_id from agent.group_inputs source
+                    where source.group_id > $1 and disposition = 'unread'
+                      and exists(select 1 from agent.chat_workers w where w.group_id=source.group_id and w.active)
+                    order by source.group_id limit $2)
+                   union all
+                   (select distinct chat_id as group_id from agent.chat_worker_requests
+                    where chat_id > $1 and state in ('pending','running','reported','completed')
+                      and exists(select 1 from agent.chat_workers w where w.group_id=chat_id and w.active)
+                    order by chat_id limit $2)
+                   union all
+                   (select distinct source.group_id from agent.group_replies source
+                    where source.group_id > $1 and enqueued = false
+                      and exists(select 1 from agent.chat_workers w where w.group_id=source.group_id and w.active)
+                    order by source.group_id limit $2)
+                   union all
+                   (select connection_id::text as group_id from (select distinct connection_id from agent.connection_messages
+                    where connection_id > coalesce(nullif($1, '')::uuid, '00000000-0000-0000-0000-000000000000'::uuid)
+                      and state in ('proposed','awaiting_user','awaiting_muse')
+                      and exists(select 1 from agent.chat_workers w where w.group_id=connection_id::text and w.active)
+                    order by connection_id limit $2) pending)
+                   union all
+                   (select connection_id::text as group_id from (select distinct connection_id from agent.connection_messages
+                    where connection_id > coalesce(nullif($1, '')::uuid, '00000000-0000-0000-0000-000000000000'::uuid)
+                      and not outcome_notified and state in ('queued','delivered','uncertain','denied','cancelled')
+                      and exists(select 1 from agent.chat_workers w where w.group_id=connection_id::text and w.active)
+                    order by connection_id limit $2) outcomes)
+                 ) work order by work.group_id limit $2SELECT work_id FROM agent.connection_work WHERE connection_id=$1 AND work_id=ANY($2)select agent_id,generation,active from agent.chat_workers where group_id=$1 for updategenerationinsert into agent.chat_worker_requests (request_id,chat_id,generation,worker_agent_id,owner_chat_id,owner_agent_id,origin_json,instruction,created_at_ms,state,result_json,result_submission_id) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) on conflict(request_id) do nothingchat worker owner changedselect * from agent.chat_worker_requests where request_id=$1SELECT EXISTS(SELECT 1 FROM agent.connections WHERE connection_id=$1 AND active)chat worker request identity collisionThe work's connection is no longer activeINSERT INTO agent.connection_work (connection_id,work_id,coordinator,request_id)
+                     SELECT $1,work_id,$3,$4 FROM unnest($2::uuid[]) AS work_id
+                     ON CONFLICT (connection_id,work_id) DO NOTHINGSELECT count(*) FROM agent.connection_work WHERE connection_id=$1 AND work_id=ANY($2) AND request_id=$3This connection work has already been assignedc.active AND (
+    r.host_muse <> 'self' OR r.kind NOT IN ('space', 'goal')
+    OR (r.kind = 'space' AND EXISTS (
+        SELECT 1 FROM spaces.spaces live_space
+        WHERE live_space.space_id::text = r.resource_id AND live_space.space_slug = r.reference))
+    OR (r.kind = 'goal' AND EXISTS (
+        SELECT 1 FROM goals.goals live_goal WHERE live_goal.goal_id = r.resource_id))
+)€¬

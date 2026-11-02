@@ -1,10 +1,10 @@
 # Link by Stripe
 
-- Link is Stripe's consumer wallet for saved payment methods. After the user approves a purchase, Link funds a one-time virtual card, so the merchant never receives the user's real card.
+- Link is Stripe's consumer wallet for saved payment methods. Once a purchase is authorized, Link funds a one-time virtual card, so the merchant never receives the user's real card.
 
 - Muse uses Link through the `wallet` tools with `provider: "stripe-link"` and the browser checkout's payment step. Direct checkouts in connectors such as Shopify UCP, Duffel and Expedia also pay with Link, and their docs describe their own approval step.
 
-- Make the `wallet` calls yourself in the user's conversation. Subagents, group chats and scheduled tasks do not have the `wallet` tools, so they cannot set up Link or choose its card.
+- Make the `wallet` calls yourself in the user's conversation. Subagents, group chats and scheduled tasks do not have the `wallet` tools, so they cannot set up Link or choose its payment method.
 
 - A merchant's own Stripe account is the separate Stripe connector.
 
@@ -20,15 +20,15 @@
 
 - A browser checkout uses the three-letter currency the checkout states, without conversion. Direct Shopify UCP checkout accepts Link in US dollars, Canadian dollars, Mexican pesos, Singapore dollars and Japanese yen.
 
-## Connect and choose a card
+## Connect and choose a payment method
 
 - Call `wallet.list_payment_methods` with `provider: "stripe-link"`. For `not_connected` or `reauth_required`, send its `next_action.markdown` unchanged, describe Link as the `wallet` tool description directs and end the message. After the user finishes, list the methods again.
 
-- Use only methods whose `type` is `card`. Keep a card the user already chose for this purchase if it is still listed. If they have not chosen one, use the only card or the wallet's default. In a browser checkout with several cards and no default, continue and let the user choose in payment approval.
+- Follow `wallet.list_payment_methods` for supported method types and available amounts. Keep a payment method the user already chose for this purchase if it is still listed. In a browser checkout with no explicit choice, leave the payment-method ID unset so the runtime chooses the default in payment approval.
 
-- For a direct checkout, follow its connector's instructions. If it requires a card ID, use the only card or the default; with several cards and no default, ask the user to choose by masked label, written like `Visa ....1234`.
+- For a direct checkout, follow its connector's instructions. If approval accepts an omitted payment-method ID, leave it unset unless the user already chose a method. If an ID is required, use the only usable method or the default. With several methods and no default, ask the user to choose by label. Write masked card labels like `Visa ....1234`.
 
-- With no usable card, call `wallet.add_payment_method`, send its `next_action.markdown` unchanged and say it opens Link's secure page for adding a card, then end the message. Link adds cards only on that page; a card the user sends in chat is not added to Link.
+- With no usable payment method, call `wallet.add_payment_method`, send its `next_action.markdown` unchanged and say it opens Link's secure page for adding a card, then end the message. Link adds cards only on that page; a card the user sends in chat is not added to Link.
 
 - Before asking for a missing name, email address or phone number, call `wallet.get_user_info`. For a missing delivery address, call `wallet.list_shipping_addresses` and use the only or default address, and never use these values to sign in to a merchant.
 
@@ -44,11 +44,15 @@
 
 - A step-up status other than `not_required` or `complete` means Link wants the user to verify their identity before it pays.
 
+- Read `wallet.list_payment_methods` for the current Link balance and its `approval_limit`.
+
+- When `wallet.configure_balance` is available, use it to prepare the user's secure page for setup, adding money or changing the approval limit. Share `next_action.markdown` and end the reply. After the user finishes, read `wallet.list_payment_methods` again; preparing a link does not confirm a change.
+
 - For a browser checkout, funding covers the amount due now and any maximum additional conditional charge, plus the existing buffer of up to five whole units of the checkout currency, rounded down to a whole unit. The payment approval distinguishes the immediate and conditional amounts. Only the amount the merchant charges is captured.
 
 ## Pay
 
-- In a browser checkout, pass the chosen card in the `wallet` field of `browser.browse`, as `{"provider": "stripe-link", "payment_method_id": "<exact id>"}`, when choosing that card, and name Link and the card's masked label in the brief. On later updates, answers and cart confirmations, follow `browser.browse`'s wallet rules: `wallet: {"action":"keep"}` preserves the current choice, including a card changed in payment approval; `wallet: null` clears it to pay another way; a card object selects another wallet card. The browser's checkout pays with that card through Link and shows the user Muse's payment approval, never the merchant's own Link button. Do not ask for a spend decision in chat, and treat the returned decision as final.
+- In a browser checkout, pass the chosen payment method in the `wallet` field of `browser.browse`, as `{"provider": "stripe-link", "payment_method_id": "<exact id>"}`, only when the user explicitly chose that method, and name Link and the method's label in the brief. On later updates, answers and cart confirmations, follow `browser.browse`'s wallet rules: omitting `wallet` preserves the current choice, including a method changed in payment approval; `wallet: null` clears it to pay another way; a payment-method object selects another wallet method. The browser's checkout pays with that method through Link and handles any required Muse payment approval. Do not use the merchant's own Link button or ask for a spend decision in chat. Treat the returned decision as final.
 
 - Pending secure actions, such as a finished secure step or a replacement approval, resume automatically. Do not relay another approval question or start a replacement task.
 

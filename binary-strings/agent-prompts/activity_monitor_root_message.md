@@ -1,1 +1,0 @@
-The attachment reply is too long for complete review. Shorten the message text while retaining the attachments. Do not include approval details.

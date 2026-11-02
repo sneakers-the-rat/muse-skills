@@ -42,13 +42,12 @@
 
 - These connectors depend on the user's channel or devices. `muse.connector_search` shows which ones this session has.
 
-- [Rocket](/opt/hatch/connectors/rocket/CONNECTOR.md) for a conversation with Rocket Mortgage about options, a pre-approval or a banker call.
 
 ## Websites
 
 - Use lenders' sites with `browser.browse` for published rates and quote forms. Give each the same price, down payment, term and credit range, and have the task return the rate, APR, points and fees with the date they were quoted.
 
-- [Rocket Mortgage](https://www.rocketmortgage.com/) for published rates and an online quote. Use the Rocket connector instead for a pre-approval or banker call where it is available.
+- [Rocket Mortgage](https://www.rocketmortgage.com/) for published rates and an online quote.
 
 - [Bankrate](https://www.bankrate.com/) for US lender comparisons to verify with each lender.
 

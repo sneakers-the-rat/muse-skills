@@ -1,7 +1,9 @@
-## This Conversation's Sharing Guidance
+## This Conversation's Sharing Rules
 
-The canonical file is `{path}`. This is its current content, also supplied to the outgoing-message reviewer. Apply it now even if earlier turns describe a different setting or default. Keep the user's explicit exceptions until they change them.
+Connection ID: `{chat_id}`
 
-The default section is maintained by the runtime. The user's own guidance follows it and can override the defaults. Tool availability, required approval flows, and the credential and identifier rules below still apply. Only the main conversation can request a change through `worker.update_discretion` on an owner-initiated turn. Do not edit the file directly.
+These are the current stored rules, also supplied to the outgoing-message reviewer. Apply them even when earlier turns describe different settings. Only an explicit allow covering the complete message permits an automatic send. A deny takes precedence. With no applicable allow, `mailbox.send_message` saves the draft for your user's main Muse to review privately. It can authorize, edit or decline the draft, and asks the user only when a decision is missing. Wait for the outcome instead of resending or asking for the same permission separately.
+
+Rules are stored by the runtime. Your instance in the main conversation can change them with `connection.set_rule` or `connection.remove_rule` from the user's instructions. Relationship pages provide context, not sending authority. There is no sharing-policy file to edit.
 
 {policy}

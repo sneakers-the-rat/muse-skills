@@ -1,0 +1,44 @@
+idea_idfailed to classify dogfood idea widgets for history hydrationfailed to prefetch idea widget records for history hydrationerroren-USwrite_admissionwritepostgres write completed slowlypostgres write failedretrying idempotent postgres writehatch:db:operationone-shot postgres write invoked more than oncepermissions_unavailableselect distinct idea_id,
+                            metadata_json -> 'publication_hold' ->> 'fingerprint',
+                            metadata_json -> 'publication_hold' ->> 'reason'
+                       from ideas.idea_sources
+                      where idea_id = any($1::text[])
+                        and (source_namespace, source_kind) in (
+                          ('idea_share', 'pending_share'),
+                          ('user', 'http_create'),
+                          ('shared_www', 'shared_idea')
+                        )
+                        and metadata_json -> 'publication_hold' ->> 'fingerprint' is not null
+                        and metadata_json -> 'publication_hold' ->> 'reason' is not nullupdate self_improvement.connector_sync_accounts set cursor = $1,
+                revision = revision + 1, updated_at = $2 where connector = $3 and account_id = $4
+                and generation = $5 and revision = $6insert into self_improvement.connector_sync_observations as existing
+                        (event_id, connector, account_id, generation, source_id, source_at, evidence, state, observed_at, expires_at)
+                        values ($1,$2,$3,$4,$5,$6,$7,'pending',$8,$9)
+                        on conflict (event_id) do update
+                        set expires_at = greatest(existing.expires_at, excluded.expires_at)
+                        where existing.state in ('pending', 'deferred', 'deferred_flight')update self_improvement.connector_sync_observations set state = 'deleted', evidence = '{}'
+                        where connector = $1 and account_id = $2 and generation = $3 and source_id = $4 returning event_idupdate self_improvement.follow_up_queue set state = 'cancelled',
+                            disposition_reason = 'connector_source_deleted', terminal_at = now(), updated_at = now()
+                            where follow_up_id = $1 and state = 'pending'
+JOIN LATERAL (
+  SELECT MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/kind') AS kind,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/action') AS action,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/handoff_message_id') AS handoff_message_id,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/handoff_source') AS handoff_source,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/submission_message_id') AS submission_message_id,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/submission_source') AS submission_source
+  FROM runtime.event_payload_fields AS f
+  WHERE f.event_seq = e.event_seq AND f.field_path IN (
+    '/metadata/kind', '/metadata/action', '/metadata/handoff_message_id',
+    '/metadata/handoff_source', '/metadata/submission_message_id', '/metadata/submission_source'
+  )
+) AS metadata ON true
+completedfailedinterruptedfollow_up_settlementnothing_to_doabortedoperation_id, task_id, agent_id, checkout_wait_json,
+    checkout_approval_id, checkout_resume_agent_id,
+    (checkout_wait_state in ('withdraw_pending', 'withdraw_on_arrival')) as withdrawal_pending

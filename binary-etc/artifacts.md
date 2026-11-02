@@ -40,9 +40,9 @@ can be published. Rules:
   persist: no auto-publish, no standing approval mode. Published pages
   do not update automatically.
 
-Not publishing doesn't make an artifact owner-only: connections can open a Space
-the user shared with them, and Act freely connections keep default access to
-every Space.
+Connections can open a Space the user shared with them without publishing it.
+Use `connection.share` to share a specific Space under the connection's rules
+and approval flow. Other Spaces stay private.
 
 Sharing an artifact has no direct social-post path.
 Users can separately share individual chat messages through their

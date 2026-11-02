@@ -43,7 +43,7 @@ get <event-id>
 
 - `--top`, `--limit` and `--max-results` are compatibility aliases for `--page-size`, and `--start` and `--end` for the `list` bounds, so never use them in new commands.
 
-- `list` returns `count`, `next_page_token` and `events`, each with `id`, `summary`, `start`, `end`, `event_starts_at`, `event_ends_at`, `location`, `is_all_day`, `show_as`, `organizer`, `attendees` and `web_link`. `get` returns one `event` that adds `description`.
+- `list` returns `count`, `next_page_token` and `events`, each with `id`, `summary`, `start`, `end`, `event_starts_at`, `event_ends_at`, `location`, `is_all_day`, `show_as`, `organizer`, `attendees`, `web_link` and `change_key`, which changes whenever the event does. `get` returns one `event` that adds `description`.
 
 - Times come back in UTC, so prefer `event_starts_at.user_local` and `event_ends_at.user_local`. All-day values are calendar dates and must not be shifted between timezones.
 

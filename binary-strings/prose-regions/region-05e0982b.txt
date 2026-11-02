@@ -1,0 +1,43 @@
+select connection_id, muse_id from agent.connections
+                where $1=any(person_paths) or $2=any(person_paths) or group_path in ($1,$2)
+                order by connection_id for updateupdate agent.connections set person_paths=array_replace(person_paths,$1,$2),
+                group_path=case when group_path=$1 then $2 else group_path end,
+                updated_at_ms=$3 where $1=any(person_paths) or group_path=$1These pages belong to different Muse identitiesupdate agent.connection_participants set person_path=$2 where person_path=$1select m.agent_id, m.submission_json, m.accepted_at from runtime.events e
+                 join agent.message_mailbox m on m.transcript_event_seq=e.event_seq
+                 where e.message_id=$1 and e.event_name='message.user' and e.role='user'
+                 and m.submission_kind='user' order by m.accepted_ordinal limit 1select w.agent_id,i.submission_id,i.input_json,
+                        coalesce(i.received_at_ms, (
+                            select (extract(epoch from e.created_at) * 1000)::bigint
+                            from runtime.events e
+                            where e.message_id='group-msg-' || i.submission_id
+                              and e.agent_id=w.agent_id and e.event_name='message.user'
+                            order by e.event_seq limit 1
+                        )) as received_at_ms
+                     from agent.group_inputs i join agent.chat_workers w using(group_id)
+                     where i.group_id=$1 and i.external_message_id=$2 and w.active
+update agent.connections set proactivity_enabled=$3,
+                 proactivity_revision=proactivity_revision + case when proactivity_enabled=$3 then 0 else 1 end,
+                 updated_at_ms=case when proactivity_enabled=$3 then updated_at_ms else $4 end
+                 where connection_id=$1 and active
+                   and (proactivity_revision=$2 or proactivity_enabled=$3)
+                 returning proactivity_enabled, proactivity_revisionselect exists(select 1 from agent.connections c where c.active and
+                (c.created_at_ms >= $1 or exists(select 1 from agent.group_inputs i
+                    where i.group_id=c.connection_id::text and i.received_at_ms >= $1)
+                or exists(select 1 from agent.connection_messages m
+                    where m.connection_id=c.connection_id and m.created_at_ms >= $1 and m.state='queued')))select connection_id, audience, rules_revision, rules_changed_at_ms, rules_changed_source_message_id, active
+                 from agent.connections where connection_id in ($1,$2)
+                 order by connection_id for updatedelete from agent.connection_rules where connection_id=$1the sharing rules changed during resetthe new connection changed during resetinsert into agent.connection_rules
+                     (connection_id,rule_id,effect,title,summary,description,source_message_id,created_at_ms,updated_at_ms)
+                     select $2,rule_id,effect,title,summary,description,source_message_id,created_at_ms,updated_at_ms
+                     from agent.connection_rules where connection_id=$1insert into agent.connection_rule_sources (connection_id,rule_id,source_message_id)
+                     select $2,rule_id,source_message_id from agent.connection_rule_sources where connection_id=$1
+                     on conflict do nothingupdate agent.connections set rules_changed_at_ms=$2, rules_changed_source_message_id=$3 where connection_id=$1rules_changed_at_msrules_changed_source_message_idupdate agent.connections set active=false, rules_revision=rules_revision+1, updated_at_ms=$2
+                 where connection_id=$1 and activeupdate agent.connection_messages set state='cancelled', feedback='This conversation was reset.',
+                 outcome_notified=false, updated_at_ms=$2
+                 where connection_id=$1 and state in ('proposed','awaiting_user','awaiting_muse','queued')delete from agent.side_chat_discretion_clearances where chat_id=$1invalid sharing rule removal countagent.agent_compactions.details_jsonitems_jsonupdated_at_msdelete from agent.connection_resources where connection_id=$1echat history anchor has a negative sequenceboundary_seqresources_jsonclient_timezonenegative chat event sequencesubjectchat history before_seqoriginlifecyclepinnedpinned_ordersession_titlesource_session_idsource_prompt_seq_upper_boundsource_message_id_boundaryupdated_atmailbox input payload does not match its admitted submission identityinvalid mail task revisionmessage_id, connection_id, worker_id, worker_generation, producer_id, audience, rules_revision, text_content, payload_sha256, request_json, publication_id, state, approval_id, feedback, message_revision, review_operation_id, reviewer_agent_id, reviewer_submission_id, reviewed_payload_sha256, owner_authorization_json, rule_review_completeinsert into agent.connection_messages
+                 (message_id, connection_id, worker_id, worker_generation, producer_id, audience,
+                  rules_revision, text_content, payload_sha256, request_json, publication_id, state, created_at_ms, updated_at_ms,
+                  owner_authorization_json)
+                 values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'proposed',$12,$12,$13)
+                 on conflict(message_id) do nothingthe saved message cannot be replacedselect audience,rules_revision from agent.connections where connection_id=$1 and active for updateThe owner instruction does not match this review.deniedawaiting_museThe message or its rules changed. Read the saved message again.update agent.connection_messages set state='denied', feedback=$2, updated_at_ms=$3
+                where message_id=$1 and state in ('proposed','awaiting_user','awaiting_muse')

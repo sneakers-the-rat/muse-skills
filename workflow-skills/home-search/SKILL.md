@@ -40,7 +40,6 @@
 
 - These connectors depend on the user's channel or devices. `muse.connector_search` shows which ones this session has.
 
-- [Redfin](/opt/hatch/connectors/redfin/CONNECTOR.md) for homes for sale, open houses and tour booking through Redfin's agent.
 
 - [HasData](/opt/hatch/connectors/hasdata_mcp/CONNECTOR.md) for Zillow and Redfin listing data.
 
@@ -48,7 +47,7 @@
 
 - Use `browser.browse` to check a listing's current status, price and viewing times on the portal and the listing agent's page, in the country and city where the home is.
 
-- In the US, use [Zillow](https://www.zillow.com/) and [Realtor.com](https://www.realtor.com/), with [Apartments.com](https://www.apartments.com/) for rentals. Use [Redfin](https://www.redfin.com/) for rentals and sold-home history, which its connector does not search, and wherever the connector is unavailable.
+- In the US, use [Zillow](https://www.zillow.com/) and [Realtor.com](https://www.realtor.com/), with [Apartments.com](https://www.apartments.com/) for rentals. Use [Redfin](https://www.redfin.com/) for listings, rentals and sold-home history.
 
 - Use [Rightmove](https://www.rightmove.co.uk/) and [Zoopla](https://www.zoopla.co.uk/) in the UK, [Realtor.ca](https://www.realtor.ca/) in Canada, [Idealista](https://www.idealista.com/) in Spain, Italy and Portugal, [SeLoger](https://www.seloger.com/) in France and [ImmobilienScout24](https://www.immobilienscout24.de/) in Germany.
 
