@@ -1,1 +1,0 @@
-self_improvement/ideas/pool_judge.md

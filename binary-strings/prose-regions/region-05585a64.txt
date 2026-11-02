@@ -1,0 +1,68 @@
+ordered browser task card projection failedbrowser user-control resume point was not recordedbrowser broker returned the wrong presentation-refresh result shapebrowser user-control terminalization is already in progressbrowser task changed before releasing user controlbrowser viewer did not drain; retry continuationrunning-continuationuser-browser-releasebrowser target was lost while releasing user controlbrowser target was lost while parking released controlunreadable legacy hook was not admittedinvalid legacy hook path was not admittedinvalid legacy hook was not admittedfailed to resolve public session id for agent.statusagent.status
+INSERT INTO requests (
+  request_id, root_request_id, parent_request_id, request_origin,
+  transcript_surface, root_work_class
+)
+VALUES ($1, $2, $3, $4, $5::runtime.transcript_surface, $6)
+ON CONFLICT (request_id) DO UPDATE SET
+  root_request_id = COALESCE(requests.root_request_id, excluded.root_request_id),
+  parent_request_id = COALESCE(requests.parent_request_id, excluded.parent_request_id),
+  request_origin = CASE
+    WHEN requests.request_origin = 'internal.runtime_replay' THEN excluded.request_origin
+    ELSE requests.request_origin
+  END,
+  transcript_surface = excluded.transcript_surface,
+  root_work_class = CASE
+    WHEN requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing'
+      THEN excluded.root_work_class
+    ELSE requests.root_work_class
+  END
+WHERE (requests.root_request_id IS NULL AND excluded.root_request_id IS NOT NULL)
+   OR (requests.parent_request_id IS NULL AND excluded.parent_request_id IS NOT NULL)
+   OR (requests.request_origin = 'internal.runtime_replay'
+       AND excluded.request_origin <> 'internal.runtime_replay')
+   OR requests.transcript_surface IS DISTINCT FROM excluded.transcript_surface
+   OR (requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing')
+call_idstatusoutput
+INSERT INTO tool_outputs (event_seq, call_id, status, output_text, error_text, created_at)
+VALUES ($1, $2, $3, $4, $5, to_timestamp($6::double precision / 1000.0))
+ON CONFLICT (event_seq) DO UPDATE SET
+  call_id = excluded.call_id,
+  status = excluded.status,
+  output_text = excluded.output_text,
+  error_text = excluded.error_text
+arguments
+INSERT INTO tool_calls (event_seq, call_id, tool_name, status, arguments_json, created_at)
+VALUES ($1, $2, $3, 'started', $4, to_timestamp($5::double precision / 1000.0))
+ON CONFLICT (call_id) DO UPDATE SET
+  event_seq = excluded.event_seq,
+  tool_name = excluded.tool_name,
+  status = excluded.status,
+  arguments_json = excluded.arguments_json
+
+INSERT INTO chat_event_derived_write_backlog (event_seq, resources_json)
+VALUES ($1, $2)
+ON CONFLICT (event_seq) DO UPDATE SET
+  resources_json = excluded.resources_json,
+  updated_at = now()
+
+UPDATE events
+SET display_text_ready = $2,
+    reply_target_message_id = $3,
+    payload_json = $4
+WHERE event_seq = $1
+
+INSERT INTO messages (message_id, event_seq, role, body, created_at)
+SELECT e.message_id, e.event_seq, e.role, $2, e.created_at
+FROM events e
+WHERE e.event_seq = $1
+  AND e.message_id IS NOT NULL
+  AND e.role IS NOT NULL
+ON CONFLICT (message_id) DO UPDATE SET
+  body = excluded.body
+UPDATE chat_private.peer_conversations SET requester_chat_id = NULL
+         WHERE conversation_id = $1 AND requester_revision = $2
+           AND requester_chat_id = $3 AND NOT requester_unavailable
+           AND chat_id = $5
+           AND EXISTS (SELECT 1 FROM agent.agents
+                       WHERE id = $4 AND session_id = $3)peer handoff disagrees with its asking-chat claim
