@@ -1,0 +1,57 @@
+invocation_id, task_id, planner_agent_id, parent_invocation_id, caller_agent_id, caller_submission_id, call_id, agent_id, submission_id, runtime_work_id, input_digest, kind, state, input_json, context_json, result_json, wait_call_id, ordinal, tab_id, (extract(epoch from created_at) * 1000)::bigint as created_at_ms, (extract(epoch from stop_requested_at) * 1000)::bigint as stop_requested_at_ms, terminal_reason, handoff_state, (extract(epoch from finished_at) * 1000)::bigint as finished_at_msSELECT c.*, w.generation,
+                   (SELECT i.input_json FROM agent.group_inputs i
+                    WHERE i.group_id=w.group_id AND i.received_at_ms IS NOT NULL
+                    ORDER BY i.received_at_ms DESC,i.sequence DESC LIMIT 1) AS latest_input
+                 FROM agent.connections c
+                 JOIN agent.chat_workers w ON w.group_id=c.connection_id::text AND w.active
+                 WHERE c.connection_id=$1 AND c.active
+                   AND (c.provider<>'peer' OR c.muse_id IS NULL OR EXISTS (
+                     SELECT 1 FROM peer.contacts p WHERE p.muse_id=c.muse_id AND p.status='verified'))SELECT c.*, w.generation,
+                   (SELECT i.input_json FROM agent.group_inputs i
+                    WHERE i.group_id=w.group_id AND i.received_at_ms IS NOT NULL
+                    ORDER BY i.received_at_ms DESC,i.sequence DESC LIMIT 1) AS latest_input
+                 FROM agent.connections c
+                 JOIN agent.chat_workers w ON w.group_id=c.connection_id::text AND w.active
+                 WHERE c.active AND ($4::uuid IS NULL OR c.connection_id>$4)
+                   AND (c.provider<>'peer' OR c.muse_id IS NULL OR EXISTS (
+                     SELECT 1 FROM peer.contacts p WHERE p.muse_id=c.muse_id AND p.status='verified'))
+                   AND (c.connection_id=ANY($3) OR (c.updated_at_ms>$1 AND c.updated_at_ms<=$2)
+                     OR EXISTS (SELECT 1 FROM agent.group_inputs i
+                       WHERE i.group_id=w.group_id AND i.received_at_ms>$1 AND i.received_at_ms<=$2)
+                     OR EXISTS (SELECT 1 FROM agent.chat_worker_requests q
+                       WHERE q.chat_id=w.group_id AND q.generation=w.generation
+                         AND q.delivered_at_ms>$1 AND q.delivered_at_ms<=$2)
+                     OR EXISTS (SELECT 1 FROM agent.connection_resources r
+                       WHERE r.connection_id=c.connection_id AND r.shared_at_ms>$1 AND r.shared_at_ms<=$2)
+                     OR EXISTS (SELECT 1 FROM peer.activity a
+                       WHERE a.payload->>'connection_id'=c.connection_id::text AND NOT a.dismissed
+                         AND a.kind IN ('link_shared','file_shared') AND a.at_ms>$1 AND a.at_ms<=$2)
+                     OR EXISTS (SELECT 1 FROM runtime.events e WHERE e.parent_agent_id=w.agent_id
+                       AND e.created_at>to_timestamp($1::double precision/1000)
+                       AND e.created_at<=to_timestamp($2::double precision/1000)
+                       AND e.event_name IN ('message.user','message.assistant','message.internal'))
+                     OR EXISTS (SELECT 1 FROM runtime.events e WHERE e.agent_id=w.agent_id
+                       AND e.parent_agent_id IS NULL
+                       AND e.created_at>to_timestamp($1::double precision/1000)
+                       AND e.created_at<=to_timestamp($2::double precision/1000)
+                       AND e.event_name IN ('message.user','message.assistant','message.internal')))
+                 ORDER BY c.connection_id LIMIT 100SELECT p.* FROM agent.connection_participants p
+                 JOIN agent.connections c USING(connection_id)
+                 WHERE p.connection_id=ANY($1) AND c.active AND p.audience=c.audience
+                 ORDER BY p.connection_id,p.participant_idSELECT c.connection_id,q.request_id,q.owner_chat_id,q.delivered_at_ms,q.result_json,q.origin_json
+                 FROM agent.connections c
+                 JOIN agent.chat_workers w ON w.group_id=c.connection_id::text AND w.active
+                 JOIN agent.chat_worker_requests q ON q.chat_id=w.group_id
+                   AND q.generation=w.generation AND q.worker_agent_id=w.agent_id
+                 JOIN chat.chats owner ON owner.chat_id=q.owner_chat_id AND owner.status<>'deleted'
+                 WHERE c.connection_id=ANY($1) AND c.active AND q.state='delivered'
+                   AND q.delivered_at_ms>$2 AND q.delivered_at_ms<=$3
+                   AND q.result_json IS NOT NULL AND ($4::text IS NULL OR q.request_id>$4)
+                 ORDER BY q.request_id LIMIT 500origin_jsonreview_messageowner_chat_iddelivered_at_msresult_jsonc.active AND (
+    r.host_muse <> 'self' OR r.kind NOT IN ('space', 'goal')
+    OR (r.kind = 'space' AND EXISTS (
+        SELECT 1 FROM spaces.spaces live_space
+        WHERE live_space.space_id::text = r.resource_id AND live_space.space_slug = r.reference))
+    OR (r.kind = 'goal' AND EXISTS (
+        SELECT 1 FROM goals.goals live_goal WHERE live_goal.goal_id = r.resource_id))
+)€Ÿ

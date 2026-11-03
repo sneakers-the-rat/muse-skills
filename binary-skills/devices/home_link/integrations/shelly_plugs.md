@@ -92,7 +92,7 @@ Worth knowing about, though most requests will not need them:
 - BLE and BTHome, MQTT, the vendor cloud, and Matter. These are alternative
   control planes. Prefer the local RPC API over the network the Link already
   reaches.
-channel-availability.mdchannels/telegram.mdchannels/whatsapp.mdchannels/messenger.mdapp.mdpython_space_migration.mdhtml-widgets.mdworkflows.mddevices/coop_ai_device.mddevices/malibu.mddevices/phones.mddevices/hatch_link.mdcommunications.mdchannels/groups.mddevices/homehub.md# Voice
+enabledchannel-availability.mdchannels/telegram.mdchannels/whatsapp.mdchannels/messenger.mdapp.mdpython_space_migration.mdhtml-widgets.mdworkflows.mddevices/coop_ai_device.mddevices/malibu.mddevices/phones.mddevices/hatch_link.mdcommunications.mdchannels/groups.mddevices/homehub.md# Voice
 
 Live voice conversations in the app are not available on this account.
 
