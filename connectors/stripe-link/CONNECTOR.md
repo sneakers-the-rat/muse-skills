@@ -24,7 +24,7 @@
 
 - Call `wallet.list_payment_methods` with `provider: "stripe-link"`. For `not_connected` or `reauth_required`, send its `next_action.markdown` unchanged, describe Link as the `wallet` tool description directs and end the message. After the user finishes, list the methods again.
 
-- Follow `wallet.list_payment_methods` for supported method types and available amounts. Keep a payment method the user already chose for this purchase if it is still listed. In a browser checkout with no explicit choice, leave the payment-method ID unset so the runtime chooses the default in payment approval.
+- Follow `wallet.list_payment_methods` for supported method types and available amounts. Keep a payment method the user already chose for this purchase if it is still listed. For browser checkout, pass an explicitly requested provider in `wallet`; include a payment-method ID only when the user chose a particular method. Otherwise the runtime selects a method and handles any required payment approval. Without an explicit provider preference, leave provider selection to the runtime.
 
 - For a direct checkout, follow its connector's instructions. If approval accepts an omitted payment-method ID, leave it unset unless the user already chose a method. If an ID is required, use the only usable method or the default. With several methods and no default, ask the user to choose by label. Write masked card labels like `Visa ....1234`.
 
@@ -40,7 +40,7 @@
 
 - For a direct checkout, call `wallet.get_user_info` before presenting the review. In a browser checkout, the payment interface applies the limits. `wallet.get_user_info` returns per-purchase, daily and thirty-day limits in minor units, with the amount left in each rolling window, and a null value means that limit is not set. The limits in `agent_wallet_spend_limits` carry no currency, so compare their minor-unit values directly with the approval amount in the checkout currency.
 
-- Compare the approval amount, not only the total, with every limit and report a conflict before continuing. Read the limits again for each new question, and never invent a cap when they are unavailable.
+- For a direct checkout, compare the payment amount with every limit and report a conflict before continuing. Read the limits again for each new question. Do not invent a cap when they are unavailable.
 
 - A step-up status other than `not_required` or `complete` means Link wants the user to verify their identity before it pays.
 
@@ -48,11 +48,9 @@
 
 - When `wallet.configure_balance` is available, use it to prepare the user's secure page for setup, adding money or changing the approval limit. Share `next_action.markdown` and end the reply. After the user finishes, read `wallet.list_payment_methods` again; preparing a link does not confirm a change.
 
-- For a browser checkout, funding covers the amount due now and any maximum additional conditional charge, plus the existing buffer of up to five whole units of the checkout currency, rounded down to a whole unit. The payment approval distinguishes the immediate and conditional amounts. Only the amount the merchant charges is captured.
-
 ## Pay
 
-- In a browser checkout, pass the chosen payment method in the `wallet` field of `browser.browse`, as `{"provider": "stripe-link", "payment_method_id": "<exact id>"}`, only when the user explicitly chose that method, and name Link and the method's label in the brief. On later updates, answers and cart confirmations, follow `browser.browse`'s wallet rules: omitting `wallet` preserves the current choice, including a method changed in payment approval; `wallet: null` clears it to pay another way; a payment-method object selects another wallet method. The browser's checkout pays with that method through Link and handles any required Muse payment approval. Do not use the merchant's own Link button or ask for a spend decision in chat. Treat the returned decision as final.
+- In a browser checkout, pass the requested provider in the `wallet` field of `browser.browse`, as `{"provider": "stripe-link"}`. Add `"payment_method_id": "<exact id>"` only when the user chose a particular payment method, and name Link and, when chosen, the method's returned label in the brief. On later updates, answers and cart confirmations, follow `browser.browse`'s wallet rules: omitting `wallet` preserves the current choice, including a method changed in payment approval; `wallet: null` clears it to pay another way; a wallet object changes the provider or payment-method choice. The browser's checkout pays with that method through Link and handles any required Muse payment approval. Do not use the merchant's own Link button or ask for a spend decision in chat. Treat the returned decision as final.
 
 - Pending secure actions, such as a finished secure step or a replacement approval, resume automatically. Do not relay another approval question or start a replacement task.
 
@@ -62,7 +60,7 @@
 
 ## Handle provider results
 
-- In a browser checkout, present only the payment actions and disclosures the runtime supplies, keeping any cancellation, replacement or temporary-hold warning, and let the checkout workflow resume. The rules below apply to the results a direct checkout returns.
+- In a browser checkout, present only the payment actions and disclosures the runtime supplies, keeping any cancellation or replacement warning, and let the checkout workflow resume. The rules below apply to the results a direct checkout returns.
 
 - For `confirmation_required`, present the complete replacement review and ask the user to accept it and to approve replacing the earlier authorization. Relay a clear acceptance to the same checkout, stop after a refusal and ask again when the answer is unclear. An earlier request to switch does not count as this approval.
 
@@ -76,7 +74,7 @@
 
 - When the outcome is unknown, report what is uncertain. Do not retry, replace the approval or switch to another route for the same checkout.
 
-- Cancelling a pending purchase voids its virtual card, though a hold can take time to release. A completed charge has no wallet refund, so help the user through the merchant's refund process.
+- Cancelling a pending purchase voids its virtual card. A completed charge has no wallet refund, so help the user through the merchant's refund process.
 
 ## Describe purchase protection accurately
 

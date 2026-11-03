@@ -32,7 +32,9 @@
 
 - For a shortlist or map, use `--summary`. It keeps each record's name, location, address, categories, hours and closure status, rating, price level, phone numbers, links and offerings when present, without gallery or review payloads. It preserves the usual ID-to-record JSON shape. Use full details only when the task needs the omitted content.
 
-- Reuse details already returned for the same branch and task. Fetch only new candidates or facts that need refreshing. Do not pipe details through `head`: it can hide later places or cut the JSON. If you need to process a full response, save it once and parse that file rather than rerunning the lookup. Missing records and nested fields such as `rating` can be null; treat them as unknown, not a reason to fetch the same response again.
+- Direct, redirected or piped `places details` output can include a reserved top-level `_meta` entry for privacy deletion and redaction. It is not a place: skip `_meta` when iterating or counting records. Normal runtime readback hides it from the agent, but does not remove it from a saved file.
+
+- Reuse details already returned for the same branch and task. Fetch only new candidates or facts that need refreshing. Do not pipe details through `head`: it can hide later places or cut the JSON. If you need to process a full response, save it once, parse that file and filter out `_meta` rather than rerunning the lookup. Missing records and nested fields such as `rating` can be null; treat them as unknown, not a reason to fetch the same response again.
 
 - The response maps each place ID to its record, with the place's fields under `details`, including `details.rating.avg_rating` and `details.rating.num_rating`. Read `places --help` for options such as `--num-gallery-media`, `--num-quotes` and `--product-source`.
 

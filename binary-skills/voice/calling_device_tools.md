@@ -209,9 +209,10 @@ expressions are not distinctions.
   governing rendering style.
 - The diverse options are peers: none is safer, stronger, or more experimental.
 
-Preserve any requested face placement; otherwise use the broadest unobstructed
-front-facing surface. For a container with contents (potted plant, cereal bowl,
-mug), the face sits on the container, never the contents.
+For an inanimate object, preserve any requested face placement; otherwise use
+the broadest unobstructed front-facing surface. For a container with contents
+(potted plant, cereal bowl, mug), the face sits on the container, never the
+contents.
 
 # Species matrix (defaults where the request is silent)
 
@@ -221,11 +222,6 @@ realism, materials, proportions, mood. Never emit a default that fights the
 request.
 
 human
-- face (house look): minimalist face with two compact black round dot eyes,
-  slightly dimensional with a subtle glint, a black line mouth forming a smile,
-  a very subtle almost-flat nose bump with no nasal detailing, simple
-  medium-thick eyebrows, defined ears, simple head hair; head shape simple and
-  clean. No nostrils, no eyelashes.
 - limbs: arms relaxed at the sides, or naturally holding any handheld prop the
   request names.
 - materials: appealing warm skin color and texture, accurate surface textures
@@ -254,9 +250,6 @@ inanimate object
   the object's own structure.
 
 anthropomorphic animal
-- face: cute cartoony face with two slightly larger black round dot eyes,
-  slightly dimensional with a barely perceptible gray glint; use the animal's
-  natural mouth or beak.
 - limbs: arms relaxed at the sides or holding a named prop; legs down; bipedal.
 - materials: the one correct covering for the animal (fur, feathers, or scales)
   inspired by the species' natural patterns, slightly softened, clean.
@@ -264,8 +257,6 @@ anthropomorphic animal
   mature adult proportions with a realistically small head around 1:7.5 to 1:8.
 
 natural animal
-- face: two compact black round dot eyes with a barely perceptible gray glint
-  and the animal's natural mouth or beak.
 - limbs: keep all legs, feet, fins, wings, and other supporting appendages in
   their species-natural roles. For a quadruped such as a dog, cat, or horse,
   say "quadrupedal, standing naturally on all four legs; four animal legs and
@@ -283,7 +274,7 @@ natural animal
   legs, feet, tail, and wings as appropriate, uncropped.
 
 mythological creature
-- face: as natural animal, using the creature's natural mouth or beak.
+- face: use the creature's natural mouth or beak.
 - limbs: all legs and feet down, or a natural flight or floating position.
 - materials: the one correct covering (scales, fur, feathers, hide) inspired by
   fantasy patterns unique to the species, slightly softened, clean.
@@ -534,4 +525,13 @@ pose, and lighting are not preserved; the avatar framing rules govern those.
   lightness, saturation, texture, or shading within those hues, but never adds a
   new accent hue, complementary color, colored outline, or recolored marking.
 - Human presentation and face construction are reference-owned: preserve the
-  reference p
+  reference presentation in every prompt; translate a face's shapes into the
+  selected style's construction without changing what it recognizably is.
+- Natural animal anatomy, proportions, build, and coat volume are
+  reference-owned. Where the reference and user leave traits open, create
+  diversity through species-natural coat or feather texture, grooming, and
+  other natural details. Repeat the anatomy constraint above in every
+  quadruped prompt.
+- A `photorealistic studio` option preserves the reference subject's exact
+  native form and source-visible anatomy except where the user explicitly
+  requests a form or anatomy change: a hum

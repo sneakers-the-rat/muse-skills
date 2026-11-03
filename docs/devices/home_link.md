@@ -92,7 +92,7 @@ Present scan results as a concise, readable summary.
 Focused integration guides live under `~/docs/devices/home_link/integrations/`.
 They are indexed here so this document can stay compact while the catalog grows.
 Every guide states when its path was last verified.
-Read a guide only after fresh discovery confirms its match conditions. A guide
+Read a device guide only after fresh discovery confirms its match conditions. A guide
 is a known-good starting point, not a substitute for current device evidence.
 If current evidence conflicts with a guide or its path fails, continue the
 normal discovery and research flow using current official documentation. The
@@ -101,6 +101,10 @@ this document remain required.
 
 ### Catalog
 
+- **Home Assistant on this VM:** Read
+  `~/docs/devices/home_link/integrations/home_assistant.md` whenever Home
+  Assistant on this VM comes up: to check on it, install, start, stop, update
+  or remove it, set it up, or add an integration.
 - **Brother printers: IPP printing:** Read
   `~/docs/devices/home_link/integrations/brother_printers.md` when fresh
   discovery identifies Brother as the manufacturer, advertises an IPP service,

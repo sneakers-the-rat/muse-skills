@@ -1,0 +1,89 @@
+select p.* from agent.connection_participants p
+                join agent.connections c using(connection_id)
+                where p.connection_id=$1 and c.active and p.audience=c.audience
+                order by p.kind,p.display_name,p.participant_idselect audience from agent.connections where connection_id=$1 and active for updateselect exists(select 1 from unnest($1::uuid[]) as directory_id
+                 where not exists(select 1 from agent.connections c where c.connection_id=directory_id))The conversation audience changeddelete from agent.connection_participants where connection_id=$1 and not (participant_id=any($2))A participant directory entry no longer existsupdate agent.connections set person_paths=$2,group_path=$3,updated_at_ms=$4
+                         where connection_id=$1 and (person_paths,group_path) is distinct from ($2,$3)insert into agent.connection_participants
+                  (connection_id,participant_id,audience,display_name,kind,owner_participant_id,directory_id,person_path,muse_id)  on conflict (connection_id,participant_id) do update set
+                  audience=excluded.audience,display_name=excluded.display_name,kind=excluded.kind,
+                  owner_participant_id=excluded.owner_participant_id,directory_id=excluded.directory_id,
+                  person_path=excluded.person_path,muse_id=excluded.muse_id
+                  where (connection_participants.audience,connection_participants.display_name,
+                         connection_participants.kind,connection_participants.owner_participant_id,
+                         connection_participants.directory_id,connection_participants.person_path,
+                         connection_participants.muse_id)
+                    is distinct from (excluded.audience,excluded.display_name,excluded.kind,
+                                      excluded.owner_participant_id,excluded.directory_id,
+                                      excluded.person_path,excluded.muse_id)insert into agent.connections
+                    (connection_id,provider,address,display_name,muse_id,audience,active,rules_revision,
+                     person_paths,search_document,created_at_ms,updated_at_ms)  on conflict (connection_id) do update set
+                    display_name=excluded.display_name,muse_id=excluded.muse_id,
+                    person_paths=excluded.person_paths,search_document=excluded.search_document,
+                    updated_at_ms=excluded.updated_at_ms
+                    where connections.provider='directory'
+                      and connections.address=excluded.address and connections.audience=excluded.audience
+                      and (connections.display_name,connections.muse_id,connections.person_paths)
+                          is distinct from (excluded.display_name,excluded.muse_id,excluded.person_paths)select exists (
+                    select 1 from unnest($1::uuid[],$2::text[]) as expected(id,identity)
+                    join agent.connections c on c.connection_id=expected.id
+                    where c.provider<>'directory' or c.address<>expected.identity or c.audience<>expected.identity)Participant directory identity changedselect exists(select 1 from chat_private.external_party_conversations where chat_id=$1)select distinct idea_id,
+                            metadata_json -> 'publication_hold' ->> 'fingerprint',
+                            metadata_json -> 'publication_hold' ->> 'reason'
+                       from ideas.idea_sources
+                      where idea_id = any($1::text[])
+                        and (source_namespace, source_kind) in (
+                          ('idea_share', 'pending_share'),
+                          ('user', 'http_create'),
+                          ('shared_www', 'shared_idea')
+                        )
+                        and metadata_json -> 'publication_hold' ->> 'fingerprint' is not null
+                        and metadata_json -> 'publication_hold' ->> 'reason' is not null
+SELECT event_seq
+FROM events
+WHERE idempotency_key = $1
+LIMIT 1
+FOR UPDATE
+event_seq
+UPDATE events
+SET display_text_ready = $2,
+    reply_target_message_id = $3,
+    payload_json = jsonb_set(
+      $4::jsonb,
+      '{metadata}',
+      CASE
+        WHEN jsonb_typeof($4::jsonb -> 'metadata') = 'object'
+          THEN $4::jsonb -> 'metadata'
+        ELSE '{}'::jsonb
+      END || jsonb_strip_nulls(jsonb_build_object(
+        'can_broadcast_share',
+          payload_json::jsonb #> '{metadata,can_broadcast_share}'
+      )),
+      true
+    )::text
+WHERE event_seq = $1
+RETURNING payload_json, event_name, parent_agent_id, agent_id
+runtime.messages.body
+INSERT INTO messages (message_id, event_seq, role, body, created_at)
+SELECT e.message_id, e.event_seq, e.role, $2, e.created_at
+FROM events e
+WHERE e.event_seq = $1
+  AND e.message_id IS NOT NULL
+  AND e.role IS NOT NULL
+ON CONFLICT (message_id) DO UPDATE SET
+  body = excluded.body
+select actor_muse,request_sha256,result_json from goals.shared_mutations where goal_id=$1 and mutation_id=$2the mutation ID belongs to a different editinsert into goals.shared_tasks (goal_id,task_id,title,assigned_to,completed,updated_by,updated_at_ms) values ($1,$2,$3,$4,$5,$6,$7)
+                        on conflict(goal_id,task_id) do update set title=excluded.title,assigned_to=excluded.assigned_to,completed=excluded.completed,updated_by=excluded.updated_by,updated_at_ms=excluded.updated_at_ms
+                        where (shared_tasks.title,shared_tasks.assigned_to,shared_tasks.completed)
+                            is distinct from (excluded.title,excluded.assigned_to,excluded.completed)a shared goal supports at most 200 tasksdelete from goals.shared_tasks where goal_id=$1 and task_id=$2update goals.goals set title=coalesce($2,title),summary=coalesce($3,summary),description=coalesce($4,description),status=coalesce($5,status),
+                completed_at=case when $5='completed' then coalesce(completed_at,$6) when $5 is not null then null else completed_at end,
+                completed_at_ts=case when $5='completed' then coalesce(completed_at_ts,$7) when $5 is not null then null else completed_at_ts end,
+                escalation=case when $5='completed' then null else escalation end,
+                escalation_due_at=case when $5='completed' then null else escalation_due_at end,
+                updated_at=$6, updated_at_ts=$7 where goal_id=$1Goal pausedGoal retiredGoal completedinsert into goals.shared_mutations (goal_id,mutation_id,actor_muse,request_sha256,result_json,created_at_ms) values ($1,$2,$3,$4,$5,$6)INSERT INTO runtime.maintenance_markers (marker_key, detail_json) VALUES ('event_hook_admissions_v1', '{}') ON CONFLICT (marker_key) DO NOTHINGINSERT INTO runtime.event_hook_admissions (hook_id, revision, definition_sha256, script_sha256, enabled)  ON CONFLICT (hook_id) DO NOTHINGfailed to resolve owning root session from chat event recordinterrupted multipart uploadcharsetpath not foundresolve pathpath escapes mount rootpath already existsalready_existscreate parent directorymedia processor not initializedinference-proxy returned an invalid model selection routeartifact body length overflowshopping_results_v2navigationnavigation.scheduled_tasknode_card.notification_opt_inview ideaview canonical idearesolve canonical on not-foundlist ideas by idspublication has no chat ownerinvalid publication tracepublication owner does not match its transcript/metadata/message_kindpublication has no execution ownerinvalid publication authorityfailed to serialize idea for reply_to_target hydrationread file artifact stateread artifact placementread saved artifact stateread share linkread saved artifactscan artifact libraryread artifact user statelist saved artifactssidebar_fullsidebar_changednavigation.items.updatedGatekeeper response omitted requested gate; using defaultspawn find for fs query scanfind stderr pipe unavailableread find stdout for fs query scanwait for fs query scanread find stderr for fs query scanfind stdout pipe unavailableread directory entrystat directorycreate temporary fileload goal by idlist goal suggestionslist goal briefingslist goal updateslist goalsload goal session mapping by root goal idresolve root goal parentruntime.resources.metadata_jsonCould not read hooksHook admission failedlist authoritative cron definitionshttpsread shared Spaceread shared Space stateread connection Spacesdecode artifact sharingread artifact sharingMissing preview attachmentinvalid prepared attachmentThey receive a copy of this item. Later changes are not shared automatically.They can open this Space and use its shared actions, including future changes, until access is removed.They can view and edit this goal and its tasks, including future changes, until access is removed.context_seqmalformed_requestInvalid resource requestmembership_changedCircle membership changedconversation_inactiveThe circle has no active conversationThe conversation is no longer activestat filestat fs.find scan segmentSpeech request body timed out.Invalid speech request body.
+This message was not approved.invalid_catalogInvalid catalog cursorspacesaved_spacefailed to build Sentinel permission inventory clientpermission inventory is unavailableinvalid Sentinel permission inventory responsefailed to read Sentinel permission inventoryfailed to open scheduler for permission inventoryfailed to identify active scheduled tasks for permission inventorystefi_proxy_unavailableJARVIS_STEFI_PROXY_SOCK is not set; invite badge requires the Stefi proxystefi_invite_badge_request_failedstefi_invite_badge_response_read_failedvalidate uploadmissing or invalid multipart boundary in Content-Typethe 'path' field must appear before the 'file' field in the multipart bodyapplication/octet-streamthe SxS response can no longer be swappedfailed to persist the selected SxS responseShared item not foundconnections_shareInvalid cursorMessage not foundThe user just verified their own email address in Muse Mail settings, so email
+from `verified_email_address` below now reaches you as theirs. You send them a
+welcome email right after this turn. In your own voice, tell them in one or two
+short, warm sentences that their address is verified and a welcome email is on
+its way, without saying it was sent or copying this wording. Reply with only
+that and call no tools.
+resolve not calledmissing auth tokenhatch_daemon_core::peers::artifact_gateway::body::ArtifactBodyhatch_daemon_core::peers::artifact_gateway::host::PeerPrincipalcommit called without prepared stateopen temp file for hashingread temp file for hashingno parent directoryresolve ingestion dirrename nutrition sidecarwrite nutrition sidecarcreate ingestion UUID dir/definitions/listthe store reported an absence for a listingruntimeprivate_client_uploadscheck_live_private_uploadsload_chat_bindingutf-8available_planspath is not accessibleparent path is not a directorystat pathinvalid pathmissing pathinvalid upload destinationvalidate upload destinationparent path not foundUDS HTTP request path must start with '/'sort_order asc, goal_id asccase attention_kind when 'user_action_required' then 0 when 'action_required' then 0 when 'new_information' then 1 else 2 end asc, case when next_due_at is not null and next_due_at <= now() + interval '30 days' then next_due_at else timestamptz '9999-12-31' end asc, coalesce(last_activity_at_ts, updated_at_ts, updated_at::timestamptz) desc, sort_order asc, goal_id ascgoal_id, source, attention_kind, attention_updated_at::text as attention_updated_at, next_due_at::text as next_due_at, escalation, slug, title, summary, description, momentum, momentum_status, emoji, image_relpath, icon_generation_status, status, created_at, updated_at, last_activity_at, pushable, parent_goal_id, sort_order, fixed_position, category, goal_kind, value_alignment, review_cadence, completed_atfixed_position asc nulls last, case when fixed_position is not null then goal_id end ascgoals.list_render_by_sourceevent_hook_admissions.bootstrap_completepeer.goal_grants.checkpeer.shared_item.releasepeer.connection_spacespeer.group_resource_accesspeer.remote_resource_circlepeer.claim_circle_resource_requestpeer.directory.contacts/sign-subkey

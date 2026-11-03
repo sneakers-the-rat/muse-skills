@@ -4,6 +4,8 @@
 
 - Before every run's Duffel command, check `muse.connector_search` for Duffel. If the lookup fails or does not return Duffel, skip the search for this run.
 
+- If `search` refuses because a date has already passed, this run has nothing to price; don't retry with a guessed date. If the booked itinerary has departed, end the job under its stop conditions. Otherwise the job's date is wrong: treat it as a failed read and note the mismatch in the state file.
+
 - If a Duffel command returns `error.kind: connector_country_not_allowed` or `code: duffel_unavailable`, make no further Duffel calls in this run. Treat a skipped or refused search as a failed read under Flight Tracking's coverage rules. Keep the job and any pending candidate with a failure note; a skipped or refused confirmation run returns to the daily schedule like other failed confirmations.
 
 - While Duffel is available, run exactly one `search` per run for the complete booked itinerary and passenger mix, with `--limit 30`, saved to a new file. Duffel is the pricing source here, since a browser or web price isn't comparable with the booked fare; other failed scheduled searches wait for the next run.

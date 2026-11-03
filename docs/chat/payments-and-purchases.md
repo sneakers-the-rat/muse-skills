@@ -65,26 +65,34 @@ user leaves, pre-approve one order with connector `browser` and method
 `page.submit`. Set its binding to `merchant`, the store's https origin;
 `item`, the exact product name with `item_match: specific`, or a description
 whose every word must appear in the name with `item_match: generic`; and
-`max_total: {amount, currency}`, the maximum funded amount. This covers only
-a matching Link one-time card; cart review still runs. Leave 5 in the order's
-currency between the order total, including tax and shipping, and `max_total`
-for Link's funding buffer. Get the user's OK before setting `max_total` above
-their budget, and keep the order itself within that budget. For a future
+`max_total: {amount, currency}`, the most the whole order may cost. This covers
+only a matching Link one-time card; cart review still runs. For a future
 purchase, create a run-once task with `cron.add` first and put its id in the
 pre-approval action's `schedule_id`. Each task holds one purchase pre-approval;
 a new one replaces it. Tell the user before starting additional orders that
 those checkouts will still ask for payment approval.
 
-Do not reproduce the payment sheet as another chat approval. Set `wallet` in
-`browser.browse` only when the user chose a wallet provider and payment method,
-including a preference in memory or their shopping profile. Use the provider
-and exact payment-method ID from `wallet.list_payment_methods`. Name only the
-returned label in the task. Without a preference, omit `wallet` and let Muse
-select a method for the purchase.
+Naming a wallet in `task` does not select it. Set `wallet` in `browser.browse`
+for an explicit wallet provider preference from the user, including a preference
+in memory or their shopping profile. When they name only a provider, pass just
+`provider`, including when answering a browser question. The runtime selects a payment method and handles any required payment approval. Do not ask for a card choice in chat before
+proceeding. Payment approval lets the user choose among the selected wallet's
+payment methods. To change wallet providers, update `browser.browse.wallet`; checkout
+must prepare payment approval for that provider.
+
+When the user chose a particular payment method, include its exact `payment_method_id`
+from `wallet.list_payment_methods` in `wallet` and name its returned label in
+`task`. Do not reproduce the payment sheet as another chat approval.
 When the user prefers a method saved by the merchant, include that preference
-in the task and leave `wallet` unset.
-The user can choose another offered method in payment approval.
-When the user requests a method the runtime cannot supply, such as PayPal, preserve that choice in the task. The browser uses
+in the task and leave `wallet` unset. The checkout records
+`payment_route: merchant_saved`.
+For payment through Muse Wallet (Link or Shop Pay), the checkout uses
+`payment_route: wallet`.
+Without an explicit provider choice, the runtime preserves an approved choice,
+then prefers sufficient Link balance when available, connected Shop Pay when
+native support is detected, otherwise Link. It handles any required payment
+approval, where the user can choose another offered method. When the user requests a method the runtime cannot
+supply, such as PayPal, preserve that choice in the task. The browser uses
 takeover and returns the prepared checkout for the user to complete.
 
 The result's `card_picked` names the payment method approved in that interface,
@@ -93,8 +101,8 @@ it may differ from the method you proposed. It does not prove a charge or an ord
 
 Updates and answers keep the current payment choice when
 you omit `wallet`, including a method picked in payment approval. When changing
-how to pay, use a payment-method object to select another wallet method, or
-`wallet: null` to switch to a merchant-saved method or browser takeover.
+how to pay, use a wallet object to change the provider or payment-method choice, or `wallet: null`
+to switch to a merchant-saved method or browser takeover.
 
 A merchant logo does not prove that a route is supported. Preserve an exact
 user choice; do not silently replace it with a default. When the workflow
@@ -111,10 +119,12 @@ wallet setup request open.
 
 After setup, list the methods again and continue the same browser task.
 Answer its waiting question with `answer_to`, name the connected wallet and
-include the details supplied while waiting in `task`. Pass the user's chosen
-method in `wallet`; otherwise omit it to keep the task's choice. The reply
-returns to the waiting checkout with its cart intact. If no question is waiting,
-continue the task with that context.
+include the details supplied while waiting in `task`. If the user explicitly
+chose a provider, pass it in `wallet`, including a payment-method ID only when they
+chose a particular method. Otherwise leave it unset so the runtime selects the
+provider and handles any required payment approval. The reply returns to
+the waiting checkout with its cart intact. If no question is waiting, continue
+the task with that context.
 
 Suggest another way to pay only after the wallet connection fails or does not
 go through, the wallet refuses the payment or is over its spend limit, the

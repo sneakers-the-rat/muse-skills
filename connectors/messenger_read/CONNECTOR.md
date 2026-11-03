@@ -133,6 +133,82 @@
 
 - Add `--attach 'FILE'` with a readable local path, where a leading `~` expands to the home directory even inside single quotes. Copy a file from outside the workspace into `~/workspace/` first, and use that same copy in the preview and in `--attach`.
 
+## Group chats
+
+- `thread-create`, `participants add` and `participants remove` work on open (non-encrypted) groups; encrypted and one-to-one chats are refused. `participants remove` also refuses groups with AI bots or linked to a Facebook Group, even when the user is leaving.
+
+- These commands ask the user for approval themselves, so run them without Preview and send's chat preview. Ask first only when the request is ambiguous, and run it once the user picks. Pass message text with `--text-stdin`.
+
+- Resolve the group with `threads --search` and use its ID, skipping groups with `is_e2ee: true`. If `is_e2ee` is missing or nothing matches, run `sync threads` once and search again.
+
+- When more than one open group matches the chat the user named, list each match as its name, Markdown-linked to `https://www.messenger.com/t/<GROUP_ID>` (the numeric part of `cid.g.<GROUP_ID>`), followed by two of its other members' names, for example `[Weekend Crew](https://www.messenger.com/t/123) (Sandra Liangstein, Mary Zuckerez)`, and ask which chat they mean. Show names, never bare URLs or IDs. If only encrypted chats match, say these commands cannot change members there.
+
+- When a name matches more than one contact or group member, list each match by full name, linked as Resolve the recipient describes (the name itself is the link; never a bare URL or ID), and ask which one they mean.
+
+- Never retry a failed call automatically or trigger approval again; report the reason once and stop. After a failure, keep the people, group, name and message unless the user changes them.
+
+### Start a group chat
+
+- Use `thread-create` only when the user explicitly asks to start a new group chat, not to add someone to an existing one. It needs at least two other participants, each a Messenger contact resolved through Resolve the recipient; the server adds the user automatically. If a participant is not in the retained contacts, find them with `contacts --search` and call again.
+
+- An opening message is required; ask for one if the user has not given it, and never invent one. Call once:
+
+```json
+{
+  "command": "/opt/hatch/bin/hatch_messenger_cli thread-create --participant '<FBID_1>' --participant '<FBID_2>' --thread-name '<GROUP_NAME>' --text-stdin",
+  "stdin": "exact initial message text"
+}
+```
+
+- Omit `--thread-name` when the user gave no name. Otherwise pass it exactly, without dropping or replacing characters to avoid quoting. Single-quote it, writing each `'` as `'\''` (`Mom's 60th` becomes `'Mom'\''s 60th'`; inside the JSON string the backslash is `\\`).
+
+- Use the returned `conversation_id` for follow-up `send` and `sync messages`.
+
+- A timed-out call may have created the group, so check with `sync threads` before creating it again.
+
+- `INITIAL_MESSAGE_FAILED` means the group exists but the message was not sent. Never call `thread-create` again for it, even if the user asks to retry, because that makes a second group. Tell the user, and on their OK send the message once with `send --cid '<CONVERSATION_ID>' --text-stdin`, using the ID from the error or from `sync threads`.
+
+### Add people to a group
+
+- Use `participants add` only when the user asks to add contacts to a group they are in. Resolve each person through Resolve the recipient and pass only unambiguous `user_id`s, never a guessed ID. If someone is not in the retained contacts, find them with `contacts --search` and call again.
+
+- Call once, with at most 50 `--user-id` values:
+
+```sh
+/opt/hatch/bin/hatch_messenger_cli participants add --cid '<CONVERSATION_ID>' --user-id '<FBID_1>' --user-id '<FBID_2>'
+```
+
+- Report each person by name from `results[].outcome`:
+  - `added`: now in the group.
+  - `pending_approval`: invited, but not in the group until an admin approves. Say that; it is not a failure.
+  - `already_member` or `already_pending`: nothing changed.
+
+- `GROUP_FULL` and `ADD_NOT_ALLOWED` mean nobody was added; for `ADD_NOT_ALLOWED`, do not guess who or why. Once the add has been sent, any other failure, including a timeout or an unreadable response, means it may have happened: say the outcome is unknown and suggest checking the group in Messenger.
+
+### Remove someone or leave a group
+
+- Use `participants remove` only when the user asks to remove someone from a group they are in, or to leave it. Only admins can remove others; anyone can leave. AI bots cannot be removed.
+
+- Take the person's `id` from the group's `participants` in `threads`, matched by name. To leave, use the user's own `user_id` from `check`.
+
+- Call once per person, so each gets its own approval card. If the user is also leaving, do that last.
+
+```sh
+/opt/hatch/bin/hatch_messenger_cli participants remove --cid '<CONVERSATION_ID>' --user-id '<FBID>'
+```
+
+- `{"success": true}` means the person is out of the group, or the user left.
+
+- If the command refuses before the approval card because it cannot read the local threads, or you or the command cannot find the person among the group's members, nothing was sent: run `sync threads` once, resolve them again and call again; if they are still missing, tell the user. Report only the final outcome, not the retry.
+
+- These errors mean nothing changed:
+  - `NOT_IN_GROUP`: the person is not in the group.
+  - `ONLY_SELF_REMOVAL_ALLOWED`: the user is not an admin, so they can only leave. Ask whether they want to leave, and call again with their own ID only on an explicit yes.
+  - `BOT_REMOVAL_NOT_SUPPORTED`: the person is an AI bot.
+  - `REMOVE_NOT_ALLOWED`: Messenger does not allow it; do not guess why.
+
+- Once the removal has been sent, any other failure, including `REMOVE_FAILED`, a timeout or an unreadable response, means it may have happened: say the outcome is unknown and suggest checking the group in Messenger.
+
 ## Marketplace messages
 
 - Use `marketplace initiate` only when the user asks to contact the seller of a specific listing. Resolve the listing and its positive numeric ID, preview the listing title or URL and the exact message as a blockquote, and wait for confirmation:

@@ -146,6 +146,11 @@
 
 ## 4. Self-improvement outputs
 
+- Leave `~/workspace/self_improvement/migrations/` intact, including
+  `copy_first_objective_workspace_v1.json`. These files are platform migration
+  bookkeeping, not personal memory or objective output. Sharing a parent
+  directory with personal content does not make them cleanup targets.
+
 - Review both finished and in-flight runs whose evidence window included the
   subject:
 

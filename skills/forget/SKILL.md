@@ -24,6 +24,8 @@
 
 - Use the tool or product action that owns each item and preserve unrelated content. Refresh anything derived from what changed and verify from fresh state.
 
+- Preserve platform configuration and migration bookkeeping even when the user asks to forget everything. Do not bulk-truncate files or replace structured state with `{}`; clean approved personal content through its owning action.
+
 - Make a revised plan instead of broadening the cleanup when the situation has materially changed or there is no safe way to clean up one place.
 
 - For shopping preferences, check `~/memory/shopping/PROFILE.md` directly and edit or remove the matching entries. Verify that no staged, queued, running or scheduled shopping-profile run can restore them.

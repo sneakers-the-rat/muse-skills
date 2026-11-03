@@ -1,0 +1,36 @@
+select count(*)::bigint from memory.entriesselect value from memory.metadata where key = $1 limit 1select exists(select 1 from memory.entries)insert into memory.metadata (key, value, updated_at)
+                     values ($1, $2, now())
+                     on conflict (key) do update set value = excluded.value, updated_at = excluded.updated_atset local hnsw.iterative_scan = 'strict_order'select e.memory_uri,
+                            greatest(
+                                0.0::double precision,
+                                1.0::double precision - (emb.embedding <=> $1::vector)
+                            ) as similarity
+                     from memory.embeddings emb
+                     join memory.entries e on e.memory_entry_id = emb.memory_entry_id
+                     where ($3::text is null or starts_with(e.citation_path, $3))
+                     order by emb.embedding <=> $1::vector
+                     limit $2with q as (select websearch_to_tsquery('english', $1) as query)
+                     select e.memory_uri,
+                            ts_rank_cd(sd.search_vector, q.query)::double precision as rank_score
+                     from memory.entries e
+                     cross join q
+                     join runtime.search_documents sd
+                       on sd.owner_table = 'memory.entries'
+                      and sd.owner_key = e.memory_uri
+                     where sd.search_vector @@ q.query
+                       and ($3::text is null or starts_with(e.citation_path, $3))
+                     order by rank_score desc,
+                              e.created_at desc
+                     limit $2select claim_id, supersedes_claim_id from memory.claimsdelete from memory.claimsselect claim_id from memory.claims
+                     where claim_id = $1
+                        or (status = 'active' and rtrim(lower(regexp_replace(claim_text, '\s+', ' ', 'g')), '.!?') = $2)
+                     order by (claim_id = $1) desc, first_seen asc
+                     limit 1update memory.claims
+                         set reinforced_at = greatest(reinforced_at, $2),
+                             updated_at = now()
+                         where claim_id = $1insert into memory.claims
+                           (claim_id, run_id, kind, salience, claim_text, quote, speaker,
+                            evidence_handles, status, confidence, first_seen, reinforced_at,
+                            valid_until, source_path, source_line)
+                         values ($1, $2, $3, $4, $5, $6, $7, $8, 'active', $9, $10, $10, $11, $12, $13)
+                         on conflict (claim_id) do nothing
