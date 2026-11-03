@@ -1,0 +1,258 @@
+.cachepeer-portraitsdropping unclaimed peer connection portraitvoice_out_of_credits_blockedvoice_out_of_credits_end_callui.set.voice.end_callmanifest.yamlmanifest.ymlfailed to parse connector manifest; consent screen omittedmeta_catalog_searchversion: 1
+metadata:
+  visible_in_settings: true
+auth: none
+connector: meta_catalog_search
+category: social
+display_name: Meta Catalog
+description: Enable Muse shopping with faster results and more choice
+icon: meta_catalog_search
+actions:
+  read:
+    default: allow
+    label: Read permissions
+    methods:
+      catalog.search:
+        label: Search
+        approval_phrase: search Meta's product catalog
+consent_screen:
+  bullets:
+    - icon: info
+      title: "You choose what Muse can do"
+      text: "By default, Muse will ask before taking actions it thinks need review. Disconnect at any time in Settings."
+    - icon: caution
+      title: "Keep an eye on things"
+      text: "Muse may take unexpected actions. Monitor it carefully."
+  callout_title: "Non-confidential connector"
+  footer_paragraphs:
+    - text: "Meta Catalog works by connecting through Meta, which means the info exchanged will be visible to Meta. [Learn more](https://muse.ai/privacy)"
+      variants:
+        confidential_vm:
+          text: "Meta Catalog works by connecting through Meta, which means the info exchanged will be visible to Meta. [Learn more](https://muse.ai/privacy)"
+          placement: callout
+    - text: "Muse will exchange info with Meta. To learn more, view their [terms](https://www.facebook.com/legal/terms) and [privacy policy](https://www.facebook.com/privacy/policy/)."
+version: 1
+metadata:
+  visible_in_settings: true
+auth:
+  provider: shop-pay
+  required: true
+connector: shop-pay
+category: wallet
+display_name: Shop Pay
+icon: shop_pay
+description: Make secure purchases across millions of stores
+actions:
+  write:
+    default: ask
+    label: Write and delete permissions
+    methods:
+      payment_approval.create:
+        approval_policy: dedicated_consent
+        # Shop Pay uses the same delegated-spend permission shape as Stripe
+        # Link: only spend creation is user-managed. Wallet reads use the
+        # connected credential, payment-method management returns a
+        # provider-hosted interaction, and cancellation only releases an
+        # existing approval.
+        label: Create spend requests
+        approval_phrase: approve a payment from your Shop Pay wallet
+commands:
+  auth.start: null
+  auth.inspect: null
+  auth.userinfo: null
+  payment_methods.list: null
+  payment_methods.add: null
+  shipping_addresses.list: null
+  checkout-approve: payment_approval.create
+  browser-native-checkout-prepare: null
+  browser-native-checkout-create-approved: payment_approval.create
+  browser-native-checkout-cancel: null
+  browser-card-checkout-prepare: null
+  browser-card-checkout-create-approved: payment_approval.create
+  browser-card-checkout-retrieve: null
+
+consent_screen:
+  bullets:
+    - icon: data_types
+      title: "Level up with Shop Pay"
+      text: "Muse will access things like the last four digits of your credit card and your shipping address. Muse cannot access your full credit card details."
+    - icon: info
+      title: "You choose what Muse can do"
+      text: "By default, Muse will ask before taking actions it thinks need review. Disconnect at any time in Settings."
+    - icon: caution
+      title: "Keep an eye on things"
+      text: "Muse may take unexpected actions. Monitor it carefully."
+  footer_paragraphs:
+    - "The info used for your tasks is part of your interactions with Muse, which we may use to improve AI at Meta. You can manage this in Settings. [Learn more](https://www.facebook.com/privacy/genai/)"
+    - "Muse will exchange info with Shop Pay. To learn more, view Shopify's [terms](https://www.shopify.com/legal/terms) and [privacy policy](https://www.shopify.com/legal/privacy)."
+onepasswordversion: 1
+metadata:
+  visible_in_settings: true
+auth:
+  provider: onepassword
+  required: true
+cli:
+  binary: onepassword
+  skill: onepassword
+connector: onepassword
+category: productivity
+display_name: 1Password
+description: Securely use your passwords and vault items. You’ll need the 1Password app installed on this device.
+icon: onepassword
+actions:
+  read:
+    default: allow
+    label: Read information from 1Password
+    response_guard: verification_codes
+commands:
+  authorize-url: null
+consent_screen:
+  bullets:
+    - icon: data_types
+      title: "Level up with 1Password"
+      text: "Muse will use logins you choose to share."
+    - icon: info
+      title: "You choose what Muse can do"
+      text: "By default, Muse will ask before taking actions it thinks need review. Disconnect at any time in Settings."
+    - icon: caution
+      title: "Keep an eye on things"
+      text: "Muse may take unexpected actions. Monitor it carefully."
+  footer_paragraphs:
+    - "The info used for your tasks is part of your interactions with Muse, which we may use to improve AI at Meta. You can manage this in Settings. [Learn more](https://muse.ai/privacy)"
+    - "Muse will exchange info with 1Password. To learn more, view their [terms](https://1password.com/legal/terms-of-service) and [privacy policy](https://1password.com/legal/privacy)."
+version: 1
+metadata:
+  visible_in_settings: true
+auth:
+  provider: stripe-link
+  required: true
+connector: stripe-link
+category: wallet
+display_name: Link by Stripe
+icon: stripe
+description: Make secure payments and protect your purchases
+request_quota:
+  mode: shadow
+  workers:
+    - stripe-link
+    # The checkout-card restricted-socket worker family
+    # (com.hatch.stripe-link-checkout-card@.service). Same connector target as
+    # the primary worker, so this grants no extra quota. Without it the
+    # restricted worker's cgroup resolves to no binding, making the request
+    # UNCLASSIFIED -- and unclassified admission follows the fleet-default
+    # Enforce manager mode (SentinelConnectorQuotaEnforcementEnabled), which
+    # fails closed before any provider call. This connector-level shadow mode
+    # only softens quota exceedance for requests that classify.
+    - stripe-link-checkout-card
+actions:
+  read:
+    default: allow
+    label: Read permissions
+    methods:
+      financial_insights:
+        label: Read transactions
+        requires_capabilities:
+          - financial_insights
+  write:
+    default: ask
+    label: Write and delete permissions
+    methods:
+      spend_requests.create_delegated:
+        approval_policy: dedicated_consent
+        label: Create spend requests
+      spend_requests.transfer_ownership:
+        approval_policy: dedicated_consent
+        label: Manage spend requests
+
+consent_screen:
+  bullets:
+    - icon: data_types
+      title: "Level up with Link by Stripe"
+      text: "Muse will access things like the last four digits of your credit card and your address. Muse cannot access your full credit card details, account or routing numbers."
+    - icon: info
+      title: "You choose what Muse can do"
+      text: "By default, Muse will ask before taking actions it thinks need review. Disconnect at any time in Settings."
+    - icon: caution
+      title: "Keep an eye on things"
+      text: "Muse may take unexpected actions. Monitor it carefully."
+  footer_paragraphs:
+    - "The info used for your tasks is part of your interactions with Muse, which we may use to improve AI at Meta. You can manage this in Settings. [Learn more](https://www.facebook.com/privacy/genai/)"
+    - "Muse will exchange info with Link by Stripe. To learn more, view their [terms](https://stripe.com/legal/link) and [privacy policy](https://stripe.com/privacy)."
+tailscaleversion: 1
+metadata:
+  visible_in_settings: true
+auth:
+  provider: tailscale
+  required: true
+connector: tailscale
+category: productivity
+display_name: Tailscale
+description: Securely connect to the devices on your private network
+icon: tailscale
+actions:
+  auth:
+    default: ask
+    label: Join or leave a Tailscale network
+    methods:
+      tailscale.up:
+        label: Join a Tailscale network
+      # Split from tailscale.up because the argument decides WHOSE network
+      # this device joins: a standing allow on the plain join must never
+      # cover a join that hands the node to a different control server.
+      # The manifest policy blocks persistent Allow. Task-scoped Allow also
+      # requires a write action, so this auth method remains single-use-or-deny.
+      tailscale.up_login_server:
+        approval_policy: fresh_consent_or_task_allow
+        label: Join via a custom control server
+        approval_phrase: join a Tailscale network via a custom control server
+      tailscale.down:
+        label: Leave and forget this device
+  read:
+    default: allow
+    label: Read Tailscale status
+    methods:
+      tailscale.status:
+        label: Connection status and devices
+        approval_phrase: view connection status and devices in Tailscale
+      tailscale.ip:
+        label: This device's Tailscale addresses
+        approval_phrase: view this device's Tailscale addresses
+commands:
+  up: tailscale.up
+  down: tailscale.down
+  status: tailscale.status
+  ip: tailscale.ip
+
+consent_screen:
+  bullets:
+    - icon: data_types
+      title: "Level up with Tailscale"
+      text: "Muse will access things like device names and network addresses, and the data returned from your devices."
+    - icon: info
+      title: "You choose what Muse can do"
+      text: "By default, Muse will ask before taking actions it thinks need review. Disconnect at any time in Settings."
+    - icon: caution
+      title: "Keep an eye on things"
+      text: "Muse may take unexpected actions. Monitor it carefully."
+  footer_paragraphs:
+    - "The info used for your tasks is part of your interactions with Muse, which we may use to improve AI at Meta. You can manage this in Settings. [Learn more](https://www.facebook.com/privacy/genai/)"
+    - "Muse will exchange info with Tailscale. To learn more, view their [terms](https://tailscale.com/terms) and [privacy policy](https://tailscale.com/privacy-policy)."
+no_imagesuncollectedno_videoss.metaaiusercontent.comparse browser task channel contextparse browser task root messageSurface the supplied terminal summary. Preserve its uncertainty and do not retry, continue, or finish the browser task.BROWSER TASK TERMINAL UPDATEterminal_revisionordernot_placedThis window ended while its checkout was still waiting for the user's payment approval. That checkout sent no order and entered no payment, and the order is placed only after the approval, so the browser did not place this order. Tell the user plainly that the order was not placed; this settles any doubt in the summary about whether the browser placed it, though not about anything the user did themselves.
+checkout_approvalpending_resumeThe existing payment approval remains attached to this checkout. Tell the user that approving that card will resume the same checkout after its browser is reopened and its purchase terms are checked. Do not start a replacement browser task, ask for a second approval, or tell the user to place the order separately while this approval can still resume it. If the user wants to abandon or replace the purchase, call `browser.windows` with `action: "close"` and this task's `task_id`. Wait for successful cancellation before starting replacement work; a tool error does not confirm cancellation.
+approved_resumeThe user has already approved the saved checkout, and the runtime will resume it after cleanup and admission finish. Tell the user that the existing checkout is resuming; approval is not evidence that the order was placed. Do not start a replacement browser task, request another approval, or tell the user to order separately while this checkout can still resume. If the user wants to abandon or replace the purchase, call `browser.windows` with `action: "close"` and this task's `task_id`. Wait for successful cancellation before starting replacement work; a tool error does not confirm cancellation.
+Tell the user that the browser task ended before it used the browser and did not take any action on a website. Do not retry or continue the browser task.parse browser task presentation root for terminal updatebridgecompletionvoice_lifecycleinvitation_admittedadmission_recoveredchat publication retiredchat_publication_preparationThe character from the first reference image and the character from the second reference image holding hands and waving at the camera in a plain white space. Keep each character exactly as it looks in its reference image. No text.
+Your owner just connected with a new contact on Muse. Both people confirmed the connection, so you and the contact's Muse can now collaborate. Your owner manages their connections and sharing rules in Connections. The details below identify the contact, their Muse and your conversation. Leave out any name that's missing.
+
+Let your owner know the connection was successful, and that this means you can now collaborate with the contact's Muse.
+
+When a picture is listed, it shows you and the contact's Muse holding hands, made for this moment, and the file already exists. Include it on its own line after a complete sentence, as `![Me and <the contact's Muse>](<picture path>)`.
+
+End with one short offer they can skip, to set up how you'll work with the contact's Muse, like "Want to take a minute to tell me how to handle Robin? I'll keep it quick." Use the contact's Muse's name, or the contact's name if the Muse's is missing. Only offer once, and don't use any tools in this reply. Don't add other suggestions, tips, or questions.
+
+If your owner says no or doesn't answer, let it go. If they want to set it up, use what you already know and ask only for the missing context: how they know the person, what they would like you to work on together, and what may be shared. Keep it conversational, with one short question at a time.
+
+Save relationship facts on the person's page in `~/memory/people/`. Save explicit standing sharing instructions with `connection.set_rule`, using `connection.get` to read the current rules and revision first. Keep existing rules unless the user changes them. A one-time request stays one-time. Briefly confirm what you saved without asking the user to approve their own clear instruction again.
+
+A matching deny blocks a message. An allow must cover the whole message and its attachments for automatic sending. Other drafts come to you privately to review, edit or decline with `connection.review_message`. Ask the user only when a material choice is unclear.
+## New connection
+unknown_to_absentunknown_to_presentpresent_to_absentabsent_to_presentpresent_to_presentconnector_status_cacheevent hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/streaming/stream_pipeline/media_resources.rs:351hatch_server::daemon::streaming::stream_pipeline::media_resourceshatch_daemon_services::media_resourceshatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/streaming/stream_pipeline/media_resources.rsevent hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/reply_to_target.rs:387hatch_server::daemon::reply_to_targethatch_daemon_services::reply_to_targethatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/reply_to_target.rsevent hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/artifact_projection.rs:372hatch_server::daemon::artifact_projectionhatch_daemon_services::artifact_projectionhatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/artifact_projection.rsevent hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/hatch_profile_sync/snapshot.rs:545hatch_server::daemon::runtime::hatch_profile_sync::snapshothatch_daemon_services::hatch_profile_sync::snapshothatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/hatch_profile_sync/snapshot.rsevent hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/hatch_profile_sync/snapshot.rs:585event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/hatch_profile_sync/snapshot.rs:594event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/hatch_profile_sync/snapshot.rs:549event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/hatch_profile_sync/snapshot.rs:247event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/hatch_profile_sync/snapshot.rs:252event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/execute_resolve_worker/agent_run.rs:461hatch_server::daemon::runtime::execute_resolve_worker::agent_runrun_idhatch_daemon_services::execute_resolve_worker::agent_runhatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/execute_resolve_worker/agent_run.rsevent hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/egress_approval_runtime/session_lifecycle.rs:221hatch_server::daemon::runtime::egress_approval_runtime::session_lifecyclehatch_daemon_services::egress_approval_runtime::session_lifecyclehatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/egress_approval_runtime/session_lifecycle.rsevent hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/peers/connection_portrait.rs:169hatch_server::daemon::peers::connection_portraitelapsed_mshatch_daemon_services::peers::connection_portraithatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/peers/connection_portrait.rsevent hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/peers/connection_portrait.rs:177event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/peers/connection_portrait.rs:173event hatch-engine/crates/hatch-daemon-services/src/worker_support/../../../hatch-server/src/daemon/runtime/browser_task_terminal_update.rs:406hatch_server::daemon::runtime::browser_task_terminal_updatehatch_daemon_services::worker_support::runtime::browser_task_terminal_updatehatch-engine/crates/hatch-daemon-services/src/worker_support/../../../hatch-server/src/daemon/runtime/browser_task_terminal_update.rsevent hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/streaming/browser_monitor/projection/handoff.rs:85hatch_server::daemon::streaming::browser_monitor::projection::handoffhatch_daemon_services::browser_runtime::browser_monitor::projection::handoffhatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/streaming/browser_monitor/projection/handoff.rsevent hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/streaming/browser_task_lifecycle/retained_outcome/settlement.rs:670hatch_server::daemon::streaming::browser_task_lifecycle::retained_outcome::settlementhatch_daemon_services::browser_runtime::browser_task_lifecycle::retained_outcome::settlementhatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/streaming/browser_task_lifecycle/retained_outcome/settlement.rsevent hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/pin_reminder.rs:142hatch_server::daemon::pin_reminderattemptmax_attemptshatch_daemon_services::pin_reminderhatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/pin_reminder.rsevent hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/streaming/stream_pipeline/media_resources.rs:145event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/streaming/stream_pipeline/media_resources.rs:171event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/streaming/stream_pipeline/media_resources.rs:371event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/streaming/stream_pipeline/media_resources.rs:303event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/streaming/stream_pipeline/media_resources.rs:38event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/reply_to_target.rs:669idea_countevent hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/reply_to_target.rs:738unit_countevent hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/reply_to_target.rs:369event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/reply_to_target.rs:421event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/reply_to_target.rs:439event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/reply_to_target.rs:457event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/reply_to_target.rs:406event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/reply_to_target.rs:810message_countevent hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/reply_to_target.rs:1151event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/reply_to_target.rs:1177event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/reply_to_target.rs:1166event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/reply_to_target.rs:888presentation_countevent hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/reply_to_target.rs:555event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/reply_to_target.rs:1103event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/startup/daemon_service/rv_identity.rs:186hatch_server::daemon::startup::daemon_service::rv_identitymarkerhatch_daemon_services::startup_identityhatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/startup/daemon_service/rv_identity.rsevent hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/startup/daemon_service/rv_identity.rs:192parked_msevent hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/startup/daemon_service/rv_identity.rs:125parked_duration_msevent hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/startup/daemon_service/rv_identity.rs:150event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/startup/daemon_service/rv_identity.rs:253proofproof_failure_reasonwait_budget_msevent hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/startup/daemon_service/rv_identity.rs:262event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/artifact_projection.rs:617event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/artifact_projection.rs:564event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/product_messages/notification_opt_in.rs:185hatch_server::product_messages::notification_opt_inhatch_daemon_services::notification_opt_inhatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/product_messages/notification_opt_in.rsevent hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/product_messages/notification_opt_in.rs:278event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/product_messages/notification_opt_in.rs:235event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/product_messages/notification_opt_in.rs:433event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/browser_blocked_sites.rs:13hatch_daemon_services::browser_blocked_siteshatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/browser_blocked_sites.rsevent hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/daemon_loop/scheduled_root_messages.rs:192hatch_server::daemon::runtime::daemon_loop::scheduled_root_messagesroot_session_idvoice_call_idhatch_daemon_services::scheduled_root_messageshatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/daemon_loop/scheduled_root_messages.rsevent hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/daemon_loop/scheduled_root_messages.rs:199event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/daemon_loop/scheduled_root_messages.rs:569event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/daemon_loop/scheduled_root_messages.rs:246root_work_classevent hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/daemon_loop/scheduled_root_messages.rs:301event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/daemon_loop/scheduled_root_messages.rs:409event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/daemon_loop/scheduled_root_messages.rs:422waited_msevent hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/daemon_loop/scheduled_root_messages.rs:435event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/daemon_loop/scheduled_root_messages.rs:293event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/peers.rs:327hatch_server::daemon::peershatch_daemon_services::peershatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/peers.rsevent hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/rtc_stats.rs:293hatch_server::daemon::rtc_statshatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/rtc_stats.rsevent hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/rtc_stats.rs:312stats_typeevent hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/rtc_stats.rs:301event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/rtc_stats.rs:346event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/rtc_stats.rs:360event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/rtc_stats.rs:375event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/rtc_stats.rs:355event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/rtc_stats.rs:272event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/rtc_stats.rs:491event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/rtc_stats.rs:427event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/streaming/subagent_relay/completion.rs:136hatch_server::daemon::streaming::subagent_relay::completionhatch_daemon_services::subagent_relay::completionhatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/streaming/subagent_relay/completion.rsevent hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/streaming/subagent_relay/completion.rs:862event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/streaming/subagent_relay/completion.rs:1366event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/streaming/subagent_relay/completion.rs:1372event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/streaming/subagent_relay/completion.rs:166expected_voice_call_idlive_voice_call_idevent hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/streaming/subagent_relay/completion.rs:1619event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/streaming/subagent_relay/completion.rs:1670event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/streaming/subagent_relay/completion.rs:1662event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/voice_shortlist_recompute.rs:605hatch_daemon_services::voice_selection::precomputehatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/voice_shortlist_recompute.rsevent hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/voice_shortlist_recompute.rs:610event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/voice_shortlist_recompute.rs:608event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/voice_shortlist_recompute.rs:790event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/voice/preview_line_policy.rs:56hatch_server::daemon::voice::preview_line_policyhatch_daemon_services::voice_selection::preview_line_policyhatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/voice/preview_line_policy.rsevent hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/voice_selection_write.rs:557hatch_server::daemon::runtime::voice_selection_writehatch_daemon_services::voice_selection::writehatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/voice_selection_write.rsevent hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/voice_selection_write.rs:166event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/voice_selection_write.rs:179replacementevent hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/voice_selection_write.rs:349event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/artifact_catalog/sharing.rs:191hatch_server::daemon::artifact_catalog::sharinghatch_daemon_services::artifact_catalog::sharinghatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/artifact_catalog/sharing.rsevent hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/artifact_catalog/sharing.rs:280classupstream_statusevent hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/fileserver_events/watcher.rs:340hatch_server::daemon::runtime::fileserver_eventsrecursivehatch_daemon_services::fileserver_events::watcherhatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/fileserver_events/watcher.rsevent hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/fileserver_events/watcher.rs:413event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/fileserver_events/watcher.rs:440event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/fileserver_events/watcher.rs:346event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/data_source_ingest/reconciled.rs:51hatch_server::daemon::data_source_ingest::reconciledproducer_idhatch_daemon_services::data_source_ingest::reconciledhatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/data_source_ingest/reconciled.rsevent hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/data_source_ingest/reconciled.rs:60delivery_appevent hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/hatch_profile_sync/snapshot.rs:521event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/hatch_profile_sync/snapshot.rs:221event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/hatch_profile_sync/snapshot.rs:493event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/hatch_profile_sync/snapshot.rs:499event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/websocket/chat_commands/usage_footer.rs:33hatch_server::daemon::websocket::chat_commands::usage_footerhatch_daemon_services::chat_command_support::usage_footerhatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/websocket/chat_commands/usage_footer.rsevent hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/execute_resolve_worker/agent_run.rs:154event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/egress_approval_runtime/session_lifecycle.rs:119event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/egress_approval_runtime/session_lifecycle.rs:42event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/egress_approval_runtime/session_lifecycle.rs:300event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/egress_approval_runtime/session_lifecycle.rs:330event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/egress_approval_runtime/session_lifecycle.rs:316event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/egress_approval_runtime/session_lifecycle.rs:387event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/egress_approval_runtime/startup_reconciliation.rs:305hatch_server::daemon::runtime::egress_approval_runtime::startup_reconciliationwork_idhatch_daemon_services::egress_approval_runtime::startup_reconciliationhatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/egress_approval_runtime/startup_reconciliation.rsevent hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/egress_approval_runtime/startup_reconciliation.rs:338event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/egress_approval_runtime/startup_reconciliation.rs:345event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/egress_approval_runtime/startup_reconciliation.rs:320event hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/egress_approval_runtime/startup_reconciliation.rs:593work_classevent hatch-engine/crates/hatch-daemon-services/src/../../hatch-server/src/daemon/runtime/egress_approval_runtime/startup_reconciliation.rs:630

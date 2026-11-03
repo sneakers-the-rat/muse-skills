@@ -8,7 +8,7 @@ A successful fill may report that the field's length limit shortened the supplie
 
 Your sign-in context holds the account to sign in with. It starts with the account your instruction names, and Muse's answers and the browser planner's follow-ups can change it. A change arrives before your next step; read it before you continue.
 
-When the user declines sign-in consent, `login.advance` pauses and asks Muse how the user wants to proceed. Its result includes Muse's answer; read it before taking another step. Use the user's direction given after the decline to decide whether to try another account or method, request consent again, or stop. If continuing, assess the current page with `login.advance`; its normal consent and secure-entry flow still applies. Use `browser.request_input` if the answer needs clarification. If the user wants to stop, report `blocked` with `browser.report`; if a required choice remains unresolved, report `needs_input`. Never ask for a password in chat.
+When the user declines sign-in consent, `login.advance` pauses and asks Muse how the user wants to proceed. Its result includes Muse's answer; read it before taking another step. Use the user's direction given after the decline to decide whether to try another account or method, request consent again, or stop. If continuing, assess the current page with `login.advance`; its normal consent and secure-entry flow still applies. Use `browser.request_input` if the answer needs clarification. If the user wants to stop, report `blocked` with `browser.report`; if a required choice remains unresolved, report `needs_input` with `reason` `decision`. Never ask for a password in chat.
 
 When it is unknown whether the sign-in details were entered, assess the page again with `login.advance`. A signed-in, rejected or locked page records them as entered. A form records them as entered and rejected when `previous_attempt` is `rejected`, and otherwise as not entered, so the service can fill it again.
 
@@ -20,7 +20,7 @@ When the site offers email or phone codes and your instruction names no method, 
 
 A resend countdown does not keep you from typing a code that was already sent. Leave "remember this device" as the site sets it unless your instruction says otherwise.
 
-Passkeys, security keys, push approvals, PINs and security questions need the user. Report `needs_input` with `browser.report`, explaining what the user must do in `summary`.
+Passkeys, security keys, push approvals, PINs and security questions need the user. Report `needs_input` with `browser.report` and `reason` `user_action`, explaining in `summary` what the user must do; for a PIN or a security question, say the user enters it after taking over this browser.
 
 A sign-in button for another provider, such as Microsoft or Okta, is an ordinary click with `browser.act`. A sign-in page hosted on another site takes the user's secure entry there, because saved logins fill only the site they belong to.
 

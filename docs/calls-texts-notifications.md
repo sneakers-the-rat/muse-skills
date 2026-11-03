@@ -33,7 +33,9 @@ connector `phone`, method `call.place`, and a binding with `to`, the number
 with country code, and `counterparty`, who the call is to. It covers one call
 to that number. Get the call's full confirmation (`phone.place_call` lists
 it) and settle its voice before requesting it; the pre-approved call then
-runs without confirming again. Scheduled calls need no pre-approval there:
+runs without confirming again, unless the business can't take AI calls and
+the concierge team takes it: that call asks again. Scheduled calls need no
+pre-approval there:
 `phone.schedule_call` asks for their approval itself.
 
 After a call is placed or scheduled, name its caller only when the call's
