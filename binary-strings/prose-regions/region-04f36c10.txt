@@ -1,0 +1,493 @@
+
+SELECT e.payload_json
+FROM runtime.events AS e
+WHERE e.parent_agent_id = $1
+  AND e.event_name = 'message.user'
+  AND e.visibility = 'public'
+  AND e.transcript_surface = 'main_chat'
+  AND e.source IN ('runtime', 'runtime.voice_audio')
+ORDER BY e.event_seq DESC
+LIMIT 1
+
+SELECT DISTINCT ON (e.message_id) e.message_id, e.payload_json
+FROM runtime.events AS e
+WHERE e.message_id = ANY($1)
+  AND e.event_name IN ('message.user', 'message.assistant', 'message.internal')
+ORDER BY e.message_id, e.event_seq DESC
+SELECT DISTINCT e.message_id, COALESCE(NULLIF(TRIM(e.agent_id), ''), e.parent_agent_id) AS input_agent_id, s.metadata_json FROM runtime.events e LEFT JOIN agent.subagent_spawns s ON $3::text IS NOT NULL AND e.agent_id <> $1 AND s.child_agent_id = e.agent_id AND s.agent_type = 'browser_task' WHERE e.message_id = ANY($2) AND e.event_name IN ('message.user', 'message.internal')input_agent_id
+SELECT e.event_seq AS seq
+FROM runtime.events e
+JOIN runtime.event_payload_fields f ON f.event_seq = e.event_seq
+WHERE COALESCE(NULLIF(TRIM(e.agent_id), ''), e.parent_agent_id) =
+
+  AND event_name IN ('message.user', 'message.assistant')
+  AND f.field_path = '/metadata/context_seq'
+  AND NULLIF(COALESCE(f.text_value, f.scalar_value), '')::bigint IN (
+
+SELECT NULLIF(BTRIM(COALESCE(
+         tz.text_value,
+         tz.scalar_value,
+         e.payload_json::jsonb #>> '{metadata,client_timezone}'
+       )), '') AS client_timezone
+FROM runtime.events AS e
+LEFT JOIN runtime.event_payload_fields AS tz ON tz.event_seq = e.event_seq
+  AND tz.field_path = '/metadata/client_timezone'
+WHERE e.event_name = 'message.user'
+  AND e.visibility = 'public'
+  AND e.source IN ('runtime', 'runtime.voice_audio')
+  AND e.event_seq >= (
+    SELECT min(seq)
+    FROM (
+      SELECT e2.event_seq AS seq
+      FROM runtime.events AS e2
+      WHERE e2.event_name = 'message.user'
+        AND e2.visibility = 'public'
+        AND e2.source IN ('runtime', 'runtime.voice_audio')
+      ORDER BY e2.event_seq DESC
+      LIMIT 100
+    ) recent
+  )
+  AND NULLIF(BTRIM(COALESCE(
+        tz.text_value,
+        tz.scalar_value,
+        e.payload_json::jsonb #>> '{metadata,client_timezone}'
+      )), '') IS NOT NULL
+ORDER BY e.event_seq DESC
+LIMIT 1
+
+SELECT e.event_seq AS seq
+FROM runtime.events e
+WHERE parent_agent_id = $1
+  AND (
+    (
+      event_name IN ('message.user', 'message.assistant')
+      AND EXISTS (
+        SELECT 1 FROM runtime.event_payload_fields f
+        WHERE f.event_seq = e.event_seq
+          AND f.field_path = '/metadata/tool_call_id'
+          AND COALESCE(f.text_value, f.scalar_value) = ANY($2::text[])
+      )
+    )
+    OR (
+      event_name IN ('tool_call.started', 'tool_call.completed')
+      AND EXISTS (
+        SELECT 1 FROM runtime.event_payload_fields f
+        WHERE f.event_seq = e.event_seq
+          AND f.field_path = '/tool_id'
+          AND COALESCE(f.text_value, f.scalar_value) = ANY($2::text[])
+      )
+    )
+)
+select distinct on (e.message_id) e.message_id,
+                        (extract(epoch from e.created_at) * 1000)::bigint AS occurred_at_ms,
+                        m.body
+                 from runtime.events e
+                 join runtime.messages m on m.event_seq = e.event_seq
+                 left join runtime.event_payload_fields status on status.event_seq = e.event_seq
+                   and status.field_path = '/status'
+                 where e.reply_to_message_id = any($1::text[])
+                   and e.event_name = 'message.assistant' and e.role = 'assistant'
+                   and e.source = 'runtime' and e.visibility = 'public'
+                   and e.transcript_surface = 'main_chat' and e.display_text_ready = true
+                   and coalesce(status.text_value, status.scalar_value,
+                                e.payload_json::jsonb->>'status') = $2
+                 order by e.message_id, e.event_seq descselect distinct on (e.reply_to_message_id)
+                        e.reply_to_message_id, e.message_id, m.body
+                 from runtime.events e
+                 join runtime.messages m on m.event_seq = e.event_seq
+                 left join runtime.event_payload_fields status on status.event_seq = e.event_seq
+                   and status.field_path = '/status'
+                 where e.reply_to_message_id = any($1::text[])
+                   and e.event_name = 'message.assistant' and e.role = 'assistant'
+                   and e.source = 'runtime' and e.visibility = 'public'
+                   and e.transcript_surface = 'main_chat' and e.display_text_ready = true
+                   and coalesce(status.text_value, status.scalar_value,
+                                e.payload_json::jsonb->>'status') = $2
+                 order by e.reply_to_message_id, e.event_seq descSELECT EXISTS (
+                        SELECT 1 FROM runtime.events e
+                        JOIN runtime.messages m ON m.event_seq = e.event_seq
+                        WHERE e.parent_agent_id = $1 AND e.reply_to_message_id = $2
+                          AND e.event_name = 'message.assistant' AND e.role = 'assistant'
+                          AND e.source = 'runtime' AND e.visibility = 'public'
+                          AND e.transcript_surface = 'main_chat'
+                          AND e.display_text_ready = true AND BTRIM(m.body) <> ''
+                    )select exists(select 1 from agent.subagent_spawns
+                 where parent_agent_id = $1 and parent_message_id = $2
+                   and seen_at is null)present
+UPDATE chat_event_derived_write_backlog
+SET attempts = attempts + 1,
+    last_error = $2,
+    deadlettered_at = CASE
+        WHEN attempts + 1 >= $3 THEN now()
+        ELSE deadlettered_at
+    END,
+    updated_at = now()
+WHERE event_seq = $1
+RETURNING deadlettered_at IS NOT NULL
+DELETE FROM chat_event_derived_write_backlog WHERE event_seq = $1
+SELECT
+  e.event_seq,
+  e.event_name,
+  (extract(epoch from e.created_at) * 1000)::bigint AS occurred_at_ms,
+  e.payload_json,
+  CASE
+    WHEN e.event_name = 'delta.presentation' THEN NULLIF(m.body, '')
+    ELSE m.body
+  END AS display_text,
+  e.chat_context_json,
+  b.resources_json
+FROM chat_event_derived_write_backlog b
+JOIN events e ON e.event_seq = b.event_seq
+LEFT JOIN messages m ON m.event_seq = e.event_seq
+WHERE b.deadlettered_at IS NULL
+  AND b.attempts < $2
+  AND e.payload_json IS NOT NULL
+ORDER BY b.created_at ASC, b.event_seq ASC
+LIMIT $1
+chat event derived backlog drain limit
+SELECT MAX(event_seq)
+FROM runtime.events
+chat_context_jsonsource
+SELECT message_id
+FROM events
+WHERE reply_to_message_id = $1
+  AND message_id IS NOT NULL
+UNION
+SELECT message_id
+FROM events
+WHERE reply_target_message_id = $1
+  AND message_id IS NOT NULL
+event_nameparent_agent_idparent_message_id
+SELECT e.event_seq
+FROM events AS e
+WHERE e.event_name = 'message.assistant'
+  AND e.visibility = 'public'
+  AND EXISTS (
+    SELECT 1
+    FROM jsonb_array_elements_text(coalesce(e.payload_json::jsonb -> 'widget_ids', '[]'::jsonb)) AS widget_ids(value)
+    WHERE widget_ids.value = $1
+  )
+ORDER BY e.event_seq DESC
+LIMIT 1
+
+SELECT e.event_seq
+FROM events AS e
+WHERE e.event_name = 'delta.presentation'
+  AND e.visibility = 'public'
+  AND e.payload_json::jsonb ->> 'id' = $1
+ORDER BY e.event_seq DESC
+LIMIT 1
+
+WITH requested(citation_id) AS (
+  SELECT DISTINCT citation_id
+  FROM unnest($2::text[]) AS requested(citation_id)
+), latest_event_per_citation AS (
+  SELECT requested.citation_id, max(e.event_seq) AS event_seq
+  FROM requested
+  JOIN runtime.event_payload_fields AS entity_id
+    ON entity_id.scalar_type = 'string'
+   AND entity_id.text_value IS NOT NULL
+   AND entity_id.field_path LIKE '/segments/%/segment/ads_entity/citation_id'
+   AND hashtextextended(entity_id.text_value, 0) =
+       hashtextextended(requested.citation_id, 0)
+   AND entity_id.text_value = requested.citation_id
+  JOIN runtime.events AS e
+    ON e.event_seq = entity_id.event_seq
+  WHERE e.parent_agent_id = $1
+    AND e.event_name = 'message.assistant'
+    AND e.visibility = 'public'
+    AND e.role = 'assistant'
+    AND e.payload_json IS NOT NULL
+  GROUP BY requested.citation_id
+), matching_events AS (
+  SELECT DISTINCT event_seq
+  FROM latest_event_per_citation
+)
+SELECT e.event_name, e.payload_json
+FROM matching_events
+JOIN runtime.events AS e USING (event_seq)
+ORDER BY e.event_seq ASC
+
+SELECT
+  *
+FROM event_transcript_rows
+WHERE seq = $1
+LIMIT 1
+
+SELECT EXISTS(
+  SELECT 1
+  FROM events
+  WHERE idempotency_key = $1
+)
+
+SELECT e.payload_json
+FROM events AS e
+WHERE message_id = $1
+  AND event_name = $2
+  AND e.payload_json IS NOT NULL
+ORDER BY event_seq DESC
+LIMIT 1
+
+SELECT e.payload_json,
+       (extract(epoch from e.created_at) * 1000)::bigint AS occurred_at_ms
+FROM events AS e
+WHERE event_name = $2
+  AND message_id = $1
+  AND e.payload_json IS NOT NULL
+ORDER BY event_seq DESC
+LIMIT 1
+
+SELECT e.payload_json,
+       (extract(epoch from e.created_at) * 1000)::bigint AS occurred_at_ms
+FROM events AS e
+WHERE reply_target_message_id = $1
+  AND event_name = $2
+  AND e.payload_json IS NOT NULL
+ORDER BY event_seq DESC
+LIMIT 1
+
+SELECT event_seq
+FROM events
+WHERE message_id = $1 AND event_name = $2
+ORDER BY event_seq DESC
+LIMIT 1
+FOR UPDATE
+
+WITH requested(citation_id) AS (
+  SELECT DISTINCT citation_id
+  FROM unnest($2::text[]) AS requested(citation_id)
+), latest_event_per_citation AS (
+  SELECT requested.citation_id, max(e.event_seq) AS event_seq
+  FROM requested
+  JOIN runtime.event_payload_fields AS entity_id
+    ON entity_id.scalar_type = 'string'
+   AND entity_id.text_value IS NOT NULL
+   AND (
+     entity_id.field_path LIKE '/data/products/%/citation_id'
+     OR entity_id.field_path LIKE '/segments/%/segment/product/citation_id'
+   )
+   AND hashtextextended(entity_id.text_value, 0) =
+       hashtextextended(requested.citation_id, 0)
+   AND entity_id.text_value = requested.citation_id
+  JOIN runtime.events AS e
+    ON e.event_seq = entity_id.event_seq
+  WHERE e.parent_agent_id = $1
+    AND e.event_name IN ('delta.presentation', 'message.assistant')
+    AND e.visibility = 'public'
+    AND e.role = 'assistant'
+    AND e.payload_json IS NOT NULL
+  GROUP BY requested.citation_id
+), matching_events AS (
+  SELECT DISTINCT event_seq
+  FROM latest_event_per_citation
+)
+SELECT e.event_name, e.payload_json
+FROM matching_events
+JOIN runtime.events AS e USING (event_seq)
+ORDER BY e.event_seq ASC
+
+SELECT e.payload_json
+FROM events AS e
+WHERE e.message_id IN ($1, $2)
+  AND e.event_name = $3
+  AND e.payload_json IS NOT NULL
+ORDER BY CASE WHEN e.message_id = $1 THEN 0 ELSE 1 END,
+         e.event_seq DESC
+LIMIT 1
+
+SELECT DISTINCT ON (e.message_id)
+       e.message_id,
+       m.body AS display_text,
+       NULLIF(COALESCE(context_seq.text_value, context_seq.scalar_value), '')::bigint
+         AS context_seq
+FROM runtime.events AS e
+LEFT JOIN runtime.messages AS m ON m.event_seq = e.event_seq
+LEFT JOIN runtime.event_payload_fields AS context_seq
+  ON context_seq.event_seq = e.event_seq
+ AND context_seq.field_path = '/metadata/context_seq'
+WHERE e.message_id = ANY($1::text[])
+  AND e.event_name = 'message.assistant'
+  AND e.visibility = 'public'
+  AND e.role = 'assistant'
+  AND e.transcript_surface = 'main_chat'
+ORDER BY e.message_id, e.event_seq DESC
+turnscount
+WITH RECURSIVE family(id) AS (
+  SELECT id FROM agent.agents WHERE id = $1 OR presentation_root_session_id = $1
+  UNION
+  SELECT a.id FROM agent.agents a JOIN family f ON a.parent_id = f.id
+)
+SELECT id FROM family
+
+DELETE FROM chat.event_transports
+WHERE event_seq IN (
+  SELECT seq
+  FROM event_transcript_rows
+  WHERE parent_agent_id = $1
+    AND transcript_surface = $2
+    AND seq >= $3
+)
+
+DELETE FROM resources
+WHERE event_seq IN (
+  SELECT seq
+  FROM event_transcript_rows
+  WHERE parent_agent_id = $1
+    AND transcript_surface = $2
+    AND seq >= $3
+)
+
+DELETE FROM search_documents sd
+USING events e
+WHERE sd.owner_table = 'runtime.events'
+  AND sd.owner_key = e.event_seq::text
+  AND e.parent_agent_id = $1
+  AND e.transcript_surface = $2::runtime.transcript_surface
+  AND e.event_seq >= $3
+SELECT agent_id, seq FROM agent.context_items WHERE message_id = ANY($1) UNION SELECT agent_id, seq FROM agent.context_item_resume_projection WHERE agent_id = ANY($2) AND provenance_json::jsonb ->> 'message_id' = ANY($1)
+DELETE FROM chat.event_transports
+WHERE event_seq IN (
+  SELECT seq FROM event_transcript_rows WHERE message_id = $1
+)
+
+DELETE FROM resources
+WHERE event_seq IN (
+  SELECT seq FROM event_transcript_rows WHERE message_id = $1
+)
+
+DELETE FROM search_documents sd
+USING events e
+WHERE sd.owner_table = 'runtime.events'
+  AND sd.owner_key = e.event_seq::text
+  AND e.message_id = $1
+
+SELECT e.message_id
+FROM runtime.events e
+JOIN runtime.event_payload_fields epf
+  ON epf.event_seq = e.event_seq
+ AND epf.field_path = '/id'
+ AND epf.scalar_type = 'string'
+WHERE e.event_name = 'delta.presentation'
+  AND e.source = 'runtime'
+  AND epf.text_value IS NOT NULL
+  AND hashtextextended(epf.text_value, 0) = hashtextextended($1, 0)
+  AND epf.text_value = $1
+
+WITH candidates AS MATERIALIZED (
+  SELECT event.event_seq FROM runtime.events AS event
+  WHERE event.display_text_ready = false
+    AND event.event_name = 'message.assistant'
+    AND event.visibility = 'public' AND event.role = 'assistant'
+    AND ($1::text IS NULL OR event.message_id = $1)
+    AND event.payload_json IS NOT NULL
+    AND event.payload_json::jsonb ->> 'status' IN ('completed', 'failed', 'interrupted')
+  ORDER BY event.event_seq LIMIT $2
+), released AS (
+  UPDATE runtime.events event SET display_text_ready = true
+  FROM candidates WHERE event.event_seq = candidates.event_seq
+  RETURNING event.event_seq
+), publications AS (
+  UPDATE chat_private.publications p SET body = m.body, display_ready = true,
+    state = CASE WHEN t.disposition = 'quiet' THEN 'retired'
+      WHEN t.disposition <> 'publish' THEN p.state
+      WHEN length(trim(m.body)) = 0 THEN 'retired' ELSE 'pending' END
+  FROM released JOIN runtime.messages m USING(event_seq), chat_private.publication_turns t
+  WHERE p.event_seq = released.event_seq AND p.state = 'writing'
+    AND t.execution_id = p.execution_id
+  RETURNING p.event_seq
+)
+SELECT count(*) FROM released
+
+UPDATE events
+SET payload_json = jsonb_set(
+      payload_json::jsonb,
+      '{metadata}',
+      CASE
+        WHEN jsonb_typeof(payload_json::jsonb -> 'metadata') = 'object'
+          THEN payload_json::jsonb -> 'metadata'
+        ELSE '{}'::jsonb
+      END || jsonb_build_object('can_broadcast_share', $2::boolean),
+      true
+    )::text
+WHERE message_id = ANY($1::text[])
+  AND event_name = 'message.assistant'
+  AND visibility = 'public'
+  AND transcript_surface = 'main_chat'
+RETURNING event_seq
+
+INSERT INTO event_payload_fields (
+  event_seq,
+  field_path,
+  scalar_type,
+  scalar_value,
+  text_value
+)
+SELECT value,
+       '/metadata/can_broadcast_share',
+       'bool',
+       $2,
+       NULL
+FROM unnest($1::bigint[]) AS event_seq(value)
+ON CONFLICT (event_seq, field_path) DO UPDATE SET
+  scalar_type = excluded.scalar_type,
+  scalar_value = excluded.scalar_value,
+  text_value = NULL
+SELECT prompt_floor_seq FROM agents WHERE id = $1
+SELECT COALESCE(a.prompt_floor_seq, -1) AS prompt_floor_seq,
+       c.checkpoint_seq,
+       COALESCE(c.details_json::jsonb -> 'replacement_history_seq', '[]'::jsonb)
+         AS retained_context_seqs
+FROM agents AS a
+LEFT JOIN LATERAL (
+    SELECT checkpoint_seq, details_json
+    FROM agent_compactions
+    WHERE agent_id = $1
+      AND has_replacement_history
+    ORDER BY id DESC
+    LIMIT 1
+) AS c ON c.checkpoint_seq > COALESCE(a.prompt_floor_seq, -1)
+WHERE a.id = $1
+Conversation history before this boundary was cleared.agent.context_items.item_jsonruntime.conversation_clearUPDATE agents SET updated_at = $1, prompt_floor_seq = $2 WHERE id = $3conversation clear agent does not existselect distinct b.chat_id
+                from chat_private.bindings b join chat.chats c using(chat_id)
+                where b.provider = $1 and (b.delivery_target = $2 or b.conversation_key = $2)
+                  and c.status = 'active' limit 2select distinct c.chat_id
+    from agent.agent_ancestors ancestry
+    join agent.agents owner on owner.id = ancestry.ancestor_id
+    left join agent.chat_workers g on g.agent_id = owner.id
+    join chat.chats c on c.chat_id = coalesce(g.group_id, owner.session_id)
+    where ancestry.descendant_id = $1
+      and (g.group_id is not null or (owner.kind = 'root' and owner.parent_agent_id is null))
+    limit 2select b.conversation_key, b.epoch
+                from chat_private.bindings b
+                left join chat_private.transport_state s
+                  on s.provider = b.provider and s.name = 'config'
+                where b.chat_id = $1 and b.provider = $2 and not b.revoked
+                  and s.body ->> 'enabled' = 'true'select distinct c.chat_id
+                from runtime.events e
+                join agent.agent_ancestors ancestry
+                  on ancestry.descendant_id = coalesce(e.parent_agent_id, e.agent_id)
+                join agent.agents owner on owner.id = ancestry.ancestor_id
+                left join agent.chat_workers g on g.agent_id = owner.id
+                join chat.chats c on c.chat_id = coalesce(g.group_id, owner.session_id)
+                where e.message_id = $1
+                  and (g.group_id is not null or (owner.kind = 'root' and owner.parent_agent_id is null))
+                limit 2select b.provider, b.conversation_key, b.delivery_target, b.epoch,
+                  coalesce(s.body ->> 'enabled' = 'true', false)
+                from chat_private.bindings b
+                left join chat_private.transport_state s
+                  on s.provider = b.provider and s.name = 'config'
+                where b.chat_id = $1 and not b.revoked
+                limit 1update chat_private.binding_authorizations set chat_id = $1
+                where provider = $2 and binding_id = $3 and (chat_id is null or chat_id = $1)private binding belongs to another chatupdate chat_private.bindings set revoked = true, epoch = epoch + 1
+                    where provider = $1 and not revoked
+UPDATE chat.chats AS metadata
+SET status = $1,
+    pinned = FALSE,
+    pinned_order = NULL,
+    updated_at = $2
+WHERE status = $4 AND EXISTS (
+  SELECT 1 FROM chat_private.bindings AS transport
+  WHERE transport.chat_id = metadata.chat_id AND transport.provider = $3
+)
+RETURNING chat_id AS session_id
+€÷

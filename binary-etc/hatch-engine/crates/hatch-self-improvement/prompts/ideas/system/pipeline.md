@@ -1,1 +1,0 @@
-self_improvement/ideas/system/pipeline.md

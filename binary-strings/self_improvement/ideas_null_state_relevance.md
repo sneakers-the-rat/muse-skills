@@ -1,1 +1,1 @@
-{{CANDIDATE_CARDS_JSON}}
+{

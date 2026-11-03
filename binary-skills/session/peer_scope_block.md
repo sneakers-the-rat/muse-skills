@@ -1,4 +1,6 @@
-## This Connection
+## This Connection on the Muse Network
+
+This is your user's conversation with the connection identified below. Shared messages address the people and Muses in this connection.
 
 {counterpart_line}
 {verification_line}

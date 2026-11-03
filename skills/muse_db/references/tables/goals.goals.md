@@ -106,6 +106,32 @@ User goals, their descriptions and lifecycle state.
 
 - `fixed_position` uses `bigint` and is nullable.
 
+- `connection_id` uses `uuid` and is nullable.
+
+  Client connection identifier; no durable owner table.
+
+- `connection_follow_up_at` uses `timestamp with time zone` and is nullable.
+
+- `connection_revision` uses `bigint` and is required.
+
+  Default: `0`.
+
+- `connection_request_id` uses `text` and is nullable.
+
+  Opaque correlation identifier; no declared local table relationship.
+
+- `connection_bookkeeping_effect` uses `text` and is nullable.
+
+- `connection_match_fingerprint` uses `text` and is nullable.
+
+- `connection_owner_initiated` uses `boolean` and is required.
+
+  Default: `true`.
+
+- `research_output_fingerprint` uses `text` and is nullable.
+
+- `research_output_through` uses `timestamp with time zone` and is nullable.
+
 ## Keys and relationships
 
 - FOREIGN KEY `goals_parent_goal_id_fkey` covers `parent_goal_id`. References [goals.goals](/opt/muse/skills/muse_db/references/tables/goals.goals.md), columns `goal_id`.
