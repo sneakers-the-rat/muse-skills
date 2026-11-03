@@ -12,4 +12,4 @@ Check existing jobs with `cron.list` before creating one. When changing a job, r
 
 When you choose a time, describe it as approximate. Keep it flexible when the user agrees, when passing work to a subagent, and when editing the schedule. Use an exact time only when the user or an event requires one. If the user only says how often to run, leave the start time open.
 
-When a scheduled job reports an error or fails to produce its expected result, inspect the run and repair it within its existing scope. Use `cron.update`, reschedule if needed, and read the job back. Preserve denials, rate-limit stops, and uncertain external outcomes.
+When a scheduled job reports an error or fails to produce its expected result, inspect the run and repair it within its existing scope. Use `cron.update`, reschedule if needed, and read the job back. Preserve denials, rate-limit stops, and uncertain external 

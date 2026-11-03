@@ -1,0 +1,98 @@
+select root_session_id, input_digest, task_id from runtime.browser_task_requests where request_id = $1
+select task_id from runtime.browser_tasks
+where admission_seq is not null
+  and status = 'queued'
+  and profile_id = $1
+union all
+select task_id from runtime.browser_tasks
+where admission_seq is not null
+  and status in ('starting', 'running', 'user_controlled', 'parked_outcome')
+  and profile_id = $1
+
+select task_id, title,
+  case
+    when status in ('queued', 'starting', 'running') then 'working'
+    when status = 'user_controlled' then 'user_control'
+    when status = 'parked_outcome' and owner_agent_id is null then 'idle'
+    when status = 'parked_outcome' then coalesce(outcome_status, 'waiting')
+    else status
+  end as state,
+  coalesce(owner_kind = 'user', false) as started_by_user,
+  latest_tab_json as current_page,
+  profile_id,
+  status,
+  broker_instance,
+  node_id,
+  root_session_id,
+  owner_kind,
+  request_trace_context_json,
+  chat_context_json
+from (
+  select * from runtime.browser_tasks
+  where root_session_id = $1
+    and ($2::text is null or task_id > $2)
+    and owner_kind is distinct from 'research'
+  union all
+  select * from runtime.browser_tasks
+  where $3
+    and owner_kind = 'cron' and broker_instance <> 'proactivity'
+    and root_session_id <> $1
+    and ($2::text is null or task_id > $2)
+) as task
+where status <> 'superseded'
+order by task_id
+
+SELECT id, kind, parent_id, status
+FROM agents
+WHERE id = ANY($1)
+ORDER BY id
+FOR UPDATE
+
+SELECT 1::bigint
+FROM runtime.browser_tasks
+WHERE task_id = $1
+  AND admission_seq IS NOT NULL
+  AND status = 'starting'
+  AND parent_agent_id = $2
+  AND root_message_id = $3
+  AND owner_agent_id = $4
+  AND stream_owner_message_id = $5
+FOR UPDATE
+parent_id
+INSERT INTO subagent_spawns (
+  parent_message_id, parent_request_id, root_request_id, root_message_execution_id, parent_agent_id, child_agent_id, child_depth, created_at, status, prompt, requester_source, requester_chat_context_json, agent_type, metadata_json, spawn_call_id
+)
+SELECT $1,
+       $2,
+       $3,
+       $4,
+       $5,
+       $6,
+       COALESCE((SELECT depth FROM agents WHERE id = $6), 0),
+       $7,
+       $8,
+       $9,
+       $10,
+       $11,
+       $12,
+       $13,
+       $14
+RETURNING spawn_id, child_depth, created_at
+ 
+SELECT metadata_json FROM subagent_spawns WHERE child_agent_id = $1
+completion_resultcompletion_result_context_seqagent.subagent_spawns.metadata_json
+UPDATE subagent_spawns
+SET metadata_json = $1
+WHERE child_agent_id = $2
+  AND EXISTS (
+    SELECT 1 FROM agents
+    WHERE agents.id = subagent_spawns.child_agent_id
+      AND agents.status NOT IN ('shutdown', 'not_found')
+  )
+
+UPDATE agents
+SET updated_at = $1,
+    status = $2
+WHERE id = $3
+  AND status NOT IN ('shutdown', 'not_found')
+€—

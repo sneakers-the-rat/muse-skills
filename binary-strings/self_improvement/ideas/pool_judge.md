@@ -19,22 +19,36 @@ carry that approval itself. Quote the span.
 
 ### pool_fit
 
-Your only concern is whether the entry works for a broad audience reading it
-cold. A personalized idea pairs a need with one user's instance of it, such
-as a particular order, account, place, or date. Fail the entry when:
+Picture a stranger meeting this card mid-scroll in a feed. The title is the
+only thing they see, and acting on it means opening or downloading an app.
+The question is not whether they can understand the card, but whether they
+would stop for it. Fail the entry when:
 
-- it still carries one user's instance instead of the broader category, or a
-  combination of details uncommon enough to point back at one user. Keep an
-  instance when the need and the instance together apply to a broad
-  audience, such as a trip to a popular destination like Japan. Fail one
-  that fits only a few readers or comes from one user's own history or data
-- the need itself is niche, wanted by only a very small part of readers
-- it uses "you" or "your" for something only some readers have, such as a
-  partner, children, a pet, an age, or a health condition
+- the need is niche, or it only looks common because the life event above
+  it is common. Moving is common; finding free moving boxes is not
+- the need is a one-off chore or a problem that only exists in one moment,
+  such as confirming a checkout time or getting one device to pair
+- the card only works for someone already in the middle of something, such
+  as an open thread, a pending case, an upcoming drop, or a list they
+  already made. "Reopen a stalled hotel points case" and "Stage your
+  limited sneaker checkout before drop day" fail this
+- it still carries one user's instance, or a combination of details
+  uncommon enough to point back at one user. Keep an anchor that many
+  people share, such as a trip to a popular destination like Japan
+- it is so general you cannot say what it acts on or what the reader ends
+  up with. "Catch early events with earlier reminders" and "Find the true
+  cheapest delivered price" fail this
 - it reads like advice on health or finance
-- the title and summary do not say what the reader gets
-- the title is not written to the reader or as a command, or runs well past
-  10 words or 60 characters
+- it assumes something about the reader: a life stage or condition (a
+  partner, children, a pet, an age), or something they have already done
+  or already own
+- the title does not land on its own: it does not show what it acts on,
+  what the reader gets, and that the assistant does the work. Fail a title
+  that reads like a chore for the reader, a marketing line, or one that
+  opens with filler or hides the capability behind a generic verb that
+  could open almost any card. Any voice is fine: first person, second
+  person, or an imperative
+- the title runs well past 10 words or 60 characters
 - the prompt is not a short first-person request from the reader to their
   assistant
 - the instructions assume something only the reader knows, such as which

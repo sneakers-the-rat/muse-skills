@@ -1,0 +1,151 @@
+errorsuccesswrite_admissionwritepostgres write completed slowlypostgres write failedretrying idempotent postgres writeone-shot postgres write invoked more than oncebound merchant checkpoint disappearedcheckout spend operation changed while terminalizingcheckout spend outcome is unknown because the task has legacy recovery stateselect exists (
+                            select 1 from runtime.checkout_spend_operations
+                            where client_task_key = $1 and approval_id = $2 and state = 'cancelled'
+                        )cancelled checkout approval cannot authorize a new spend operationbegin replay requires existing rowcheckout already has a terminal result; recover it instead of beginning a new spend operation
+insert into runtime.checkout_spend_operations (
+  operation_id,
+  client_task_key,
+  wallet_provider,
+  checkout_request_id,
+  approval_id,
+  original_request_trace_json,
+  recovery_epoch,
+  state,
+  expires_at_ms,
+  created_at_ms,
+  updated_at_ms,
+  checkout_attribution
+) values ($1, $2, $3, $4, $5, $8, 1, 'pending', $6, $7, $7, $9)
+returning *
+insert into runtime.checkout_spend_successors
+                                     (predecessor_operation_id, successor_operation_id) values ($1, $2)
+update runtime.checkout_spend_checkpoints
+set external_id = $4,
+    detail = $5,
+    bound_at_ms = $6
+where operation_id = $1
+  and provider = $2
+  and checkpoint_key = $3
+returning *
+merchant checkpoint is already bound with different detailinvalid merchant checkpoint bind decision
+insert into runtime.checkout_spend_checkpoints (
+  operation_id,
+  provider,
+  checkpoint_key,
+  claimed_at_ms
+) values ($1, $2, $3, $4)
+returning *
+invalid merchant checkpoint claim decisioncheckout spend recovery state changed unexpectedlywallet request is already bound to a different checkout spend operation
+update runtime.checkout_spend_operations
+set wallet_request_id = $2,
+    state = 'active',
+    updated_at_ms = $3
+where operation_id = $1
+returning *
+checkout spend operation belongs to a different checkout task
+update runtime.checkout_spend_operations
+set state = $2,
+    terminal_result = $3,
+    updated_at_ms = $4
+where operation_id = $1
+  and recovery_epoch = 1
+  and state in ('pending', 'active')
+returning *
+verify decision requires operation
+select *
+from runtime.checkout_spend_operations
+where operation_id = $1
+checkout spend operation not found for this task
+update runtime.checkout_spend_operations
+set state = 'active',
+    updated_at_ms = $2
+where operation_id = $1
+returning *
+OpenTable modification requires its original approved termscheckout_spend.begin_operationoperation_idmerchant_providerexternal_idcheckout_spend.bind_checkpointcheckout_spend.claim_checkpointclient_task_keycheckout_request_idwallet_request_idcheckout_spend.bind_wallet_requestcheckout_spend.terminalize_operationcheckout_spend.verify_wallet_requestcheckout_spend.load_operation_for_taskcheckout_spend.verify_operation_ready_for_createacquired connection, but time to acquire exceeded slow thresholdacquired connection
+update runtime.checkout_spend_operations o
+set state = 'expired', updated_at_ms = $2
+where o.client_task_key = $1
+  and o.recovery_epoch = 1
+  and o.state = 'pending'
+  and o.wallet_request_id is null
+  and o.expires_at_ms <= $2
+  and (o.client_task_key like 'opentable:reservation-modify:%'
+       or exists (select 1 from runtime.checkout_spend_successors s
+                  where s.successor_operation_id = o.operation_id
+                     or s.predecessor_operation_id = o.operation_id))
+        
+delete from runtime.checkout_spend_operations o
+where o.client_task_key = $1
+  and o.recovery_epoch = 1
+  and o.state = 'pending'
+  and o.wallet_request_id is null
+  and o.expires_at_ms <= $2
+  and o.client_task_key not like 'opentable:reservation-modify:%'
+  and not exists (select 1 from runtime.checkout_spend_successors s
+                  where s.successor_operation_id = o.operation_id
+                     or s.predecessor_operation_id = o.operation_id)
+        
+select *
+from runtime.checkout_spend_operations
+where client_task_key = $1
+  and state in ('pending', 'active')
+for update
+
+select *
+from runtime.checkout_spend_operations
+where operation_id = $1
+for update
+
+select *
+from runtime.checkout_spend_operations
+where client_task_key = $1
+  and recovery_epoch = 0
+order by updated_at_ms desc
+limit 1
+for update
+
+select *
+from runtime.checkout_spend_operations
+where wallet_provider = $1
+  and wallet_request_id = $2
+for update
+
+coalesce((
+    o.state = 'cancelled'
+    and o.recovery_epoch = 1
+    and o.client_task_key like 'opentable:%'
+    and o.wallet_provider = 'stripe-link'
+    and o.wallet_request_id is not null
+    and o.terminal_result @> '{"provider":"opentable","payload":{"kind":"payment_setup_cancelled","retry_allowed":true}}'::jsonb
+    and coalesce(o.terminal_result->'reference_id', 'null'::jsonb) = 'null'::jsonb
+    and coalesce(o.terminal_result->'decline_reason', 'null'::jsonb) = 'null'::jsonb
+    and exists (
+        select 1 from runtime.checkout_spend_checkpoints c
+        where c.operation_id = o.operation_id
+          and c.provider = 'opentable'
+          and c.checkpoint_key = 'merchant_cancellation'
+          and c.external_id = o.wallet_request_id
+          and c.bound_at_ms is not null
+          and c.detail = '{"status":"canceled"}'::jsonb
+    )
+    and not exists (
+        select 1 from runtime.checkout_spend_checkpoints c
+        where c.operation_id = o.operation_id
+          and (c.checkpoint_key = 'merchant_execution' or c.provider <> 'opentable')
+    )
+    or (
+        o.state = 'declined'
+        and o.recovery_epoch = 1
+        and o.client_task_key like 'opentable:%'
+        and o.wallet_provider = 'stripe-link'
+        and o.terminal_result->>'provider' = 'opentable'
+        and o.terminal_result->>'decline_reason' = 'payment_setup_failed'
+        and coalesce(o.terminal_result->'reference_id', 'null'::jsonb) = 'null'::jsonb
+        and coalesce(o.terminal_result->'cancellation_reason', 'null'::jsonb) = 'null'::jsonb
+        and not exists (
+            select 1 from runtime.checkout_spend_checkpoints c
+            where c.operation_id = o.operation_id
+        )
+    )
+), false)
+€á

@@ -1,0 +1,113 @@
+faithful_variationdiversebrowser task relocation was not requestedtarget_unavailablebrowser.kill_specialistbrowser.specialistsaccount_hint must name the account to sign in with, without control characters.browser.steer_specialistBrowser services are unavailable.browser specialist control did not completeThe specialist control did not complete. Check browser.specialists before you try again.Could not complete the steer. Check browser.specialists for the target's current status.browser workflow is waiting or terminalbrowser call effects could not be readbrowser.reportruntime_tool_outputThis browser task is no longer active.task_state_unavailablebot_challenge.guidebrowser.loginbrowser.paybrowser.bot_challengeBrowser control is held by another workflow or the user.seat_state_unavailablebrowser.request_inputOnly the browser planner controls specialists.purchase_outcome_not_recordedcheckout.submitcheckout.review_cartcheckout.commitlogin.advancebot_challenge.assessbot_challenge.recoverbrowser.filesThis browser operation is unavailable.Browser durable state is unavailable.durable_state_unavailableImage annotations require image.source: {screenshot} or {receipt, program, frame}.A retained image inspection cannot also read text, inspect an element or listen to the live page.browser tab inventory was not readThis browser holds one tab, so the open ran as a navigation of that tab instead of a new tab.browser tab count was not readservices_unavailableBrowser submission is no longer active.native browser operation did not completeThe view this call cites is gone, so nothing was sent. Observe the tab again, then make this call again from that view.browser task is no longer runningruntime.browser_controlreference screen was not keptbrowser storage unavailableThis subtask stopped during a restart and did not report a result. Its work may be partly or fully done: check what it already produced before redoing anything, then redo or redelegate only what is actually missing.Closed during restart recovery without reporting a result.failed to persist terminal state for closed checkpointed subagentfailed to persist terminal status for closed checkpointed agentclosed Spaces builder checkpoint has no parent identityclosed Spaces builder checkpoint has no storage rootfailed to load closed Spaces builder generationfailed to delete runtime restart checkpoint for closed agentpartial_recovery_descriptormissing_conversationinvalid_structural_owner_identityrecovery_identity_mismatchinvalid_recovery_descriptorinvalid_durable_owner_identityinvalid_inherited_execution_authoritybot-challenge-guides
+[TRUNCATED] Goals exceeded prompt budget.tracking.set_statussession/tracking_context_section_preamble.mdSubstantial work the main agent keeps track of, manages, or follows up on for the user over time.
+session/tracking_active_section_preamble.mdThese are your currently active tracked items; close an item with `tracking.set_status` set to `completed` when user confirmation, the end of its relevant timeline, or other evidence shows that the whole responsibility has finished.
+Close the tracked item proactively when the evidence shows it is finished, without waiting for the user to explicitly ask you to close it.
+failed to load goals prompt snapshot; rendering empty goals sectiongoals prompt snapshot timed out; rendering empty goals sectionrelationship connection context unavailablerelationship connection context timed outfailed to load paired-device prompt snapshot; omitting devices sectionpaired-device prompt snapshot timed out; omitting devices sectionLocal time out of range for `NaiveDateTime`TimeDelta::days out of bounds`NaiveDate + TimeDelta` overflowed%A %Y-%m-%dselect exists(select 1 from spaces.user_state
+         where sharing_state is null or accessed_at_ms is not null
+           or last_opened_at_ms is not null or frequency_score is not null
+           or favorite_order is not null)insert into spaces.user_state (space_slug, favorite_order, is_favorite) values  on conflict (space_slug) do update set
+            favorite_order = excluded.favorite_order, is_favorite = true
+          where spaces.user_state.sharing_state is not null
+            and spaces.user_state.accessed_at_ms is null
+            and spaces.user_state.last_opened_at_ms is null
+            and spaces.user_state.frequency_score is null
+            and spaces.user_state.favorite_order is null(, true)content-typeacceptx-typesafe-request-idlast_auditlast_buildselect owner_agent_id, root_session_id
+        from runtime.browser_tasks where task_id = $1 and status = 'running' for updateselect epoch, control_revision from runtime.browser_executions
+        where task_id = $1 and planner_agent_id = $2 for updatebrowser seat changedbrowser service authority changedbrowser invocation authority changed
+SELECT json_build_object(
+         'accepted_ordinal', accepted_ordinal,
+         'state', state,
+         'checkpoint_custody', checkpoint_custody,
+         'submission_json', submission_json
+       )::text
+FROM agent.message_mailbox
+WHERE agent_id = $1
+  AND state IN ('accepted', 'attached')
+ORDER BY accepted_ordinal, submission_id
+FOR UPDATE
+SELECT payload_json FROM runtime_restart_checkpoints WHERE agent_id = $1
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = 'executing',
+    stream_owner_message_id = $3,
+    attached_at = now()
+WHERE submission_id = $1
+  AND agent_id = $2
+  AND state = 'accepted'
+  AND stream_owner_message_id IS NULL
+
+SELECT agent_id, state, stream_owner_message_id, submission_json,
+       accepted_ordinal
+FROM agent.message_mailbox
+WHERE submission_id = $1
+FOR UPDATE
+
+SELECT EXISTS (
+  SELECT 1
+  FROM agent.message_mailbox
+  WHERE agent_id = $1
+    AND state = 'accepted'
+    AND accepted_ordinal < $2
+    AND (NOT $3 OR submission_kind <> 'internal_handoff')
+)
+tracked mailbox successor unexpectedly lost custodymessage mailbox successor promotion cannot overtake an older priority peer
+UPDATE agent.message_mailbox
+SET state = CASE WHEN $4 THEN 'completed' ELSE 'aborted' END,
+    checkpoint_custody = coalesce(checkpoint_custody, 'executing'),
+    terminalized_at = now()
+WHERE agent_id = $1
+  AND stream_owner_message_id = $2
+  AND submission_id = ANY($3)
+  AND state = 'attached'
+
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = 'executing',
+    stream_owner_message_id = $2,
+    attached_at = coalesce(attached_at, now())
+WHERE agent_id = $1
+  AND submission_id = ANY($3)
+  AND (
+    (state = 'accepted' AND stream_owner_message_id IS NULL)
+    OR (state = 'attached' AND stream_owner_message_id = $2)
+  )
+
+UPDATE agent.message_mailbox
+SET checkpoint_custody = 'queued'
+WHERE agent_id = $1
+  AND stream_owner_message_id = $2
+  AND submission_id = ANY($3)
+  AND state = 'attached'
+
+UPDATE agent.message_mailbox
+SET state = CASE
+      WHEN state = 'attached' AND $2 THEN 'completed'
+      ELSE 'aborted'
+    END,
+    terminalized_at = now()
+WHERE agent_id = $1
+  AND state IN ('accepted', 'attached')
+
+INSERT INTO agent.volatile_context_pins
+  (agent_id, variant_hash, variant_json, prompt_floor_seq, checkpoint_seq, body)
+SELECT $1, $2, $3, $4, $5, NULL
+WHERE EXISTS (SELECT 1 FROM agent.agents WHERE id = $1)
+ON CONFLICT (agent_id, variant_hash) DO UPDATE SET
+  variant_json = excluded.variant_json,
+  prompt_floor_seq = excluded.prompt_floor_seq,
+  checkpoint_seq = excluded.checkpoint_seq,
+  created_at = now()
+
+SELECT COALESCE(a.prompt_floor_seq, -1) AS prompt_floor_seq,
+       COALESCE(c.checkpoint_seq, -1) AS checkpoint_seq
+FROM agent.agents AS a
+LEFT JOIN LATERAL (
+    SELECT checkpoint_seq
+    FROM agent.agent_compactions
+    WHERE agent_id = $1
+      AND has_replacement_history
+    ORDER BY id DESC
+    LIMIT 1
+) AS c ON c.checkpoint_seq > COALESCE(a.prompt_floor_seq, -1)
+WHERE a.id = $1
+checkpoint_seqscaffold_prepare_failedscaffold_complete_failedcandidatepolicyguard routing table names a policy that is not compiled in; falling back to the external policypolicyguard policy rendered empty; falling back to the external policypolicyguard routing table names no policy for this family; falling back to the external policyqueueddialingringinghandoff_pendingrequested_label_match/labels/0spoken_suffixrequires_spoken_name_clarificationplausible_spoken_name_match_count/match/classno_phone_numbermore_matchesother_matchesneeds_clarificationcontact_idspoken_spellinghttp://srcsethref=.hrefjavascript:http:https://srcset=action=formaction=poster=@importdata:<iframe<object<embed<link<meta<base<formfetch(xmlhttprequestwebsocketeventsourcesendbeaconimport(postmessagedocument.cookielocalstoragesessionstorageindexeddbMedia planner inference attribution is unavailableMedia invocation deadline is out of rangemedia.generate_imagethumbnail_urllikesmedia_type.goals bookkeeping could not broadcast the goal updategoals bookkeeping goal update broadcast channel closedgoals bookkeeping goal update broadcast timed out(no visible text)No research directory is available for this mission; put the full detail in your `finish_research` summary.&Your research directory is intact at `À,` with these files from before the restart: À€“

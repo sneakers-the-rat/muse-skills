@@ -1,0 +1,107 @@
+delete from health.samples
+                 where provider = $1
+                   and node_id is not distinct from $2
+                   and start_at <= $4
+                   and coalesce(end_at, start_at) >= $3internal error: entered unreachable code: bundle-specific clear always includes a sample typedelete from health.samples
+                 where provider = $1
+                   and node_id is not distinct from $2
+                   and sample_type = $3
+                   and bundle_id is null
+                   and start_at <= $5
+                   and coalesce(end_at, start_at) >= $4delete from health.samples
+                 where provider = $1
+                   and node_id is not distinct from $2
+                   and sample_type = $3
+                   and bundle_id is not distinct from $4
+                   and start_at <= $6
+                   and coalesce(end_at, start_at) >= $5delete from health.sample_values where sample_id = any($1)insert into health.events (
+                   provider, node_id, bundle_id, timezone, event_type, event_at, event_end_at
+                 )
+                 values ($1, $2, $3, $4, $5, $6, $7)
+                 returning health_event_idinsert into health.events (
+                   provider, node_id, external_event_id, bundle_id, timezone, event_type,
+                   event_at, event_end_at
+                 )
+                 values ($1, $2, $3, $4, $5, $6, $7, $8)
+                 returning health_event_idstart_epoch_secend_epoch_secbundle_idevent_typehealth.eventsinsert into health.sample_values (
+               sample_id, value_name, unit, numeric_value, text_value
+             )  on conflict (sample_id, value_name)
+              do update set
+                unit = excluded.unit,
+                numeric_value = excluded.numeric_value,
+                text_value = excluded.text_valuesleep_awake_duration_secsleep_core_duration_secsleep_deep_duration_secsleep_rem_duration_secsleep_asleep_unspecified_duration_secinsert into health.sleep_sessions (
+               provider, node_id, external_sleep_id, bundle_id, timezone, start_at, end_at,
+               quality_score, awake_seconds, core_seconds, deep_seconds, rem_seconds,
+               asleep_unspecified_seconds, asleep_seconds, in_bed_seconds
+             )
+             values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+             returning sleep_session_idquality_scoresleep_in_bed_duration_sechealth.sleep_sessionsaggregatesinsert into health.samples (
+               provider, node_id, external_sample_id, bundle_id, timezone, sample_type,
+               start_at, end_at, unit, numeric_value, text_value
+             )  returning sample_iddelete from health.record_values where record_table = $1 and record_id = $2insert into health.record_values (
+               record_table, record_id, value_name, unit, numeric_value, text_value
+             )  on conflict (record_table, record_id, value_name)
+              do update set
+                unit = excluded.unit,
+                numeric_value = excluded.numeric_value,
+                text_value = excluded.text_valueinsert into health.workouts (
+               provider, node_id, external_workout_id, bundle_id, timezone, workout_type,
+               start_at, end_at, active_seconds, energy_kcal, distance_meters,
+               hr_max_bpm, hr_average_bpm
+             )
+             values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+             returning workout_idactive_duration_secsenergy_burned_kcaldistance_metershr_max_bpmhr_average_bpmworkout_typehealth.workoutsinsert into health.aggregates (
+               provider, node_id, timezone, aggregate_type, period_start, period_end,
+               numeric_value, unit
+             ) with ns as (
+             select tstzrange($4::timestamptz, $5::timestamptz) as s
+         ),
+         matched as (
+             delete from health.synced_ranges
+             where provider = $1
+               and node_id is not distinct from $2::text
+               and category = $3
+               and (span && (select s from ns) or span -|- (select s from ns))
+             returning lower(span) as lo, upper(span) as hi
+         ),
+         bounds as (
+             select min(lo) as lo, max(hi) as hi from matched
+         )
+         insert into health.synced_ranges (provider, node_id, category, span)
+         select $1, $2::text, $3, tstzrange(
+             least(lower(ns.s), coalesce((select lo from bounds), lower(ns.s))),
+             greatest(upper(ns.s), coalesce((select hi from bounds), upper(ns.s)))
+         )
+         from nsselect pg_advisory_xact_lock_shared(hashtext($1))health.records.writedelete from health.samples
+         where node_id = $1
+           and start_at <= $3
+           and coalesce(end_at, start_at) >= $2select distinct provider from health.synced_ranges where node_id = $1delete from health.samples
+         where provider = $1
+           and node_id is not distinct from $2
+           and sample_type = $3
+           and start_at <= $5
+           and coalesce(end_at, start_at) >= $4active reconciliation changed while its staging was lockedfenced invalid device reconciliation attempt
+    update device.nodes
+    set health_last_received_at = $1,
+        health_last_sync_status = 'success',
+        health_last_sync_error = null
+    where node_id = $2
+    failed to resolve public session id for agent.statusagent.statusdeleted sessions.updated events require an owner-visible deletion proofsession row unavailable for sessions.updated payloadfailed to hydrate sessions.updated payloaddropped companion progress frame after its voice call changedselect pg_advisory_xact_lock(4841544348435458)insert into context.ingest_attempts
+        (id, source_id, contributor_key, recorded_at, outcome,
+         submitted, inserted, duplicates, event_ids, error_code)
+        values ($1,$2,$3,clock_timestamp(),$4,$5,$6,$7,$8,$9)select last_append_position from context.sources where id = $1 for updateupdate context.sources set last_append_position = $2 where id = $1select id, (group_key is not distinct from $3
+            and payload_kind = $4
+            and occurred_at is not distinct from $5::timestamptz
+            and payload = $6 and content_hints = $7
+            and ttl_seconds is not distinct from $8) as matches
+         from context.events where source_id = $1 and dedupe_key = $2 for sharematchesinsert into context.events
+        (id, source_id, append_position, dedupe_key, group_key, payload_kind,
+         occurred_at, ingested_at, payload, content_hints, ttl_seconds, expires_at, group_id)
+        values ($1,$2,$3,$4,$5,$6,$7,statement_timestamp(),$8,$9,$10,
+            statement_timestamp() + $10::integer * interval '1 second',$11)delete from context.ingest_attempts where id in
+    (select id from context.ingest_attempts where recorded_at < now() - interval '7 days'
+     order by recorded_at, id limit 100)select pg_notify($1, '')hatch_context_committedinsert into context.sources
+    (id, source_domain, source_key, display_name, created_at, last_append_position)
+    values ($1, $2, $3, $4, clock_timestamp(), 0)
+    on conflict (source_domain, source_key) do nothingselect id, source_domain, source_key as key, display_name, created_at::text as created_at
+     from context.sources where source_domain = $1 and source_key = $2missing_tool_call_idmissing_message_idagent_handle_missingtracked_tool_not_foundfailed to mark tracked tool process pending approvalawaiting-approval checkpoint payload version is unsupportedfailed to decode runtime restart checkpoint payloadawaiting-approval checkpoint row was missing payload_jsonfailed to load runtime restart checkpointfailed to enrich approval snapshot with live wallet; preserving eligible mint-time options{bin}sh-c--enable-app-redirectOAuth authorize URL command returned a failure statusOAuth authorize URL response omitted state; returning URL without request provenanceauthd socket unavailable; returning OAuth authorize URL without request provenancereturning OAuth authorize URL without updating request provenanceauthd socket unavailable; suppressing Shop Pay authorize URLShop Pay authorize URL omitted a unique OAuth stateOAuth authorize URL command response was missing a usable URLOAuth authorize URL command returned invalid JSONOAuth authorize URL command failedShop Pay request provenance binding failed; suppressing authorize URLruntime.skillsruntime.skills.paced_probe

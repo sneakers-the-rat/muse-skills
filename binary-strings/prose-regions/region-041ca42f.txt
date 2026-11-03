@@ -1,0 +1,254 @@
+name cannot be emptyworkspace_agents.mdtsconfig.base.jsonclient/tsconfig.jsonclient/index.htmlclient/src/App.tsxclient/src/main.tsxclient/src/theme.cssclient/src/api.tsclient/src/globals.d.tsserver/tsconfig.jsonserver/src/actions.tsserver/src/schema.tsdrizzle/0001_initial.sqlspace-staticcreate fileprebaked dependency clone failed; falling back to bun installprebaked dependency set no longer matches the artifact template; falling back to bun install. Rebuild the bundle to restore the fast path.dependenciesscan directoryread directorycould not remove artifact version historydelete goal workspaceupdate_idat least one field must be provided for editmust be one of `active` or `completed`subgoal rollup activities do not mutate goal momentumruntime.subgoal_activity_rollupinsert subgoal rollup activitycurrent_statedeleted goal briefing row but could not remove its workspace artifactdeleted goal briefing row but could not remove its hero imagegoal guide path is not a regular filegoal workspace path is not a real directoryupdate runtime.browser_invocations set suspended_state = 'running'
+                 where invocation_id = $1 and suspended_state = 'waiting_child'select 1 from runtime.browser_invocations where invocation_id = $1 for updateinsert into runtime.browser_seat_inputs
+         (input_id, task_id, invocation_id, revision, kind, source_id, detail_json, shown_at)
+         select $1, $2, $3, coalesce(max(revision), 0) + 1, $4, $5, $6,
+           case when $7::boolean then now() end
+         from runtime.browser_seat_inputs where invocation_id = $3
+         on conflict (input_id) do nothinginsert into runtime.browser_seat_inputs
+         (input_id, task_id, kind, source_id, detail_json)
+         values ($1, $2, $3, $4, $5) on conflict (input_id) do nothingselect owner_agent_id, root_session_id
+        from runtime.browser_tasks where task_id = $1 and status = 'running' for updateselect epoch, control_revision from runtime.browser_executions
+        where task_id = $1 and planner_agent_id = $2 for updatebrowser seat changedbrowser service authority changedbrowser invocation authority changed
+INSERT INTO requests (
+  request_id, root_request_id, parent_request_id, request_origin,
+  transcript_surface, root_work_class
+)
+VALUES ($1, $2, $3, $4, $5::runtime.transcript_surface, $6)
+ON CONFLICT (request_id) DO UPDATE SET
+  root_request_id = COALESCE(requests.root_request_id, excluded.root_request_id),
+  parent_request_id = COALESCE(requests.parent_request_id, excluded.parent_request_id),
+  request_origin = CASE
+    WHEN requests.request_origin = 'internal.runtime_replay' THEN excluded.request_origin
+    ELSE requests.request_origin
+  END,
+  transcript_surface = excluded.transcript_surface,
+  root_work_class = CASE
+    WHEN requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing'
+      THEN excluded.root_work_class
+    ELSE requests.root_work_class
+  END
+WHERE (requests.root_request_id IS NULL AND excluded.root_request_id IS NOT NULL)
+   OR (requests.parent_request_id IS NULL AND excluded.parent_request_id IS NOT NULL)
+   OR (requests.request_origin = 'internal.runtime_replay'
+       AND excluded.request_origin <> 'internal.runtime_replay')
+   OR requests.transcript_surface IS DISTINCT FROM excluded.transcript_surface
+   OR (requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing')
+call_id
+INSERT INTO tool_outputs (event_seq, call_id, status, output_text, error_text, created_at)
+VALUES ($1, $2, $3, $4, $5, to_timestamp($6::double precision / 1000.0))
+ON CONFLICT (event_seq) DO UPDATE SET
+  call_id = excluded.call_id,
+  status = excluded.status,
+  output_text = excluded.output_text,
+  error_text = excluded.error_text
+
+INSERT INTO tool_calls (event_seq, call_id, tool_name, status, arguments_json, created_at)
+VALUES ($1, $2, $3, 'started', $4, to_timestamp($5::double precision / 1000.0))
+ON CONFLICT (call_id) DO UPDATE SET
+  event_seq = excluded.event_seq,
+  tool_name = excluded.tool_name,
+  status = excluded.status,
+  arguments_json = excluded.arguments_json
+
+INSERT INTO chat_event_derived_write_backlog (event_seq, resources_json)
+VALUES ($1, $2)
+ON CONFLICT (event_seq) DO UPDATE SET
+  resources_json = excluded.resources_json,
+  updated_at = now()
+UPDATE chat_private.peer_conversations SET requester_chat_id = NULL
+         WHERE conversation_id = $1 AND requester_revision = $2
+           AND requester_chat_id = $3 AND NOT requester_unavailable
+           AND chat_id = $5
+           AND EXISTS (SELECT 1 FROM agent.agents
+                       WHERE id = $4 AND session_id = $3)peer handoff disagrees with its asking-chat claimpeer handoff requester changed before admission
+SELECT json_build_object(
+         'accepted_ordinal', accepted_ordinal,
+         'state', state,
+         'checkpoint_custody', checkpoint_custody,
+         'submission_json', submission_json
+       )::text
+FROM agent.message_mailbox
+WHERE agent_id = $1
+  AND state IN ('accepted', 'attached')
+ORDER BY accepted_ordinal, submission_id
+FOR UPDATE
+SELECT payload_json FROM runtime_restart_checkpoints WHERE agent_id = $1
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = 'executing',
+    stream_owner_message_id = $3,
+    attached_at = now()
+WHERE submission_id = $1
+  AND agent_id = $2
+  AND state = 'accepted'
+  AND stream_owner_message_id IS NULL
+
+SELECT agent_id, state, stream_owner_message_id, submission_json,
+       accepted_ordinal
+FROM agent.message_mailbox
+WHERE submission_id = $1
+FOR UPDATE
+
+SELECT EXISTS (
+  SELECT 1
+  FROM agent.message_mailbox
+  WHERE agent_id = $1
+    AND state = 'accepted'
+    AND accepted_ordinal < $2
+    AND (NOT $3 OR submission_kind <> 'internal_handoff')
+)
+tracked mailbox successor unexpectedly lost custodymessage mailbox successor promotion cannot overtake an older priority peer
+UPDATE agent.message_mailbox
+SET state = CASE WHEN $4 THEN 'completed' ELSE 'aborted' END,
+    checkpoint_custody = coalesce(checkpoint_custody, 'executing'),
+    terminalized_at = now()
+WHERE agent_id = $1
+  AND stream_owner_message_id = $2
+  AND submission_id = ANY($3)
+  AND state = 'attached'
+
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = 'executing',
+    stream_owner_message_id = $2,
+    attached_at = coalesce(attached_at, now())
+WHERE agent_id = $1
+  AND submission_id = ANY($3)
+  AND (
+    (state = 'accepted' AND stream_owner_message_id IS NULL)
+    OR (state = 'attached' AND stream_owner_message_id = $2)
+  )
+
+UPDATE agent.message_mailbox
+SET checkpoint_custody = 'queued'
+WHERE agent_id = $1
+  AND stream_owner_message_id = $2
+  AND submission_id = ANY($3)
+  AND state = 'attached'
+
+UPDATE agent.message_mailbox
+SET state = CASE
+      WHEN state = 'attached' AND $2 THEN 'completed'
+      ELSE 'aborted'
+    END,
+    terminalized_at = now()
+WHERE agent_id = $1
+  AND state IN ('accepted', 'attached')
+SELECT session_id, COALESCE(prompt_floor_seq, -1) AS prompt_floor_seq,
+                kind = 'root' AND parent_agent_id IS NULL
+                AND ephemeral IS DISTINCT FROM TRUE
+                AND status NOT IN ('shutdown', 'not_found') AS eligible
+         FROM agent.agents WHERE agent_id = $1 FOR UPDATEstartup_root_changedSELECT EXISTS(SELECT 1 FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND accepted_ordinal < $2)startup mailbox promotion cannot overtake an earlier accepted input
+SELECT payload_json
+FROM agent.runtime_restart_checkpoints
+WHERE agent_id = $1
+FOR UPDATE
+message mailbox attachment cannot overtake an older priority peer
+INSERT INTO agent.runtime_restart_checkpoints (
+  agent_id, mode, recovery_class, recovery_owner_id, execution_config_json,
+  payload_json, created_at, updated_at
+) SELECT $1, $2, $3, $4, $5, $6, $7, $7
+WHERE EXISTS (
+  SELECT 1
+  FROM agent.agents
+  WHERE agent_id = $1
+    AND status NOT IN ('shutdown', 'not_found')
+)
+ON CONFLICT (agent_id) DO NOTHING
+SELECT EXISTS (SELECT 1 FROM agent.agents WHERE agent_id = $1 AND status NOT IN ('shutdown', 'not_found'))conversation epoch
+INSERT INTO agent.message_mailbox (
+  submission_id, agent_id, conversation_epoch, submission_kind,
+  routing_scope, state, checkpoint_custody, stream_owner_message_id,
+  submission_json, transcript_event_seq, attached_at
+) VALUES (
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+  CASE WHEN $6 = 'attached' THEN now() ELSE NULL END
+)
+ON CONFLICT (submission_id) DO NOTHING
+RETURNING accepted_ordinal, accepted_at
+startup mailbox promotion requires its previously accepted input
+SELECT agent_id, conversation_epoch, submission_kind, routing_scope,
+       state, stream_owner_message_id, submission_json,
+       transcript_event_seq, accepted_ordinal, accepted_at
+FROM agent.message_mailbox
+WHERE submission_id = $1
+FOR UPDATE
+update chat.message_bindings set admitted_at = coalesce(admitted_at, now())
+                    where jarvis_message_id = $1 and chat_id = $2 and binding_epoch = $3 and transport = $4binding epochconversation_epochsubmission_kindrouting_scope
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = $5,
+    stream_owner_message_id = $2,
+    submission_json = $3,
+    transcript_event_seq = coalesce($4, transcript_event_seq),
+    attached_at = now()
+WHERE submission_id = $1
+  AND state = 'accepted'
+  AND stream_owner_message_id IS NULL
+mailbox stream ownerselect a.account_id from chat_private.accounts a
+             join chat_private.binding_authorizations b on b.provider = a.provider and b.account_id = a.account_id
+             where b.provider = $1 and b.binding_id = $2
+               and a.connection_id = $3 and not a.revoked for share of adirect input has no captured binding epochaccount_retiredselect connection_id, generation, transport_json, delivery_target
+             from chat_private.binding_authorizations
+             where provider = $1 and binding_id = $2 and chat_id = $3
+               and account_id = $4 and external_kind = 'direct' and participation = 'active'
+             for shareaccount_authorization_retiredtransport_jsontransport_authorization_absentconnection_iddelivery_targetselect epoch from chat_private.bindings
+         where chat_id = $1 and provider = $2 and not revoked for sharetransport_authorization_changedbinding_retired
+INSERT INTO agent.volatile_context_pins
+  (agent_id, variant_hash, variant_json, prompt_floor_seq, checkpoint_seq, body)
+SELECT $1, $2, $3, $4, $5, NULL
+WHERE EXISTS (SELECT 1 FROM agent.agents WHERE id = $1)
+ON CONFLICT (agent_id, variant_hash) DO UPDATE SET
+  variant_json = excluded.variant_json,
+  prompt_floor_seq = excluded.prompt_floor_seq,
+  checkpoint_seq = excluded.checkpoint_seq,
+  created_at = now()
+
+SELECT COALESCE(a.prompt_floor_seq, -1) AS prompt_floor_seq,
+       COALESCE(c.checkpoint_seq, -1) AS checkpoint_seq
+FROM agent.agents AS a
+LEFT JOIN LATERAL (
+    SELECT checkpoint_seq
+    FROM agent.agent_compactions
+    WHERE agent_id = $1
+      AND has_replacement_history
+    ORDER BY id DESC
+    LIMIT 1
+) AS c ON c.checkpoint_seq > COALESCE(a.prompt_floor_seq, -1)
+WHERE a.id = $1
+SELECT pg_advisory_xact_lock(hashtextextended('activity-monitor-root-carrier:' || $1, 0))
+WITH lineage(message_id) AS (
+    SELECT $1::text
+    UNION
+    SELECT user_message_id
+    FROM activity_monitor_carrier_user_messages
+    WHERE carrier_message_id = $1
+      AND (root_agent_id IS NULL OR root_agent_id = $2)
+    UNION
+    SELECT $3::text
+    WHERE $3 IS NOT NULL AND $4
+)
+INSERT INTO activity_monitor_message_threads (
+    message_id, activity_thread_id, created_at, updated_at
+)
+SELECT message_id, $5, $6, $6
+FROM lineage
+ON CONFLICT(message_id) DO UPDATE SET
+    activity_thread_id = excluded.activity_thread_id,
+    updated_at = excluded.updated_at
+WHERE activity_monitor_message_threads.activity_thread_id
+    IS DISTINCT FROM excluded.activity_thread_id
+
+SELECT activity_thread_id
+FROM activity_monitor_message_threads
+WHERE message_id = $1
+LIMIT 1
+
+INSERT INTO activity_monitor_agent_threads (agent_id, activity_thread_id, created_at, updated_at)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT(agent_id) DO UPDATE SET
+    activity_thread_id = excluded.activity_thread_id,
+    updated_at = excluded.updated_at
+WHERE activity_monitor_agent_threads.activity_thread_id IS DISTINCT FROM excluded.activity_thread_id
+activity_monitor_upsert_activity_thread_actionactivity_monitor_list_thread_actionsactivity_monitor_action_by_idactivity_monitor_list_recent_thread_actionsactivity_monitor_carrier_user_messagesactivity_monitor_message_thread_lookupactivity_monitor_read_threadactivity_monitor_list_active_threadsactivity_monitor_create_activity_threadfailed to load accepted Idea card for Ideas builderfailed to load accepted Idea card source metadata for Ideas builderfailed to resolve Ideas build scratch directoryfailed to create Ideas build scratch directory

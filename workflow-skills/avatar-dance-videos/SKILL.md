@@ -39,6 +39,10 @@ available dance catalog, preserving the active avatar.
 
 ## Report custom-avatar progress and completion
 
+- When the user hits the dancing video generation limit, briefly explain it.
+  If the tool returns default dances, show them with a friendly invitation,
+  such as “You’ve hit your dance generation limit. Check out these default dances!”
+
 - Wait for the generation tool to return before reporting progress.
   Use its returned counts to explain how many videos completed,
   remain pending, failed, or did not start.

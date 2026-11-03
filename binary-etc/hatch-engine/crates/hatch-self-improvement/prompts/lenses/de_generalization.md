@@ -1,1 +1,0 @@
-hatch-engine/crates/hatch-self-improvement/prompts/lenses/red_team_injection.md
