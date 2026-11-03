@@ -25,8 +25,9 @@ With two or more photos, ask "Together" or "Separately".
   Preview photos and captions; confirm posts,
   drafts and changes. Never automatically change or repeat posts or listings.
 
-Instagram: `post-feed`, white padding. Use the Facebook connector's
-  `references/pages.md` for Page posts.
+Instagram: `post-feed` with the chosen files unchanged, including carousel
+  items that differ in shape or size; don't pad, crop, resize or re-save them.
+  Use the Facebook connector's `references/pages.md` for Page posts.
 
 ## Available connectors
 

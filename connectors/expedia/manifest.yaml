@@ -1,0 +1,63 @@
+version: 1
+gating:
+  allowed_countries: [US, PR]
+metadata:
+  visible_in_settings: true
+auth:
+  client_id: "8aa2cb16-4c3e-4fec-a267-ff8719e55c1a"
+  provider: expedia
+  required: false
+cli:
+  binary: expedia
+  skill: expedia
+connector: expedia
+display_name: Expedia
+icon: expedia
+description: Search, book, and retrieve Expedia lodging.
+request_quota:
+  mode: enforce
+  workers: [expedia]
+  # CAGI caps each user's Expedia requests at 30 in any trailing minute and
+  # 915 per hour, then rejects for the rest of that window. This bucket stops a
+  # runaway loop first: a full bucket plus a minute of refill stays at 27, and
+  # an hour at 735, so no separate hourly cap is needed. The burst covers a
+  # search plus several hotel panel opens, each a quote and details.
+  queries_per_minute: 12
+  burst: 15
+actions:
+  read:
+    default: allow
+    label: Read
+    response_guard: verification_codes
+    methods:
+      profile.read:
+        label: read your expedia profile
+        approval_phrase: read your expedia profile
+      lodging.browse:
+        label: Browse Lodging
+        approval_phrase: browse Expedia lodging
+      lodging.booking.read:
+        label: Read my bookings
+        approval_phrase: read your Expedia lodging bookings
+cli_subcommands:
+  - profile
+  - search
+  - property-details
+  - quote
+  - validate-booking
+  - book
+  - booking-status
+consent_screen:
+  bullets:
+    - icon: data_types
+      title: "Connecting is optional"
+      text: "You can search Expedia lodging without an account. Connecting adds member access. Booking changes and cancellations are handled by Expedia."
+    - icon: info
+      title: "Pay-now checkout"
+      text: "Eligible pay-now rates use your selected Stripe Link payment method. Other rates provide a Book on Expedia link for website checkout."
+    - icon: caution
+      title: "Prices and availability can change"
+      text: "Review the property, dates, party, charges, cancellation terms, fees, and policies shown before approving."
+  footer_paragraphs:
+    - "Muse exchanges member profile, booking, and guest information with Expedia only to perform your request."
+    - "By approving a booking, you accept Expedia's [Terms of Service](https://www.expedia.com/lp/lg-terms), [Privacy Statement](https://www.expedia.com/lp/lg-privacy), and the displayed property rules."

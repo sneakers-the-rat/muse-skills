@@ -2,7 +2,7 @@
 
 ## Start with what matters
 
-- Saved travel preferences, when the user has any, live in `~/memory/travel/PROFILE.md`. Planning from them saves the user from repeating airports, airlines, hotel and loyalty details they have already given, and what they say in this conversation takes precedence. Muse updates the profile in the background from the conversation.
+- Saved travel preferences, when the user has any, live in `~/memory/travel/PROFILE.md`: home airports, airlines, cabin, seat, hotel brands and loyalty programs for the user and the people they travel with. Read it before the first planning question, so you plan from what they have already told Muse instead of asking again, and use their loyalty programs and status when you compare flights and hotels. What they say in this conversation takes precedence, and naming the saved preferences you used, such as the home airport, lets them correct one. Muse updates the profile in the background from the conversation.
 
 - Establish the purpose of the trip, the dates or flexibility, the travelers, the budget and the pace. Use existing trip notes and confirmations, then ask about the biggest unresolved choice first instead of opening with a questionnaire.
 

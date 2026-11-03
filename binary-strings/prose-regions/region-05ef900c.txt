@@ -1,0 +1,36 @@
+update agent.connection_messages set state='awaiting_muse', feedback=$2, rule_review_complete=$4,
+                updated_at_ms=$3 where message_id=$1 and state='proposed'with settled as (
+                select m.message_id,
+                    case when m.publication_id is null then d.state
+                         when o.delivered or cardinality(p.recipient_muses)=0 then 'delivered'
+                         when o.uncertain or o.partly_delivered then 'uncertain'
+                         else 'failed' end as state
+                from agent.connection_messages m
+                left join agent.group_replies r on m.publication_id is null
+                    and r.group_id=m.connection_id::text and r.submission_id=m.message_id::text
+                left join chat_private.deliveries d on d.delivery_key=r.delivery_key
+                left join chat_private.peer_publications p on p.operation_id=m.publication_id
+                left join lateral (
+                    select count(*) as recipients,
+                        bool_and(state in ('delivered','failed','superseded','uncertain')) as settled,
+                        bool_and(state='delivered') as delivered,
+                        bool_or(state='delivered') as partly_delivered,
+                        bool_or(state='uncertain') as uncertain
+                    from peer.outbox where m.publication_id is not null
+                        and (envelope_id=m.publication_id or hosted_publication_id=m.publication_id)
+                ) o on true
+                where m.state='queued' and (
+                    (m.publication_id is null and d.state in ('delivered','failed','uncertain')) or
+                    (m.publication_id is not null and
+                        ((o.recipients>0 and o.settled) or cardinality(p.recipient_muses)=0)))
+                order by m.created_at_ms, m.message_id limit 100 for update of m skip locked
+            ) update agent.connection_messages m set
+                state=case when s.state='delivered' then 'delivered' when s.state='uncertain' then 'uncertain' else 'cancelled' end,
+                feedback=case when s.state='delivered' then null when s.state='uncertain' then 'Delivery could not be confirmed. Do not send this message again.' else 'The message could not be delivered.' end,
+                outcome_notified=case when s.state='delivered' then m.outcome_notified else false end,
+                updated_at_ms=$1 from settled s where m.message_id=s.message_id returning m.*update agent.connection_messages set state='cancelled', feedback=$2,
+                updated_at_ms=$3, outcome_notified=false where message_id=$1 and state='queued'update agent.connection_messages set outcome_notified=true where message_id=$1 and state=$2update agent.connection_messages set state='awaiting_user', approval_id=$2, updated_at_ms=$3
+                where message_id=$1 and (state in ('proposed','awaiting_user')
+                    or (state='awaiting_muse' and not rule_review_complete
+                        and review_operation_id is not null and reviewed_payload_sha256=payload_sha256))
+                and (approval_id is null or approval_id=$2)mailbox admission requires a checkpoint queueinvalid group chat idagent_recovery_owners.has_active_ownercompleted_atspawn_call_idpublication has no chat ownerinvalid publication tracepublication owner does not match its transcript/metadata/message_kindpublication has no execution ownerinvalid publication authorityruntime.resources.metadata_jsonagent_statusseen_attool_call_idtool_namerequestresulttool_idattached mailbox input has no stream ownerstagedqueuedexecutinginput chat is absentinvalid input binding epochConversationTransportStatelink_idneeds_reconciliationpending_cancellationinput provider is absentinvalid mail report outcomeforeground report has no durable submissionforeground report submission has no persisted input identityforeground report input event is missingstartup input size exceeds i64startup queue size exceeds i64startup media size overflowchats.defer_reactionchats.finish_reactionchats.next_reactionchats.pending_reactionschats.defer_publicationchats.finish_publicationchats.publication_contextchats.next_publicationchats.publication_progresschats.pending_publicationschats.adopt_publicationchats.predecessor_publicationchats.defer_publication_for_originchats.publication_delivery_evidencechats.uncertain_publication_effectacquired connection, but time to acquire exceeded slow thresholdacquired connectionchats.native_message_ownerchats.input_receiptchats.reserve_inbound_messageinbound message requires native identitychats.resolve_native_referencechats.resolve_transport_referencelatest_public_runtime_user_message_routelatest_visible_main_chat_user_message_atconnections.ensurea connection needs a conversation and audienceconnections.apply_rule_changessharing rule source does not match its changechange each sharing rule only once per passinvalid sharing rule change countconnections.set_ruleload_turn_developer_contextscapture_turn_developer_contextsduplicate turn developer context sequenceload_inherited_turn_developer_contextsrecent context item scan limitload_items_recentprobe_agent_state_readupsert_itemdelete_items_in_seq_rangerecent tool call scan limitfind_function_call_recentfunction_call_context_seqtool call has multiple context sequenceshas_pending_summarizationpersist_summarized_outputmark_summarization_checkedload_item_created_at_by_seqobject_removal_drain_cursorartifact provenance recovery limitload_artifact_provenance_recovery_snapshot

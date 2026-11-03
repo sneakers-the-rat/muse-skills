@@ -1,0 +1,1575 @@
+The requesting conversation is no longer availableThe requesting turn is no longer availablespaceShare a Feed item, Idea, Space, Goal, or file.The file path has no file nameChoose a file in the workspace using its path or sandbox URI.Feed item not foundIdea not foundSpace not foundGoal not foundBoth owners confirmed the connection.sunexpected owner approval responseprovider connection identity is no longer currentread provider connection ruleswhatsapp_companionhatch.circle-resource.v1Connections are disabledhumancontactsubjectfingerprintthe action does not fit the approval previewinvalid chat worker actionchat_worker_actionchat.worker_actionoperation_idpeer request reconciliation failedfailed to disconnect an ended peer request's linkrequest_endedfailed to refresh confirmed peer contacttriggerpeer_imagerepair/v1/peer/sign-delegatesign peer delegate via authddecode signed delegate tokenconnection_versionfailed to publish peer admission mirror to peerdfailed to read peer admission mirror; disabling previously admitted authorityread peer admission mirrorfailed to disable peer admission after snapshot read failurepeer admission mirror publication failed; rotating publisher tokenrebuild peer admission mirrorretry peer admission mirror publicationread peer admission mirror snapshotpeerd mirror status observed after failed disable (diagnostic only)peerd mirror status unavailable after failed disablevalidate peer invite requestcreate_request_id must be non-nil/v1/peer/sign-invite-v2inviteinviter_offered_presetpairing.request_supersededprevious_relationship_generation_idrequest_supersededfailed to write a peer conversation activity rowfailed to repair default peer DM titlespeer DM title has an invalid session idfailed to reconcile peer profile photoruntime.skillsJARVIS_HOMEJARVIS_VAR_LIB_DIRCREDENTIALS_DIRECTORYJARVIS_TRACE_CONTEXTJARVIS_RUNTIME_CONTEXT_TOKENskill command runtime context registration faileddance image frame unavailable; retaining completed videodance image frame extraction task failedagent_status broadcast presence statusstandalone/mirror/streamapplication/x-ndjsonadmission snapshot upload stalledclient rendering snapshot read failed; keeping lifts inline this turndatabase write admission gate closedadmission_timeoutassert_table_existstable_presence.query
+INSERT INTO requests (
+  request_id, root_request_id, parent_request_id, request_origin,
+  transcript_surface, root_work_class
+)
+VALUES ($1, $2, $3, $4, $5::runtime.transcript_surface, $6)
+ON CONFLICT (request_id) DO UPDATE SET
+  root_request_id = COALESCE(requests.root_request_id, excluded.root_request_id),
+  parent_request_id = COALESCE(requests.parent_request_id, excluded.parent_request_id),
+  request_origin = CASE
+    WHEN requests.request_origin = 'internal.runtime_replay' THEN excluded.request_origin
+    ELSE requests.request_origin
+  END,
+  transcript_surface = excluded.transcript_surface,
+  root_work_class = CASE
+    WHEN requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing'
+      THEN excluded.root_work_class
+    ELSE requests.root_work_class
+  END
+WHERE (requests.root_request_id IS NULL AND excluded.root_request_id IS NOT NULL)
+   OR (requests.parent_request_id IS NULL AND excluded.parent_request_id IS NOT NULL)
+   OR (requests.request_origin = 'internal.runtime_replay'
+       AND excluded.request_origin <> 'internal.runtime_replay')
+   OR requests.transcript_surface IS DISTINCT FROM excluded.transcript_surface
+   OR (requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing')
+output
+INSERT INTO tool_outputs (event_seq, call_id, status, output_text, error_text, created_at)
+VALUES ($1, $2, $3, $4, $5, to_timestamp($6::double precision / 1000.0))
+ON CONFLICT (event_seq) DO UPDATE SET
+  call_id = excluded.call_id,
+  status = excluded.status,
+  output_text = excluded.output_text,
+  error_text = excluded.error_text
+arguments
+INSERT INTO tool_calls (event_seq, call_id, tool_name, status, arguments_json, created_at)
+VALUES ($1, $2, $3, 'started', $4, to_timestamp($5::double precision / 1000.0))
+ON CONFLICT (call_id) DO UPDATE SET
+  event_seq = excluded.event_seq,
+  tool_name = excluded.tool_name,
+  status = excluded.status,
+  arguments_json = excluded.arguments_json
+
+INSERT INTO chat_event_derived_write_backlog (event_seq, resources_json)
+VALUES ($1, $2)
+ON CONFLICT (event_seq) DO UPDATE SET
+  resources_json = excluded.resources_json,
+  updated_at = now()
+
+UPDATE events
+SET display_text_ready = $2,
+    reply_target_message_id = $3,
+    payload_json = $4
+WHERE event_seq = $1
+
+INSERT INTO messages (message_id, event_seq, role, body, created_at)
+SELECT e.message_id, e.event_seq, e.role, $2, e.created_at
+FROM events e
+WHERE e.event_seq = $1
+  AND e.message_id IS NOT NULL
+  AND e.role IS NOT NULL
+ON CONFLICT (message_id) DO UPDATE SET
+  body = excluded.body
+UPDATE chat_private.peer_conversations SET requester_chat_id = NULL
+         WHERE conversation_id = $1 AND requester_revision = $2
+           AND requester_chat_id = $3 AND NOT requester_unavailable
+           AND chat_id = $5
+           AND EXISTS (SELECT 1 FROM agent.agents
+                       WHERE id = $4 AND session_id = $3)peer handoff disagrees with its asking-chat claimpeer handoff requester changed before admissionSELECT session_id, COALESCE(prompt_floor_seq, -1) AS prompt_floor_seq,
+                kind = 'root' AND parent_agent_id IS NULL
+                AND ephemeral IS DISTINCT FROM TRUE
+                AND status NOT IN ('shutdown', 'not_found') AS eligible
+         FROM agent.agents WHERE agent_id = $1 FOR UPDATEstartup_root_changedSELECT EXISTS(SELECT 1 FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND accepted_ordinal < $2)startup mailbox promotion cannot overtake an earlier accepted input
+SELECT payload_json
+FROM agent.runtime_restart_checkpoints
+WHERE agent_id = $1
+FOR UPDATE
+
+SELECT EXISTS (
+  SELECT 1
+  FROM agent.message_mailbox
+  WHERE agent_id = $1
+    AND state = 'accepted'
+    AND accepted_ordinal < $2
+    AND (NOT $3 OR submission_kind <> 'internal_handoff')
+)
+message mailbox attachment cannot overtake an older priority peer
+INSERT INTO agent.runtime_restart_checkpoints (
+  agent_id, mode, recovery_class, recovery_owner_id, execution_config_json,
+  payload_json, created_at, updated_at
+) SELECT $1, $2, $3, $4, $5, $6, $7, $7
+WHERE EXISTS (
+  SELECT 1
+  FROM agent.agents
+  WHERE agent_id = $1
+    AND status NOT IN ('shutdown', 'not_found')
+)
+ON CONFLICT (agent_id) DO NOTHING
+SELECT EXISTS (SELECT 1 FROM agent.agents WHERE agent_id = $1 AND status NOT IN ('shutdown', 'not_found'))conversation epoch
+INSERT INTO agent.message_mailbox (
+  submission_id, agent_id, conversation_epoch, submission_kind,
+  routing_scope, state, checkpoint_custody, stream_owner_message_id,
+  submission_json, transcript_event_seq, attached_at
+) VALUES (
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+  CASE WHEN $6 = 'attached' THEN now() ELSE NULL END
+)
+ON CONFLICT (submission_id) DO NOTHING
+RETURNING accepted_ordinal, accepted_at
+startup mailbox promotion requires its previously accepted input
+SELECT agent_id, conversation_epoch, submission_kind, routing_scope,
+       state, stream_owner_message_id, submission_json,
+       transcript_event_seq, accepted_ordinal, accepted_at
+FROM agent.message_mailbox
+WHERE submission_id = $1
+FOR UPDATE
+update chat.message_bindings set admitted_at = coalesce(admitted_at, now())
+                    where jarvis_message_id = $1 and chat_id = $2 and binding_epoch = $3 and transport = $4binding epochconversation_epochsubmission_kindrouting_scope
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = $5,
+    stream_owner_message_id = $2,
+    submission_json = $3,
+    transcript_event_seq = coalesce($4, transcript_event_seq),
+    attached_at = now()
+WHERE submission_id = $1
+  AND state = 'accepted'
+  AND stream_owner_message_id IS NULL
+mailbox stream ownerselect a.account_id from chat_private.accounts a
+             join chat_private.binding_authorizations b on b.provider = a.provider and b.account_id = a.account_id
+             where b.provider = $1 and b.binding_id = $2
+               and a.connection_id = $3 and not a.revoked for share of adirect input has no captured binding epochaccount_retiredselect connection_id, generation, transport_json, delivery_target
+             from chat_private.binding_authorizations
+             where provider = $1 and binding_id = $2 and chat_id = $3
+               and account_id = $4 and external_kind = 'direct' and participation = 'active'
+             for shareaccount_authorization_retiredtransport_jsontransport_authorization_absentdelivery_targetselect epoch from chat_private.bindings
+         where chat_id = $1 and provider = $2 and not revoked for sharetransport_authorization_changedbinding_retiredactivity_monitor_list_thread_actionsactivity_monitor_list_recent_thread_actionsactivity_monitor_message_thread_lookupactivity_monitor_read_threadupdate self_improvement.connector_context_records set current = false
+        where connector = $1 and account_id = $2 and generation = $3 and subject_id = $4
+        and current and ($5::text is null or suggestion_id <> $5) returning suggestion_idupdate self_improvement.follow_up_queue set state = 'cancelled',
+        disposition_reason = 'connector_source_deleted', terminal_at = now(), updated_at = now()
+        where follow_up_id = any($1) and state = 'pending'connector context contribution does not match its checkpointdeletedselect e.group_key from self_improvement.connector_context_records r
+                join context.events e on e.id = r.event_id
+                where e.source_id = $1 and r.subject_id = $2
+                  and (e.expires_at is null or e.expires_at > statement_timestamp()) order by e.append_position desc limit 1select count(*) from unnest($1::text[]) requested(event_id)
+        left join context.events e on e.id = requested.event_id
+        where e.id is nullconnector context publication event is unavailableinsert into self_improvement.connector_context_records
+            (connector,account_id,generation,subject_id,suggestion_id,event_id,current,
+             source_id,group_id,append_position)
+            select $1,$2,$3,$4,$5,$6,true,e.source_id,e.group_id,e.append_position
+            from context.events e where e.id = $6 on conflict do nothingupdate self_improvement.connector_mailbox_state m
+        set responded_seen_at = $7
+        from unnest($4::text[], $5::text[], $6::bigint[]) as s(thread_id, message_id, position)
+        where m.connector = $1 and m.account_id = $2 and m.generation = $3
+          and m.thread_id = s.thread_id and m.source_id <> s.message_id
+          and m.arrival_position < s.position and m.responded_seen_at is nullinsert into self_improvement.connector_mailbox_state as existing
+        (connector, account_id, generation, source_id, thread_id,
+         arrival_position, position, facts, recorded_at, expires_at)
+        select $1, $2, $3, s.source_id, s.thread_id, s.arrival, s.position, s.facts, $9, $10
+        from unnest($4::text[], $5::text[], $6::bigint[], $7::bigint[], $8::jsonb[])
+          as s(source_id, thread_id, arrival, position, facts)
+        on conflict (connector, account_id, generation, source_id) do update
+        set arrival_position = least(existing.arrival_position, excluded.arrival_position),
+            position = greatest(existing.position, excluded.position),
+            facts = case when excluded.position > existing.position
+                then excluded.facts else existing.facts end,
+            recorded_at = case when excluded.position > existing.position
+                then excluded.recorded_at else existing.recorded_at end
+        where excluded.position > existing.position
+           or excluded.arrival_position < existing.arrival_positionselect source_id, position, facts from self_improvement.connector_mailbox_state
+        where connector = $1 and account_id = $2 and generation = $3
+          and source_id = any($4)
+        for updateupdate self_improvement.connector_mailbox_state m
+        set position = c.position, facts = c.facts, recorded_at = $7
+        from unnest($4::text[], $5::bigint[], $6::jsonb[]) as c(source_id, position, facts)
+        where m.connector = $1 and m.account_id = $2 and m.generation = $3
+          and m.source_id = c.source_idsource_idfactsdelete from self_improvement.connector_mailbox_state
+            where connector = $1 and account_id = $2delete from self_improvement.connector_mailbox_state
+            where connector = $1 and account_id = $2 and generation = $3
+              and source_id = any($4)too many group attachment snapshotsinvalid group attachment snapshot referenceinvalid group attachment MIME typeduplicate group attachment snapshot referencegroup attachment snapshots exceed limitBackground participation is temporarily unavailablecontent_limitattachments_coverageoriginal_evidence_sha256phone call transcript is unavailabledemo_script_outcomehuman_answeredvoicemailblockednot_connecteddemo_goodbye_outcome</<\/space_preview_repairspace preview repair: handler not registeredspace preview repair: handler registry unavailablespace_preview_missingspace preview repair: runtime work store unavailablequeued Space preview repairspace preview repair: seeding failedspace preview repair: catalog read failed on viewnot_authorizedpermission_disabledstripeconnector_checkpoint_changed--insightStripe Link Financial Insights fetch failedStripe Link Financial Insights response exceeded the size limitStripe Link Financial Insights response was too largeFinancial Insights publication identity could not be serializedinspectStripe Link connection inspection failedStripe Link connection status failedas_ofstripe_financial_insights{"status":"ready"}connector_call_reasonFinancial Insights semantic snapshot could not be serializedreadyfailed to persist browser task projectiontask_missingcapture_failedexpiredtake_failedtake_timeoutstale_headpayload_validationbroker_fence_changednot_attemptedwrittencaptured_and_presentedclient preview digest mismatchclient preview is too largeclient preview observation returned no capture decisionclient browser ended during observationclient browser changed during observation/api/computer/assets/desktop-v2.pngneeds_userã€ads-No rule fully covers this message.owner_requestExpected a message reviewOnly the user's Muse can review a messageGive a short reason for the decisionThe review turn is no longer activeReview only the conversation that requested this turnSaved message not foundConversation worker not foundThe message changed or its review is complete. Read it again.Do not replace the text when declining a messageThe conversation or its rules changed. Ask the worker for a new draft.Send a nonempty messageMessage preparation timed outowner message review failed; leaving the draft pendingsaved message disappearedconnection not foundSaved message integrity check failedThe conversation or its rules changed. Prepare the message again using the current context.An attachment changed after this message was prepared. Prepare a new message.The main Muse decision does not match the saved messagethe connection is no longer activeconnection message reviewedconnection approval has no durable identityThe user did not approve this message. Leave it unsent.The conversation changed before delivery.connection message queuedSharing rule review timed outinvalid connection review; requesting one correctionSharing rule review retry timed outThe tracked responsibility is complete.Tracking completedbundled Ideas localization catalog is unavailablefailed to load bundled Ideas localization provenancefailed to load bundled Ideas dogfood provenanceIdea catalog sharing context read failedIdea share variant projection read failedIdea share revision projection read failedIdea direct sharing read failedIdea publication hold read failedresponse_statusresponse_sizehttp://localhost/hatch/viewer/profileprofile_image_hostfiles can only be shared in a direct peer conversationbytescontent_truncatedrequired_review_imagepeer-file://Shared items must refer to local files before sendingresolve DM conversation for grant noticeresolve DM conversation for relationship confirmationcontrol.relationship_confirmationWhatsApp directory read timed outartifact proxy dial failedartifact proxy send failedCircle is no longer activeResource metadata is too largeload peer relationship for SAS confirmationload peer SAS confirmation replayreconcile peer SAS confirmation replaypairingacquire exact-link SAS confirmation leasepeerd SAS confirmation lease is shorter than the required commit bound/v1/peer/sign-relationship-confirmationsign peer relationship confirmation via authddecode signed relationship confirmationparse signed relationship confirmationverify authd relationship confirmationauthd relationship confirmation notice id does not match signed tupleauthd relationship confirmation does not match requested tuplefailed to release SAS confirmation leasefailed to reconcile replayed SAS confirmation lease
+due-occurrence coalesce check failed; seeding immediate occurrence anywaySELECT payload_json FROM runtime_restart_checkpoints WHERE agent_id = $1 FOR UPDATESELECT submission_json, octet_length(submission_json)::bigint AS serialized_bytes
+         FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND submission_id <> $2startup_queue_fullinvalid connector permission update idclient browser observation capacity is busybrowser task control transition is still settlingagentmaintenance_occurrencemaintenance_attemptrequest_generationgeneric_maintenancejitter_offset_secsjitter_window_secsmaintenance occurrence collided with terminalized work item"((?:sandbox://|file://|peer-file://|/|workspace/)[^"]+)"|'((?:sandbox://|file://|peer-file://|/|workspace/)[^']+)'|(?:url\(\s*|(?:src|href|poster)\s*=\s*)((?:sandbox://|file://|peer-file://|/|workspace/)[^\s)'">]+)widget asset literal patternstripe_link_financial_insights_fetch_failedSELECT event_seq, event_name, source, role::text AS role,
+                    visibility::text AS visibility, message_id, agent_id,
+                    parent_agent_id, parent_message_id, reply_to_message_id,
+                    transcript_surface::text AS transcript_surface, payload_json,
+                    request_id, root_request_id, parent_request_id,
+                    extract(epoch from created_at)::bigint AS created_at
+             FROM runtime.events WHERE idempotency_key = $1SELECT ci.item_json, ci.message_source,
+                        extract(epoch from ci.created_at)::bigint AS created_at,
+                        p.client_context_json
+                 FROM agent.context_items ci
+                 LEFT JOIN agent.context_item_resume_projection p
+                   ON p.agent_id = ci.agent_id AND p.seq = ci.seq
+                 WHERE ci.agent_id = $1 AND ci.seq = $2Cannot get last fileXML:com.adobe.xmpRaw profile type iptcRaw profile type 8bimgroup delivery claim is no longer currentno_activationactivation_recoveredstripe_link_financial_insights_activation_recovery_failedmessage_event_stream_idlemid > lencalled `Result::unwrap()` on an `Err` valueimpressionclickengagementfeedback_upfeedback_downvalidationtransportassertion failed: self.is_char_boundary(new_len)avatar_sharelocal_mapoptionimage_optionsdiscovery_pool_idea_idletterhotel_resultsshopping_cartspace_build_completednode_cardinternal_link_action_cardgeneric_listexternal_linkaudioslidesforeground_rootpeer_chat_rootexternal_party_chat_rootmail_conversationdelegate_main_requestworkflow_subagentspaces_builderspaces_builder_litespaces_builder_editspaces_builder_python_editbrowser_taskdeep_researchideas_builderspace_taskself_improvement_stepflight_tracking_steppeer_sync_stepfeed_workflow_stepephemeral_agent_stepscheduler_cron_executescheduler_cron_resolveexecute_resolve_workersystem_cron_productvoice_delegaterealtime_voicecompaniondeveloperassistantinternal error: entered unreachable code: invalid Once stateuser_goalassistant_trackingÿNot enough planes read from TIFF imagePlanar TIFF with CMYK color type is not supportedonlineout_of_creditsneeds_approvalcompactingrespondingwaiting_for_subagentsserialization_failurelockedconnection_transientconstraintmalformed_or_corrupttransient_ioioio_transientpool_timeoutpool_closedrow_not_foundchannel_closedagent_status_parsestorage_invariantlimit_exceededquick_checkcreatedrenamedunarchivedpinnedafter_inferenceawaiting_approvalafter_tool_dispatchsaved message review failed, retaining the message for retryads_entitiesassistant payload has no ads entity segmentsassistant payload has no ads segmentsassistant payload has no product entity segments/data/productsdurable shopping presentation has an unexpected kindsource_changedcurrentskippedgroup_delivery_incompletebrowser broker control request timed outbrowser broker returned the wrong task-control result shaperefresh_budget_spentretryablerefresh_outcomepeer.contact_updateduser_controlledparked_outcomeinterruptedcontact_listevent_stream_connectedinbound_dropopportunisticcomplete_when_awakeobjectiveproactive_notificationflight_trackingvoice_persistencewebhook_fetchlightstripe_link_connectedpermission_enabledlifecyclerecorded_reportendedleft_queuetarget_retiredchat_retiredconversation_resettarget_not_rootrefusedroot_follow_up_settledroot_follow_up_handed_offcron_handoffconnector_tracking_ingestonboarding_handoffself_improvement_handoffsubagent_relayworkflow_terminal_handoffdevice_sync_handoffphone_result_handoffspace_slugnutrition log card requires at least one meal<section class="hatch-nutrition-card meal-detail-card" data-card-root>
+  <script type="application/json" data-card-data>
+{}
+  </script>
+
+  <style>
+    html[data-html-preview-widget="true"],
+    html[data-html-preview-widget="true"] body,
+    html:not([data-html-preview-widget]),
+    html:not([data-html-preview-widget]) body {
+      --nutrition-canvas: var(--hatch-widget-bg, #fcfcfc);
+      margin: 0 !important;
+      padding: 0 !important;
+      min-height: 0 !important;
+      background: var(--nutrition-canvas) !important;
+      background-color: var(--nutrition-canvas) !important;
+    }
+
+    html[data-theme="dark"],
+    html[data-theme="dark"] body {
+      --nutrition-canvas: var(--hatch-widget-bg, #181819);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      html:not([data-theme]),
+      html:not([data-theme]) body {
+        --nutrition-canvas: var(--hatch-widget-bg, #181819);
+      }
+    }
+
+    .hatch-nutrition-card {
+      color-scheme: light dark;
+      --nutrition-surface: var(--hatch-agent-bubble-bg, #e9eaeb);
+      --nutrition-control: var(--hatch-widget-surface-muted, #f3f4f5);
+      --nutrition-control-hover: var(--hatch-widget-surface, #ffffff);
+      --nutrition-divider: color-mix(in srgb, var(--hatch-widget-text, #0b0b0d) 12%, transparent);
+      --nutrition-radius: var(--hatch-agent-bubble-radius, 22px);
+      --nutrition-text: var(--hatch-widget-text, #0b0b0d);
+      --nutrition-text-secondary: var(--hatch-widget-muted, #646469);
+      display: block;
+      width: calc(100% - 24px);
+      max-width: 440px;
+      box-sizing: border-box;
+      border: 0;
+      padding: 0;
+      background: transparent !important;
+      box-shadow: none;
+      color: var(--nutrition-text);
+      font: 14px/20px "Optimistic AI VF", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+      text-decoration: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .meal-detail-surface {
+      width: 100%;
+      box-sizing: border-box;
+      overflow: hidden;
+      border-radius: var(--nutrition-radius);
+      padding: 16px;
+      background: var(--nutrition-surface);
+      clip-path: inset(0 round var(--nutrition-radius));
+      overflow-anchor: none;
+      transform: translateZ(0);
+      -webkit-mask-image: -webkit-radial-gradient(white, black);
+    }
+
+    @media (hover: hover) {
+      .meal-detail-surface:hover {
+        filter: brightness(0.95);
+      }
+
+      html[data-theme="dark"] .meal-detail-surface:hover {
+        filter: brightness(1.1);
+      }
+    }
+
+    @media (prefers-color-scheme: dark) and (hover: hover) {
+      html:not([data-theme]) .meal-detail-surface:hover {
+        filter: brightness(1.1);
+      }
+    }
+
+    .hatch-nutrition-card *,
+    .hatch-nutrition-card *::before,
+    .hatch-nutrition-card *::after {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .hatch-nutrition-card [hidden] {
+      display: none !important;
+    }
+
+    .meal-detail-content {
+      display: grid;
+      gap: 12px;
+    }
+
+    .meal-detail-header {
+      display: grid;
+      gap: 20px;
+    }
+
+    .meal-detail-title-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 60px;
+      align-items: start;
+      gap: 4px;
+      min-height: 64px;
+    }
+
+    .meal-detail-copy {
+      display: grid;
+      min-width: 0;
+      gap: 2px;
+    }
+
+    .nutrition-section-label {
+      margin: 0;
+      color: var(--nutrition-text-secondary);
+      font-size: 13px;
+      font-weight: 400;
+      line-height: 18px;
+    }
+
+    .meal-title {
+      display: -webkit-box;
+      overflow: hidden;
+      color: var(--nutrition-text);
+      font-size: 17px;
+      font-weight: 500;
+      line-height: 22px;
+      overflow-wrap: anywhere;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+    }
+
+    .meal-log-icon {
+      display: grid;
+      width: 60px;
+      height: 60px;
+      padding: 2px;
+      place-items: center;
+      overflow: hidden;
+      border-radius: 10px;
+      background: var(--nutrition-control);
+    }
+
+    .meal-log-icon img {
+      display: block;
+      width: 56px;
+      height: 56px;
+      object-fit: contain;
+    }
+
+    .nutrition-metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 24px;
+    }
+
+    .nutrition-metric {
+      min-width: 0;
+    }
+
+    .nutrition-metric-label {
+      overflow: hidden;
+      color: var(--nutrition-text-secondary);
+      font-size: 13px;
+      font-weight: 400;
+      line-height: 18px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .nutrition-metric-value {
+      overflow-wrap: anywhere;
+      color: var(--nutrition-text);
+      font-size: 15px;
+      font-variant-numeric: tabular-nums;
+      font-weight: 550;
+      line-height: 20px;
+    }
+
+    .nutrition-divider {
+      width: 100%;
+      height: 1px;
+      background: var(--nutrition-divider);
+    }
+
+    .ingredient-section {
+      margin: 0;
+    }
+
+    .ingredient-list {
+      display: grid;
+    }
+
+    .ingredient-item {
+      display: grid;
+      grid-template-rows: minmax(0, 1fr);
+      margin-top: 8px;
+      opacity: 1;
+      transform: translateY(0);
+      transition:
+        grid-template-rows 220ms cubic-bezier(0.22, 1, 0.36, 1),
+        margin-top 220ms cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 160ms ease-out,
+        transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .ingredient-item:first-child {
+      margin-top: 0;
+    }
+
+    .ingredient-item.is-collapsed {
+      grid-template-rows: minmax(0, 0fr);
+      margin-top: 0;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(-4px);
+    }
+
+    .ingredient-item-content {
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .ingredient-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+      min-height: 18px;
+      padding: 0;
+    }
+
+    .ingredient-name {
+      min-width: 0;
+      overflow: hidden;
+      color: var(--nutrition-text-secondary);
+      font-size: 13px;
+      font-weight: 400;
+      line-height: 18px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .ingredient-meta {
+      color: var(--nutrition-text-secondary);
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+      font-weight: 400;
+      line-height: 18px;
+      white-space: nowrap;
+    }
+
+    .ingredient-toggle {
+      display: grid;
+      width: 100%;
+      min-height: 36px;
+      margin: 16px 0 0;
+      place-items: center;
+      border: 0;
+      border-radius: 26px;
+      padding: 8px 12px;
+      background: var(--nutrition-control);
+      color: var(--nutrition-text);
+      cursor: pointer;
+      font: inherit;
+      font-size: 15px;
+      font-weight: 500;
+      line-height: 20px;
+      letter-spacing: 0;
+      text-align: center;
+      transition:
+        background-color 160ms ease-out,
+        transform 120ms ease-out;
+    }
+
+    .ingredient-toggle:hover {
+      background: var(--nutrition-control-hover);
+    }
+
+    .ingredient-toggle:focus-visible {
+      outline: 2px solid currentColor;
+      outline-offset: 2px;
+    }
+
+    .ingredient-toggle:active {
+      transform: scale(0.99);
+    }
+
+    html[data-theme="dark"] .hatch-nutrition-card {
+      --nutrition-surface: var(--hatch-agent-bubble-bg, #1f1f20);
+      --nutrition-control: var(--hatch-widget-surface-muted, #414244);
+      --nutrition-control-hover: var(--hatch-widget-surface, #505154);
+      --nutrition-text: var(--hatch-widget-text, #f7f7f8);
+      --nutrition-text-secondary: var(--hatch-widget-muted, #b3b3b8);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      html:not([data-theme]) .hatch-nutrition-card {
+        --nutrition-surface: var(--hatch-agent-bubble-bg, #1f1f20);
+        --nutrition-control: var(--hatch-widget-surface-muted, #414244);
+        --nutrition-control-hover: var(--hatch-widget-surface, #505154);
+        --nutrition-text: var(--hatch-widget-text, #f7f7f8);
+        --nutrition-text-secondary: var(--hatch-widget-muted, #b3b3b8);
+      }
+    }
+
+    /* Temporary compatibility for iOS previews that do not bridge host theme tokens. */
+    @supports (-webkit-touch-callout: none) {
+      html,
+      body {
+        --nutrition-canvas: #fcfcfc !important;
+      }
+
+      .hatch-nutrition-card {
+        --nutrition-surface: #e9eaea;
+      }
+
+      html[data-theme="dark"],
+      html[data-theme="dark"] body {
+        --nutrition-canvas: #050505 !important;
+      }
+
+      html[data-theme="dark"] .hatch-nutrition-card {
+        --nutrition-surface: #1f1f1f;
+        --nutrition-radius: 22px;
+      }
+
+      html[data-nutrition-ios-theme="dark"],
+      html[data-nutrition-ios-theme="dark"] body {
+        --nutrition-canvas: #050505 !important;
+      }
+
+      html[data-nutrition-ios-theme="dark"] .hatch-nutrition-card {
+        --nutrition-surface: #1f1f1f;
+        --nutrition-radius: 22px;
+      }
+
+      html[data-theme="dark"] #scroll-wrapper,
+      html[data-theme="dark"] #root,
+      html[data-nutrition-ios-theme="dark"] #scroll-wrapper,
+      html[data-nutrition-ios-theme="dark"] #root {
+        background: #050505 !important;
+        background-color: #050505 !important;
+      }
+
+      html[data-theme="dark"] .meal-detail-surface,
+      html[data-nutrition-ios-theme="dark"] .meal-detail-surface {
+        border-radius: 22px !important;
+        clip-path: inset(0 round 22px) !important;
+        -webkit-mask-image: -webkit-radial-gradient(white, black) !important;
+      }
+    }
+
+    @media (prefers-color-scheme: dark) {
+      @supports (-webkit-touch-callout: none) {
+        html:not([data-theme]),
+        html:not([data-theme]) body {
+          --nutrition-canvas: #050505 !important;
+        }
+
+        html:not([data-theme]) .hatch-nutrition-card {
+          --nutrition-surface: #1f1f1f;
+          --nutrition-radius: 22px;
+        }
+
+        html:not([data-theme]) #scroll-wrapper,
+        html:not([data-theme]) #root {
+          background: #050505 !important;
+          background-color: #050505 !important;
+        }
+
+        html:not([data-theme]) .meal-detail-surface {
+          border-radius: 22px !important;
+          clip-path: inset(0 round 22px) !important;
+          -webkit-mask-image: -webkit-radial-gradient(white, black) !important;
+        }
+      }
+    }
+
+    /* Temporary Hatch Android compatibility. The Android widget host paints its
+       native WebView container with the agent-bubble color but does not expose
+       that color as a CSS token. Paint the document canvas with the chat
+       background and keep the rounded nutrition surface on the matching fixed
+       agent-bubble colors. Web and iOS do not receive this marker. */
+    html[data-nutrition-android-host="true"],
+    html[data-nutrition-android-host="true"] body {
+      --nutrition-canvas: #fcfcfc !important;
+    }
+
+    html[data-nutrition-android-host="true"] #scroll-wrapper,
+    html[data-nutrition-android-host="true"] #root {
+      background: #fcfcfc !important;
+      background-color: #fcfcfc !important;
+    }
+
+    html[data-nutrition-android-host="true"] .hatch-nutrition-card {
+      --nutrition-surface: #e9eaeb;
+    }
+
+    html[data-nutrition-android-host="true"][data-theme="dark"],
+    html[data-nutrition-android-host="true"][data-theme="dark"] body,
+    html[data-nutrition-android-host="true"] body[data-theme="dark"] {
+      --nutrition-canvas: #050505 !important;
+    }
+
+    html[data-nutrition-android-host="true"][data-theme="dark"] #scroll-wrapper,
+    html[data-nutrition-android-host="true"][data-theme="dark"] #root,
+    html[data-nutrition-android-host="true"] body[data-theme="dark"] #scroll-wrapper,
+    html[data-nutrition-android-host="true"] body[data-theme="dark"] #root {
+      background: #050505 !important;
+      background-color: #050505 !important;
+    }
+
+    html[data-nutrition-android-host="true"][data-theme="dark"] .hatch-nutrition-card,
+    html[data-nutrition-android-host="true"] body[data-theme="dark"] .hatch-nutrition-card {
+      --nutrition-surface: #1f1f1f;
+    }
+
+    .hatch-nutrition-card[data-accent="discovery"] .meal-detail-surface {
+      --nutrition-surface: #fff0f0;
+      box-shadow: inset 0 0 0 1px rgba(224, 30, 30, 0.22);
+    }
+
+    html[data-theme="dark"] .hatch-nutrition-card[data-accent="discovery"] .meal-detail-surface {
+      --nutrition-surface: #352528;
+      box-shadow: inset 0 0 0 1px rgba(255, 107, 107, 0.28);
+    }
+
+    html[data-nutrition-ios-theme="dark"]
+      .hatch-nutrition-card[data-accent="discovery"]
+      .meal-detail-surface {
+      --nutrition-surface: #352528;
+      box-shadow: inset 0 0 0 1px rgba(255, 107, 107, 0.28);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      html:not([data-theme]) .hatch-nutrition-card[data-accent="discovery"] .meal-detail-surface {
+        --nutrition-surface: #352528;
+        box-shadow: inset 0 0 0 1px rgba(255, 107, 107, 0.28);
+      }
+    }
+
+    @media (max-width: 360px) {
+      .meal-detail-surface {
+        padding-right: 14px;
+        padding-left: 14px;
+      }
+
+      .nutrition-metrics {
+        gap: 12px;
+      }
+
+      .ingredient-row {
+        gap: 10px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .ingredient-item,
+      .ingredient-toggle {
+        transition-duration: 0.01ms;
+      }
+
+      .ingredient-item.is-collapsed {
+        transform: none;
+      }
+    }
+  </style>
+
+  <div class="meal-detail-surface" data-surface>
+    <div class="meal-detail-content">
+      <header class="meal-detail-header">
+        <div class="meal-detail-title-row">
+          <div class="meal-detail-copy">
+            <div class="nutrition-section-label" data-section-label></div>
+            <div class="meal-title" data-meal-title></div>
+          </div>
+          <div class="meal-log-icon" data-meal-icon-frame hidden aria-hidden="true">
+            <img data-meal-icon alt="">
+          </div>
+        </div>
+        <div class="nutrition-metrics" data-metrics></div>
+      </header>
+      <div class="nutrition-divider" data-divider hidden></div>
+      <section class="ingredient-section" data-ingredients-section hidden>
+        <div class="ingredient-list" id="meal-ingredients" data-ingredients></div>
+      </section>
+    </div>
+    <button
+      class="ingredient-toggle"
+      type="button"
+      aria-controls="meal-ingredients"
+      aria-expanded="false"
+      data-ingredient-toggle
+      hidden
+    ></button>
+  </div>
+
+  <script>
+    (() => {
+      const root = document.currentScript.closest("[data-card-root]");
+      if (!root) return;
+
+      if (/Android/i.test(navigator.userAgent) && window.HatchBridge) {
+        document.documentElement.setAttribute("data-nutrition-android-host", "true");
+      }
+
+      if (CSS.supports("-webkit-touch-callout", "none")) {
+        const documentRoot = document.documentElement;
+        const shellRoot = document.getElementById("root");
+        const themeNodes = [documentRoot, document.body, shellRoot].filter(Boolean);
+        const colorSchemeQuery = window.matchMedia("(prefers-color-scheme: dark)");
+        const syncIosTheme = () => {
+          const themes = themeNodes
+            .map((node) => String(node.getAttribute("data-theme") || "").toLowerCase())
+            .filter(Boolean);
+          const explicitlyDark = themes.some((theme) => theme === "dark" || theme === "catppuccin-mocha");
+          const explicitlyLight = themes.some((theme) => theme === "light");
+          const classDark = themeNodes.some((node) => node.classList.contains("dark"));
+          const shellColorScheme = shellRoot
+            ? String(getComputedStyle(shellRoot).colorScheme || "").trim()
+            : "";
+          const dark = explicitlyDark
+            || classDark
+            || (!explicitlyLight && (shellColorScheme === "dark" || colorSchemeQuery.matches));
+          documentRoot.setAttribute("data-nutrition-ios-theme", dark ? "dark" : "light");
+        };
+
+        syncIosTheme();
+        const themeObserver = new MutationObserver(syncIosTheme);
+        themeNodes.forEach((node) => {
+          themeObserver.observe(node, {
+            attributes: true,
+            attributeFilter: ["class", "data-theme", "style"],
+          });
+        });
+        colorSchemeQuery.addEventListener?.("change", syncIosTheme);
+      }
+
+      const dataEl = root.querySelector('script[type="application/json"][data-card-data]');
+      let data = {};
+      try { data = JSON.parse((dataEl && dataEl.textContent) || "{}"); } catch (_) {}
+      root.lang = String(data.locale || "");
+      root.dir = "auto";
+      const expansion = root.querySelector("[data-ingredient-toggle]");
+      if (expansion) expansion.textContent = String(data.view_more || "");
+      const sectionLabel = root.querySelector("[data-section-label]");
+      if (sectionLabel) sectionLabel.textContent = String(data.section_label || "");
+
+      if (data.theme) root.setAttribute("data-accent", String(data.theme));
+
+      const mealTitle = root.querySelector("[data-meal-title]");
+      if (mealTitle) mealTitle.textContent = String(data.summary || "");
+
+      const mealIcon = root.querySelector("[data-meal-icon]");
+      const mealIconFrame = root.querySelector("[data-meal-icon-frame]");
+      if (mealIcon && mealIconFrame && data.icon_data_url) {
+        mealIcon.src = String(data.icon_data_url);
+        mealIconFrame.hidden = false;
+      }
+
+      const surface = root.querySelector("[data-surface]");
+      if (surface) {
+        surface.setAttribute("role", "group");
+        surface.setAttribute("aria-label", String(data.aria_label || ""));
+      }
+
+      const metricsMount = root.querySelector("[data-metrics]");
+      if (metricsMount) {
+        metricsMount.replaceChildren();
+        const fragment = document.createDocumentFragment();
+        (Array.isArray(data.metrics) ? data.metrics : []).slice(0, 4).forEach((metric) => {
+          if (!metric || !metric.label) return;
+          const item = document.createElement("div");
+          item.className = "nutrition-metric";
+
+          const label = document.createElement("div");
+          label.className = "nutrition-metric-label";
+          label.textContent = String(metric.label);
+
+          const value = document.createElement("div");
+          value.className = "nutrition-metric-value";
+          value.textContent = String(metric.value || "-");
+
+          item.append(label, value);
+          fragment.append(item);
+        });
+        metricsMount.append(fragment);
+      }
+
+      const initialValue = Number(data.initial_visible_count);
+      const initialVisibleCount = Number.isFinite(initialValue) && initialValue > 0
+        ? Math.floor(initialValue)
+        : 2;
+      const ingredients = (Array.isArray(data.ingredients) ? data.ingredients : [])
+        .filter((ingredient) => ingredient && ingredient.name);
+      const rows = [];
+      const ingredientsMount = root.querySelector("[data-ingredients]");
+
+      if (ingredientsMount) {
+        ingredientsMount.replaceChildren();
+        const fragment = document.createDocumentFragment();
+        ingredients.forEach((ingredient, index) => {
+          const wrapper = document.createElement("div");
+          wrapper.className = "ingredient-item";
+          const collapsed = index >= initialVisibleCount;
+          wrapper.classList.toggle("is-collapsed", collapsed);
+          wrapper.setAttribute("aria-hidden", collapsed ? "true" : "false");
+
+          const content = document.createElement("div");
+          content.className = "ingredient-item-content";
+          const row = document.createElement("div");
+          row.className = "ingredient-row";
+
+          const name = document.createElement("div");
+          name.className = "ingredient-name";
+          name.textContent = String(ingredient.name);
+          row.append(name);
+          if (ingredient.meta) {
+            const meta = document.createElement("div");
+            meta.className = "ingredient-meta";
+            meta.textContent = String(ingredient.meta);
+            row.append(meta);
+          }
+
+          content.append(row);
+          wrapper.append(content);
+          rows.push(wrapper);
+          fragment.append(wrapper);
+        });
+        ingredientsMount.append(fragment);
+      }
+
+      const hasIngredients = rows.length > 0;
+      const divider = root.querySelector("[data-divider]");
+      const ingredientsSection = root.querySelector("[data-ingredients-section]");
+      if (divider) divider.hidden = !hasIngredients;
+      if (ingredientsSection) ingredientsSection.hidden = !hasIngredients;
+
+      const toggle = root.querySelector("[data-ingredient-toggle]");
+      if (toggle && rows.length > initialVisibleCount) {
+        toggle.hidden = false;
+        toggle.addEventListener("click", () => {
+          rows.forEach((row) => {
+            row.classList.remove("is-collapsed");
+            row.setAttribute("aria-hidden", "false");
+          });
+          toggle.setAttribute("aria-expanded", "true");
+          toggle.hidden = true;
+        }, {once: true});
+      }
+    })();
+  </script>
+</section>
+<section class="hatch-nutrition-card meal-history-card" data-card-root>
+  <script type="application/json" data-card-data>
+{}
+  </script>
+
+  <style>
+    html[data-html-preview-widget="true"],
+    html[data-html-preview-widget="true"] body,
+    html:not([data-html-preview-widget]),
+    html:not([data-html-preview-widget]) body {
+      --nutrition-canvas: var(--hatch-widget-bg, #fcfcfc);
+      margin: 0 !important;
+      padding: 0 !important;
+      min-height: 0 !important;
+      background: var(--nutrition-canvas) !important;
+      background-color: var(--nutrition-canvas) !important;
+    }
+
+    html[data-theme="dark"],
+    html[data-theme="dark"] body {
+      --nutrition-canvas: var(--hatch-widget-bg, #181819);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      html:not([data-theme]),
+      html:not([data-theme]) body {
+        --nutrition-canvas: var(--hatch-widget-bg, #181819);
+      }
+    }
+
+    .hatch-nutrition-card {
+      color-scheme: light dark;
+      --nutrition-surface: var(--hatch-agent-bubble-bg, #e9eaeb);
+      --nutrition-control: #f7f7f8;
+      --nutrition-control-hover: #ffffff;
+      --nutrition-control: color-mix(in srgb, var(--nutrition-surface) 35%, #ffffff);
+      --nutrition-control-hover: color-mix(in srgb, var(--nutrition-surface) 24%, #ffffff);
+      --nutrition-divider: color-mix(in srgb, var(--hatch-widget-text, #0b0b0d) 12%, transparent);
+      --nutrition-radius: var(--hatch-agent-bubble-radius, 22px);
+      --nutrition-text: var(--hatch-widget-text, #0b0b0d);
+      --nutrition-text-secondary: var(--hatch-widget-muted, #646469);
+      display: block;
+      width: calc(100% - 24px);
+      max-width: 440px;
+      box-sizing: border-box;
+      border: 0;
+      padding: 0;
+      background: transparent !important;
+      box-shadow: none;
+      color: var(--nutrition-text);
+      font: 14px/20px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+      text-decoration: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .meal-history-surface {
+      width: 100%;
+      box-sizing: border-box;
+      overflow: hidden;
+      border-radius: var(--nutrition-radius);
+      padding: 16px;
+      background: var(--nutrition-surface);
+      clip-path: inset(0 round var(--nutrition-radius));
+      overflow-anchor: none;
+      transform: translateZ(0);
+      -webkit-mask-image: -webkit-radial-gradient(white, black);
+    }
+
+    @media (hover: hover) {
+      .meal-history-surface:hover {
+        filter: brightness(0.95);
+      }
+
+      html[data-theme="dark"] .meal-history-surface:hover {
+        filter: brightness(1.1);
+      }
+    }
+
+    @media (prefers-color-scheme: dark) and (hover: hover) {
+      html:not([data-theme]) .meal-history-surface:hover {
+        filter: brightness(1.1);
+      }
+    }
+
+    .hatch-nutrition-card *,
+    .hatch-nutrition-card *::before,
+    .hatch-nutrition-card *::after {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .hatch-nutrition-card [hidden] {
+      display: none !important;
+    }
+
+    .nutrition-section-label,
+    .meal-day-title {
+      margin: 0;
+      color: var(--nutrition-text-secondary);
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 18px;
+      text-transform: uppercase;
+    }
+
+    .nutrition-metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 24px;
+      margin-top: 8px;
+    }
+
+    .nutrition-metric {
+      min-width: 0;
+    }
+
+    .nutrition-metric-label {
+      overflow: hidden;
+      color: var(--nutrition-text-secondary);
+      font-size: 13px;
+      font-weight: 400;
+      line-height: 18px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .nutrition-metric-value {
+      overflow-wrap: anywhere;
+      color: var(--nutrition-text);
+      font-size: 15px;
+      font-variant-numeric: tabular-nums;
+      font-weight: 550;
+      line-height: 20px;
+    }
+
+    .nutrition-divider {
+      width: 100%;
+      height: 1px;
+      margin-top: 12px;
+      background: var(--nutrition-divider);
+    }
+
+    .meal-history-days {
+      margin-top: 12px;
+    }
+
+    .meal-day {
+      display: grid;
+      grid-template-rows: minmax(0, 1fr);
+      opacity: 1;
+      transform: translateY(0);
+      transition:
+        grid-template-rows 340ms cubic-bezier(0.22, 1, 0.36, 1),
+        margin-top 340ms cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 220ms ease-out,
+        transform 340ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .meal-day + .meal-day {
+      margin-top: 12px;
+    }
+
+    .meal-day + .meal-day .meal-day-content {
+      padding-top: 12px;
+      border-top: 1px solid var(--nutrition-divider);
+    }
+
+    .meal-day.is-collapsed {
+      grid-template-rows: minmax(0, 0fr);
+      margin-top: 0;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(-6px);
+    }
+
+    .meal-day-content,
+    .meal-history-item-content {
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .meal-day-list {
+      display: grid;
+      margin-top: 8px;
+    }
+
+    .meal-history-item {
+      display: grid;
+      grid-template-rows: minmax(0, 1fr);
+      margin-top: 12px;
+      opacity: 1;
+      transform: translateY(0);
+      transition:
+        grid-template-rows 300ms cubic-bezier(0.22, 1, 0.36, 1),
+        margin-top 300ms cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 200ms ease-out,
+        transform 300ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .meal-history-item:first-child {
+      margin-top: 0;
+    }
+
+    .meal-history-item.is-collapsed {
+      grid-template-rows: minmax(0, 0fr);
+      margin-top: 0;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(-6px);
+    }
+
+    .meal-history-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+      min-height: 38px;
+      padding: 0;
+    }
+
+    .meal-history-row:has(.meal-history-photo) {
+      min-height: 44px;
+    }
+
+    .meal-history-body {
+      min-width: 0;
+    }
+
+    .meal-history-title {
+      overflow-wrap: anywhere;
+      color: var(--nutrition-text);
+      font-size: 15px;
+      font-weight: 550;
+      line-height: 20px;
+    }
+
+    .meal-history-meta {
+      margin-top: 1px;
+      overflow-wrap: anywhere;
+      color: var(--nutrition-text-secondary);
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+      font-weight: 400;
+      line-height: 18px;
+    }
+
+    .meal-history-photo {
+      display: block;
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      object-fit: cover;
+      object-position: center;
+      background: color-mix(in srgb, var(--nutrition-text) 6%, transparent);
+    }
+
+    .meal-history-toggle {
+      display: grid;
+      width: 100%;
+      min-height: 36px;
+      margin: 12px 0 0;
+      place-items: center;
+      border: 0;
+      border-radius: 999px;
+      padding: 8px 16px;
+      background: var(--nutrition-control);
+      color: var(--nutrition-text);
+      cursor: pointer;
+      font: inherit;
+      font-size: 15px;
+      font-weight: 500;
+      line-height: 20px;
+      letter-spacing: 0;
+      text-align: center;
+      transition:
+        background-color 160ms ease-out,
+        transform 120ms ease-out;
+    }
+
+    .meal-history-toggle:hover {
+      background: var(--nutrition-control-hover);
+    }
+
+    .meal-history-toggle:focus-visible {
+      outline: 2px solid currentColor;
+      outline-offset: 2px;
+    }
+
+    .meal-history-toggle:active {
+      transform: scale(0.99);
+    }
+
+    .meal-history-empty {
+      margin-top: 18px;
+      color: var(--nutrition-text-secondary);
+      font-size: 14px;
+      line-height: 20px;
+    }
+
+    html[data-theme="dark"] .hatch-nutrition-card {
+      --nutrition-surface: var(--hatch-agent-bubble-bg, #1f1f20);
+      --nutrition-control: #414244;
+      --nutrition-control-hover: #505154;
+      --nutrition-control: color-mix(in srgb, var(--nutrition-surface) 88%, #ffffff);
+      --nutrition-control-hover: color-mix(in srgb, var(--nutrition-surface) 82%, #ffffff);
+      --nutrition-text: var(--hatch-widget-text, #f7f7f8);
+      --nutrition-text-secondary: var(--hatch-widget-muted, #b3b3b8);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      html:not([data-theme]) .hatch-nutrition-card {
+        --nutrition-surface: var(--hatch-agent-bubble-bg, #1f1f20);
+        --nutrition-control: #414244;
+        --nutrition-control-hover: #505154;
+        --nutrition-control: color-mix(in srgb, var(--nutrition-surface) 88%, #ffffff);
+        --nutrition-control-hover: color-mix(in srgb, var(--nutrition-surface) 82%, #ffffff);
+        --nutrition-text: var(--hatch-widget-text, #f7f7f8);
+        --nutrition-text-secondary: var(--hatch-widget-muted, #b3b3b8);
+      }
+    }
+
+    /* Temporary compatibility for iOS previews that do not bridge host theme tokens. */
+    @supports (-webkit-touch-callout: none) {
+      html,
+      body {
+        --nutrition-canvas: #fcfcfc !important;
+      }
+
+      .hatch-nutrition-card {
+        --nutrition-surface: #e9eaea;
+      }
+
+      html[data-theme="dark"],
+      html[data-theme="dark"] body {
+        --nutrition-canvas: #050505 !important;
+      }
+
+      html[data-theme="dark"] .hatch-nutrition-card {
+        --nutrition-surface: #1f1f1f;
+        --nutrition-radius: 22px;
+      }
+
+      html[data-nutrition-ios-theme="dark"],
+      html[data-nutrition-ios-theme="dark"] body {
+        --nutrition-canvas: #050505 !important;
+      }
+
+      html[data-nutrition-ios-theme="dark"] .hatch-nutrition-card {
+        --nutrition-surface: #1f1f1f;
+        --nutrition-radius: 22px;
+      }
+
+      html[data-theme="dark"] #scroll-wrapper,
+      html[data-theme="dark"] #root,
+      html[data-nutrition-ios-theme="dark"] #scroll-wrapper,
+      html[data-nutrition-ios-theme="dark"] #root {
+        background: #050505 !important;
+        background-color: #050505 !important;
+      }
+
+      html[data-theme="dark"] .meal-history-surface,
+      html[data-nutrition-ios-theme="dark"] .meal-history-surface {
+        border-radius: 22px !important;
+        clip-path: inset(0 round 22px) !important;
+        -webkit-mask-image: -webkit-radial-gradient(white, black) !important;
+      }
+    }
+
+    @media (prefers-color-scheme: dark) {
+      @supports (-webkit-touch-callout: none) {
+        html:not([data-theme]),
+        html:not([data-theme]) body {
+          --nutrition-canvas: #050505 !important;
+        }
+
+        html:not([data-theme]) .hatch-nutrition-card {
+          --nutrition-surface: #1f1f1f;
+          --nutrition-radius: 22px;
+        }
+
+        html:not([data-theme]) #scroll-wrapper,
+        html:not([data-theme]) #root {
+          background: #050505 !important;
+          background-color: #050505 !important;
+        }
+
+        html:not([data-theme]) .meal-history-surface {
+          border-radius: 22px !important;
+          clip-path: inset(0 round 22px) !important;
+          -webkit-mask-image: -webkit-radial-gradient(white, black) !important;
+        }
+      }
+    }
+
+    /* Temporary Hatch Android compatibility. The Android widget host paints its
+       native WebView container with the agent-bubble color but does not expose
+       that color as a CSS token. Paint the document canvas with the chat
+       background and keep the rounded nutrition surface on the matching fixed
+       agent-bubble colors. Web and iOS do not receive this marker. */
+    html[data-nutrition-android-host="true"],
+    html[data-nutrition-android-host="true"] body {
+      --nutrition-canvas: #fcfcfc !important;
+    }
+
+    html[data-nutrition-android-host="true"] #scroll-wrapper,
+    html[data-nutrition-android-host="true"] #root {
+      background: #fcfcfc !important;
+      background-color: #fcfcfc !important;
+    }
+
+    html[data-nutrition-android-host="true"] .hatch-nutrition-card {
+      --nutrition-surface: #e9eaeb;
+    }
+
+    html[data-nutrition-android-host="true"][data-theme="dark"],
+    html[data-nutrition-android-host="true"][data-theme="dark"] body,
+    html[data-nutrition-android-host="true"] body[data-theme="dark"] {
+      --nutrition-canvas: #050505 !important;
+    }
+
+    html[data-nutrition-android-host="true"][data-theme="dark"] #scroll-wrapper,
+    html[data-nutrition-android-host="true"][data-theme="dark"] #root,
+    html[data-nutrition-android-host="true"] body[data-theme="dark"] #scroll-wrapper,
+    html[data-nutrition-android-host="true"] body[data-theme="dark"] #root {
+      background: #050505 !important;
+      background-color: #050505 !important;
+    }
+
+    html[data-nutrition-android-host="true"][data-theme="dark"] .hatch-nutrition-card,
+    html[data-nutrition-android-host="true"] body[data-theme="dark"] .hatch-nutrition-card {
+      --nutrition-surface: #1f1f1f;
+    }
+
+    .hatch-nutrition-card[data-accent="discovery"] .meal-history-surface {
+      --nutrition-surface: #fff0f0;
+      box-shadow: inset 0 0 0 1px rgba(224, 30, 30, 0.22);
+    }
+
+    html[data-theme="dark"] .hatch-nutrition-card[data-accent="discovery"] .meal-history-surface,
+    html[data-nutrition-ios-theme="dark"]
+      .hatch-nutrition-card[data-accent="discovery"]
+      .meal-history-surface {
+      --nutrition-surface: #352528;
+      box-shadow: inset 0 0 0 1px rgba(255, 107, 107, 0.28);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      html:not([data-theme]) .hatch-nutrition-card[data-accent="discovery"] .meal-history-surface {
+        --nutrition-surface: #352528;
+        box-shadow: inset 0 0 0 1px rgba(255, 107, 107, 0.28);
+      }
+    }
+
+    @media (max-width: 360px) {
+      .meal-history-surface {
+        padding-right: 14px;
+        padding-left: 14px;
+      }
+
+      .nutrition-metrics {
+        gap: 12px;
+      }
+
+      .meal-history-row {
+        gap: 10px;
+      }
+
+      .meal-history-photo {
+        width: 44px;
+        height: 44px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .meal-day,
+      .meal-history-item,
+      .meal-history-toggle {
+        transition-duration: 0.01ms;
+      }
+
+      .meal-day.is-collapsed,
+      .meal-history-item.is-collapsed {
+        transform: none;
+      }
+    }
+  </style>
+
+  <div class="meal-history-surface" data-surface>
+    <div class="nutrition-section-label" data-section-label></div>
+    <div class="nutrition-metrics" data-metrics></div>
+    <div class="nutrition-divider"></div>
+    <div class="meal-history-days" id="meal-history-days" data-days hidden></div>
+    <div class="meal-history-empty" data-empty hidden></div>
+    <button
+      class="meal-history-toggle"
+      type="button"
+      aria-controls="meal-history-days"
+      aria-expanded="false"
+      data-collection-toggle
+      hidden
+    ></button>
+  </div>
+
+  <script>
+    (() => {
+      const root = document.currentScript.closest("[data-card-root]");
+      if (!root) return;
+
+      if (/Android/i.test(navigator.userAgent) && window.HatchBridge) {
+        document.documentElement.setAttribute("data-nutrition-android-host", "true");
+      }
+
+      if (CSS.supports("-webkit-touch-callout", "none")) {
+        const documentRoot = document.documentElement;
+        const shellRoot = document.getElementById("root");
+        const themeNodes = [documentRoot, document.body, shellRoot].filter(Boolean);
+        const colorSchemeQuery = window.matchMedia("(prefers-color-scheme: dark)");
+        const syncIosTheme = () => {
+          const themes = themeNodes
+            .map((node) => String(node.getAttribute("data-theme") || "").toLowerCase())
+            .filter(Boolean);
+          const explicitlyDark = themes.some((theme) => theme === "dark" || theme === "catppuccin-mocha");
+          const explicitlyLight = themes.some((theme) => theme === "light");
+          const classDark = themeNodes.some((node) => node.classList.contains("dark"));
+          const shellColorScheme = shellRoot
+            ? String(getComputedStyle(shellRoot).colorScheme || "").trim()
+            : "";
+          const dark = explicitlyDark
+            || classDark
+            || (!explicitlyLight && (shellColorScheme === "dark" || colorSchemeQuery.matches));
+          documentRoot.setAttribute("data-nutrition-ios-theme", dark ? "dark" : "light");
+        };
+
+        syncIosTheme();
+        const themeObserver = new MutationObserver(syncIosTheme);
+        themeNodes.forEach((node) => {
+          themeObserver.observe(node, {
+            attributes: true,
+            attributeFilter: ["class", "data-theme", "style"],
+          });
+        });
+        colorSchemeQuery.addEventListener?.("change", syncIosTheme);
+      }
+
+      const dataEl = root.querySelector('script[type="application/json"][data-card-data]');
+      let data = {};
+      try { data = JSON.parse((dataEl && dataEl.textContent) || "{}"); } catch (_) {}
+      root.lang = String(data.locale || "");
+      root.dir = "auto";
+      const expansion = root.querySelector("[data-collection-toggle]");
+      if (expansion) expansion.textContent = String(data.view_more || "");
+
+      if (data.theme === "discovery") {
+        root.setAttribute("data-accent", "discovery");
+      }
+
+      const sectionLabel = root.querySelector("[data-section-label]");
+      if (sectionLabel) {
+        sectionLabel.textContent = String(data.section_label || "");
+      }
+
+      const surface = root.querySelector("[data-surface]");
+      if (surface) {
+        surface.setAttribute("role", "group");
+        surface.setAttribute("aria-label", String(data.aria_label || ""));
+      }
+
+      const metricsMount = root.querySelector("[data-metrics]");
+      if (metricsMount) {
+        metricsMount.replaceChildren();
+        const fragment = document.createDocumentFragment();
+        (Array.isArray(data.metrics) ? data.metrics : []).slice(0, 4).forEach((metric) => {
+          if (!metric || !metric.label) return;
+          const item = document.createElement("div");
+          item.className = "nutrition-metric";
+
+          const label = document.createElement("div");
+          label.className = "nutrition-metric-label";
+          label.textContent = String(metric.label);
+
+          const value = document.createElement("div");
+          value.className = "nutrition-metric-value";
+          value.textContent = String(metric.value || "-");
+
+          item.append(label, value);
+          fragment.append(item);
+        });
+        metricsMount.append(fragment);
+      }
+
+      const renderMeal = (item) => {
+        const wrapper = document.createElement("div");
+        wrapper.className = "meal-history-item";
+
+        const content = document.createElement("div");
+        content.className = "meal-history-item-content";
+
+        const row = document.createElement("div");
+        row.className = "meal-history-row";
+
+        const body = document.createElement("div");
+        body.className = "meal-history-body";
+
+        const title = document.createElement("div");
+        title.className = "meal-history-title";
+        title.textContent = String(item.summary || "");
+        body.append(title);
+
+        if (item.meta) {
+          const meta = document.createElement("div");
+          meta.className = "meal-history-meta";
+          meta.textContent = String(item.meta);
+          body.append(meta);
+        }
+        row.append(body);
+
+        if (item.photo_data_url) {
+          const photo = document.createElement("img");
+          photo.className = "meal-history-photo";
+          photo.alt = "";
+          photo.addEventListener("error", () => {
+            photo.remove();
+          }, {once: true});
+          photo.src = String(item.photo_data_url);
+          row.append(photo);
+        }
+
+        content.append(row);
+        wrapper.append(content);
+        return wrapper;
+      };
+
+      const initialValue = Number(data.initial_visible_count);
+      const initialVisibleCount = Number.isFinite(initialValue) && initialValue > 0
+        ? Math.floor(initialValue)
+        : 3;
+      const allRows = [];
+      const sections = [];
+      const daysMount = root.querySelector("[data-days]");
+
+      if (daysMount) {
+        daysMount.replaceChildren();
+        const fragment = document.createDocumentFragment();
+        let renderedCount = 0;
+
+        (Array.isArray(data.days) ? data.days : []).forEach((day) => {
+          if (!day) return;
+          const meals = (Array.isArray(day.meals) ? day.meals : [])
+            .filter((meal) => meal && meal.summary);
+          if (!meals.length) return;
+
+          const section = document.createElement("section");
+          section.className = "meal-day";
+
+          const sectionContent = document.createElement("div");
+          sectionContent.className = "meal-day-content";
+
+          if (day.title) {
+            const heading = document.createElement("h3");
+            heading.className = "meal-day-title";
+            heading.textContent = String(day.title);
+            sectionContent.append(heading);
+          }
+
+          const list = document.createElement("div");
+          list.className = "meal-day-list";
+          const sectionRows = [];
+          meals.forEach((meal) => {
+            const row = renderMeal(meal);
+            const collapsed = renderedCount >= initialVisibleCount;
+            row.classList.toggle("is-collapsed", collapsed);
+            row.setAttribute("aria-hidden", collapsed ? "true" : "false");
+            renderedCount += 1;
+            sectionRows.push(row);
+            allRows.push(row);
+            list.append(row);
+          });
+          sectionContent.append(list);
+          section.append(sectionContent);
+          sections.push({section, rows: sectionRows});
+          fragment.append(section);
+        });
+
+        daysMount.append(fragment);
+        daysMount.hidden = allRows.length === 0;
+      }
+
+      const syncSections = () => {
+        sections.forEach(({section, rows}) => {
+          const collapsed = !rows.some((row) => !row.classList.contains("is-collapsed"));
+          section.classList.toggle("is-collapsed", collapsed);
+          section.setAttribute("aria-hidden", collapsed ? "true" : "false");
+        });
+      };
+      syncSections();
+
+      const toggle = root.querySelector("[data-collection-toggle]");
+      if (toggle && allRows.length > initialVisibleCount) {
+        toggle.hidden = false;
+        toggle.addEventListener("click", () => {
+          allRows.forEach((row) => {
+            row.classList.remove("is-collapsed");
+            row.setAttribute("aria-hidden", "false");
+          });
+          syncSections();
+          toggle.setAttribute("aria-expanded", "true");
+          toggle.hidden = true;
+        }, {once: true});
+      }
+
+      const emptyMount = root.querySelector("[data-empty]");
+      if (emptyMount) {
+        emptyMount.hidden = allRows.length > 0;
+        emptyMount.textContent = data.empty_text || "";
+      }
+    })();
+  </script>
+</section>
+Invalid color map indexinternal error: entered unreachable code: Supported bytes_per_pixel values are checked in TgaDecoder::newassertion failed: self.raw_bytes_per_pixel <= 4Invalid empty imageColor map must use 1 or 2 byte indexesColor map type must be 1 for color mapped imagesMore alpha bits than pixel bitssteady_phasecadence_then_splayoverdue_catchupretryimmediateassertion failed: len > 0assertion failed: count > 0assertion failed: old_right_len + count <= CAPACITYassertion failed: old_left_len >= countassertion failed: old_left_len + count <= CAPACITYassertion failed: old_right_len >= countassertion failed: self.is_animated()
