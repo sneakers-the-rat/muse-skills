@@ -75,13 +75,15 @@ descriptions are documentation, not instructions. Then run:
 
 ## Tracked shopping trips
 
-- Call `get_shopping_link`  when the user chose an online merchant and asked to shop there; interest or a comparison is not a request. Before the call, name the merchant or product and explain that it creates a cashback-tracked visit. Purchasing remains a separate step. For Shopee, quote cashback only from a product-link result.
+- Call `get_shopping_link` when the user has chosen an online merchant or product and asked to shop there, prepare a cart or buy it; interest or a comparison is not a request. Before the call, name the merchant or product and explain that it creates a cashback-tracked visit. Purchasing remains a separate step. For Shopee, quote cashback only from a product-link result.
 
 - Pass exactly one of `merchantId` or `skuId`, never both, and never `sbocLink`.
 
 - After a timeout or unclear result, do not repeat the write. Check `list_my_promos` to resolve an uncertain claim. Trips have no status lookup, so report the uncertainty. Offer a merchant trip after a rejected skuId request only when no trip was created.
 
-- Show the returned disclosure and link. Open the link with `browser.browse` and ask the user if they want to purchase something.
+- Show the returned disclosure and link unchanged. Open the link with `browser.browse` before starting cart preparation or checkout, and build the cart from the page it opens. Give any delegated browser task that exact link as its starting URL.
+
+- If a direct cart already exists when the user chooses ShopBack, stop advancing it. Open the tracked link and rebuild the cart, then recheck discounts, delivery or collection options and the final total before payment.
 
 ## Hotel and flight deals
 

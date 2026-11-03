@@ -1,0 +1,94 @@
+connector_call_reasonJARVIS_TRACE_CONTEXTJARVIS_HOMEJARVIS_VAR_LIB_DIRCREDENTIALS_DIRECTORYJARVIS_RUNTIME_CONTEXT_TOKENskill command runtime context registration failedinternal error: entered unreachable code: private terminal identity requires a terminal eventprivate Companion maintenance terminal matched unexpected RuntimeWorkprivate Companion maintenance RuntimeWork did not terminalizefeed maintenance coalesce could not read prompts; leaving the slot to its cron firemaintenance_coalescedfeed maintenance coalesce could not open the schedulerfeed maintenance coalesce could not queue the slotfeed maintenance coalesce slot did not start within the wait boundfeed maintenance coalesce slot startedfeed maintenance coalesce could not read the slot statusselect pg_advisory_xact_lock(4841544348435458)insert into context.ingest_attempts
+        (id, source_id, contributor_key, recorded_at, outcome,
+         submitted, inserted, duplicates, event_ids, error_code)
+        values ($1,$2,$3,clock_timestamp(),$4,$5,$6,$7,$8,$9)select last_append_position from context.sources where id = $1 for updateupdate context.sources set last_append_position = $2 where id = $1select id, (group_key is not distinct from $3
+            and payload_kind = $4
+            and occurred_at is not distinct from $5::timestamptz
+            and payload = $6 and content_hints = $7
+            and ttl_seconds is not distinct from $8) as matches
+         from context.events where source_id = $1 and dedupe_key = $2 for sharematchesinsert into context.events
+        (id, source_id, append_position, dedupe_key, group_key, payload_kind,
+         occurred_at, ingested_at, payload, content_hints, ttl_seconds, expires_at, group_id)
+        values ($1,$2,$3,$4,$5,$6,$7,statement_timestamp(),$8,$9,$10,
+            statement_timestamp() + $10::integer * interval '1 second',$11)delete from context.ingest_attempts where id in
+    (select id from context.ingest_attempts where recorded_at < now() - interval '7 days'
+     order by recorded_at, id limit 100)select pg_notify($1, '')hatch_context_committedinsert into context.sources
+    (id, source_domain, source_key, display_name, created_at, last_append_position)
+    values ($1, $2, $3, $4, clock_timestamp(), 0)
+    on conflict (source_domain, source_key) do nothingselect id, source_domain, source_key as key, display_name, created_at::text as created_at
+     from context.sources where source_domain = $1 and source_key = $2participationstripe-linkinspectStripe Link connection inspection failedStripe Link connection status failedCircle is no longer activeconnector_status_cacheinstagram_messagescredentialsrefresh_token_rejectedfailed to resolve local authd account status; keeping legacy statusfailed to resolve Plaid Item statuscheckmessenger-companion-auth-statusretry_scheduledterminal_device_errorfull_sync_terminalfull_sync_claimeddata_source.backfilldatabase write admission gate closedadmission_timeoutassert_table_existstable_presence.queryinsert into context.subscription_sources
+        (subscription_id, source_id, active, start_position, discovery_position)
+        select $1, s.id, true, boundary.position, boundary.position
+        from (select id, last_append_position from context.sources
+          where ($2 or source_domain = any($3)) and not exists
+            (select 1 from context.subscription_sources ss where ss.subscription_id = $1 and ss.source_id = context.sources.id)
+          order by id for update) s
+        cross join lateral (select case
+          when $4 then s.last_append_position
+          when $5::timestamptz is null then 0
+          else coalesce((select min(e.append_position) - 1 from context.events e
+            where e.source_id=s.id and e.ingested_at > $5
+              and e.append_position <= s.last_append_position), s.last_append_position)
+          end as position) boundary
+        on conflict do nothingcontext.subscription.pullbatch_limits1–100 new events, at most 100 history events, 1 MiB, lease 1–5400 secondsselect ss.source_id, ss.start_position, ss.discovery_position, s.last_append_position
+        from context.subscription_sources ss join context.sources s on s.id = ss.source_id
+        where ss.subscription_id = $1 and ss.active and ss.discovery_position < s.last_append_position
+        order by ss.discovered_at nulls first, ss.source_id limit 1discovery_positionlast_append_positionwith page as materialized (
+            select group_id, append_position, content_hints from context.events
+            where source_id = $1 and append_position > $2 and append_position <= $3
+            and (expires_at is null or expires_at > statement_timestamp())
+            order by append_position limit 1000
+        ), heads as (
+            insert into context.group_cursors
+                (subscription_id, source_id, group_id, acknowledged_position, available_position)
+            select $4, $1, group_id, $5, max(append_position) from page
+            where ($6 or content_hints && $7::text[]) group by group_id
+            on conflict (subscription_id,source_id,group_id) do update
+                set available_position = greatest(context.group_cursors.available_position, excluded.available_position)
+            returning available_position
+        ) select case when count(*) < 1000 then $3 else max(append_position) end from pageupdate context.subscription_sources set discovery_position = $3, discovered_at = clock_timestamp()
+            where subscription_id = $1 and source_id = $2select exists(select 1 from context.subscription_sources ss
+        join context.sources s on s.id = ss.source_id where ss.subscription_id = $1
+        and ss.active and ss.discovery_position < s.last_append_position)update self_improvement.connector_context_records set current = false
+        where connector = $1 and account_id = $2 and generation = $3 and subject_id = $4
+        and current and ($5::text is null or suggestion_id <> $5) returning suggestion_idupdate self_improvement.follow_up_queue set state = 'cancelled',
+        disposition_reason = 'connector_source_deleted', terminal_at = now(), updated_at = now()
+        where follow_up_id = any($1) and state = 'pending'connector context contribution does not match its checkpointselect e.group_key from self_improvement.connector_context_records r
+                join context.events e on e.id = r.event_id
+                where e.source_id = $1 and r.subject_id = $2
+                  and (e.expires_at is null or e.expires_at > statement_timestamp()) order by e.append_position desc limit 1select count(*) from unnest($1::text[]) requested(event_id)
+        left join context.events e on e.id = requested.event_id
+        where e.id is nullconnector context publication event is unavailableinsert into self_improvement.connector_context_records
+            (connector,account_id,generation,subject_id,suggestion_id,event_id,current,
+             source_id,group_id,append_position)
+            select $1,$2,$3,$4,$5,$6,true,e.source_id,e.group_id,e.append_position
+            from context.events e where e.id = $6 on conflict do nothingupdate self_improvement.connector_mailbox_state m
+        set responded_seen_at = $7
+        from unnest($4::text[], $5::text[], $6::bigint[]) as s(thread_id, message_id, position)
+        where m.connector = $1 and m.account_id = $2 and m.generation = $3
+          and m.thread_id = s.thread_id and m.source_id <> s.message_id
+          and m.arrival_position < s.position and m.responded_seen_at is nullinsert into self_improvement.connector_mailbox_state as existing
+        (connector, account_id, generation, source_id, thread_id,
+         arrival_position, position, facts, recorded_at, expires_at)
+        select $1, $2, $3, s.source_id, s.thread_id, s.arrival, s.position, s.facts, $9, $10
+        from unnest($4::text[], $5::text[], $6::bigint[], $7::bigint[], $8::jsonb[])
+          as s(source_id, thread_id, arrival, position, facts)
+        on conflict (connector, account_id, generation, source_id) do update
+        set arrival_position = least(existing.arrival_position, excluded.arrival_position),
+            position = greatest(existing.position, excluded.position),
+            facts = case when excluded.position > existing.position
+                then excluded.facts else existing.facts end,
+            recorded_at = case when excluded.position > existing.position
+                then excluded.recorded_at else existing.recorded_at end
+        where excluded.position > existing.position
+           or excluded.arrival_position < existing.arrival_positionselect source_id, position, facts from self_improvement.connector_mailbox_state
+        where connector = $1 and account_id = $2 and generation = $3
+          and source_id = any($4)
+        for updateupdate self_improvement.connector_mailbox_state m
+        set position = c.position, facts = c.facts, recorded_at = $7
+        from unnest($4::text[], $5::bigint[], $6::jsonb[]) as c(source_id, position, facts)
+        where m.connector = $1 and m.account_id = $2 and m.generation = $3
+          and m.source_id = c.source_idfactsgmaildelete from self_improvement.connector_mailbox_state
+            where connector = $1 and account_id = $2delete from self_improvement.connector_mailbox_state
+            where connector = $1 and account_id = $2 and generation = $3
+              and source_id = any($4)due-occurrence coalesce check failed; seeding immediate occurrence anywayconditional successor is terminalmaintenance readiness unknown; preserving scheduled checkdeferred maintenance readiness deadline is not in the futuredeferred maintenance readiness reason changeddeferred maintenance occurrence collided with terminal workmaintenance scheduler could not open runtime work storemaintenance enrollment check failed; asking the seederfailed to seed follow-on maintenance occurrence; asking the seedermaintenance_occurrencemaintenance_attemptrequest_generationgeneric_maintenancejitter_offset_secsjitter_window_secsmaintenance occurrence collided with terminalized work itemsuccessor_failure_countnext_deadline_at_msnext_schedule_reasonnext_jitter_offset_secsnext_jitter_window_secscontinuous_successor_lease_lostdetailmaintenance failed attempt did not terminalizefailed to seed maintenance retry occurrence; asking the seederself_improvement_queue_drainfailed to requeue leased maintenance work; holding its lease in quarantineterminalized maintenance work has an empty work idfailed to terminalize leased maintenance work and the quarantine is full; requeueingterminalize_storage_failurefailed to terminalize leased maintenance work; holding it for the error backoffquarantined maintenance work after repeated terminalization storage failures; holding leaseconsecutive_storage_failuresintended_terminal_stateheld maintenance work is no longer leased by this owner; dropping itquarantine_cool_down_elapseddeferral_hold_elapsedstorage_backoff_elapsedfailed to readmit held maintenance work; parking for another cool-downfailed to defer leased maintenance work and the quarantine is full; requeueingdefer_storage_failurefailed to defer leased maintenance work; holding it for the error backoffquarantined maintenance work after repeated deferral storage failuresobjective_gate_releasedfailed to read queued objective work after an objective settledfailed to start the objective queue drain after an objective settledlease_lostretry_stopped_reasonhandler_non_retryablemaintenance_attempts_exhaustedattempts_exhaustedassigned startup recovery phase to due maintenancerequeued due maintenance without redrawing its startup recovery phasemaintenance recovery page was full without a work-id cursorconfigured_attempt_deadlinemaintenance_lease_lostattempt_deadline_msmaintenance_attempt_deadline_exceededclaimed maintenance work item with no registered handler; skippingno registered maintenance handlerhandler_not_registeredclaimed a quarantined maintenance work item; holding its lease without runningmaintenance_attempt_admission_failedadmitted_attempt_deadlineinvalid connector account identityconnector account inventory exceeds boundflight_trackingemailskip_reasonflight_tracking_pausedsource_pausedgroup_keyflight_tracking_failedretrying_groupsflight Tracking cancelledreconcilepurchase_activitysocialskipped_groupssource_policy_skipped_groupssource_policy_retried_groupsshopping_context_batch_fullshopping_context_aggregate_failedshopping_context_failedsource_policy_pausedcontext_eventsack_lease_lostgroups_waitingdiscovery_pendingshopping_context_renew_failedfailed to release shopping context batches after renewal failure� 

@@ -1,0 +1,27 @@
+errorsuccesswrite_admissionwritepostgres write completed slowlypostgres write failedretrying idempotent postgres writeone-shot postgres write invoked more than onceselect
+                           coalesce(sum(score) filter (
+                             where created_at > now() - interval '24 hours'
+                           ), 0)::bigint as last_24h,
+                           coalesce(sum(score), 0)::bigint as last_7d
+                         from safety.user_violations
+                         where lane = $1
+                           and created_at > now() - interval '7 days'last_7dinsert into safety.user_violations
+                       (violation_id, agent_id, violation_type, check_name, lane,
+                        review_request_id, request_id, message_id, score)
+                     values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                     on conflict on constraint user_violations_distinct_violation
+                       do nothingselect w.violation_type, w.hours, count(v.violation_id)::bigint as n, (array_agg(v.created_at order by v.created_at desc))[w.lim::int] as nth_newest from (values ) as w(violation_type, hours, lim, lanes, excluded_check_names) left join safety.user_violations v on v.violation_type = w.violation_type and v.created_at > ::timestamptz - make_interval(hours => w.hours) and v.created_at <=  and (w.lanes is null or v.lane = any(w.lanes)) and v.check_name <> all(w.excluded_check_names) group by w.violation_type, w.hours, w.lim, (::int, ::bigint, ::text[], ::text[])with newest as (
+                       select max(created_at) as flagged_at
+                       from safety.user_violations
+                       where violation_type = any($1::text[])
+                         and request_id is not null
+                     )
+                     select v.request_id, v.agent_id,
+                            extract(epoch from max(v.created_at))::bigint as flagged_at
+                     from safety.user_violations v, newest
+                     where v.violation_type = any($1::text[])
+                       and v.request_id is not null
+                       and v.created_at > newest.flagged_at - make_interval(secs => $2)
+                     group by v.request_id, v.agent_id
+                     order by max(v.created_at) desc, v.request_id, v.agent_id
+                     limit $3safety.activity_review_score_sumssafety.record_violationsafety.counts_within_windowsdatabase write admission gate closedadmission_timeoutcalled `Result::unwrap()` on an `Err` valueCRSCyberprompttool_calltool_responsereturned_text_responseactivity_reviewerConfigurationInvalidArgumentIoTlsRowNotFoundTypeNotFoundtype_nameColumnIndexOutOfBoundsindexlenColumnNotFoundColumnDecodesourceEncodeDecodeAnyDriverErrorPoolTimedOutPoolClosedWorkerCrashedMigrateInvalidSavePointStatementBeginFailed

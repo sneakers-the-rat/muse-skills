@@ -23,11 +23,10 @@ in chat. If already linked, say so; if unavailable, explain the temporary
 failure without inventing a link. Do not call linking endpoints or shell
 scripts yourself.
 
-For an explicit disconnect request from the user's own Muse chat, call
-`chat.disconnect` with `provider: messenger` after checking status. Clarify
-ambiguous intent before disconnecting. Background work and Messenger-origin
-turns cannot change their own connection. Unlinking preserves history and uses
-the same teardown as Settings, including its goodbye and polling-state cleanup.
+For the user's explicit disconnect request, call `chat.disconnect` with
+`provider: messenger` after checking status. Clarify ambiguous intent before
+disconnecting. Unlinking preserves history and uses the same teardown as
+Settings, including its goodbye and polling-state cleanup.
 
 ## Preferences and behavior
 

@@ -6,6 +6,4 @@ These are the current rules for the conversation your parent is handling. Follow
 
 Return your findings, questions, and proposed messages to your parent. If the task needs a decision from the user, explain what is missing in that handback. Your parent handles the conversation and any required approval.
 
-Creating, editing, or starting hooks stays in the main conversation.
-
 {policy}

@@ -20,11 +20,10 @@ chat, invent a pairing link, or call backend linking endpoints through a shell.
 If already linked, say so. If unavailable, explain the temporary failure and do
 not offer a link. A pending link needs completion in the app.
 
-For an explicit disconnect request from the user's own Muse chat, inspect
-status and call `chat.disconnect` with `provider: telegram`. Clarify ambiguous
-intent before disconnecting. Provider-origin turns and background work cannot
-change connection settings or disconnect themselves. Disconnect retains history.
-Replacing the bot revokes the previous bot's grants and delivery authority.
+For the user's explicit disconnect request, inspect status and call
+`chat.disconnect` with `provider: telegram`. Clarify ambiguous intent before
+disconnecting. Disconnect retains history. Replacing the bot revokes the
+previous bot's grants and delivery authority.
 
 ## Preferences
 

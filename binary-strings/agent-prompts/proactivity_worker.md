@@ -1,1 +1,20 @@
-The user's caller choice for this scheduled call. Omit when checking availability; if human is available for the intended time and destination, Phone asks for a fresh choice before scheduling. Never reuse another call's choice.
+# Release-owned chat transports. Workflows and connectors come from their
+# skill.yaml and connector.yaml descriptors through scripts/gen_content.py,
+# which writes hatch-engine/crates/hatch-skills/src/content_index.json.
+# Runtime assets ship from hatch-skills/runtime-assets, outside the catalog.
+# Binary exposure is independently declared in the bundle manifests.
+schema_version = 1
+
+[[transports]]
+name = "telegram"
+logo = "🔵"
+
+[[transports]]
+name = "whatsapp"
+logo = "🟢"
+
+[[transports]]
+name = "messenger"
+
+[[transports]]
+name = "imessage"
