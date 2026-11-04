@@ -4,6 +4,12 @@
 
 - `/opt/hatch/bin/duffel` searches, books and manages flights from many airlines. Its commands are `places`, `search`, `seat-options`, `validate-booking`, `book`, `booking-status`, `cancellation-quote` and `cancel-booking`. It needs no user login, and payment uses the user's Link by Stripe card. `duffel COMMAND --help` lists each command's flags.
 
+<!-- duffel-rental-cars-only:start -->
+- It also searches and reserves pay-at-pickup rental cars with `car-search`, `car-quote` and `car-book`.
+<!-- duffel-rental-cars-only:end -->
+
+- `car-booking-status` and `car-cancel` check and cancel rental-car reservations made here. Read [rental cars](references/cars.md) before any rental-car command; the flight sections below do not apply to cars.
+
 - Before a user-facing search, read [Flight Booking](/opt/muse/skills/flight-booking/SKILL.md), which compares flight sources and builds the flight list. Read [checkout](/opt/muse/assets/booking/references/checkout.md) once the user picks a flight to book, not before searching. [Flight Tracking](/opt/muse/skills/flight-tracking/SKILL.md) uses Duffel only for the fare check on a booked trip. Duffel does not report live flight status.
 
 ## Search a complete trip
@@ -86,6 +92,8 @@
 
 - A checkout or traveler-profile team mismatch stops that checkout. Continue with the airline using `browser.browse`. Existing bookings can still be managed through their original team.
 
+- `status: airline_site_booking_required` from `validate-booking` or `book` means this airline charges the card in its own currency, which Duffel checkout can't pay. Nothing was approved or charged. Keep the chosen itinerary and follow Flight Booking's airline-booking guidance using `browser.browse`; other airlines' Duffel fares stay bookable here.
+
 - If `resource_team_persist_failed: true` appears after creation, preserve the result, returned IDs and airline booking reference; do not repeat creation. This connector cannot repair the saved team binding, so Duffel management may remain unavailable. Continue with the airline using `browser.browse`; agency-issued refunds may require the issuing agency.
 
 - `code: duffel_quote_receipt_missing`, `duffel_quote_expired` or `duffel_quote_team_mismatch` stops use of that offer or quote. Before any approval or submission for this purchase, run a fresh search before continuing offer reads, seat lookup or checkout; do not retry that ID. After approval or submission, follow [Uncertain results](references/recovery.md) using the original checkout evidence. These codes do not resolve booking or funding uncertainty or permit a retry or replacement purchase. Fresh successful searches can rebuild a malformed disposable quote cache; rebuilding it does not resolve an earlier purchase.
@@ -119,6 +127,8 @@
 - [Flight Booking](/opt/muse/skills/flight-booking/SKILL.md)
 
 - [Flight Tracking](/opt/muse/skills/flight-tracking/SKILL.md)
+
+- [Trip Transport](/opt/muse/skills/trip-transport/SKILL.md)
 
 - Use `muse.skill_search` to find other skills and `muse.connector_search` to find other connectors.
 

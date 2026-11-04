@@ -57,6 +57,12 @@
 
 - Before reporting, explaining or rewriting any Instagram metric, including user-supplied figures, read [Account insight metrics](references/account-insights-metrics.md). Re-read it when its definitions leave context.
 
+- For `account-insights` fields, post rows and user-supplied figures that correspond to a field listed in [Account insight metrics](references/account-insights-metrics.md), use that field's documented display name and do not fetch metadata only to rename it. For analytics results keyed by a Metric Catalog name, resolve each metric you will report with `analytics-metric-metadata` and use its returned display name exactly. That returned display name is authoritative over CLI field names, user wording and descriptive labels in other results. Omit a metric only when its required metadata lookup returns no display name rather than naming it yourself.
+
+- Preserve the documented or returned display name every time the metric appears, including when repeating the user's wording, describing unavailable data, writing a formula, and in later prose, headings, tables, comparisons and recommendations. Replace user shorthand rather than echoing it as a metric name. Never shorten the display name or add a qualifier: write **Accounts reached**, not "reach," and **Views**, not "content views." Before responding, check the final answer for renamed metrics.
+
+- Preserve the metric's returned unit as well as its display name. Never describe event counts, such as Views, interactions, profile visits, saves or taps, as people or accounts; describe account-count metrics as accounts, not people.
+
 - Change Instagram state only when the user requests it. Keep the selected account, target and supplied values unchanged through approval; report completion only from a successful result.
 
 - `--retries N` retries transient failures and defaults to 0. Keep `--retries 0` for writes unless they only edit existing text or state. `post-feed`, `post-story`, `comment-reply`, `set-profile-picture`, `profile-banner` and `update-bio --action add-link` reject any other value because a retry could repeat the change.
@@ -101,7 +107,7 @@
 
 - Post rows can carry the author's `username`, `author_name`, `author_bio`, `follower_count` and `verified`. Use them instead of a separate profile lookup unless the request needs missing or fresher profile details.
 
-- Post rows count `likes` and `comments` only. They never include per-post Views, Viewers, Accounts reached, saves or shares, and account totals must never be assigned to individual posts.
+- Post rows count `likes` and `comments` only. They never include per-post Views, Viewers, Accounts reached, Saves or Shares, and account totals must never be assigned to individual posts.
 
 - For detailed metrics on the selected account's own post, use `individual-post-insights` as described below.
 
@@ -149,7 +155,7 @@
 
 ## Read account insights
 
-- For account totals, follower growth or daily trends over a supported rolling window, use `analytics-account-insights`: `--time-range last-7d`, `last-14d`, `last-28d` or `last-90d`. Keep relative requests for these windows as rolling windows even when you calculate their dates.
+- For account totals, follower changes or daily trends over a supported rolling window, use `analytics-account-insights`: `--time-range last-7d`, `last-14d`, `last-28d` or `last-90d`. Keep relative requests for these windows as rolling windows even when you calculate their dates.
 
 - For another relative window, a calendar month or explicit date bounds, use `account-insights` for the metrics it returns. It defaults to 30 days and supports `--period last_7_days`, `last_30_days`, `last_90_days`, `this_month` or `this_year`, paired `--start-date`/`--end-date`, or paired Unix-second `--start-time`/`--end-time`. Never replace requested dates with a rolling window. If the metric requires `analytics-account-insights`, explain its supported windows and ask whether one is acceptable.
 

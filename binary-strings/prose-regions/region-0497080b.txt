@@ -1,0 +1,148 @@
+spaceShare a Feed item, Idea, Space, Goal, or file.The file path has no file nameChoose a file in the workspace using its path or sandbox URI.Feed item not foundvideoimageIdea not foundSpace not foundGoal not foundprovider connection identity is no longer currentread provider connection ruleswhatsapp_companionhatch.circle-resource.v1quota_exhaustedToo many resource requestsconnections_disabledConnections are disabledinvalid_signatureInvalid resource request signatureinvalid_request_windowExpired or invalid resource requestinvalid_targetInvalid resource targetnot_a_memberNot a current circle memberinvalid_routeThe resource request did not come through its circlerelayinvalid_relayOnly the circle host can relay a member requestinvalid_contentResource content does not match its signaturespace_not_foundThe shared Space has changedresource_not_sharedThe resource is no longer shared with this circlesdk_scopeUse the Space's published actionsThis request has already been admittedreceivehuman{bin}sh-c--enable-app-redirectOAuth authorize URL command returned a failure statusOAuth authorize URL response omitted state; returning URL without request provenanceauthd socket unavailable; returning OAuth authorize URL without request provenancereturning OAuth authorize URL without updating request provenanceauthd socket unavailable; suppressing Shop Pay authorize URLShop Pay authorize URL omitted a unique OAuth stateOAuth authorize URL command response was missing a usable URLOAuth authorize URL command returned invalid JSONOAuth authorize URL command failedShop Pay request provenance binding failed; suppressing authorize URLruntime.skillsruntime.skills.paced_probeconnector_call_reasonJARVIS_TRACE_CONTEXTJARVIS_HOMEJARVIS_VAR_LIB_DIRCREDENTIALS_DIRECTORYJARVIS_RUNTIME_CONTEXT_TOKENskill command runtime context registration failedmedia resource signing task faileddirectories must not be emptyfs.media native find failed, falling back to recursive walknode_modulescodex-clibuildtargetenv__pycache__site-packagesworkspace/self_improvementworkspace/profile-imagesworkspace/user/notesworkspace/user/filesworkspace/user/media_library/browser_screenshotsfind for media scan returned non-zero status with partial outputmissing source or destinationpath contains protected goal internal filesrenames are not allowed inside the media sync directoryoverwrite requires a regular file sourcedestination already existsoverwrite requires a regular file destinationstat rename destinationrenameotherdirsymlinkfind for recents scan returned non-zero status with partial outputUSER.mdSOUL.mdMEMORY.mdHEARTBEAT.mdstat artifact meta.jsonread artifact meta.jsonread artifact search rootindex.htmlstat artifact index.htmlread artifact dir for output filemeta.jsonpath is not a filewrite temporary filesync temporary filefailed to stat paired delete pathfailed to delete paired pathdeleteartifact.deletion_startedartifact.deletion_failedremove artifact directoryartifact.deletion_succeededartifact.deletion_skippedobfuscated_idworkspace/user/media_library/video.thumbnailsattempting to destroy shared artifactJARVIS_STEFI_PROXY_SOCK not set, skipping shared artifact destroyfailed to build stefi client for artifact destroydestroyed shared artifact via stefistefi artifact destroy faileddirectory not emptyremove file.tombstonesmetadata.jsonunreadable legacy hook was not admittedinvalid legacy hook path was not admittedinvalid legacy hook was not admittedselect goal_id from goals.goals where goal_id=$1 for updateselect count(*) from peer.goal_grants where goal_id=$1 and grantee_muse<>$2 and revoked_at_ms is nullshared goal not foundinsert into peer.goal_grants
+                (goal_id,grantee_muse,relationship_generation_id,granted_at_ms)
+                values ($1,$2,$3,$4) on conflict(goal_id,grantee_muse) do update set
+                relationship_generation_id=excluded.relationship_generation_id,
+                granted_at_ms=excluded.granted_at_ms,revoked_at_ms=nulla goal supports at most 50 connectionsinsert into goals.shared_update_state (goal_id,generation,pending) values ($1,0,false) on conflict(goal_id) do nothingselect pg_advisory_xact_lock(hashtextextended('peer.space_grants:' || $1, 0))insert into peer.space_grants
+             (slug, grantee_muse, space_id, relationship_generation_id, granted_at_ms, revoked_at_ms)  on conflict (slug, grantee_muse) do update set
+            space_id=excluded.space_id, relationship_generation_id=excluded.relationship_generation_id,
+            granted_at_ms=excluded.granted_at_ms, revoked_at_ms=nullfailed to resolve public session id for streamed framedropped companion progress frame after its voice call changedno deployed artifact found in meta.json (missing obfuscated_id)artifact.destroy_urldestroy/hatch/share_artifact
+INSERT INTO requests (
+  request_id, root_request_id, parent_request_id, request_origin,
+  transcript_surface, root_work_class
+)
+VALUES ($1, $2, $3, $4, $5::runtime.transcript_surface, $6)
+ON CONFLICT (request_id) DO UPDATE SET
+  root_request_id = COALESCE(requests.root_request_id, excluded.root_request_id),
+  parent_request_id = COALESCE(requests.parent_request_id, excluded.parent_request_id),
+  request_origin = CASE
+    WHEN requests.request_origin = 'internal.runtime_replay' THEN excluded.request_origin
+    ELSE requests.request_origin
+  END,
+  transcript_surface = excluded.transcript_surface,
+  root_work_class = CASE
+    WHEN requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing'
+      THEN excluded.root_work_class
+    ELSE requests.root_work_class
+  END
+WHERE (requests.root_request_id IS NULL AND excluded.root_request_id IS NOT NULL)
+   OR (requests.parent_request_id IS NULL AND excluded.parent_request_id IS NOT NULL)
+   OR (requests.request_origin = 'internal.runtime_replay'
+       AND excluded.request_origin <> 'internal.runtime_replay')
+   OR requests.transcript_surface IS DISTINCT FROM excluded.transcript_surface
+   OR (requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing')
+call_idoutput
+INSERT INTO tool_outputs (event_seq, call_id, status, output_text, error_text, created_at)
+VALUES ($1, $2, $3, $4, $5, to_timestamp($6::double precision / 1000.0))
+ON CONFLICT (event_seq) DO UPDATE SET
+  call_id = excluded.call_id,
+  status = excluded.status,
+  output_text = excluded.output_text,
+  error_text = excluded.error_text
+arguments
+INSERT INTO tool_calls (event_seq, call_id, tool_name, status, arguments_json, created_at)
+VALUES ($1, $2, $3, 'started', $4, to_timestamp($5::double precision / 1000.0))
+ON CONFLICT (call_id) DO UPDATE SET
+  event_seq = excluded.event_seq,
+  tool_name = excluded.tool_name,
+  status = excluded.status,
+  arguments_json = excluded.arguments_json
+
+INSERT INTO chat_event_derived_write_backlog (event_seq, resources_json)
+VALUES ($1, $2)
+ON CONFLICT (event_seq) DO UPDATE SET
+  resources_json = excluded.resources_json,
+  updated_at = now()
+
+UPDATE events
+SET display_text_ready = $2,
+    reply_target_message_id = $3,
+    payload_json = $4
+WHERE event_seq = $1
+
+INSERT INTO messages (message_id, event_seq, role, body, created_at)
+SELECT e.message_id, e.event_seq, e.role, $2, e.created_at
+FROM events e
+WHERE e.event_seq = $1
+  AND e.message_id IS NOT NULL
+  AND e.role IS NOT NULL
+ON CONFLICT (message_id) DO UPDATE SET
+  body = excluded.body
+UPDATE chat_private.peer_conversations SET requester_chat_id = NULL
+         WHERE conversation_id = $1 AND requester_revision = $2
+           AND requester_chat_id = $3 AND NOT requester_unavailable
+           AND chat_id = $5
+           AND EXISTS (SELECT 1 FROM agent.agents
+                       WHERE id = $4 AND session_id = $3)peer handoff disagrees with its asking-chat claimpeer handoff requester changed before admissionSELECT session_id, COALESCE(prompt_floor_seq, -1) AS prompt_floor_seq,
+                kind = 'root' AND parent_agent_id IS NULL
+                AND ephemeral IS DISTINCT FROM TRUE
+                AND status NOT IN ('shutdown', 'not_found') AS eligible
+         FROM agent.agents WHERE agent_id = $1 FOR UPDATEstartup_root_changedSELECT EXISTS(SELECT 1 FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND accepted_ordinal < $2)startup mailbox promotion cannot overtake an earlier accepted input
+SELECT payload_json
+FROM agent.runtime_restart_checkpoints
+WHERE agent_id = $1
+FOR UPDATE
+
+SELECT EXISTS (
+  SELECT 1
+  FROM agent.message_mailbox
+  WHERE agent_id = $1
+    AND state = 'accepted'
+    AND accepted_ordinal < $2
+    AND (NOT $3 OR submission_kind <> 'internal_handoff')
+)
+message mailbox attachment cannot overtake an older priority peer
+INSERT INTO agent.runtime_restart_checkpoints (
+  agent_id, mode, recovery_class, recovery_owner_id, execution_config_json,
+  payload_json, created_at, updated_at
+) SELECT $1, $2, $3, $4, $5, $6, $7, $7
+WHERE EXISTS (
+  SELECT 1
+  FROM agent.agents
+  WHERE agent_id = $1
+    AND status NOT IN ('shutdown', 'not_found')
+)
+ON CONFLICT (agent_id) DO NOTHING
+SELECT EXISTS (SELECT 1 FROM agent.agents WHERE agent_id = $1 AND status NOT IN ('shutdown', 'not_found'))conversation epoch
+INSERT INTO agent.message_mailbox (
+  submission_id, agent_id, conversation_epoch, submission_kind,
+  routing_scope, state, checkpoint_custody, stream_owner_message_id,
+  submission_json, transcript_event_seq, attached_at
+) VALUES (
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+  CASE WHEN $6 = 'attached' THEN now() ELSE NULL END
+)
+ON CONFLICT (submission_id) DO NOTHING
+RETURNING accepted_ordinal, accepted_at
+startup mailbox promotion requires its previously accepted input
+SELECT agent_id, conversation_epoch, submission_kind, routing_scope,
+       state, stream_owner_message_id, submission_json,
+       transcript_event_seq, accepted_ordinal, accepted_at
+FROM agent.message_mailbox
+WHERE submission_id = $1
+FOR UPDATE
+update chat.message_bindings set admitted_at = coalesce(admitted_at, now())
+                    where jarvis_message_id = $1 and chat_id = $2 and binding_epoch = $3 and transport = $4binding epochconversation_epochsubmission_kindrouting_scope
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = $5,
+    stream_owner_message_id = $2,
+    submission_json = $3,
+    transcript_event_seq = coalesce($4, transcript_event_seq),
+    attached_at = now()
+WHERE submission_id = $1
+  AND state = 'accepted'
+  AND stream_owner_message_id IS NULL
+mailbox stream ownerselect a.account_id from chat_private.accounts a
+             join chat_private.binding_authorizations b on b.provider = a.provider and b.account_id = a.account_id
+             where b.provider = $1 and b.binding_id = $2
+               and a.connection_id = $3 and not a.revoked for share of adirect input has no captured binding epochaccount_retiredselect connection_id, generation, transport_json, delivery_target
+             from chat_private.binding_authorizations
+             where provider = $1 and binding_id = $2 and chat_id = $3
+               and account_id = $4 and external_kind = 'direct' and participation = 'active'
+             for shareaccount_authorization_retiredtransport_jsontransport_authorization_absentdelivery_targetselect epoch from chat_private.bindings
+         where chat_id = $1 and provider = $2 and not revoked for sharetransport_authorization_changedbinding_retiredtoo many group attachment snapshotsinvalid group attachment snapshot referenceinvalid group attachment MIME typeduplicate group attachment snapshot referencegroup attachment snapshots exceed limituser input has no canonical admission receiptcanonical user input does not match its authenticated admission
+
+space_preview_repairspace preview repair: handler not registeredspace preview repair: handler registry unavailablespace_preview_missingspace preview repair: runtime work store unavailablequeued Space preview repairspace preview repair: seeding failedspace preview repair: catalog read failed on viewNo rule fully covers this message.Send a nonempty messageMessage preparation timed outhistoryhistory_jsonlowner_requestowner_messageschat_summaryowner_in_chatparticipant_identitiesA widget changed during reviewAn attachment changed during reviewA review revision cannot introduce an unreviewed filesaved message disappearedconnection not foundSaved message integrity check failedThe conversation or its rules changed. Prepare the message again using the current context.An attachment changed after this message was prepared. Prepare a new message.The main Muse decision does not match the saved messagethe connection is no longer activeconnection review revision could not be preparedThe suggested revision could not be prepared. Review the saved draft or ask the worker for a new one.connection message reviewedallowask_ownerconnection approval has no durable identityThe user did not approve this message. Leave it unsent.The conversation changed before delivery.connection message queuedSharing rule review timed outinvalid connection review; requesting one correctionSharing rule review retry timed outbundled Ideas localization catalog is unavailablefailed to load bundled Ideas localization provenancefailed to load bundled Ideas dogfood provenanceIdea catalog sharing context read failedIdea share variant projection read failedIdea share revision projection read failedIdea direct sharing read failedIdea publication hold read failedfiles can only be shared in a direct peer conversationcontent_truncatedrequired_review_imageShared items must refer to local files before sendingWhatsApp directory read timed outCircle is no longer activeInvalid catalog requestcontent-typeResource metadata is too largeconnector_status_cachemessenger_companioninstagram_messagescredentialsrefresh_token_rejectedfailed to resolve local authd account status; keeping legacy statusfailed to resolve Plaid Item statusmessengercheckmessenger-companion-auth-statusstandaloneclient rendering snapshot read failed; keeping lifts inline this turndatabase write admission gate closedadmission_timeoutassert_table_existstable_presence.querySELECT payload_json FROM runtime_restart_checkpoints WHERE agent_id = $1 FOR UPDATESELECT submission_json, octet_length(submission_json)::bigint AS serialized_bytes
+         FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND submission_id <> $2startup_queue_fullx-hatch-verified-noise-shared-agentfile edits require owner scopex-hatch-voice-pick-surfacehttp://localhost/hatch/training-opt-outsetthe in-VM connector OAuth flow`badge_version` must be non-negativehttp://stefi-proxy/hatch/invite/badgestefi_invite_badge_invalid_jsonstefi_invite_badge_failedmemory_uri cannot be emptyserialize memory.get payloadquery cannot be emptyserialize memory.search payloadmemory reindexing runs inside self-improvement maintenancememory consolidation runs inside self-improvement maintenancemaintenance_occurrencemaintenance_attemptrequest_generationgeneric_maintenancejitter_offset_secsjitter_window_secsmaintenance occurrence collided with terminalized work itemhttp://localhost/hatch/professional-consent/statusprofessional consent status timed outparse professional consent statusprofessional consent returned an unknown statusread professional consent status for connectorgeneric_grid/v1/poppy/connectors/list

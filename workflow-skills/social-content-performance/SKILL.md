@@ -2,7 +2,9 @@
 
 ## Scope the question
 
-- Identify the network, the account and what the user wants to learn, such as which posts reached the most people, how a launch landed or what to post next. Settle the reporting period and timezone before fetching anything.
+- For a caption or hashtag request with no analysis question, write from the user's brief and the material they supply, return the draft and stop. Do not fetch account data or establish a reporting period for this branch. The remaining analysis steps apply only to performance questions.
+
+- For a performance question, identify the network, the account and what the user wants to learn, such as which posts reached the most people, how a launch landed or what to post next. Settle the reporting period and timezone before fetching anything.
 
 - Analyze only accounts the user manages. Take the account from the connector's own account list, ask which one to use when several fit, and stop when a named account is not returned rather than substituting another.
 
@@ -10,13 +12,13 @@
 
 ## Gather the evidence
 
-- Retrieve the posts in scope with their publication times and permalinks, then the metrics the question needs. Use the connector's metric definitions and display names rather than labels from memory.
+- Retrieve the posts in scope with their publication times and permalinks, then the metrics the question needs. Preserve each connector's returned metric display names exactly rather than replacing them with generic labels or labels from memory.
 
 - For Instagram post metrics, use the connector's owned-post insights and media definitions. These figures cover each post's lifetime rather than the selected reporting period; compare posts of similar age and state that scope.
 
-- Keep each metric at the level it was returned. Account totals do not describe one post, daily reach does not add up to unique people across a period, and a missing value is unknown rather than zero.
+- Keep each metric at the level it was returned. Account totals do not describe one post, daily unique-account values do not add up to a unique count across a period, and a missing value is unknown rather than zero.
 
-- Keep reach, impressions, views, engagement and conversions distinct, each with its own denominator. Separate organic from paid results and keep follower and non-follower breakdowns when they are returned.
+- Keep metrics with different counting conditions or denominators distinct. Separate organic from paid results and keep follower and non-follower breakdowns when they are returned.
 
 - Use only the account's own data as evidence about its performance. Web results, social search, outside benchmarks and remembered figures do not count.
 

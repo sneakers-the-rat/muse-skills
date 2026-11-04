@@ -49,7 +49,7 @@
 
 - Treat `selected_offer` as the current itinerary, price, bags and fare terms. Check each slice's `from` and `to` against the chosen airports, and stop if they differ.
 
-- When validation asks for a first-time payment profile, pass the account holder's email and legal name, from `wallet.get_user_info` when the user hasn't given them, with `--customer-email`, `--customer-given-name` and `--customer-family-name` to both validation and booking. This profile is not a passenger, and it is created only after purchase approval.
+- Pass the account holder's email and legal name on the first `validate-booking`, using what the user said and filling only missing fields from `wallet.get_user_info`, with `--customer-email`, `--customer-given-name` and `--customer-family-name`, so a first booking needs no extra round for its payment profile. Validation ignores them once a profile is stored. Pass the same three flags to `book` only when validation returned `customer_profile_stored: false`. This profile is the account holder, not a passenger, and it is created only after purchase approval.
 
 - If Link connects before the traveler details arrive, confirm it in one line and wait for them. Once the details are in, validate and `book`; the approval card handles the card choice.
 

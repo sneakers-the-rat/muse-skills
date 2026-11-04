@@ -21,7 +21,7 @@ Ineligible cases:
 - The need is niche, only for a very small share of users.
 - The need doesn't make sense without the specific instance.
 - The need is a one-off chore, or a problem that only exists in one moment, with no ongoing capability behind it worth selling, like confirming a checkout time or getting one device to pair.
-- The card only works for a user who is already in the middle of something, like an open thread, a pending case, or an upcoming drop. Swapping the instance for a category doesn't help, because the card still needs the user to be in that state. Bad examples: "Draft your bike rental reply with dates confirmed", "Reopen a stalled hotel points case", "Stage your limited sneaker checkout before drop day".
+- The card is a step in one person's specific story. A good card is one any reader can fill in from their own life: "I can draft replies to recruiter messages" works because most readers get them. A card that depends on a particular person, deal, or case, or on a small task, does not, like "Draft your bike rental reply with dates confirmed" or "Reopen a stalled hotel points case". When the need behind the step is big enough, offer the help from the start, like "I can compare SUV prices across nearby dealers".
 - The card reads like advice on sensitive topics such as health or finance.
 - Without the instance, the card becomes too general and abstract to feel meaningful or attractive. The giveaway is that you can't say what the card acts on, or what the user ends up with. Bad examples: "Catch early events with earlier reminders", "Find the true cheapest delivered price".
 
@@ -34,11 +34,12 @@ Rewrite the idea card for a broader audience, who don't have any context about t
 - Don't assume anything about the user. "You/your" is applicable when it's a general "you" that applies to a broad audience. Avoid any specific you/your that assumes the user's life stage or condition, like your wife, your 40s, or your dog. Don't assume what they have already done or already own either.
 - Name the capability that makes the card worth tapping. If a generic verb could open almost any card, it's hiding the point.
 - Write the way the audience talks. Nothing that reads like a marketing line.
+- Keep the tone easy, with no urgency that assumes the reader is about to act, like "today" or "your next phone". Timing many readers share works, like booking a trip before Christmas.
 - Respect the rules here first when there's a conflict with the style guide. Other additional rules in the style guide are still valid.
 
 For the fields:
 
-- Title: 6 to 10 words, 60 characters max. It's the only part the user sees, so it has to land on its own: they should be able to tell what it acts on, what they get out of it, and that the assistant is the one doing the work. Use whatever phrasing fits the card best, first person, second person, or an imperative. No filler openers, nothing that reads like a marketing line, and nothing that reads like a chore the reader has to do themselves.
+- Title: 6 to 10 words, 60 characters max. It's the only part the user sees, so it has to land on its own: they should be able to tell what it acts on, what they get out of it, and that the assistant is the one doing the work. Name the most concrete thing the card acts on, in concrete nouns, like "Let me cut your raw clips into post-ready Reels". Say what the assistant actually does in everyday words: a stranger reading the title should be able to say what will happen. Use whatever phrasing fits the card best: the assistant speaking in first person ("I can", "Let me"), second person, or an imperative. No filler openers, nothing that reads like a marketing line, and nothing that reads like a chore the reader has to do themselves.
 - Summary: 1-2 short sentences, a more detailed description of the card.
 - Prompt: the line the user sends to their assistant themselves, in first person. 1-2 short sentences.
 - Instructions: the Markdown plan that the assistant will follow to execute, 400 words max. Write it from the card's build plan, items and execution contract. Try to keep it aligned with the personalized version, except where the general card promises the broader capability, then cover that instead. Remove the user's PII. Anything the assistant needs to know, let it directly ask the user. If the assistant needs any permission like sending, posting, or spending, let it ask the user first before doing it.

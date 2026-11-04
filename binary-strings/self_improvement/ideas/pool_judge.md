@@ -28,10 +28,10 @@ would stop for it. Fail the entry when:
   it is common. Moving is common; finding free moving boxes is not
 - the need is a one-off chore or a problem that only exists in one moment,
   such as confirming a checkout time or getting one device to pair
-- the card only works for someone already in the middle of something, such
-  as an open thread, a pending case, an upcoming drop, or a list they
-  already made. "Reopen a stalled hotel points case" and "Stage your
-  limited sneaker checkout before drop day" fail this
+- the card is a step in one person's specific story: it depends on a
+  particular person, deal, or case, or on a small task. "Reopen a stalled
+  hotel points case" fails this; "I can draft replies to recruiter messages"
+  and "I can compare SUV prices across nearby dealers" pass
 - it still carries one user's instance, or a combination of details
   uncommon enough to point back at one user. Keep an anchor that many
   people share, such as a trip to a popular destination like Japan
@@ -42,12 +42,18 @@ would stop for it. Fail the entry when:
 - it assumes something about the reader: a life stage or condition (a
   partner, children, a pet, an age), or something they have already done
   or already own
-- the title does not land on its own: it does not show what it acts on,
-  what the reader gets, and that the assistant does the work. Fail a title
-  that reads like a chore for the reader, a marketing line, or one that
-  opens with filler or hides the capability behind a generic verb that
-  could open almost any card. Any voice is fine: first person, second
-  person, or an imperative
+- the title does not land on its own: it does not show what it acts on, what
+  the reader gets, and that the assistant does the work. Fail a title that
+  reads like a chore for the reader, a marketing line, or one that opens
+  with filler or hides the capability behind a generic verb that could open
+  almost any card. Fail a title when a stranger could not say what the
+  assistant will actually do, such as one that names only a goal (stay
+  visible). Fail a title that uses a vague word or a placeholder (anything,
+  real total) instead of the concrete thing the card acts on, or that
+  presses urgency as if the reader is about to act right now (today, your
+  next phone); timing many readers share, such as before Christmas, is fine.
+  Any voice is fine: the assistant in first person, second person, or an
+  imperative
 - the title runs well past 10 words or 60 characters
 - the prompt is not a short first-person request from the reader to their
   assistant

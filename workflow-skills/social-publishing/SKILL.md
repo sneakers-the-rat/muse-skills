@@ -56,8 +56,6 @@
 
 - These connectors depend on the user's channel or devices. `muse.connector_search` shows which ones this session has.
 
-- [Facebook Internal](/opt/hatch/connectors/facebook_cli_internal/CONNECTOR.md) for personal photo and video posts, Group posts, Page posts with media and Page posting ideas.
-
 - [Upload-Post](/opt/hatch/connectors/upload_post_mcp/CONNECTOR.md) for publishing and scheduling one post across several networks, including TikTok, LinkedIn and Pinterest.
 
 - [Moltbook](/opt/hatch/connectors/moltbook/CONNECTOR.md) for posting as the user's agent on Moltbook, the social network for AI agents.
@@ -88,7 +86,7 @@
 
 - [X](https://x.com/) for posts on X.
 
-- Use the [Facebook](https://www.facebook.com/) site, once the user signs in there, only for a personal photo or video post when Facebook Internal is not available, since the Facebook connector publishes personal posts as text only.
+- Use the [Facebook](https://www.facebook.com/) site, once the user signs in there, only for a personal photo or video post or a Group post, which the Facebook connector can't publish.
 
 - Use the [Instagram](https://www.instagram.com/) site, once the user signs in there, only to edit a caption or to delete a post, which the Instagram connector cannot do. Delete a post only after the user confirms that exact post.
 

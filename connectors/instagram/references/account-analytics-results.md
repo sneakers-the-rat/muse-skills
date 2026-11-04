@@ -14,7 +14,7 @@
 
 - With `--include-time-series`, `interactions_over_time` contains daily interaction counts. `net_followers_over_time` contains `overall`, `follows` and `unfollows` series; `overall` is net growth, not the number of new follows.
 
-- `metrics.instagram_account_follows_count` is the current follower-count snapshot despite its field name. `metrics.instagram_user_follower_growth` is net follower growth over the window.
+- `metrics.instagram_account_follows_count` is **Followers**, the current follower-count snapshot despite its field name. `metrics.instagram_user_follower_growth` is **Net followers**, the returned change in followers over the window.
 
 - `follower_growth_delta.value` is formatted growth from the window's starting follower count to its current count, accompanied by `sentiment`. Preserve that display value; it is not an unformatted ratio or a count of follows.
 
@@ -26,7 +26,7 @@
 
 - Keep returned content-format and follower-status labels, including unknown buckets, unchanged.
 
-- Daily Viewers or Accounts reached counts cannot be summed into a unique count for the whole window because an account can appear on multiple days.
+- Daily Viewers or Accounts reached values cannot be summed into a unique count for the whole window because an account can appear on multiple days.
 
 - Active followers are snapshots; sparse points do not establish a daily activity trend.
 

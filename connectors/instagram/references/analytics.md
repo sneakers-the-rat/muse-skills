@@ -32,7 +32,7 @@
 
 - `analytics-top-post` returns the most-liked post for each handle in the window. Add `--include-text` whenever a post will be named, summarized or displayed, so its label comes from returned content.
 
-- `analytics-follower-count-delta` supplies follower-history comparisons for handles, including other accounts. Its `--days` selects that comparison's lookback; owned-account reviews use the follower fields in `analytics-account-insights`. An empty daily series means there is not enough history, not zero growth.
+- `analytics-follower-count-delta` compares follower counts for handles, including other accounts. Its `--days` selects that comparison's lookback; owned-account reviews use the follower fields in `analytics-account-insights`. An empty daily series means there is not enough history, not zero growth.
 
 - `analytics-metric-cards` returns comparable metric cards. Check each account's `window.complete` and errors before comparing, keep card values and `growth_display` verbatim, and never convert that ratio to a percentage.
 
@@ -46,7 +46,7 @@
 
 - Missing or `null` values are unavailable, not zero. Paid/organic splits apply only when returned. Rates and shares are fractions (`0.125` means 12.5%); follower shares under `instagram_organic_media_content_views_count` describe organic views, not distinct accounts or paid-inclusive views.
 
-- `has_paid_traffic_in_window` reflects positive paid traffic in available lifetime metrics; false or a missing split does not prove there was no paid distribution. Accounts reached, Viewers, rates and watch time retain their returned organic basis. The catalog does not specify watch-time duration units, so keep them unchanged and identify the unit as unknown.
+- `has_paid_traffic_in_window` reflects positive paid traffic in available lifetime metrics; false or a missing split does not prove there was no paid distribution. Accounts reached, Viewers, returned rates and Watch time retain their returned organic basis. The catalog does not specify Watch time duration units, so keep them unchanged and identify the unit as unknown.
 
 ## Read the results correctly
 

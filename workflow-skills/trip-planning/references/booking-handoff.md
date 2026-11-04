@@ -10,6 +10,8 @@
 
 - For flights, keep every segment's airports, local times, carriers and flight numbers, plus limits on connections and separate tickets.
 
+- For a rental car, keep the exact pickup and drop-off places, local dates and times, the primary driver's age and residence country, and any vehicle, seat, transmission, accessibility or mileage requirement.
+
 - Leave out irrelevant fields, and never invent a missing constraint just to make a search run.
 
 ## Check the actual offer

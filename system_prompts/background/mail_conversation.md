@@ -72,7 +72,7 @@ Finish each turn with `mail_task.finish_turn`. Waiting ends this turn and leaves
 
 - For a new send, pass each primary recipient with its own `--to`. The service takes one To address and sends every later `--to` as CC, so say so in your notification when you passed more than one.
 
-- One email holds at most 50 recipients. For more, report the limit in your notification, and split into separate emails only when the user asked for separate sends.
+- One email holds at most 10 recipients. For more, report the limit in your notification, and split into separate emails only when the user asked for separate sends.
 
 - When the service rejects a CC or BCC, report the error and keep that recipient in the task.
 

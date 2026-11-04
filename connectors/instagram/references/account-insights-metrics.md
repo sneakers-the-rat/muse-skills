@@ -2,7 +2,11 @@
 
 - The field list describes `account-insights`; [Account analytics results](account-analytics-results.md) covers `analytics-account-insights`. Audience selection and interpretation apply to account and post insights, including user-supplied figures. Use each returned definition for counting scope.
 
-- Explain the external Metric Catalog definitions in plain language, preserving their meaning and units.
+- Use the documented display name for fields listed below and the external Metric Catalog display name returned for catalog-keyed analytics results whenever citing a metric, including in prose, headings, tables, comparisons and recommendations. Preserve every substantive word and qualifier; if the name reads awkwardly, rewrite the sentence rather than shortening, expanding or paraphrasing it. Explain the definition in plain language without changing the display name, meaning or unit.
+
+- Report only values returned for that metric, account or post, and window or lifetime scope. Preserve the sign and qualifiers; do not round, estimate, bucket or substitute a nearby value.
+
+- Do not derive, extrapolate, aggregate, or recompute analytics values. Use tool-provided totals, deltas, ratios, extrema and rankings as returned; when the requested result is not returned, say it is unavailable.
 
 - Apply the unit and caption rules to account and post figures; returned media definitions take precedence for `individual-post-insights`. Use supplied values unless the request needs missing or newer data.
 
@@ -20,7 +24,7 @@
 
 ## Interpret the values
 
-- Accounts reached, Viewers and Accounts engaged are estimated account counts, and one person can have several accounts. Keep the account unit in reports and captions, including copy that addresses the audience directly, and state the reporting window in the same text.
+- Accounts reached, Viewers and Accounts engaged are estimated account counts, and one person can have several accounts. Keep the account unit in reports and captions, and state the reporting window in the same text.
 
 - Views, interactions, profile visits and taps count events. Keep those units instead of converting their totals to accounts or people. Label a metric as estimated only when its definition says so.
 
@@ -34,15 +38,15 @@
 
 - Use the Viewers definition as written, without adding a video-only scope or a minimum watch time.
 
-- Describe a calculated ratio by its numerator and denominator. Ratios of visits or taps do not show the share of distinct accounts that acted.
+- Describe a returned ratio by its stated numerator and denominator. Ratios of visits or taps do not show the share of distinct accounts that acted.
 
 - Visit counts can include repeat visits and do not identify distinct visitors, whose number can equal or fall below the visit count.
 
-- `account-insights` returns no follower count, follower growth or engagement rate. Never derive follower figures from demographic totals, and state the formula and inputs for any engagement rate you calculate.
+- `account-insights` returns no current follower total, change in followers or calculated engagement-rate metric. Never derive those figures from other values; report them as unavailable from this command.
 
 ## Fields returned by account-insights
 
-- `accounts_reached` is **Accounts reached**, counted in accounts. It is the number of unique accounts that have seen your content at least once, including promoted posts and stories. It differs from Views, which may include several views by the same accounts, and it is estimated.
+- `accounts_reached` maps to **Accounts reached**, counted in accounts. It is the number of unique accounts that have seen your content at least once, including promoted posts and stories. It differs from Views, which may include several views by the same accounts, and it is estimated.
 
 - `viewers` is **Viewers**, counted in Accounts Center accounts. It is the number of Accounts Center accounts that have viewed your content at least once, across reels, posts, stories, videos, live videos and ads, and it is estimated.
 
@@ -70,7 +74,7 @@
 
 - `profile_visits` is **Profile visits**, counted in visits. It is the number of times your profile was visited.
 
-- `bio_link_taps` is **External link taps**, counted in taps. It counts taps on links on your profile, excluding taps on your connected Facebook profile.
+- `bio_link_taps` is **Bio link taps**, counted in taps. It counts taps on links on your profile, excluding taps on your connected Facebook profile.
 
 - `contact_button_taps` is **Contact button taps**, counted in taps. It counts taps on your business address, call, email or text buttons.
 
@@ -82,25 +86,41 @@
 
 - `account-insights` does not return these metrics. Use the definitions to answer questions about them.
 
-- **Impressions** are the number of times your content was on screen, including in ads. Instagram now reports Views for organic content.
+- `account_followers` is **Followers**, the account's current follower-count snapshot.
 
-- **Initial plays** are the number of times your reel starts to play for the first time in a reel session. They count plays of at least 1 millisecond and exclude replays.
+- `instagram_organic_media_follow_count` is **Follows**, the number of follows attributed to the content.
 
-- **Replays** are the number of times your reel starts to play again after an initial play in the same reel session.
+- `ig_posts_count` is **Number of Posts**, the returned published-content count. Never shorten it to "Posts."
 
-- **Watch time** is the total time your reel was played, including time spent replaying it.
+- `ig_account_aggregated_content_views_count` is **Aggregated account level views from IG and FB**. Keep that full cross-platform scope; never relabel it as Views, total views or content views.
 
-- **Average watch time** is watch time divided by initial plays. A viewer-based version divides by viewers.
+- `instagram_media_impressions_count` is **Impressions**, the number of times your content was on screen, including in ads. Instagram now reports Views for organic content.
+
+- `ig_clips_play_count` is **Initial plays**, the number of times your reel starts to play for the first time in a reel session. It counts plays of at least 1 millisecond and excludes replays.
+
+- `instagram_clips_video_replay_count` is **Replays**, the number of times your reel starts to play again after an initial play in the same reel session.
+
+- `instagram_organic_video_view_total_time` is **Watch time**, the total time your reel was played, including time spent replaying it.
+
+- `ig_reels_avg_watch_time` is **Average watch time**, watch time divided by initial plays. A viewer-based version divides by viewers.
+
+- `ig_reels_skip_rate` is **Reels skip rate**. Preserve the returned rate and never recompute it.
+
+- `instagram_organic_clips_retention_graph` is **Reels Retention Graph**. Preserve its returned points rather than deriving retention values.
+
+- `instagram_media_repost_count` is **Reposts**, the number of times the media was reposted.
+
+- `ig_post_engagement_rate` has no official display name. Omit it rather than calling it "Engagement rate" or deriving a replacement.
 
 - **Story views** are the number of views of your story, including repeat views.
 
-- **Accounts reached** for a live video is the number of unique accounts that saw at least 3 seconds of it, and it is estimated.
+- `instagram_media_impressions_unique` is **Accounts reached**. For a live video, it is the number of unique accounts that saw at least 3 seconds of it, and it is estimated.
 
 - **3-second video plays** are the number of times your video played for at least 3 seconds, or nearly its full length if shorter.
 
 - **Returning viewers** are viewers who saw your content in the last 90 days and are returning to see this reel.
 
-- **Overall followers** are the accounts that followed you minus the accounts that unfollowed you or left Instagram in the period. This is net growth, not new followers.
+- `instagram_user_follower_growth` is **Net followers**, the accounts that followed you minus the accounts that unfollowed you or left Instagram in the period. It is net growth, not new followers.
 
 - **Active followers** are followers who were active on Instagram in the period.
 

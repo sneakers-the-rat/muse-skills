@@ -5,24 +5,41 @@ metadata:
   visible_in_settings: false
 auth: none
 connector: duffel
+cli:
+  binary: duffel
+  skill: duffel
 display_name: Duffel
-description: Search and book flights
+description: Search and book flights and rental cars
 icon: duffel
 actions:
   read:
     default: allow
-    label: Read Duffel flight data
+    label: Read Duffel travel data
     methods:
       flight.read:
         label: Read seat choices, bookings, and cancellation details
       flight.quote:
         label: Search, compare, and validate flight offers
+      car.read:
+        label: Read rental car reservations
+      car.quote:
+        label: Search, compare, and quote rental cars
   write:
     default: ask
-    label: Create or change Duffel flight bookings
+    label: Create or change Duffel travel bookings
     methods:
       booking.cancel:
         label: Cancel a flight booking
+      # Each reservation and cancellation is approved on its own: Allow once or
+      # Deny, never a standing grant.
+      car.book:
+        label: Reserve a rental car
+        approval_policy: fresh_consent_only
+        approval_phrase: book a car with Duffel
+      car.cancel:
+        label: Cancel a rental car reservation
+        approval_policy: fresh_consent_only
+        approval_phrase: cancel this rental car reservation with Duffel
 commands:
   search: flight.quote
   seat-options: flight.read
@@ -34,6 +51,13 @@ commands:
   cancellation-quote: flight.read
   cancel-booking: booking.cancel
   places: flight.read
+  car-search: car.quote
+  car-quote: car.quote
+  # Postpaid: nothing is charged now, so the reservation approval is this
+  # connector method rather than a checkout spend.
+  car-book: car.book
+  car-booking-status: car.read
+  car-cancel: car.cancel
 cli_subcommands:
   - search
   - seat-options
@@ -43,11 +67,16 @@ cli_subcommands:
   - cancellation-quote
   - cancel-booking
   - places
+  - car-search
+  - car-quote
+  - car-book
+  - car-booking-status
+  - car-cancel
 consent_screen:
   bullets:
     - icon: data_types
       title: "Level up with Duffel"
-      text: "Muse will access things like flights, passenger details and booking information."
+      text: "Muse will access things like flights, rental cars, traveler and driver details, and booking information."
     - icon: info
       title: "You choose what Muse can do"
       text: "By default, Muse will ask before taking actions it thinks need review. Disconnect at any time in Settings."

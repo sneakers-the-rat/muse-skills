@@ -1,0 +1,25 @@
+select p.* from agent.connection_participants p
+                join agent.connections c using(connection_id)
+                where p.connection_id=$1 and c.active and p.audience=c.audience
+                order by p.kind,p.display_name,p.participant_idupdate self_improvement.connector_sync_accounts set cursor = $1,
+                revision = revision + 1, updated_at = $2 where connector = $3 and account_id = $4
+                and generation = $5 and revision = $6insert into self_improvement.connector_sync_observations as existing
+                        (event_id, connector, account_id, generation, source_id, source_at, evidence, state, observed_at, expires_at)
+                        values ($1,$2,$3,$4,$5,$6,$7,'pending',$8,$9)
+                        on conflict (event_id) do update
+                        set expires_at = greatest(existing.expires_at, excluded.expires_at)
+                        where existing.state in ('pending', 'deferred', 'deferred_flight')update self_improvement.connector_sync_observations set state = 'deleted', evidence = '{}'
+                        where connector = $1 and account_id = $2 and generation = $3 and source_id = $4 returning event_idupdate self_improvement.follow_up_queue set state = 'cancelled',
+                            disposition_reason = 'connector_source_deleted', terminal_at = now(), updated_at = now()
+                            where follow_up_id = $1 and state = 'pending'SELECT bool_and(coalesce(i.indisvalid, false)) FROM unnest($1::text[]) AS n(name)
+                 LEFT JOIN pg_index i ON i.indexrelid=to_regclass(n.name)runtime_bookkeeping_transcript_window_idx(created_at, event_seq) WHERE event_name IN ('message.user','message.assistant','message.internal')runtime_events_conversation_parent_window(parent_agent_id, created_at, event_seq) WHERE event_name IN ('message.user','message.assistant','message.internal')runtime_events_conversation_root_window(agent_id, created_at, event_seq) WHERE parent_agent_id IS NULL AND event_name IN ('message.user','message.assistant','message.internal')transaction.acquire_and_beginregistry_lockselect id, domains from context.subscriptions where subscription_key = $1 for updatesubscription.lookup_for_updateiddomainssources.enroll_previousinsert into context.subscriptions (id, subscription_key, domains) values ($1,$2,$3)subscription.insertupdate context.group_cursors g set lease_token=null, lease_expires_at=null, evidence_expires_at=null,
+                        window_position=null, batch_position=null, retry_at=null,
+                        available_position=coalesce((select max(e.append_position) from context.events e
+                          where e.source_id=g.source_id and e.group_id=g.group_id
+                          and e.append_position>g.acknowledged_position and e.append_position<=g.available_position
+                          and (e.expires_at is null or e.expires_at>statement_timestamp())
+                          and ($2 or e.content_hints && $3::text[])),g.acknowledged_position)
+                        where subscription_id=$1hints.reconcile_leasestransaction.commitsources.enroll_desiredupdate context.subscription_sources ss set active = ($2 or s.source_domain = any($3))
+                from context.sources s where ss.subscription_id = $1 and s.id = ss.source_idupdate context.group_cursors g set lease_token = null, lease_expires_at = null, evidence_expires_at = null
+                from context.subscription_sources ss where g.subscription_id = $1
+                and ss.subscription_id = g.subscription_id and ss.source_id = g.source_id and not ss.activeleases.invalidate_removedupdate context.subscriptions set domains = $2, updated_at = now() where id = $1 and domains <> $2coverage.updategeofence_id, node_id, device_geofence_id, owner, label, latitude, longitude, radius_m, trigger, persistent, payload, verified, state, removed_reason, last_triggered_at, trigger_count, cooldown_until, expires_at, created_run_id, created_at, updated_atactivity_id, kind, muse_id, at_ms, dismissed, payload, dedupe_keybackground_sync_disabledselect clock_timestamp()reconciliation retry time must be after database finalization time

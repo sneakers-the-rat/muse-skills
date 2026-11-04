@@ -1,1 +1,0 @@
-This Idea activation already has a builder. Continue with that agent; do not spawn another.subagents action spawn_agent timed ou
