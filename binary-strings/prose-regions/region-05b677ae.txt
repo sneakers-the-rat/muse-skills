@@ -1,0 +1,131 @@
+
+select task_id,
+       continuation_root_task_id,
+       status,
+       state_revision,
+       deadline_at,
+       completed_at,
+       outcome_status
+from runtime.browser_tasks
+where task_id = $1
+for update
+
+select *
+from runtime.stripe_link_spend_requests
+where approval_id = $1
+for update
+failed to resolve retired Companion caller for relay telemetrydeleted sessions.updated events require an owner-visible deletion proofsession row unavailable for sessions.updated payloadfailed to hydrate sessions.updated payloadrefusing to publish a chat frame without an owning chatfailed to resolve public session id for streamed framefailed to broadcast streamed frame for root sessiondropped companion progress frame after its voice call changedfailed to load idea quality rows for HTTP feed selectionfailed to read active feed for rotation; selecting without itfailed to load persisted idea bandit state for HTTP feed selectionfailed to read idea memory affinity; ranking without the affinity termfailed to fetch ideas explore policy for HTTP feed selectionsweep of open step attempts after terminal transition failedobjective state read failed; recurring window uses its first-run lookbackcoalesced_into_existing_incomplete_runtriggercontent_schemawindow_sincewindow_lower_boundenqueuecoalescedactive_runwait_cancelledobjective_not_registeredobjective_idcoalesced_into_existing_occurrencedeferred_recurring_windowwebhook hooks run only from verified event admissionfailed to prepare hook exec cgroup; continuing without cgroup attributionHATCH_HOOK_RUNTIME# shellcheck shell=bash
+
+_HATCH_HOOK_DISABLE_AFTER_RUN=false
+
+_hatch_hook_compact_json() {
+    local value="${1-}"
+    printf '%s' "$value" | jq -ce '.'
+}
+
+_hatch_hook_object_json() {
+    local value="${1-}"
+    printf '%s' "$value" | jq -ce 'select(type == "object")'
+}
+
+_hatch_hook_emit() {
+    local decision="$1"
+    local reason="${2-}"
+    local payload="${3-}"
+    local result
+
+    if [[ -n "$payload" ]]; then
+        payload="$(_hatch_hook_compact_json "$payload")" || return
+        result="$(
+            jq -cn \
+                --arg decision "$decision" \
+                --arg reason "$reason" \
+                --argjson payload "$payload" \
+                --argjson disable_after_run "$_HATCH_HOOK_DISABLE_AFTER_RUN" \
+                '{
+                    decision: $decision,
+                    reason: $reason,
+                    payload: $payload
+                } + if $disable_after_run then {disable_after_run: true} else {} end'
+        )" || return
+    else
+        result="$(
+            jq -cn \
+                --arg decision "$decision" \
+                --arg reason "$reason" \
+                --argjson disable_after_run "$_HATCH_HOOK_DISABLE_AFTER_RUN" \
+                '{
+                    decision: $decision,
+                    reason: $reason
+                } + if $disable_after_run then {disable_after_run: true} else {} end'
+        )" || return
+    fi
+
+    printf 'HATCH_HOOK_RESULT:%s\n' "$result"
+    exit 0
+}
+
+silent() {
+    _hatch_hook_emit "silent" "${1-}" "${2-}"
+}
+
+wake() {
+    _hatch_hook_emit "wake" "${1-}" "${2-}"
+}
+
+disable_after_run() {
+    _HATCH_HOOK_DISABLE_AFTER_RUN=true
+}
+
+log() {
+    local message="${1-}"
+    local fields="${2-}"
+    local entry
+
+    if [[ -z "$fields" ]]; then
+        fields='{}'
+    fi
+    fields="$(_hatch_hook_object_json "$fields")" || return
+    entry="$(
+        jq -cn \
+            --arg message "$message" \
+            --argjson fields "$fields" \
+            '$fields + {message: $message}'
+    )" || return
+    printf 'HATCH_HOOK_LOG:%s\n' "$entry" >&2
+}
+
+_hatch_hook_state_path() {
+    printf '%s/%s.json' "${HATCH_HOOK_STATE_DIR:?HATCH_HOOK_STATE_DIR is unset}" \
+        "${HATCH_HOOK_ID:?HATCH_HOOK_ID is unset}"
+}
+
+# Read this hook's persisted state object. Prints `{}` when nothing has been
+# stored yet or the stored file is unreadable/corrupt, so callers can pipe
+# straight into jq without a first-run special case.
+hook_state_get() {
+    local path
+    path="$(_hatch_hook_state_path)" || return
+    if [[ ! -f "$path" ]]; then
+        printf '{}'
+        return 0
+    fi
+    jq -ce 'select(type == "object")' <"$path" 2>/dev/null || printf '{}'
+}
+
+# Persist this hook's state object. The value is validated on every run, but
+# the write is SKIPPED on dry runs so testing a hook can never consume a
+# detection the next live poll still needs to make.
+hook_state_set() {
+    local value path temporary
+    value="$(_hatch_hook_object_json "${1-}")" || return
+    if [[ "${HATCH_HOOK_DRY_RUN-0}" == "1" ]]; then
+        return 0
+    fi
+    path="$(_hatch_hook_state_path)" || return
+    temporary="${path}.${HATCH_HOOK_INVOCATION_ID:-$$}.tmp"
+    printf '%s\n' "$value" >"$temporary" || return
+    mv -f "$temporary" "$path"
+}
+
+exec /bin/bash -- "$HATCH_HOOK_SCRIPT_PATH"SELECT COALESCE(sql, '') AS sql FROM sqlite_master WHERE name NOT LIKE 'sqlite\_%' ESCAPE '\' ORDER BY type, nameSELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite\_%' ESCAPE '\' AND name NOT LIKE '\_\_%' ESCAPE '\' ORDER BY name"" || '

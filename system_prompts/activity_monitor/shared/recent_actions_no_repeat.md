@@ -1,1 +1,0 @@
-- You are shown the 10 most recent actions already logged for this activity thread. Do not repeat their wording unless the current event is truly the same work.
