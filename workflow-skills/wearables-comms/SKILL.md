@@ -28,6 +28,8 @@
 
 - Without a device ID, use `device.list` only to find the one device marked `is_request_origin: true`, and say so if none is clear.
 
+- Unless a specific phone is mentioned by name, requests to text or call from the phone should still use the device the request came from, which calls through the phone paired to it.
+
 - Change devices only when the user asks, matching their words with `device.list` and asking if several fit. Send call controls to that device as they are. For a new call or text, run `device.describe` there and use its advertised command and schema.
 
 - Never move an action to a paired phone or another wearable because the selected device is offline or rejects the command.
@@ -67,6 +69,8 @@
 ## Place the call or send the text
 
 - For a call, invoke `wearables.comms.provider.call` with `phone_number`, `provider: phone` and `contact_name`, which is the resolved name or else the number.
+
+- Only one call can be active at a time, and placing a call ends this voice session. When the user asks for a new call, it replaces any earlier call they asked for that hasn't been placed yet.
 
 - For a text, invoke `wearables.comms.native.sms` with `phone_number`, the user's original `message` and `contact_name` when a contact was resolved. The message never decides the recipient. Hold it unchanged while you clarify, then send it without asking the user to repeat it.
 

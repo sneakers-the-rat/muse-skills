@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Deterministic local PDF extraction pipeline for the documents skill.
 
+Uses the poppler command-line tools in the runtime image (pdfinfo, pdftotext,
+pdfimages, pdftoppm), so it needs no Python PDF library.
+
 Outputs:
 - manifest.json
 - pages.jsonl
@@ -16,6 +19,8 @@ import datetime as dt
 import json
 import os
 import re
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 from typing import Iterable
@@ -116,6 +121,41 @@ def choose_render_pages(
     return selected
 
 
+POPPLER_TOOLS = ("pdfinfo", "pdftotext", "pdfimages", "pdftoppm")
+
+
+def poppler(*args: str) -> str:
+    return subprocess.run(
+        args, check=True, capture_output=True, text=True, errors="replace"
+    ).stdout
+
+
+def page_count(path: Path) -> int:
+    for line in poppler("pdfinfo", str(path)).splitlines():
+        if line.startswith("Pages:"):
+            return int(line.split(":", 1)[1])
+    raise ValueError("pdfinfo reported no page count")
+
+
+def page_texts(path: Path, count: int, layout: bool) -> list[str]:
+    # pdftotext ends every page with a form feed.
+    args = ["pdftotext", "-enc", "UTF-8"] + (["-layout"] if layout else []) + [str(path), "-"]
+    texts = poppler(*args).split("\f")
+    return [texts[index] if index < len(texts) else "" for index in range(count)]
+
+
+def image_counts(path: Path) -> dict[int, int]:
+    """Images per 1-indexed page from `pdfimages -list`, leaving out the soft
+    masks and stencil masks that accompany some images."""
+    counts: dict[int, int] = {}
+    for line in poppler("pdfimages", "-list", str(path)).splitlines()[2:]:
+        fields = line.split()
+        if len(fields) > 2 and fields[0].isdigit() and fields[2] == "image":
+            page = int(fields[0])
+            counts[page] = counts.get(page, 0) + 1
+    return counts
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Extract text and page renders from a PDF.")
     parser.add_argument("--input", required=True, help="PDF path")
@@ -147,7 +187,13 @@ def main() -> int:
         "--dpi",
         type=int,
         default=180,
-        help="Render DPI for pdf2image (default: 180)",
+        help="Render DPI for pdftoppm (default: 180)",
+    )
+    parser.add_argument(
+        "--layout",
+        action="store_true",
+        help="Keep each page's columns side by side in the text, for searching and "
+        "quoting; use rendered pages to read layout.",
     )
     args = parser.parse_args()
 
@@ -158,28 +204,35 @@ def main() -> int:
     if not input_path.exists():
         print(f"error: input does not exist: {input_path}", file=sys.stderr)
         return 2
-    if input_path.suffix.lower() != ".pdf":
-        print(f"error: input is not a .pdf file: {input_path}", file=sys.stderr)
+    with input_path.open("rb") as f:
+        # PDF readers accept a byte-order mark and whitespace before the header.
+        header = f.read(1024).lstrip(b"\xef\xbb\xbf \t\r\n")
+    if not header.startswith(b"%PDF-"):
+        print(f"error: input is not a PDF: {input_path}", file=sys.stderr)
+        return 2
+
+    missing = [tool for tool in POPPLER_TOOLS if shutil.which(tool) is None]
+    if missing:
+        print(f"error: missing poppler tools: {', '.join(missing)}", file=sys.stderr)
         return 2
 
     try:
-        import fitz  # type: ignore
-    except Exception as exc:  # pragma: no cover
-        print(f"error: PyMuPDF import failed: {exc}", file=sys.stderr)
+        count = page_count(input_path)
+        texts = page_texts(input_path, count, args.layout)
+        images = image_counts(input_path)
+    except (subprocess.CalledProcessError, ValueError) as exc:
+        detail = getattr(exc, "stderr", "") or exc
+        print(f"error: could not read PDF: {detail}", file=sys.stderr)
         return 2
 
-    doc = fitz.open(str(input_path))
     pages: list[dict] = []
-    for idx in range(len(doc)):
-        page = doc[idx]
-        raw_text = page.get_text("text") or ""
-        text = normalize_text(raw_text)
-        image_count = len(page.get_images(full=True))
+    for idx in range(count):
+        text = normalize_text(texts[idx])
         pages.append(
             {
                 "page": idx + 1,
                 "char_count": len(text),
-                "image_count": image_count,
+                "image_count": images.get(idx + 1, 0),
                 "has_text": bool(text),
                 "text": text,
             }
@@ -202,35 +255,30 @@ def main() -> int:
     render_pages = choose_render_pages(pages, explicit_pages, args.max_render_pages)
     render_artifacts: list[dict] = []
     render_errors: list[str] = []
+    if explicit_pages is not None and len(explicit_pages) > len(render_pages):
+        skipped = ",".join(str(page) for page in explicit_pages[len(render_pages):])
+        render_errors.append(
+            f"pages {skipped} not rendered: over --max-render-pages {args.max_render_pages}"
+        )
 
     if render_pages:
-        try:
-            from pdf2image import convert_from_path  # type: ignore
-
-            renders_dir = outdir / "renders"
-            renders_dir.mkdir(parents=True, exist_ok=True)
-            for page_num in render_pages:
-                images = convert_from_path(
-                    str(input_path),
-                    dpi=args.dpi,
-                    first_page=page_num,
-                    last_page=page_num,
-                    fmt="png",
-                    single_file=True,
-                )
-                if not images:
-                    continue
-                out_name = f"page-{page_num:04d}.png"
-                out_path = renders_dir / out_name
-                images[0].save(out_path, "PNG")
-                render_artifacts.append(
-                    {
-                        "page": page_num,
-                        "path": str(out_path),
-                    }
-                )
-        except Exception as exc:  # pragma: no cover
-            render_errors.append(f"pdf2image render failed: {exc}")
+        renders_dir = outdir / "renders"
+        renders_dir.mkdir(parents=True, exist_ok=True)
+        for page_num in render_pages:
+            out_base = renders_dir / f"page-{page_num:04d}"
+            page_range = ["-f", str(page_num), "-l", str(page_num)]
+            try:
+                poppler("pdftoppm", "-png", "-r", str(args.dpi), "-singlefile", *page_range,
+                        str(input_path), str(out_base))
+            except subprocess.CalledProcessError as exc:
+                render_errors.append(f"pdftoppm failed on page {page_num}: {exc.stderr.strip()}")
+                continue
+            render_artifacts.append(
+                {
+                    "page": page_num,
+                    "path": str(out_base) + ".png",
+                }
+            )
 
     if render_artifacts or render_errors:
         render_index = {

@@ -18,8 +18,11 @@ for the selected or connected wallet, when one is available. Before asking for
 a delivery address, call `wallet.list_shipping_addresses` for that wallet.
 Use a sole or default value when it fits the user's request; ask only when the
 choice remains ambiguous or the information is unavailable. Pass the relevant
-details to the browser task. Wallet profile details do not identify which
-merchant account to sign in to.
+details to the browser task. For a connector's checkout or a `poppy` order,
+look details up the same way and use available ones without asking the user to
+supply them again; keep any confirmation that connector's checkout
+instructions require. Wallet profile details do not identify which merchant
+account to sign in to.
 
 Continue the existing task for its cart and checkout. Use a new task for
 separate work, checking `browser.windows` when necessary. Tell the worker about

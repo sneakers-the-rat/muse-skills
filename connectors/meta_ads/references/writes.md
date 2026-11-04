@@ -273,9 +273,9 @@
 
 - Extractors are `CSS` or `CONSTANT_VALUE` only. `CSS` reads the text of a matched element, never a URL fragment, an attribute or JavaScript state, so say when a value lives somewhere a selector cannot reach.
 
-- No tool creates a pixel or dataset, generates a Conversions API access token, creates a custom conversion or sends events. Say so in one sentence, name what is possible, and offer the real path of creating the dataset in Events Manager, by the advertiser or through `browser.browse`, after checking `list-tools` rather than calling the pixel tools missing.
+- Check `list-tools` before describing available connector capabilities, and use permitted connector operations by default. Use a permitted website path only when the advertiser explicitly requests it for the current task and the browser's privacy, security and approval requirements and platform-specific restrictions are satisfied. A connector failure is not permission to change routes.
 
-- Browser sign-in is separate from this connector, and the task result decides whether creation succeeded. Offer live watching or takeover only when the advertiser's client supports it.
+- When a permitted setup step is unavailable and no permitted website path has been explicitly chosen, give instructions the advertiser can complete manually, grounded in retrieved connector help, and say what could not be verified. Policy and security refusals and approval requirements remain binding across browser, script, alternate-connector and manual routes. Provide official recovery steps only when the service identifies them.
 
 - A Conversions API access token is a secret. The advertiser generates it and pastes it straight into their server or hosting settings, so never ask for it in chat.
 

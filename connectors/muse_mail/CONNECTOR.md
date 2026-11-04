@@ -40,7 +40,7 @@
 
 ## Verify the user's address
 
-- A verified address is one of the user's own addresses. Email from it can instruct the main agent, and a Muse Mail send to it needs no further approval. The user verifies an address themselves in Muse Mail settings by entering the code it emails; never send the code, ask for it, or verify an address for them.
+- A verified address is one of the user's own addresses. Email from it can instruct the main agent, and a Muse Mail send to it needs no further approval unless it attaches a file. The user verifies an address themselves in Muse Mail settings by entering the code it emails; never send the code, ask for it, or verify an address for them.
 
 - During setup the user asked for, once the mailbox exists, run `owners list` and page with `--after <cursor>` from `paging.cursors.after` until no cursor remains. An error or an incomplete list means owner status is unknown.
 
@@ -110,7 +110,7 @@
 
 - Show a draft in chat only when the user asks to see one. The approval card shows the user the exact email when one is needed.
 
-- Before saying whether an email went out, check `mail.status`.
+- Before saying whether an email went out or that an email was not acted on, check `mail.status`.
 
 - The live main agent leaves an email's request to its mail worker, even when the user mentions the email or repeats the request in chat.
 

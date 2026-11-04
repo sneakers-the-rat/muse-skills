@@ -1,0 +1,903 @@
+assertion failed: self.unfiltering_buffer.remaining_bytes() > 0assertion failed: self.remaining_frames > 0preemptible_retryableall decompressing senders hung up but more messages were expectedfull_cadence_phaseinvalid headerswindow size exceeding integer maximumArc counter overflowtile sizeoriginating_channelorigin_providergroup_channelnative_group_namepayloadrowchat_eventsessionchat_eventseventsconflicting chat context fields/fs/library/fs/search/fs/media/fs/stats/fs/reads/fs/write/fs/mkdir/fs/delete/fs/rename/fs/recents/fs/export/fs/upload/fs/upload/status/fs/raw/{*path}/fs/thumbnail/{*path}/media/raw/{*path}daemon_subscription_quotaGet subscription quota (deprecated)Deprecated compatibility endpoint. Returns the credit-enforcement snapshot and best-effort subscription metadata; it will be removed in a future release.Subscriptiondaemon_subscription_callbackHandle subscription callbackProcesses a subscription completion callback.subscription_statussubscription_tiersubscription_tier_idsubscription_tier_namesubscription_tier_rankcurrent_period_end_timegrant_timepurchase_platformstatus_subtitlesubscription_usage_statesubscription_usage_quota_statussubscription_usage_percentagesubscription_usage_resets_attopup_totaltopup_eligibleinvite_reward_eligiblecatalog_item_idstatus_transitionscurrent_periodbilling_cycle_anchortrialcancel_at_period_endcancel_atcancellation_detailspending_plan_changeentitlementlatest_order_idlatest_invoice_idcreated_atshould_block_llm_inferencemonthly_credits_statusmonthly_usage_percentagemonthly_next_refill_attopup_credits_statustopup_balancemissingsubscription_sourcecredit_sourcedaemon_subscription_available_plansGet available subscription credit plansReturns currently available paid credit plans.credit-watcher available plans fallback/subscription/callback/subscription/quota/subscription/available-plans/subscription/check-complimentary/subscription/redeem-complimentarymissing authenticated owner identityrequest_id must be a canonical lowercase UUIDv4bug report log not foundvm_log_retention_unavailableVM log retention is not active on this VMno VM logs have been retained yetinsufficient space to build a VM log snapshotvm_log_snapshot_unavailabledaemon_debug_bug_report_logs_createCreate a dummy VM bug-report log fileMaterializes a 35 MiB placeholder plaintext file in daemon-private storage and returns an opaque handle plus authenticated Noise download path.Systemdaemon_debug_bug_report_logs_downloadDownload a dummy VM bug-report log fileStreams the generated placeholder plaintext file for the authenticated owner. Supports single byte ranges (`Accept-Ranges: bytes`, `206`, `Content-Range`, `416`).Dummy bug-report log download stream./debug/bug-report-logshooks_applyApply hooks config (deprecated)Deprecated compatibility endpoint. Always returns 410 Gone; use the built-in event hooks tool.Hookshooks_statusHooks status (deprecated)deprecated_endpointLegacy declarative hooks are retired. Use the built-in event hooks tool.hooks_inspect_streamInspect hook stream inputs (deprecated)/hooks/apply/hooks/status/hooks/inspect/streamdaemon_memory_getReturns a single memory entry by uri.Memorydaemon_memory_searchSearch memoryDeprecated memory reindex triggerDeprecated. Memory indexing is internal maintenance; this endpoint preserves the historical response shape but performs no work.daemon_memory_consolidate_deprecatedDeprecated memory consolidation triggerDeprecated. Memory consolidation is internal maintenance; this endpoint preserves the historical response shape but performs no work./memory/consolidate/memory/reindex/memory/search/memory/getRedTeamdaemon_redteam_get_mocksAPI endpoint to get the current tool mocks applied by red teamers.daemon_redteam_apply_mocksAPI endpoint to let frontend apply mocked configurations for tools to enable red teaming.
+        After application, the mocked tools hit a shim rather than the real binaries.daemon_redteam_clear_mocksAPI endpoint to disable the tool mocking for red teaming. Restores tools to hitting their real underlying binaries.daemon_redteam_sidecar_tailTail mock sidecarAPI endpoint to get the trailing N JSONL entries from the mock sidecar for red teamers.#!/usr/bin/env python3
+"""Universal mock binary for eval tool responses.
+
+Dispatched via symlinks: argv[0] determines the tool name.
+Reads response config beside the staged mock tree. Candidate-routed invocations
+instead take their config path, operation groups, and selection from root-owned
+state under /run so command input cannot alter dispatch ownership.
+Auto-logs every invocation to $JARVIS_EVAL_SIDECAR.
+
+Modes:
+  subcommand (default) — argv[1] selects response entry
+  intercept            — regex-match argv[1:], pass-through on miss
+  sequence             — track call count, advance response list
+  rules                — evaluate match_args / match_env / default conditions
+"""
+
+import hashlib
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+
+_BINARY_CANDIDATES_KEY = "_binary_candidates"
+_SELECTION_FILE = "mock-binary-candidates.tsv"
+_TRUSTED_CANDIDATE_STATE_DIR = Path("/run/hatch/eval-binary-candidates")
+_TRUSTED_CANDIDATE_STATE_PATH = _TRUSTED_CANDIDATE_STATE_DIR / "state.json"
+_HELP_TOKENS = {"--help", "-h"}
+_LONG_OPTION_RE = re.compile(r"--[a-z][a-z0-9-]*")
+_VALUE_OPTION_RE = re.compile(r"(?:--[a-z][a-z0-9-]*|-[A-Za-z0-9])")
+
+
+def _tool_name() -> str:
+    return Path(sys.argv[0]).name
+
+
+def _trusted_candidate_state() -> dict | None:
+    if not _TRUSTED_CANDIDATE_STATE_PATH.exists():
+        return None
+    try:
+        state = json.loads(_TRUSTED_CANDIDATE_STATE_PATH.read_text())
+    except (OSError, json.JSONDecodeError) as exc:
+        print(
+            f"Error: trusted eval binary-candidate state is unreadable: {exc}",
+            file=sys.stderr,
+        )
+        sys.exit(125)
+    config_path = state.get("mock_config_path") if isinstance(state, dict) else None
+    groups = state.get(_BINARY_CANDIDATES_KEY) if isinstance(state, dict) else None
+    if (
+        not isinstance(config_path, str)
+        or not Path(config_path).is_absolute()
+        or not isinstance(groups, dict)
+        or not groups
+    ):
+        print(
+            "Error: trusted eval binary-candidate state is malformed",
+            file=sys.stderr,
+        )
+        sys.exit(125)
+    return state
+
+
+def _candidate_groups(config: dict) -> object:
+    state = _trusted_candidate_state()
+    if state is not None:
+        return state[_BINARY_CANDIDATES_KEY]
+    return config.get(_BINARY_CANDIDATES_KEY)
+
+
+def _config_path() -> Path:
+    state = _trusted_candidate_state()
+    if state is not None:
+        return Path(state["mock_config_path"])
+    legacy_override = os.environ.get("MOCK_CONFIG")
+    if legacy_override:
+        return Path(legacy_override)
+    # Derive the staged response config from the installed mock path. Environment
+    # variables are agent-controlled command input and cannot select dispatch
+    # rules for candidate cases because trusted state takes precedence.
+    invoked = Path(sys.argv[0])
+    if not invoked.is_absolute():
+        resolved = shutil.which(sys.argv[0])
+        if resolved:
+            invoked = Path(resolved)
+    parent = invoked.parent.resolve()
+    if parent == Path("/opt/hatch/bin"):
+        return Path("/home/hatch/mock-config.json")
+    if parent.name in {"bin", ".redteam-bin"}:
+        parent = parent.parent
+    return parent / "mock-config.json"
+
+
+def _load_config() -> dict:
+    with _config_path().open() as f:
+        return json.load(f)
+
+
+def _load_binary_candidate_selection(config: dict) -> dict[str, str]:
+    configured_groups = config.get(_BINARY_CANDIDATES_KEY)
+    if configured_groups is None:
+        return {}
+    state = _trusted_candidate_state()
+    if state is None:
+        print(
+            "Error: trusted eval binary-candidate state is unavailable",
+            file=sys.stderr,
+        )
+        sys.exit(125)
+    groups = state[_BINARY_CANDIDATES_KEY]
+    if configured_groups != groups:
+        print(
+            "Error: trusted eval binary-candidate groups do not match mock config",
+            file=sys.stderr,
+        )
+        sys.exit(125)
+    selection_path = _TRUSTED_CANDIDATE_STATE_PATH.parent / _SELECTION_FILE
+    try:
+        lines = selection_path.read_text().splitlines()
+    except OSError as exc:
+        print(
+            f"Error: eval binary-candidate selection is unavailable: {exc}",
+            file=sys.stderr,
+        )
+        sys.exit(125)
+    selection: dict[str, str] = {}
+    for line in lines:
+        parts = line.split("\t")
+        if len(parts) != 2 or not all(parts):
+            print(
+                "Error: eval binary-candidate selection is malformed",
+                file=sys.stderr,
+            )
+            sys.exit(125)
+        name, selected = parts
+        if name in selection:
+            print(
+                f"Error: duplicate eval binary-candidate group {name!r}",
+                file=sys.stderr,
+            )
+            sys.exit(125)
+        selection[name] = selected
+    if not isinstance(groups, dict) or set(selection) != set(groups):
+        print(
+            "Error: eval binary-candidate selection does not match mock config",
+            file=sys.stderr,
+        )
+        sys.exit(125)
+    return selection
+
+
+def _long_value_options(args: list[str], value_options: set[str]) -> set[str]:
+    """Return constrained long options using an explicit value-taking grammar."""
+    options: set[str] = set()
+    index = 0
+    while index < len(args):
+        argument = args[index]
+        option = argument.split("=", 1)[0]
+        if _LONG_OPTION_RE.fullmatch(option):
+            options.add(option)
+        if option in value_options and "=" not in argument:
+            index += 2
+        else:
+            index += 1
+    return options
+
+
+def _option_constraint(
+    group: dict, *, group_name: str, field: str
+) -> set[str]:
+    raw = group.get(field, [])
+    if (
+        not isinstance(raw, list)
+        or any(
+            not isinstance(option, str)
+            or _LONG_OPTION_RE.fullmatch(option) is None
+            for option in raw
+        )
+        or len(set(raw)) != len(raw)
+        or (field in group and not raw)
+    ):
+        print(
+            f"Error: eval binary-candidate group {group_name!r} has invalid {field}",
+            file=sys.stderr,
+        )
+        sys.exit(125)
+    return set(raw)
+
+
+def _value_option_constraint(group: dict, *, group_name: str) -> set[str]:
+    raw = group.get("value_options")
+    if (
+        not isinstance(raw, list)
+        or not raw
+        or any(
+            not isinstance(option, str)
+            or _VALUE_OPTION_RE.fullmatch(option) is None
+            for option in raw
+        )
+        or len(set(raw)) != len(raw)
+    ):
+        print(
+            f"Error: eval binary-candidate group {group_name!r} has invalid "
+            "value_options",
+            file=sys.stderr,
+        )
+        sys.exit(125)
+    return set(raw)
+
+
+def _enforce_binary_candidate(
+    config: dict, selection: dict[str, str], tool: str, args: list[str]
+) -> bool:
+    """Enforce owner selection and report an admitted exact capability probe."""
+    groups = _candidate_groups(config)
+    if groups is None:
+        return False
+    if not isinstance(groups, dict):
+        print("Error: eval binary-candidate groups are malformed", file=sys.stderr)
+        sys.exit(125)
+    args_str = " ".join(args)
+    matching_probe_groups: list[str] = []
+    matching_groups: list[str] = []
+    matching_subcommand_groups: list[str] = []
+    tool_is_secondary_candidate = False
+    for name, group in groups.items():
+        if not isinstance(group, dict):
+            print(
+                f"Error: eval binary-candidate group {name!r} is malformed",
+                file=sys.stderr,
+            )
+            sys.exit(125)
+        match_args = group.get("match_args")
+        if not isinstance(match_args, str) or not match_args:
+            print(
+                f"Error: eval binary-candidate group {name!r} has no match_args",
+                file=sys.stderr,
+            )
+            sys.exit(125)
+        required_any_options = _option_constraint(
+            group, group_name=name, field="required_any_options"
+        )
+        forbidden_options = _option_constraint(
+            group, group_name=name, field="forbidden_options"
+        )
+        if required_any_options & forbidden_options:
+            print(
+                f"Error: eval binary-candidate group {name!r} has overlapping "
+                "required and forbidden options",
+                file=sys.stderr,
+            )
+            sys.exit(125)
+        constrained_options = required_any_options | forbidden_options
+        if constrained_options:
+            value_options = _value_option_constraint(group, group_name=name)
+            missing_value_options = constrained_options - value_options
+            if missing_value_options:
+                print(
+                    f"Error: eval binary-candidate group {name!r} value_options "
+                    "omit constrained options",
+                    file=sys.stderr,
+                )
+                sys.exit(125)
+            present_options = _long_value_options(args, value_options)
+        else:
+            if "value_options" in group:
+                print(
+                    f"Error: eval binary-candidate group {name!r} has value_options "
+                    "without an option constraint",
+                    file=sys.stderr,
+                )
+                sys.exit(125)
+            present_options = set()
+        option_shape_matches = (
+            not required_any_options or bool(required_any_options & present_options)
+        ) and not bool(forbidden_options & present_options)
+        probe_args = group.get("probe_args")
+        if (
+            not isinstance(probe_args, list)
+            or not probe_args
+            or any(not isinstance(argument, str) for argument in probe_args)
+            or probe_args[-1] not in _HELP_TOKENS
+        ):
+            print(
+                f"Error: eval binary-candidate group {name!r} has invalid probe_args",
+                file=sys.stderr,
+            )
+            sys.exit(125)
+        candidates = group.get("candidates")
+        if (
+            not isinstance(candidates, list)
+            or not candidates
+            or any(not isinstance(candidate, str) for candidate in candidates)
+        ):
+            print(
+                f"Error: eval binary-candidate group {name!r} has invalid candidates",
+                file=sys.stderr,
+            )
+            sys.exit(125)
+        if tool not in candidates:
+            continue
+        tool_is_secondary_candidate |= candidates.index(tool) > 0
+        subcommand = probe_args[:-1]
+        if args[: len(subcommand)] == subcommand:
+            matching_subcommand_groups.append(name)
+        if (
+            len(args) == len(probe_args)
+            and args[:-1] == subcommand
+            and args[-1] in _HELP_TOKENS
+        ):
+            matching_probe_groups.append(name)
+        if option_shape_matches and re.search(match_args, args_str):
+            matching_groups.append(name)
+    if matching_probe_groups:
+        selected_tools = {selection.get(name) for name in matching_probe_groups}
+        if None in selected_tools or len(selected_tools) != 1:
+            print(
+                "Error: eval binary-candidate probe groups select conflicting owners "
+                f"for this help path: {matching_probe_groups!r}",
+                file=sys.stderr,
+            )
+            sys.exit(125)
+        if selected_tools != {tool}:
+            print("error: unrecognized subcommand", file=sys.stderr)
+            sys.exit(2)
+        return True
+    if not matching_groups:
+        if matching_subcommand_groups:
+            print(
+                "Error: eval binary-candidate operation matches a declared "
+                "subcommand but no operation group: "
+                f"{matching_subcommand_groups!r}",
+                file=sys.stderr,
+            )
+            sys.exit(125)
+        if tool_is_secondary_candidate:
+            print("error: unrecognized subcommand", file=sys.stderr)
+            sys.exit(2)
+        return False
+    selected_tools = {selection.get(name) for name in matching_groups}
+    if None in selected_tools or len(selected_tools) != 1:
+        print(
+            "Error: eval binary-candidate groups select conflicting owners for "
+            f"this operation: {matching_groups!r}",
+            file=sys.stderr,
+        )
+        sys.exit(125)
+    if selected_tools != {tool}:
+        print("error: unrecognized subcommand", file=sys.stderr)
+        sys.exit(2)
+    return False
+
+
+def _argument_fields(args: list[str]) -> dict[str, str]:
+    fields: dict[str, str] = {}
+    i = 0
+    while i < len(args):
+        argument = args[i]
+        if argument.startswith("--") and "=" in argument:
+            key, value = argument[2:].split("=", 1)
+            fields[key.replace("-", "_")] = value
+            i += 1
+        elif argument.startswith("--") and i + 1 < len(args):
+            fields[argument[2:].replace("-", "_")] = args[i + 1]
+            i += 2
+        else:
+            i += 1
+    return fields
+
+
+def _sidecar_log(tool: str, args: list[str]) -> None:
+    sidecar = os.environ.get("JARVIS_EVAL_SIDECAR") or "/tmp/jarvis-eval/sidecar.jsonl"
+    os.makedirs(os.path.dirname(sidecar), exist_ok=True)
+
+    entry: dict = {
+        "tool": tool,
+        "subcommand": args[0] if args else None,
+        "args": args,
+        "ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+
+    # Auto-parse --key value pairs into structured fields
+    entry.update(_argument_fields(args))
+
+    with open(sidecar, "a") as f:
+        f.write(json.dumps(entry) + "\n")
+
+
+_SHA256_TEMPLATE = re.compile(r"\{\{sha256:(?P<field>[A-Za-z0-9_]+)\}\}")
+
+
+def _render_template(template: str, args: list[str]) -> str:
+    fields = _argument_fields(args)
+
+    def replace(match: re.Match[str]) -> str:
+        field = match.group("field")
+        value = fields.get(field)
+        if not value:
+            print(
+                f"Error: response template requires non-empty --{field.replace('_', '-')}",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+    return _SHA256_TEMPLATE.sub(replace, template)
+
+
+def _config_relative_path(config_dir: str, value: str, *, field: str) -> Path:
+    relative = Path(value)
+    if relative.is_absolute() or ".." in relative.parts:
+        print(f"Error: {field} must be a safe relative path", file=sys.stderr)
+        sys.exit(2)
+    root = Path(config_dir).resolve()
+    resolved = (root / relative).resolve()
+    if not resolved.is_relative_to(root):
+        print(f"Error: {field} escapes the mock config directory", file=sys.stderr)
+        sys.exit(2)
+    return resolved
+
+
+def _materialize_response_files(
+    response_cfg: dict, config_dir: str, args: list[str]
+) -> None:
+    entries = response_cfg.get("materialize_files", [])
+    if not isinstance(entries, list):
+        print("Error: materialize_files must be a list", file=sys.stderr)
+        sys.exit(2)
+    for index, entry in enumerate(entries):
+        if not isinstance(entry, dict):
+            print(
+                f"Error: materialize_files[{index}] must be an object",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        source_value = entry.get("source")
+        destination_template = entry.get("destination_template")
+        if not isinstance(source_value, str) or not isinstance(
+            destination_template, str
+        ):
+            print(
+                f"Error: materialize_files[{index}] requires source and "
+                "destination_template strings",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        source = _config_relative_path(
+            config_dir, source_value, field=f"materialize_files[{index}].source"
+        )
+        destination = _config_relative_path(
+            config_dir,
+            _render_template(destination_template, args),
+            field=f"materialize_files[{index}].destination_template",
+        )
+        if not source.is_file():
+            print(
+                f"Error: response materialization source does not exist: {source}",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        temporary = destination.with_name(f".{destination.name}.tmp-{os.getpid()}")
+        try:
+            shutil.copyfile(source, temporary)
+            os.replace(temporary, destination)
+        finally:
+            temporary.unlink(missing_ok=True)
+
+
+def _emit_response(response_cfg: dict | str, config_dir: str, args: list[str]) -> None:
+    """Write the configured response to stdout/stderr and exit."""
+    if isinstance(response_cfg, str):
+        print(response_cfg)
+        sys.exit(0)
+
+    exit_code = response_cfg.get("exit_code", 0)
+
+    _materialize_response_files(response_cfg, config_dir, args)
+
+    if "file" in response_cfg:
+        file_path = os.path.join(config_dir, response_cfg["file"])
+        with open(file_path) as f:
+            content = f.read()
+        stream = sys.stderr if response_cfg.get("stderr") else sys.stdout
+        stream.write(content)
+        sys.exit(exit_code)
+
+    if "stdout" in response_cfg:
+        print(response_cfg["stdout"])
+
+    if "stdout_template" in response_cfg:
+        template = response_cfg["stdout_template"]
+        if not isinstance(template, str):
+            print("Error: stdout_template must be a string", file=sys.stderr)
+            sys.exit(2)
+        print(_render_template(template, args))
+
+    if "stderr" in response_cfg:
+        print(response_cfg["stderr"], file=sys.stderr)
+
+    sys.exit(exit_code)
+
+
+def _auto_help(tool_cfg: dict, tool: str) -> None:
+    """Generate help text from config keys."""
+    mode = tool_cfg.get("mode", "subcommand")
+    description = tool_cfg.get("description", "")
+    responses = tool_cfg.get("responses", {})
+
+    if mode == "subcommand":
+        print(f"Usage: {tool} <command> [OPTIONS]\n")
+        if description:
+            print(f"{description}\n")
+        if responses:
+            print("Available commands:")
+            for name in sorted(responses):
+                if name != "default":
+                    print(f"  {name}")
+    elif mode == "intercept":
+        print(f"Usage: {tool} [ARGS...]\n")
+        if description:
+            print(f"{description}\n")
+    elif mode == "sequence":
+        print(f"Usage: {tool} [ARGS...]\n")
+        if description:
+            print(f"{description}\n")
+    elif mode == "rules":
+        print(f"Usage: {tool} <command> [OPTIONS]\n")
+        if description:
+            print(f"{description}\n")
+    else:
+        print(f"Usage: {tool} [ARGS...]\n")
+        if description:
+            print(f"{description}\n")
+
+    print()
+    sys.exit(0)
+
+
+def _state_dir() -> Path:
+    d = Path("/tmp/jarvis-eval/mock-state")
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def _handle_subcommand(tool_cfg: dict, args: list[str], config_dir: str) -> None:
+    responses = tool_cfg.get("responses", {})
+    if not args:
+        if "default" in responses:
+            _emit_response(responses["default"], config_dir, args)
+        print(
+            f"Error: no subcommand provided. Available: {', '.join(sorted(responses))}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    subcmd = args[0]
+    if subcmd in responses:
+        _emit_response(responses[subcmd], config_dir, args)
+
+    # Try prefix matching
+    matches = [k for k in responses if k.startswith(subcmd)]
+    if len(matches) == 1:
+        _emit_response(responses[matches[0]], config_dir, args)
+
+    if "default" in responses:
+        _emit_response(responses["default"], config_dir, args)
+
+    print(
+        f"Error: unknown subcommand '{subcmd}'. Available: {', '.join(sorted(responses))}",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+
+def _handle_intercept(tool_cfg: dict, args: list[str], config_dir: str) -> None:
+    responses = tool_cfg.get("responses", {})
+    args_str = " ".join(args)
+
+    for pattern, response in responses.items():
+        if re.search(pattern, args_str):
+            _emit_response(response, config_dir, args)
+
+    # Pass-through to real binary
+    real_binary = tool_cfg.get("passthrough")
+    if real_binary:
+        real_path = _resolve_passthrough_binary(real_binary)
+        if real_path:
+            result = subprocess.run([real_path] + args, capture_output=False)
+            sys.exit(result.returncode)
+
+    if "default" in responses:
+        _emit_response(responses["default"], config_dir, args)
+
+    print(f"Error: no matching pattern for args: {args_str}", file=sys.stderr)
+    sys.exit(1)
+
+
+def _resolve_passthrough_binary(binary_name: str) -> str | None:
+    redteam_bin_dir = os.environ.get("JARVIS_REDTEAM_BIN_DIR")
+    if not redteam_bin_dir:
+        return shutil.which(binary_name)
+
+    path_entries = os.environ.get("PATH", "").split(os.pathsep)
+
+    # Avoids infinite recursion where redteam mocking scenario finds the mock shim again
+    path_minus_redteam_directory = os.pathsep.join(
+        entry for entry in path_entries if entry != redteam_bin_dir
+    )
+
+    return shutil.which(binary_name, path=path_minus_redteam_directory)
+
+
+def _handle_sequence(
+    tool_cfg: dict, tool: str, config_dir: str, args: list[str]
+) -> None:
+    responses = tool_cfg.get("responses", [])
+    if not responses:
+        sys.exit(0)
+
+    state_file = _state_dir() / f"{tool}.count"
+    count = int(state_file.read_text()) if state_file.exists() else 0
+    idx = min(count, len(responses) - 1)
+    state_file.write_text(str(count + 1))
+    _emit_response(responses[idx], config_dir, args)
+
+
+def _handle_rules(
+    tool_cfg: dict,
+    args: list[str],
+    config_dir: str,
+    *,
+    pure_help: bool = False,
+) -> None:
+    rules = tool_cfg.get("responses", [])
+    args_str = " ".join(args)
+    env = os.environ
+
+    for rule in rules:
+        # Exact candidate probes use only explicitly marked responses. Those
+        # responses never participate in ordinary or action-shaped dispatch.
+        candidate_probe_rule = rule.get("candidate_probe") is True
+        if pure_help != candidate_probe_rule:
+            continue
+        # Per-rule disabled toggle: skip without contributing to matching.
+        if rule.get("disabled"):
+            continue
+        if "match_args" in rule:
+            pattern = rule["match_args"]
+            if not re.search(pattern, args_str):
+                continue
+        elif pure_help:
+            continue
+        if "match_env" in rule:
+            match = True
+            for k, v in rule["match_env"].items():
+                if not re.search(v, env.get(k, "")):
+                    match = False
+                    break
+            if not match:
+                continue
+        _emit_response(rule.get("response", rule), config_dir, args)
+
+    if pure_help:
+        print(
+            "Error: admitted eval binary-candidate probe has no explicit response",
+            file=sys.stderr,
+        )
+        sys.exit(125)
+
+    # Fall through to default (also honor per-rule disabled here).
+    for rule in rules:
+        if rule.get("disabled") or rule.get("candidate_probe") is True:
+            continue
+        if rule.get("default"):
+            _emit_response(rule.get("response", rule), config_dir, args)
+
+    sys.exit(0)
+
+
+def main() -> None:
+    tool = _tool_name()
+    args = sys.argv[1:]
+    trusted_state = _trusted_candidate_state()
+    try:
+        config = _load_config()
+    except FileNotFoundError:
+        # Preserve the legacy top-level help fallback when an ordinary mock has
+        # no response config. Candidate-routed invocations remain fail-closed.
+        if trusted_state is None:
+            _sidecar_log(tool, args)
+            if args and args[0] in _HELP_TOKENS:
+                print(f"Usage: {tool} [SUBCOMMAND] [OPTIONS]")
+                sys.exit(0)
+        raise
+    except (OSError, json.JSONDecodeError):
+        # Legacy mocks historically ledgered the attempted invocation before
+        # surfacing config read/parse failures. Candidate state remains
+        # fail-closed and pre-ledger.
+        if trusted_state is None:
+            _sidecar_log(tool, args)
+        raise
+
+    if trusted_state is None:
+        # A candidate config without immutable state is rejected before the
+        # ledger. Ordinary mocks retain their previous config and dispatch flow.
+        if config.get(_BINARY_CANDIDATES_KEY) is not None:
+            _load_binary_candidate_selection(config)
+        candidate_probe = False
+        _sidecar_log(tool, args)
+    else:
+        selection = _load_binary_candidate_selection(config)
+        candidate_probe = _enforce_binary_candidate(config, selection, tool, args)
+        if not candidate_probe:
+            _sidecar_log(tool, args)
+
+    # Handle top-level --help / -h. An admitted candidate subcommand probe is
+    # dispatched below only to an explicitly marked candidate-probe response.
+    if args and args[0] in _HELP_TOKENS:
+        tool_cfg = config.get(tool, {})
+        _auto_help(tool_cfg, tool)
+
+    tool_cfg = config.get(tool)
+    if tool_cfg is None:
+        print(f"Error: no mock config for tool '{tool}'", file=sys.stderr)
+        sys.exit(1)
+
+    # Per-tool disabled toggle: behave as if the tool is unmocked. If a
+    # passthrough binary is configured, fall through to it; otherwise
+    # surface a clear error so the agent sees that the tool was not
+    # actually mocked.
+    if tool_cfg.get("disabled"):
+        real_binary = tool_cfg.get("passthrough")
+        if real_binary:
+            # Use the recursion-safe resolver (strips JARVIS_REDTEAM_BIN_DIR from
+            # PATH). Plain shutil.which would find the staged `.redteam-bin` shim
+            # symlink instead of the real binary and re-launch the shim.
+            real_path = _resolve_passthrough_binary(real_binary)
+            if real_path:
+                result = subprocess.run([real_path] + args, capture_output=False)
+                sys.exit(result.returncode)
+        print(f"Error: mock for tool '{tool}' is disabled", file=sys.stderr)
+        sys.exit(1)
+
+    config_dir = str(_config_path().parent)
+
+    mode = tool_cfg.get("mode", "subcommand")
+
+    if mode == "subcommand":
+        _handle_subcommand(tool_cfg, args, config_dir)
+    elif mode == "intercept":
+        _handle_intercept(tool_cfg, args, config_dir)
+    elif mode == "sequence":
+        _handle_sequence(tool_cfg, tool, config_dir, args)
+    elif mode == "rules":
+        _handle_rules(tool_cfg, args, config_dir, pure_help=candidate_probe)
+    else:
+        print(f"Error: unknown mock mode '{mode}'", file=sys.stderr)
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
+#!/usr/bin/env python3JARVIS_EVAL_SIDECAR/usr/bin/python3.12/usr/bin/python3.11.redteam-binMOCK_CONFIG/redteam/mocks/redteam/mocks/sidecardaemon_reactions_toggleToggle a reaction on a public assistant outputAccepts an opaque 1-64 byte reaction value for a durable public assistant output, including commentary and standalone presentations; persists canonical state, broadcasts `reactions.updated`, and best-effort enqueues the hidden `runtime.reaction` follow-up. User-authored and internal events return 404.
+[truncated]content/reactions/toggleis_side_chathas_unread_threadschannelstream_scopethread_idchatssetup.address_resulttasks:
+  - id: inbox_triage
+    idea_id: b2a1c7e3-279f-5628-ac62-5df899db88b4
+    title: Let me triage your inbox down to only what matters
+    summary: >-
+      A short, ranked list of only what needs you, kept current as mail
+      arrives.
+    icon: inbox
+    connector_groups:
+      - id: email
+        title: Gmail account
+        selection: single
+        required: true
+        connector_ids:
+          - gmail
+
+  - id: cancel_subscriptions
+    idea_id: 3b0781d8-5d45-42e2-8410-ad2ab6ba5ab5
+    title: I can find and cancel those random subscriptions you forgot about
+    summary: >-
+      A running list of your recurring charges with costs. Nothing gets
+      cancelled until you say which ones.
+    icon: subscription-cancellation
+    connector_groups:
+      - id: email_or_bank
+        title: Email or bank account
+        selection: single
+        required: true
+        connector_ids:
+          - gmail
+          - outlook_mail
+          - plaid
+
+  - id: morning_paper
+    idea_id: 022f714c-7e1c-49cd-8900-82aba27cdcf4
+    title: Let me print your whole day as a morning paper, so you can skip your phone
+    summary: >-
+      Your calendar, deliveries, deadlines, and weather on one page, waiting
+      for you every morning.
+    icon: morning-brief
+    connector_groups:
+      - id: email
+        title: Email account
+        selection: single
+        required: true
+        connector_ids:
+          - gmail
+          - outlook_mail
+      - id: calendar
+        title: Calendar
+        selection: single
+        required: false
+        connector_ids:
+          - google_calendar
+          - outlook_calendar
+
+  - id: avatar_weather
+    idea_id: 7d3f2a91-5c4e-4b8a-9f61-2e0c8a4d7b35
+    title: Every morning I'll dress for your weather
+    summary: >-
+      A new outfit for today's forecast right away, then a fresh look and a
+      one-line weather heads-up every morning.
+    icon: raincoat
+
+  - id: inbox_day_plan
+    idea_id: 85c1eb66-fa74-48fd-8f2c-337e713116b9
+    title: I can turn your inbox and calendar into a plan for each day
+    summary: >-
+      Today's schedule, replies you owe and deadlines in one plan, then a
+      fresh plan every morning at 8.
+    icon: calendar
+    connector_groups:
+      - id: email
+        title: Email account
+        selection: single
+        required: true
+        connector_ids:
+          - gmail
+          - outlook_mail
+      - id: calendar
+        title: Calendar
+        selection: single
+        required: false
+        connector_ids:
+          - google_calendar
+          - outlook_calendar
+
+  - id: teams_and_topics
+    idea_id: 8c469444-ad6d-5eb9-b8c4-053b8a7d4874
+    title: I'll update you on the latest from your favorite teams
+    summary: >-
+      The latest on your teams now, then a morning update whenever there's a result, a game or news.
+    icon: flag
+
+  - id: local_every_morning
+    idea_id: 0a888ee9-c2a2-425f-b835-780bae2b7729
+    title: I can find what's opening and happening near you every morning
+    summary: >-
+      New spots, free and cheap things to do, and road or transit changes near
+      you, each with its source. A short brief every morning at 8.
+    icon: map-pin
+
+  - id: health_check_in
+    idea_id: 1f97a4b9-94bb-54c6-b6f4-70d41c8936b4
+    title: Tell me your health goal and I'll plan each day around it
+    summary: >-
+      Today's plan for the goal you pick, then a new one every morning at 7
+      that adjusts to how yesterday went.
+    icon: habit-change
+
+  - id: creator_morning_report
+    idea_id: 9e7a525e-0d21-55c4-b9d0-89b2022e4d60
+    title: Your best recent posts become a fresh post idea each day
+    summary: >-
+      How your recent posts did, plus a post idea with a ready-to-copy
+      caption every morning at 8.
+    icon: scrapbook
+    connector_groups:
+      - id: instagram
+        title: Instagram account
+        selection: single
+        required: true
+        connector_ids:
+          - instagram
+onboarding task catalog must contain at least one taskchat-sparklesidea:event hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/subscription.rs:570hatch_server::daemon::http_api::routes::subscriptionhatch_daemon_http_client::daemon::http_api::routes::subscriptionhatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/subscription.rsevent hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/subscription.rs:379event hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/subscription.rs:401event hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/subscription.rs:518event hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/reactions.rs:98hatch_server::daemon::http_api::routes::reactionshatch_daemon_http_client::daemon::http_api::routes::reactionshatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/reactions.rsevent hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/reactions.rs:140event hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/reactions.rs:149event hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/subscription.rs:584destination and source slices have different lengthsSubscriptionQuotaHttpResponsefile ended before the selected download lengthseen_at_msunread_counturioccurred_at_msreply_to_message_idparent_message_iddisplay_textreaction_emojidisplay_text_readydisplay_text_updated_at_msresourcesauthor Monotonic per-chat transcript revision (the chat's public-stream
+ event-seq high-water mark, which a turn deletion's persisted marker
+ advances). Clients discard an in-flight history response whose
+ revision is older than the latest deletion event they applied.transcript_revisiontranscript_modechat_kindbefore_seqafter_seqinclude_first_unseenall_sessionsbefore_row_idanchor_seqbefore_limitafter_limitadditionalProperties Maximum number of trailing entries to return. Bounded by
+ [`SIDECAR_TAIL_MAX_LIMIT`]. Defaults to [`SIDECAR_TAIL_DEFAULT_LIMIT`]. True when the on-disk file was longer than `SIDECAR_MAX_READ_BYTES`
+ and we returned the tail of what we read — not the tail of the file. The remaining request fields keep the existing chat operation contract.
+ chat_id is the only destination selector; native IDs are never selectors.pinnedsnippethas_olderhas_neweroldest_seqnewest_seq Exactly one of chat_id or all_chats=true is required.all_chats Optional display CDN. Omission preserves native artwork URLs. Set only on the task a tapped feed card put first, whether for the
+ card's Idea or its prompt: the app the card was on. Absent when the app
+ isn't known. App of the feed card that put a task first. Stable identifier scoped to the containing task. Whether the group accepts one connector or multiple connectors. Required groups must be satisfied before the task can run. Optional
+ groups provide additional context when connected. Canonical connector ids (connector slugs). Exactly one connector when required; zero or one when optional. At least one connector when required; any number when optional.variant identifierno lzw end code found[internal exception] blocking task ran twice.`SpecificChannels` does not support deep data yetstruct UploadStatusRequeststruct SubscriptionQuotaHttpResponsestruct SubscriptionCallbackHttpResponsestruct SubscriptionCallbackRequeststruct SubscriptionAvailablePlansRequeststruct CreateBugReportLogsRequeststruct PodcastGenerationObservationstruct HooksApplyHttpRequeststruct MemorySearchHitScoresHttpResponsestruct MemorySearchCitationHttpResponsestruct MemorySearchHitMetadataHttpResponsestruct MemorySearchHitHttpResponsestruct MemorySearchHttpResponsestruct MemoryGetHttpResponsestruct MemorySearchHttpParamsstruct MemoryGetHttpParamsstruct MemoryConsolidateHttpParamsstruct ReactionsToggleRequeststruct MailboxResultstruct MailboxTransitionstruct OnboardingTaskCatalogstruct OnboardingTaskstruct OnboardingTaskConnectorGroupstruct OnboardingTaskSelectionErrorinnerBUG: inner connection already taken!hatch_daemon_http_foundation::response_compression::CompressibleRawTextFilehatch_daemon_http_foundation::logging::ApiRequestArtifactPathhatch_daemon_http_foundation::logging::ApiRequestCompletionDetailshatch_daemon_http_client::daemon::http_api::client_compat::LegacyStreamCreationhatch_daemon_http_client::daemon::http_api::chat_api::ChatRequestScopehatch_daemon_http_client::daemon::http_api::client_compat::chat::LegacyThreadIdhatch_daemon_http_client::daemon::http_api::routes::email::mailbox_event::MuseMailMailboxIdfailed to write whole bufferColor-mapped images with indices wider than color are not supportedno layer in the image matched your specified requirementsstruct variant Observation::StartSearchGetMaintenanceClearHealthExplainAbortedNotSupportedInvalidIoresponse to CONNECT with nonempty bodyassertion failed: prevstruct variant Observation::Endfailed to fill whole bufferTryFromIntErrortracing::spana Display implementation returned an error unexpectedlyRecvErrorbyte buffer not large enough for the specified dimensions and f32 pixelsReaderUnsupportednumber of read bytes exceeds limitTryFromSliceErrordescription() is deprecated; use Display

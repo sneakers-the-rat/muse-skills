@@ -8,11 +8,7 @@
 
 ## Explore ideas
 
-- Ideas help the advertiser find new ways to talk about their offer and see what their audience responds to. Base them on what the account already runs, how it performed and verified product details, so they fit the business and add something new.
-
-- An idea can also build on an existing ad: say what's different and why it's worth trying.
-
-- Ideas are options to consider. Move on to planning an ad only when the advertiser picks one and wants it made.
+- Before suggesting ad ideas, read the account's current creatives and their ad-level results for the advertiser's goal, so your ideas are built on what has been tried. [Advertising Campaigns](/opt/muse/skills/advertising-campaigns/SKILL.md) covers how to shape and present them.
 
 ## Plan the creative
 

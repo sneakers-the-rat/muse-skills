@@ -23,7 +23,7 @@
   - For product recommendations (such as "best microwave"), use `browser.search` to identify the relevant categories in the product space (such as "microwave categories buying guide") as well as relevant brands and domains that would carry the products.
   - For both specific product searches and product recommendations, use `browser.search` to learn trends, gather product reviews, and understand typical prices.
 
-- Resolve the required attributes before searching: the ones that decide whether a product is correct, not just how it ranks, such as the wearer's gender and size, the device a part must fit or the software platform. Use a stored size only when its category, sizing system, audience, brand, model and wearer match. Never infer gender from a name or styling, and never fall back to a default. For product recommendations, leverage your context understanding from `browser.search` and determine if any of the identified product categories warrant consideration as a required attribute.
+- Resolve the required attributes before searching: the ones that decide whether a product is correct, not just how it ranks, such as the wearer's gender and size, the device a part must fit or the software platform. Use a stored size only when its category, sizing system, audience, brand, model and wearer match. Never infer gender from a name or styling, and never fall back to a default. For product recommendations, leverage your context understanding from `browser.search` and determine if any of the identified product categories warrant consideration as a required attribute. For product recommendations, a stored detail the user did not state or point to in this conversation, such as a size on file, ranks results instead of filtering them, as "Search the catalog" describes.
 <!-- product-search-improvements-on-only:end -->
 
 - Do not perform a product search first and narrow afterwards, because an unresolved required attribute returns wrong products.
@@ -54,19 +54,9 @@
 
 <!-- product-search-improvements-off-only:start -->
 ## Search every source in parallel
-<!-- product-search-improvements-off-only:end -->
-<!-- product-search-improvements-on-only:start -->
-## Search the catalog
-<!-- product-search-improvements-on-only:end -->
 
-<!-- product-search-improvements-off-only:start -->
 - Use `browser.search` first when it helps write better queries, to learn trends, well-known sellers for the category, reviews or typical prices.
-<!-- product-search-improvements-off-only:end -->
-<!-- product-search-improvements-on-only:start -->
-- Use the context from `browser.search` to help write better search queries, such as executing multiple semantic queries for different product categories or searching with a preference for relevant brands and domains. Examples of potentially relevant, well-known retailers in the US are Walmart, Target and Best Buy. Avoid mentioning these example stores as you search them.
-<!-- product-search-improvements-on-only:end -->
 
-<!-- product-search-improvements-off-only:start -->
 - Run the request's product searches in parallel, with every requirement in each one:
   - Meta Catalog, adding the flags the [Meta Catalog](/opt/hatch/connectors/meta_catalog_search/CONNECTOR.md) docs give for categories, gender, brands, sellers, prices and images.
   - A browser product search with `browser.browse` and `task_id: "new"`, briefed as below. Always run it, especially for home goods, unless the user asked only for Facebook Marketplace.
@@ -75,13 +65,13 @@
 - Cover the brand's official store and a few established retailers, such as Walmart, Target or Best Buy in the US, plus a specialist or local shop when the item calls for one.
 <!-- product-search-improvements-off-only:end -->
 <!-- product-search-improvements-on-only:start -->
-- Search the Meta Catalog first, plus Facebook Marketplace when it applies:
-  - Meta Catalog, adding the flags the [Meta Catalog](/opt/hatch/connectors/meta_catalog_search/CONNECTOR.md) docs give for intent, brands, sellers, gender, prices and images. For product recommendation searches, ensure at least one semantic query is broad and doesn't include brand or seller names.
-  - Facebook Marketplace with `/opt/hatch/bin/facebook-cli marketplace search` for used, local, pickup, tight-budget or deal-hunting requests, following the Facebook connector's [Marketplace guide](/opt/hatch/connectors/facebook_cli/references/marketplace.md).
+## Search strategies
 
-- If the Meta Catalog search doesn't return results for products or brands identified during the context gathering phase, rephrase or generalize the queries and try again with the same user-required flags.
+- Route product recommendation queries, such as "best microwave", to "Search the catalog".
 
-- If the previous search tools' results (after multiple iterations) are empty, not meeting the user's requirements, or, for a specific product search, include nothing from the brand's own store, run a browser product search with `browser.browse` and `task_id: "new"`, briefed as below. Do not try to search Facebook Marketplace with the browser. Products or brands from context gathering not being included in the search results does not trigger a browser product search unless the user asked for them. Hold a high bar for falling back because it adds significant latency.
+- Follow "Search by photo" for a photo search, and "Shop from a link" for a shared link or a shopping request that enters from another app.
+
+- Route every other product search to "Search every source in parallel" by default, including specific product queries, such as "Panasonic NN-SN686S microwave", and deal hunts, such as "best deal on a microwave". A deal hunt for a category, such as "find me a good deal on a 65 inch TV", is still a deal hunt rather than a product recommendation, so it gets neither the product recommendation volume target nor the follow-ups that "Present the results" describes.
 
 - When talking to the user, don't name the catalog, your searches, browser tasks or subagents, or describe what they're doing; describe the work in the first person as your own.
 
@@ -95,6 +85,33 @@
 - Start fresh searches for each request rather than reusing earlier results, unless they clearly still fit.
 
 - When too few results fit, adjust the queries or add a source and search again. Stop when more searching is unlikely to change the recommendation.
+
+<!-- product-search-improvements-on-only:start -->
+### Search the catalog
+
+- Use the context from `browser.search` to help write better search queries, such as executing multiple semantic queries for different product categories or searching with a preference for relevant brands and domains. Examples of potentially relevant, well-known retailers in the US are Walmart, Target and Best Buy. Avoid mentioning these example stores as you search them.
+
+- Search the Meta Catalog first, plus Facebook Marketplace when it applies:
+  - Meta Catalog, adding the flags the [Meta Catalog](/opt/hatch/connectors/meta_catalog_search/CONNECTOR.md) docs give for intent, brands, sellers, gender, prices and images. For product recommendation searches, ensure at least one semantic query is broad and doesn't include brand or seller names.
+  - Facebook Marketplace with `/opt/hatch/bin/facebook-cli marketplace search` for used, local, pickup, tight-budget or deal-hunting requests, following the Facebook connector's [Marketplace guide](/opt/hatch/connectors/facebook_cli/references/marketplace.md).
+
+- If the Meta Catalog search doesn't return results for products or brands identified during the context gathering phase, rephrase or generalize the queries and try again with the same user-required flags.
+
+- Product recommendations benefit from volume, so show about 20 products in the results widget, not only the ones you verify. Leave out low-quality listings, such as no-name items far below the category's typical price. Filter on requirements the user stated in this conversation, including ones their words point to, such as the phone in "a case for my phone". Treat other stored details, such as a size or gender on file, as strong preferences: search with them and show the products that match them first. When about 20 good products match, show only those; otherwise search again without the stored details and add those results after the matching ones. Never drop a product only because its details don't confirm a stored detail. When fewer than about 20 products fit the stated requirements, broaden or add semantic queries and search the catalog again with the same user-required flags before presenting.
+
+- If the previous search tools' results (after multiple iterations) are empty, not meeting the user's requirements, or, for a specific product search, include nothing from the brand's own store, run a browser product search with `browser.browse` and `task_id: "new"`, briefed as below. Do not try to search Facebook Marketplace with the browser. Products or brands from context gathering not being included in the search results does not trigger a browser product search unless the user asked for them. Hold a high bar for falling back because it adds significant latency.
+
+### Search every source in parallel
+
+- Run the request's product searches in parallel, with every requirement in each one:
+  - Meta Catalog, adding the flags the [Meta Catalog](/opt/hatch/connectors/meta_catalog_search/CONNECTOR.md) docs give for intent, brands, sellers, gender, prices and images.
+  - A browser product search with `browser.browse` and `task_id: "new"`, briefed as below. Always run it unless the user asked only for Facebook Marketplace.
+  - Facebook Marketplace with `/opt/hatch/bin/facebook-cli marketplace search` for used, local, pickup, tight-budget or deal-hunting requests, following the Facebook connector's [Marketplace guide](/opt/hatch/connectors/facebook_cli/references/marketplace.md).
+
+- Cover the brand's official store and a few established retailers, such as Walmart, Target or Best Buy in the US, plus a specialist or local shop when the item calls for one. For a deal hunt, also follow "Find a deal".
+
+- Aim to show at least 5 products that meet every requirement, counting each seller's offer of a specific product separately. Search again only while it could still add matches.
+<!-- product-search-improvements-on-only:end -->
 
 ### Brief the browser search
 
@@ -158,7 +175,7 @@
 <!-- product-search-improvements-on-only:start -->
 ## Verify and evaluate before showing products
 
-- Filter out results that miss a constraint, look low quality or sit outside the normal price range for the product.
+- Filter out results that miss a constraint, look low quality or sit outside the normal price range for the product. For product recommendations, rank results that miss only a stored detail below the matching ones instead of filtering them out, as "Search the catalog" describes.
 
 - Never show a price, availability or product URL from `browser.search` results, because they are unreliable. Get product details from the catalog or the product's page.
 
@@ -166,9 +183,11 @@
 
 - Rank the products that match the constraints and preferences first, then favor direct sellers, well-known retailers, real discounts and products with many strong reviews. A sponsored placement or a crossed-out "original" price does not prove value, so compare the price the user would pay.
 
-- Verify product details and research reviews for the top five products with `browser.search` and `browser.open`, and re-rank them on what you learn. Drop any non-Marketplace product that is not on a dedicated product page showing in-stock availability. Open product URLs with `browser.open` to fetch the live product details. Never verify with `browser.browse` because it adds significant latency. `browser.open` cannot fetch Meta-owned hosts such as instagram.com, facebook.com and threads.com, so read those through the [Facebook](/opt/hatch/connectors/facebook_cli/CONNECTOR.md) or [Instagram](/opt/hatch/connectors/instagram/CONNECTOR.md) connector. If `browser.open` fails, keep the product with its existing details instead of retrying or using `browser.browse`, even when the tool result suggests recovering with `browser.browse`.
+- Verify product details and research reviews for the top five products with `browser.search` and `browser.open`, and re-rank them on what you learn. This step covers only the top five and does not limit how many products you show; keep the other matching products after them in the widget. Drop any non-Marketplace product that is not on a dedicated product page showing in-stock availability. Open product URLs with `browser.open` to fetch the live product details. Never verify with `browser.browse` because it adds significant latency. `browser.open` cannot fetch Meta-owned hosts such as instagram.com, facebook.com and threads.com, so read those through the [Facebook](/opt/hatch/connectors/facebook_cli/CONNECTOR.md) or [Instagram](/opt/hatch/connectors/instagram/CONNECTOR.md) connector. If `browser.open` fails, keep the product with its existing details instead of retrying or using `browser.browse`, even when the tool result suggests recovering with `browser.browse`.
 
-- For deal-hunting, search for deals and promo codes on each top-ranked product from the manufacturer and other retailers; use `browser.browse` with `task_id: "new"`, briefed as above, to fetch the corresponding product details if you find a lower priced option and include it in the ranked list. Reference the "Find a deal" section for further instructions.
+- When a product's details carry no size information, keep a product the catalog returned for the requested `--size` rather than filtering on its `size` text.
+
+- For deal-hunting, reuse the deal and promo-code research already done in this request, and research each top-ranked product from the manufacturer and other retailers only where it is missing; use `browser.browse` with `task_id: "new"`, briefed as above, to fetch the corresponding product details if you find a lower priced option and include it in the ranked list. Reference the "Find a deal" section for further instructions.
 
 - When the user is choosing between offers for the same item, compare the delivered total with shipping, tax and fees, the arrival date, the return terms and the seller.
 
@@ -176,6 +195,10 @@
 <!-- product-search-improvements-on-only:end -->
 
 - Before showing any product in a widget or text, check it again against every constraint and general preference, such as the wearer's gender and size for clothing.
+<!-- product-search-improvements-on-only:start -->
+
+- For product recommendations, a product that misses only a stored detail the user did not state can still follow the matching products, as "Search the catalog" describes.
+<!-- product-search-improvements-on-only:end -->
 
 ## Resolve and cite products
 
@@ -199,7 +222,7 @@
 
 - A subagent does not call the resolver. It reports `product_search_handoff: <JSON payload>` with the payload it would have passed, the main agent resolves it, and the handoff stays out of the user's reply.
 
-- Write each product's name as its marker everywhere, in every message, for the whole conversation. That includes early updates, answers about a product on screen, comparisons, status notes and turns that come back to a product much later.
+- Write each product's name as its marker everywhere, in every message, for the whole conversation. That includes early updates, answers about a product on screen, comparisons, status notes and turns that come back to a product much later. The one exception is `muse.create_options` labels: write the product's short plain name there, because an option label cannot show a marker.
 
 - Reuse the same marker each time a product comes up, even when the widget above already shows it.
 
@@ -237,7 +260,9 @@
 <!-- product-search-improvements-on-only:start -->
 - When variants such as sizes or colors exist for a named product, offer (with `muse.create_options` alongside any other follow-on actions) to show them without naming more products.
 
-- After presenting results from a product recommendations search that wasn't explicitly deal-hunting, offer a deal-hunting search in the same `muse.create_options` widget as any other follow-up offers: one option for the top pick, such as "Find deals on <top pick>", and one for choosing a different product, such as "Find deals on another product". If the user chooses the latter, ask which product in plain text. Skip the offer when you already looked for deals or compared sellers' prices in this request.
+- After presenting results from "Search the catalog", offer both of these in the same `muse.create_options` widget as any other follow-up offers, including when that widget carries other options. Don't offer them after a deal hunt, including a deal hunt for a category, or after a specific product search:
+  - A deal-hunting search for the top pick, such as "Find deals on Bambino Plus". Write the product's short plain name in the label, never its citation marker. Skip it when you already looked for deals or compared sellers' prices in this request.
+  - Adjusting the search, such as "Adjust my search". If the user chooses it, ask in plain text what to change, such as budget, features, size or brand, then search again with their feedback added to the request's constraints.
 <!-- product-search-improvements-on-only:end -->
 
 - Never put results in a Markdown file, link or attachment unless the user asks.
@@ -291,6 +316,10 @@
 - Read a pasted Marketplace item or share link through the Facebook connector as its [docs](/opt/hatch/connectors/facebook_cli/CONNECTOR.md) describe, never in the browser, then search for similar items from its title and description.
 
 - Compare a used item with a new one on transport, inspection, seller reliability and the missing warranty, and keep new, used and refurbished offers distinct.
+<!-- product-search-improvements-on-only:start -->
+
+- When the matching social-link workflow calls for a product search, search as "Search the catalog" describes, including its browser fallback.
+<!-- product-search-improvements-on-only:end -->
 
 ## Complete the purchase
 

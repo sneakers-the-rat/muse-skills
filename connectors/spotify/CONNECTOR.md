@@ -45,8 +45,10 @@
 ```text
 /opt/hatch/bin/spotify-api library --filter PLAYLISTS
 /opt/hatch/bin/spotify-api save --uri <spotify_uri>
-/opt/hatch/bin/spotify-api create-collection --name "<name>"
+/opt/hatch/bin/spotify-api save --current
+/opt/hatch/bin/spotify-api create-collection --name "<name>" [--add-current]
 /opt/hatch/bin/spotify-api add-to-collection --collection-uri <uri> --uris <uri1,uri2>
+/opt/hatch/bin/spotify-api add-to-collection --collection-name "<name>" --current
 /opt/hatch/bin/spotify-api update-collection --collection-uri <uri> --name "<new name>"
 ```
 
@@ -55,6 +57,12 @@
 - `TRACKS` is rejected as a library filter. Find tracks with an unfiltered `library` call or `search --search-type TRACKS`.
 
 - `save --uri` saves a track, album, artist, show, episode, audiobook or playlist to the library.
+
+- For the item playing now, such as "like this song" or "add this to my Running playlist", pass `--current`, or `--add-current` to `create-collection`. The command reads what Spotify is playing when it runs, so don't run `now-playing` first. The response names the item and playlist it used.
+
+- `--collection-name` finds one of the user's own playlists by its name, so `library` isn't needed first. Pass the name the user gives, leaving out a trailing "playlist" that only describes it; the lookup already handles a leading "my". When it returns `incomplete`, find the playlist with `library --filter PLAYLISTS` and `next-page`, then pass `--collection-uri`. When it returns `ambiguous`, ask the user which of its `candidates` they mean, then pass that playlist's `--collection-uri` with the same items: the original `--uris`, or the returned `item.uri` as `--uris` in place of `--current`, so a song change in the meantime doesn't add a different track.
+
+- When `create-collection --add-current` returns a `collection` but the add failed, add the returned `item.uri` as `--uris` to that playlist with `--collection-uri`; don't create it again.
 
 - To insert items at a position, add `--position-type BEFORE_UID` or `AFTER_UID` with `--position-uid <uid>` to `add-to-collection`, and pass `--revision-id <rev>` from the latest response.
 
@@ -98,9 +106,10 @@
 /opt/hatch/bin/spotify-api devices
 /opt/hatch/bin/spotify-api play --context-uri <uri> --target-device-id <id>
 /opt/hatch/bin/spotify-api now-playing
+/opt/hatch/bin/spotify-api add-to-queue --query "<title>" [--artist "<artist>"]
 ```
 
-- Typed requests start playback with `play`, which also takes `--uid <uid>` to start from one item in the context. Any conversation can use `pause`, `resume`, `skip`, `previous`, `seek --position-ms <ms>`, `set-volume --volume-percent <0 to 100>`, `transfer --target-device-id <id>`, `get-queue` and `add-to-queue --item-uri <uri>`.
+- Typed requests start playback with `play`, which also takes `--uid <uid>` to start from one item in the context. Any conversation can use `pause`, `resume`, `skip`, `previous`, `seek --position-ms <ms>`, `set-volume --volume-percent <0 to 100>`, `transfer --target-device-id <id>`, `get-queue` and `add-to-queue --item-uri <uri>`. `add-to-queue --query` finds a song by title and queues Spotify's top match in one step, without a separate `search`; pass `--artist` when the user names one, and name the song from `queued` in the reply.
 
 - `play` and `add-to-queue` need an active Spotify Connect device. `play`, `set-volume` and `transfer` take `--target-device-id`, so prefer passing it over relying on the active device. Run `devices` immediately before setting `--target-device-id` and use an ID from that response. If the list is empty or the named device is missing, ask the user to choose an available device instead of reusing an old ID.
 

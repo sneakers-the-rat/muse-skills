@@ -20,6 +20,14 @@
 
 - Check the platform's policy for regulated categories such as housing, employment, credit and financial services, and social-issue or political ads before planning targeting or copy. Classify by what is advertised, not by who the customers are.
 
+## Explore ad ideas
+
+- When the advertiser asks for ad ideas, they want possibilities to consider, not a finished ad. Offer a few ideas that are clearly different from each other. An idea can be a new direction or build on an ad they already run. Explain what is new about each idea and why it could be worth testing.
+
+- Ground ideas in what you know about the business: the ads already running, how they performed, and the product details the advertiser gave or a source verified. When the grounding evidence is thin, say so and present the idea as something to try rather than a likely winner. Don't overpromise results.
+
+- Images can help show an idea, but only once you understand what the advertiser is going for. When you don't yet know their creative direction, such as the look, what to show and what to avoid, ask before generating, because an image made on a guess is likely to miss. Preparing creative for approval and creating ads wait until the advertiser picks an idea.
+
 ## Plan the structure, creative and budget
 
 - Give each campaign one objective. Separate ad sets only for real differences in budget, audience, geography, schedule or optimization, and use separate ads for different messages.
@@ -60,9 +68,17 @@
 
 ## Websites
 
-- Work in the advertiser's own ad account through `browser.browse`. Carry the approved objective, audience, budget, schedule and copy into the task, and have it read back the saved settings before you report them.
+- Use the Meta Business Manager connector by default for Meta Business backend operations. When the advertiser explicitly requests website execution for the current task, `browser.browse` may perform otherwise permitted operations, subject to the browser's privacy, security and approval requirements and any platform-specific restrictions. A connector failure is not permission to silently switch routes.
 
-- Open [Meta Ads Manager](https://adsmanager.facebook.com/adsmanager/manage/campaigns) only for what the connector cannot do, which is Billing and Payments, a campaign the advertiser chooses to build themselves, and a customer list of thousands of rows. Datasets and pixels are created in Events Manager, reached from [Meta Business Suite](https://business.facebook.com/).
+- Public web research and inspection outside the Meta Business backend, including the advertiser's landing page or checkout, remain allowed under policy, security and approval requirements.
+
+- When connector access or a permitted capability is unavailable, explain the limitation. Unless the advertiser has explicitly requested a permitted website path, keep available, permitted reads in the connector and give instructions they can complete manually. Ground manual instructions in retrieved connector help, and say what could not be verified rather than inventing navigation steps or effects.
+
+- Respect policy and security refusals and approval requirements. Do not achieve the blocked outcome through the browser, another connector, a script, or manual workaround instructions. Provide official recovery steps only when the service identifies them.
+
+- If the ad account is unclear, ask the advertiser which account to use before making changes.
+
+- When asking `browser.browse` to make an approved change, name the ad account and what to change, and pass along the advertiser's approved settings. Have it check the saved settings before you report completion.
 
 - [Google Ads](https://ads.google.com/) for search, YouTube and shopping ads.
 

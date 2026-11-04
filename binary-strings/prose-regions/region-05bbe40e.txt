@@ -1,0 +1,470 @@
+delete from health.samples
+                 where provider = $1
+                   and node_id is not distinct from $2
+                   and start_at <= $4
+                   and coalesce(end_at, start_at) >= $3internal error: entered unreachable code: bundle-specific clear always includes a sample typedelete from health.samples
+                 where provider = $1
+                   and node_id is not distinct from $2
+                   and sample_type = $3
+                   and bundle_id is null
+                   and start_at <= $5
+                   and coalesce(end_at, start_at) >= $4delete from health.samples
+                 where provider = $1
+                   and node_id is not distinct from $2
+                   and sample_type = $3
+                   and bundle_id is not distinct from $4
+                   and start_at <= $6
+                   and coalesce(end_at, start_at) >= $5delete from health.sample_values where sample_id = any($1)insert into health.events (
+                   provider, node_id, bundle_id, timezone, event_type, event_at, event_end_at
+                 )
+                 values ($1, $2, $3, $4, $5, $6, $7)
+                 returning health_event_idinsert into health.events (
+                   provider, node_id, external_event_id, bundle_id, timezone, event_type,
+                   event_at, event_end_at
+                 )
+                 values ($1, $2, $3, $4, $5, $6, $7, $8)
+                 returning health_event_idstart_epoch_secend_epoch_secbundle_idevent_typehealth.eventsinsert into health.sample_values (
+               sample_id, value_name, unit, numeric_value, text_value
+             )  on conflict (sample_id, value_name)
+              do update set
+                unit = excluded.unit,
+                numeric_value = excluded.numeric_value,
+                text_value = excluded.text_valuesleep_awake_duration_secsleep_core_duration_secsleep_deep_duration_secsleep_rem_duration_secsleep_asleep_unspecified_duration_secinsert into health.sleep_sessions (
+               provider, node_id, external_sleep_id, bundle_id, timezone, start_at, end_at,
+               quality_score, awake_seconds, core_seconds, deep_seconds, rem_seconds,
+               asleep_unspecified_seconds, asleep_seconds, in_bed_seconds
+             )
+             values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+             returning sleep_session_idquality_scoresleep_in_bed_duration_sechealth.sleep_sessionsaggregatesinsert into health.samples (
+               provider, node_id, external_sample_id, bundle_id, timezone, sample_type,
+               start_at, end_at, unit, numeric_value, text_value
+             )  returning sample_iddelete from health.record_values where record_table = $1 and record_id = $2insert into health.record_values (
+               record_table, record_id, value_name, unit, numeric_value, text_value
+             )  on conflict (record_table, record_id, value_name)
+              do update set
+                unit = excluded.unit,
+                numeric_value = excluded.numeric_value,
+                text_value = excluded.text_valueinsert into health.workouts (
+               provider, node_id, external_workout_id, bundle_id, timezone, workout_type,
+               start_at, end_at, active_seconds, energy_kcal, distance_meters,
+               hr_max_bpm, hr_average_bpm
+             )
+             values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+             returning workout_idactive_duration_secsenergy_burned_kcaldistance_metershr_max_bpmhr_average_bpmworkout_typehealth.workoutsinsert into health.aggregates (
+               provider, node_id, timezone, aggregate_type, period_start, period_end,
+               numeric_value, unit
+             ) with ns as (
+             select tstzrange($4::timestamptz, $5::timestamptz) as s
+         ),
+         matched as (
+             delete from health.synced_ranges
+             where provider = $1
+               and node_id is not distinct from $2::text
+               and category = $3
+               and (span && (select s from ns) or span -|- (select s from ns))
+             returning lower(span) as lo, upper(span) as hi
+         ),
+         bounds as (
+             select min(lo) as lo, max(hi) as hi from matched
+         )
+         insert into health.synced_ranges (provider, node_id, category, span)
+         select $1, $2::text, $3, tstzrange(
+             least(lower(ns.s), coalesce((select lo from bounds), lower(ns.s))),
+             greatest(upper(ns.s), coalesce((select hi from bounds), upper(ns.s)))
+         )
+         from nsselect pg_advisory_xact_lock_shared(hashtext($1))health.records.writedelete from health.samples
+         where node_id = $1
+           and start_at <= $3
+           and coalesce(end_at, start_at) >= $2select distinct provider from health.synced_ranges where node_id = $1delete from health.samples
+         where provider = $1
+           and node_id is not distinct from $2
+           and sample_type = $3
+           and start_at <= $5
+           and coalesce(end_at, start_at) >= $4active reconciliation changed while its staging was lockedfenced invalid device reconciliation attempt
+    select
+        node_id,
+        coalesce(display_name, node_id) as display_name,
+        platform,
+        enabled_permissions_json,
+        commands_json,
+        data_sources_json,
+        version,
+        device_family,
+        model_id,
+        metadata_json,
+        is_wakeup_supported,
+        delivery_app,
+        invoke_protocol,
+        coalesce(paired_at_text, created_at::text) as paired_at,
+        coalesce(last_seen_at_text, last_seen_at::text, created_at::text) as last_seen_at,
+        status,
+        pairing_status
+    from device.nodes
+pairing_status <> 'revoked'
+    update device.nodes
+    set health_last_received_at = $1,
+        health_last_sync_status = 'success',
+        health_last_sync_error = null
+    where node_id = $2
+    legacy_ideas_markeralready_presentidea_cards_first_boot_warmupfirst_bootfirst-boot idea-cards warmup state check failedfirst-boot idea-cards warmup pending marker write failedseeded workspace AGENTS.md into pre-existing space workspacesone or more space AGENTS.md seeds failed; first boot will retryAGENTS.mdworkspace_agents.mdfailed to read workspace AGENTS.md template; will retry next bootspace-static.AGENTS.md.hatch-backfill-tmpfailed to stage workspace AGENTS.md; will retry next bootfailed to place workspace AGENTS.md; will retry next bootskipping workspace AGENTS.md backfill for unclassifiable spacespace_agents_backfillfirst-boot space workspace AGENTS.md backfill failednon_user_submissionsubmission_inputscompleted_output_classificationspecialist_turn_inputsspecialist_handoff_shapespecialist_handoff_missingspecialist_handoff_inputscurrenta browser specialist result carries an unexpected handoff payloada browser specialist result has no handoffa browser specialist result cannot carry another source or an overridea browser specialist result arrives only as its follow-upsession/avatar_completion_handoff.mdThe selected avatar image is active. Instagram profile available: {instagram_profile_available}. Use avatar.get to check that its current image path matches {image_path}. If a different avatar is now active, do not announce or present this completed avatar.
+
+### If instagram profile available is true
+- Videos may still be generating; do not wait for them. After confirming this is still the current avatar, give the user the option to add a Muse banner to their profile. 
+- This banner is a visual pill on the user's Instagram profile beneath their bio, showing their Muse avatar and name. Tapping it opens the Muse app if installed, or prompts the visitor to download it. It does not change the user's profile picture or bio. Adding the banner does not grant or change permissions for Muse or anyone else to read or access the user's Instagram profile, posts, or account. It does not give visitors access to the user's Muse and does not let them ask the user's Muse questions. Visitors only see the Muse avatar and name through the banner. Use these facts when explaining the banner or answering privacy questions.
+- To give the user the option to add a Muse banner to their profile, speak in first person and invite the user: "Want to show off my new look? Add me as a banner on your Instagram profile". Use this wording in English, or its natural equivalent in the user's language. Refer to yourself as "me" and the avatar as "my new look", not by your name in third person. Call muse.create_options with exactly one accepting reply: {"options":["Let's do it"]} in English, or its natural equivalent in the user's language. The option's displayed text is also the exact user message sent when tapped. Include the returned embed_token unchanged in the same message as the invitation; plain text alone is not a complete offer. Do not use the avatar_share card, open a share sheet, attach avatar media, or add a separate readiness announcement.
+- This handoff authorizes only the invitation, not a profile change. Wait for the user's acceptance; tapping "Let's do it" accepts this invitation. If they accept, read /opt/hatch/connectors/instagram/CONNECTOR.md to resolve their linked account and run instagram-cli profile-banner --account-id <user_own_fbid> --action add through the normal connector approval flow. If multiple accounts are linked and the intended account is unclear, ask which one. Recheck account availability before the write. If Instagram has been disconnected, do not update the profile or turn this offer into an account-linking upsell. Do not change the profile photo or bio. Confirm the banner was added only when the command returns success: true; otherwise explain that the update did not complete or could not be confirmed.
+
+### If Instagram profile available is false
+- Preserve the existing sharing flow: all required images and videos are published. After verifying the current avatar, call avatar.create_avatar_share_widget with the sharing-card fields. Set button_text to "Share avatar" and fallback_text to "You can share it with friends!" in the user's language. Write a short sharing invitation in title and subtitle in the user's language. Omit image_url. Send only the returned embed token in your final message. Do not send commentary, a readiness announcement, or other text. Do not attach avatar media. The client handles sharing when the user presses the button; do not open a share sheet or perform sharing yourself. Do not mention Instagram or offer to connect it.
+idle_video_path{image_path}{instagram_profile_available}runtime.background_execruntime_execinstagram profile banner invitation handed to agentavatar completion handoff accepted/opt/hatch/bin/instagram-cliresumeinvalid browser invocation plannerThis subtask stopped during a restart and did not report a result. Its work may be partly or fully done: check what it already produced before redoing anything, then redo or redelegate only what is actually missing.Closed during restart recovery without reporting a result.failed to persist terminal state for closed checkpointed subagentfailed to persist terminal status for closed checkpointed agentclosed Spaces builder checkpoint has no parent identityclosed Spaces builder checkpoint has no storage rootfailed to load closed Spaces builder generationfailed to delete runtime restart checkpoint for closed agentpartial_recovery_descriptormissing_conversationinvalid_structural_owner_identityrecovery_identity_mismatchinvalid_recovery_descriptorinvalid_durable_owner_identityinvalid_inherited_execution_authoritytracking.set_statussession/tracking_context_section_preamble.mdSubstantial work the main agent keeps track of, manages, or follows up on for the user over time.
+session/tracking_active_section_preamble.mdThese are your currently active tracked items; close an item with `tracking.set_status` set to `completed` when user confirmation, the end of its relevant timeline, or other evidence shows that the whole responsibility has finished.
+Close the tracked item proactively when the evidence shows it is finished, without waiting for the user to explicitly ask you to close it.
+failed to load goals prompt snapshot; rendering empty goals sectiongoals prompt snapshot timed out; rendering empty goals sectionruntime.device_sync# Goals
+
+Personal goals are enduring outcomes the user is working toward; help them
+make real progress.
+
+Separately, keep track of concrete plans, commitments, and outcomes the user
+cares about beyond the immediate conversation, including reservations,
+deliveries, reminders, and ongoing projects.
+
+Both appear below, kept current for you automatically.
+
+When clarifying a goal, ask questions one at a time; don't bombard.
+Ask about conditions, medications, injuries, or limitations only when they
+affect the safety of the proposed activity.
+project context prompt loader task failed; omitting project contextproject context prompt loader timed out; omitting project contextwebhook hooks run only from verified event admissionfailed to prepare hook exec cgroup; continuing without cgroup attributionHATCH_HOOK_RUNTIME# shellcheck shell=bash
+
+_HATCH_HOOK_DISABLE_AFTER_RUN=false
+
+_hatch_hook_compact_json() {
+    local value="${1-}"
+    printf '%s' "$value" | jq -ce '.'
+}
+
+_hatch_hook_object_json() {
+    local value="${1-}"
+    printf '%s' "$value" | jq -ce 'select(type == "object")'
+}
+
+_hatch_hook_emit() {
+    local decision="$1"
+    local reason="${2-}"
+    local payload="${3-}"
+    local result
+
+    if [[ -n "$payload" ]]; then
+        payload="$(_hatch_hook_compact_json "$payload")" || return
+        result="$(
+            jq -cn \
+                --arg decision "$decision" \
+                --arg reason "$reason" \
+                --argjson payload "$payload" \
+                --argjson disable_after_run "$_HATCH_HOOK_DISABLE_AFTER_RUN" \
+                '{
+                    decision: $decision,
+                    reason: $reason,
+                    payload: $payload
+                } + if $disable_after_run then {disable_after_run: true} else {} end'
+        )" || return
+    else
+        result="$(
+            jq -cn \
+                --arg decision "$decision" \
+                --arg reason "$reason" \
+                --argjson disable_after_run "$_HATCH_HOOK_DISABLE_AFTER_RUN" \
+                '{
+                    decision: $decision,
+                    reason: $reason
+                } + if $disable_after_run then {disable_after_run: true} else {} end'
+        )" || return
+    fi
+
+    printf 'HATCH_HOOK_RESULT:%s\n' "$result"
+    exit 0
+}
+
+silent() {
+    _hatch_hook_emit "silent" "${1-}" "${2-}"
+}
+
+wake() {
+    _hatch_hook_emit "wake" "${1-}" "${2-}"
+}
+
+disable_after_run() {
+    _HATCH_HOOK_DISABLE_AFTER_RUN=true
+}
+
+log() {
+    local message="${1-}"
+    local fields="${2-}"
+    local entry
+
+    if [[ -z "$fields" ]]; then
+        fields='{}'
+    fi
+    fields="$(_hatch_hook_object_json "$fields")" || return
+    entry="$(
+        jq -cn \
+            --arg message "$message" \
+            --argjson fields "$fields" \
+            '$fields + {message: $message}'
+    )" || return
+    printf 'HATCH_HOOK_LOG:%s\n' "$entry" >&2
+}
+
+_hatch_hook_state_path() {
+    printf '%s/%s.json' "${HATCH_HOOK_STATE_DIR:?HATCH_HOOK_STATE_DIR is unset}" \
+        "${HATCH_HOOK_ID:?HATCH_HOOK_ID is unset}"
+}
+
+# Read this hook's persisted state object. Prints `{}` when nothing has been
+# stored yet or the stored file is unreadable/corrupt, so callers can pipe
+# straight into jq without a first-run special case.
+hook_state_get() {
+    local path
+    path="$(_hatch_hook_state_path)" || return
+    if [[ ! -f "$path" ]]; then
+        printf '{}'
+        return 0
+    fi
+    jq -ce 'select(type == "object")' <"$path" 2>/dev/null || printf '{}'
+}
+
+# Persist this hook's state object. The value is validated on every run, but
+# the write is SKIPPED on dry runs so testing a hook can never consume a
+# detection the next live poll still needs to make.
+hook_state_set() {
+    local value path temporary
+    value="$(_hatch_hook_object_json "${1-}")" || return
+    if [[ "${HATCH_HOOK_DRY_RUN-0}" == "1" ]]; then
+        return 0
+    fi
+    path="$(_hatch_hook_state_path)" || return
+    temporary="${path}.${HATCH_HOOK_INVOCATION_ID:-$$}.tmp"
+    printf '%s\n' "$value" >"$temporary" || return
+    mv -f "$temporary" "$path"
+}
+
+exec /bin/bash -- "$HATCH_HOOK_SCRIPT_PATH"failed to resolve retired Companion caller for relay telemetryactivity_monitor bumped activity epoch after direct finishactivity_monitor bumped activity epoch after finish summary updateactivity_monitor failed to repair stale non-terminal feed rowactivity_monitor repaired stale non-terminal feed rows for finished activity threadsactivity_monitor failed to read feed entry state during stale finished sweepactivity_monitor ignored finish verdict from live subtitle laneambiguous root sessions for activity thread projectionfailed to resolve root session for activity thread projectionThe activity finished when the conversation turn completed.activity_monitor finished-subtitle lane rendered finish verdictsuppressed new activity thread projection without visible rootpersisting existing activity thread projection without visible rootactivity_monitor_timing activity_thread_projection_persistedfailed to resolve public session id for agent.statusagent.status
+INSERT INTO requests (
+  request_id, root_request_id, parent_request_id, request_origin,
+  transcript_surface, root_work_class
+)
+VALUES ($1, $2, $3, $4, $5::runtime.transcript_surface, $6)
+ON CONFLICT (request_id) DO UPDATE SET
+  root_request_id = COALESCE(requests.root_request_id, excluded.root_request_id),
+  parent_request_id = COALESCE(requests.parent_request_id, excluded.parent_request_id),
+  request_origin = CASE
+    WHEN requests.request_origin = 'internal.runtime_replay' THEN excluded.request_origin
+    ELSE requests.request_origin
+  END,
+  transcript_surface = excluded.transcript_surface,
+  root_work_class = CASE
+    WHEN requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing'
+      THEN excluded.root_work_class
+    ELSE requests.root_work_class
+  END
+WHERE (requests.root_request_id IS NULL AND excluded.root_request_id IS NOT NULL)
+   OR (requests.parent_request_id IS NULL AND excluded.parent_request_id IS NOT NULL)
+   OR (requests.request_origin = 'internal.runtime_replay'
+       AND excluded.request_origin <> 'internal.runtime_replay')
+   OR requests.transcript_surface IS DISTINCT FROM excluded.transcript_surface
+   OR (requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing')
+output
+INSERT INTO tool_outputs (event_seq, call_id, status, output_text, error_text, created_at)
+VALUES ($1, $2, $3, $4, $5, to_timestamp($6::double precision / 1000.0))
+ON CONFLICT (event_seq) DO UPDATE SET
+  call_id = excluded.call_id,
+  status = excluded.status,
+  output_text = excluded.output_text,
+  error_text = excluded.error_text
+arguments
+INSERT INTO tool_calls (event_seq, call_id, tool_name, status, arguments_json, created_at)
+VALUES ($1, $2, $3, 'started', $4, to_timestamp($5::double precision / 1000.0))
+ON CONFLICT (call_id) DO UPDATE SET
+  event_seq = excluded.event_seq,
+  tool_name = excluded.tool_name,
+  status = excluded.status,
+  arguments_json = excluded.arguments_json
+
+INSERT INTO chat_event_derived_write_backlog (event_seq, resources_json)
+VALUES ($1, $2)
+ON CONFLICT (event_seq) DO UPDATE SET
+  resources_json = excluded.resources_json,
+  updated_at = now()
+UPDATE chat_private.peer_conversations SET requester_chat_id = NULL
+         WHERE conversation_id = $1 AND requester_revision = $2
+           AND requester_chat_id = $3 AND NOT requester_unavailable
+           AND chat_id = $5
+           AND EXISTS (SELECT 1 FROM agent.agents
+                       WHERE id = $4 AND session_id = $3)peer handoff disagrees with its asking-chat claimpeer handoff requester changed before admission
+SELECT json_build_object(
+         'accepted_ordinal', accepted_ordinal,
+         'state', state,
+         'checkpoint_custody', checkpoint_custody,
+         'submission_json', submission_json
+       )::text
+FROM agent.message_mailbox
+WHERE agent_id = $1
+  AND state IN ('accepted', 'attached')
+ORDER BY accepted_ordinal, submission_id
+FOR UPDATE
+SELECT payload_json FROM runtime_restart_checkpoints WHERE agent_id = $1
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = 'executing',
+    stream_owner_message_id = $3,
+    attached_at = now()
+WHERE submission_id = $1
+  AND agent_id = $2
+  AND state = 'accepted'
+  AND stream_owner_message_id IS NULL
+
+SELECT agent_id, state, stream_owner_message_id, submission_json,
+       accepted_ordinal
+FROM agent.message_mailbox
+WHERE submission_id = $1
+FOR UPDATE
+
+SELECT EXISTS (
+  SELECT 1
+  FROM agent.message_mailbox
+  WHERE agent_id = $1
+    AND state = 'accepted'
+    AND accepted_ordinal < $2
+    AND (NOT $3 OR submission_kind <> 'internal_handoff')
+)
+tracked mailbox successor unexpectedly lost custodymessage mailbox successor promotion cannot overtake an older priority peer
+UPDATE agent.message_mailbox
+SET state = CASE WHEN $4 THEN 'completed' ELSE 'aborted' END,
+    checkpoint_custody = coalesce(checkpoint_custody, 'executing'),
+    terminalized_at = now()
+WHERE agent_id = $1
+  AND stream_owner_message_id = $2
+  AND submission_id = ANY($3)
+  AND state = 'attached'
+
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = 'executing',
+    stream_owner_message_id = $2,
+    attached_at = coalesce(attached_at, now())
+WHERE agent_id = $1
+  AND submission_id = ANY($3)
+  AND (
+    (state = 'accepted' AND stream_owner_message_id IS NULL)
+    OR (state = 'attached' AND stream_owner_message_id = $2)
+  )
+
+UPDATE agent.message_mailbox
+SET checkpoint_custody = 'queued'
+WHERE agent_id = $1
+  AND stream_owner_message_id = $2
+  AND submission_id = ANY($3)
+  AND state = 'attached'
+
+UPDATE agent.message_mailbox
+SET state = CASE
+      WHEN state = 'attached' AND $2 THEN 'completed'
+      ELSE 'aborted'
+    END,
+    terminalized_at = now()
+WHERE agent_id = $1
+  AND state IN ('accepted', 'attached')
+SELECT session_id, COALESCE(prompt_floor_seq, -1) AS prompt_floor_seq,
+                kind = 'root' AND parent_agent_id IS NULL
+                AND ephemeral IS DISTINCT FROM TRUE
+                AND status NOT IN ('shutdown', 'not_found') AS eligible
+         FROM agent.agents WHERE agent_id = $1 FOR UPDATEstartup_root_changedSELECT EXISTS(SELECT 1 FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND accepted_ordinal < $2)startup mailbox promotion cannot overtake an earlier accepted input
+SELECT payload_json
+FROM agent.runtime_restart_checkpoints
+WHERE agent_id = $1
+FOR UPDATE
+message mailbox attachment cannot overtake an older priority peer
+INSERT INTO agent.runtime_restart_checkpoints (
+  agent_id, mode, recovery_class, recovery_owner_id, execution_config_json,
+  payload_json, created_at, updated_at
+) SELECT $1, $2, $3, $4, $5, $6, $7, $7
+WHERE EXISTS (
+  SELECT 1
+  FROM agent.agents
+  WHERE agent_id = $1
+    AND status NOT IN ('shutdown', 'not_found')
+)
+ON CONFLICT (agent_id) DO NOTHING
+SELECT EXISTS (SELECT 1 FROM agent.agents WHERE agent_id = $1 AND status NOT IN ('shutdown', 'not_found'))conversation epoch
+INSERT INTO agent.message_mailbox (
+  submission_id, agent_id, conversation_epoch, submission_kind,
+  routing_scope, state, checkpoint_custody, stream_owner_message_id,
+  submission_json, transcript_event_seq, attached_at
+) VALUES (
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+  CASE WHEN $6 = 'attached' THEN now() ELSE NULL END
+)
+ON CONFLICT (submission_id) DO NOTHING
+RETURNING accepted_ordinal, accepted_at
+startup mailbox promotion requires its previously accepted input
+SELECT agent_id, conversation_epoch, submission_kind, routing_scope,
+       state, stream_owner_message_id, submission_json,
+       transcript_event_seq, accepted_ordinal, accepted_at
+FROM agent.message_mailbox
+WHERE submission_id = $1
+FOR UPDATE
+update chat.message_bindings set admitted_at = coalesce(admitted_at, now())
+                    where jarvis_message_id = $1 and chat_id = $2 and binding_epoch = $3 and transport = $4binding epochconversation_epochsubmission_kindrouting_scope
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = $5,
+    stream_owner_message_id = $2,
+    submission_json = $3,
+    transcript_event_seq = coalesce($4, transcript_event_seq),
+    attached_at = now()
+WHERE submission_id = $1
+  AND state = 'accepted'
+  AND stream_owner_message_id IS NULL
+mailbox stream ownerselect a.account_id from chat_private.accounts a
+             join chat_private.binding_authorizations b on b.provider = a.provider and b.account_id = a.account_id
+             where b.provider = $1 and b.binding_id = $2
+               and a.connection_id = $3 and not a.revoked for share of adirect input has no captured binding epochaccount_retiredselect connection_id, generation, transport_json, delivery_target
+             from chat_private.binding_authorizations
+             where provider = $1 and binding_id = $2 and chat_id = $3
+               and account_id = $4 and external_kind = 'direct' and participation = 'active'
+             for shareaccount_authorization_retiredtransport_jsontransport_authorization_absentconnection_idgenerationdelivery_targetselect epoch from chat_private.bindings
+         where chat_id = $1 and provider = $2 and not revoked for sharetransport_authorization_changedbinding_retiredSELECT pg_advisory_xact_lock(hashtextextended('activity-monitor-root-carrier:' || $1, 0))
+WITH lineage(message_id) AS (
+    SELECT $1::text
+    UNION
+    SELECT user_message_id
+    FROM activity_monitor_carrier_user_messages
+    WHERE carrier_message_id = $1
+      AND (root_agent_id IS NULL OR root_agent_id = $2)
+    UNION
+    SELECT $3::text
+    WHERE $3 IS NOT NULL AND $4
+)
+INSERT INTO activity_monitor_message_threads (
+    message_id, activity_thread_id, created_at, updated_at
+)
+SELECT message_id, $5, $6, $6
+FROM lineage
+ON CONFLICT(message_id) DO UPDATE SET
+    activity_thread_id = excluded.activity_thread_id,
+    updated_at = excluded.updated_at
+WHERE activity_monitor_message_threads.activity_thread_id
+    IS DISTINCT FROM excluded.activity_thread_id
+activity_monitor_bind_carrier
+SELECT activity_thread_id
+FROM activity_monitor_message_threads
+WHERE message_id = $1
+LIMIT 1
+activity_monitor_assign_agentactivity_monitor_current_agent_threadactivity_monitor_list_assigned_agentsactivity_monitor_upsert_activity_thread_actionactivity_monitor_next_action_indexactivity_monitor_delete_thread_actionactivity_monitor_list_thread_actionsactivity_monitor_action_by_idactivity_monitor_count_thread_actionsactivity_monitor_latest_action_thread_for_agentactivity_monitor_list_recent_thread_actionsactivity_monitor_running_actions_for_agentactivity_monitor_running_action_agentsactivity_monitor_record_carrieractivity_monitor_carrier_user_messagesactivity_monitor_bind_messageactivity_monitor_carrier_lifecycle_snapshotfailed to read activity monitor carrier lifecycle snapshotactivity_monitor_bind_message_any_statusactivity_monitor_message_thread_lookupactivity_monitor_redirect_root_carrier_lineageactivity_monitor_delete_runtime_work_bindingactivity_monitor_delete_stale_runtime_work_bindingsactivity_monitor_bind_runtime_workactivity_monitor_runtime_work_ids_for_threadactivity_monitor_runtime_work_thread_lookupactivity_monitor_update_nameactivity_monitor_read_threadactivity_monitor_list_active_threadsactivity_monitor_finish_activity_threadactivity_monitor_create_activity_threadactivity_monitor_update_finished_subtitlerecently finished activity threadsactivity_monitor_recent_finished_threadsinvalid activity thread query limitactivity_monitor_set_finished_thread_finish_messageactivity_monitor_reactivate_finished_threadfailed to reactivate finished activity threadactivity_monitor_settle_finish_verdictexpected_current_reason is requiredcron worker preserving active Spaces builders beyond descendant settlement deadlinecron worker failed to interrupt subagent handoff follow-up at execution deadlinecron worker subagent handoff follow-up interrupted at execution deadlinecron worker waiting for descendant subagents before resolutioncron worker deferring active Spaces builders after drain reached deadlinecron worker timed out draining descendant subagents before resolutioncron worker descendant subagents settled while drain reached deadlinecron worker timed out waiting for descendant subagents before resolutioncron worker descendant subagents settled before resolutioncron worker timeout resolve phase reopened terminalized descendantcron worker timeout resolve phase skipped hard-closed descendantcron worker timeout resolve phase descendant durable owner is missingcron worker timeout resolve phase failed to reopen terminalized descendantcron worker timeout resolve phase failed to interrupt descendantcron worker timeout resolve phase prompted descendantcron worker timeout resolve phase failed to prompt descendantcron worker timeout resolve phase failed to resume descendantcron worker timeout resolve phase missing descendant handle after resumecron worker timeout resolve phase descendant did not restart before prompt-start timeoutcron worker timeout resolve phase descendant restarted resolve turncron worker timeout resolve phase interrupt settled before promptcron worker timeout resolve phase targeting deepest active descendantscron worker timeout resolve phase exhausted before descendants settledalready_settledexisting_handoff_readmitcron.scheduler.worker.executesubmit_failedcron worker failed to submit subagent handoff follow-up before resolutionsubmittedcron worker accepted subagent handoff follow-up before resolutionaccept_channel_droppedcron worker subagent handoff follow-up acceptance channel droppedcron worker rejected subagent handoff follow-up before resolutionwait_for_settlement_failedterminal_proof_missing_after_waitdevice data source deleteddevice data deletion response must serializedevice data source deletion failed{"ok":false,"error":"device data deletion failed"}sensitive sources do not support reconciliation admissionfull_snapshotdatatype is requirednodes.notify route does not match its admission metadatachunked /nodes/sync uploads are no longer supported; send a full payloadephemeral payload handle is requiredproactive{"redacted":true,"redaction_reason":"notification and sms payloads are not stored raw"}node notification admitted but worker wake failedunauthorized; authenticated ingress request is missing verified identityended the live call's turn before restartthe live call's turn did not end before restartwallet request reached the checkout operation dispatcherread checkout spend requestwrite checkout spend responsefailed to initialize published spaces snapshotfailed to start published spaces watcherpublished spaces DB change channel closed; recreating subscriberpublished spaces DB change subscriber lagged; forcing snapshot refreshpublished spaces watcher event errorpublished spaces watcher channel disconnected; recreating watcherfailed to recreate published spaces watcherspace.deleteddeletespace.createdfailed to snapshot published spacesdevice sync worker skipped comms announcement without a proactive inference consumerdevice sync worker failed redacted sync because live payload was unavailableredacted device sync payload was unavailable in noded memorymissing_ephemeral_payloadredacted device sync payload is awaiting noded notificationdevice sync worker rejected unsafe ephemeral payload releasedevice sync worker could not prepare inference request; marking failedprepare_inference_faileddevice sync inference failed; marking faileddevice sync worker discarded a result invalidated by source deletiondevice sync worker skipped trajectory persistence for ephemeral raw payloaddevice sync worker could not persist trajectory; continuing with decisiondevice sync worker received invalid tool response; defaulting to nothing_to_dobrowser task tagging history did not settle before timeout; continuing with available evidencebrowser task tagging evidence unavailable; continuing with metadatabrowser task tagging row has invalid root agent idfailed to resolve public session for browser task tagging inferencemedia upload worker deferred lane by accumulation windowmedia upload worker deferred lane by cooldownmedia upload proactive handoff is disabled; marking batch as nothing to domedia upload worker could not prepare inference request; marking failedmedia upload worker received invalid tool response; defaulting to nothing_to_domedia upload inference failed; marking failedidle-session internalization skippedidle-session internalization detector failedidle-session internalization firedidle-gated queue drained under live quiet windowidle-gated queue drain under live signal failedidle detector could not open self-improvement storeidle detector could not read recent self-improvement runstravel profile upkeep lineage lock was poisonedtravel activity reached the idle boundaryruntime.completed_travel_turnrunrun_scopetravel_activity_idletrigger_message_idtravel_turn_completed_at_msidle travel profile upkeep failed; retry remains pendingshopping activity reached the idle boundaryruntime.completed_shopping_turnshopping_activity_idleshopping_turn_completed_at_msshopping profile upkeep lineage lock was poisonedidle shopping profile upkeep failed; retry remains pendingidle_internalize:ideas_feedidle.self_improvementfailed to materialize Ideas feed after idle internalizationself_improvement_baseline_ideasidle_ideas_feed_materialize_failedfailed to seed retry after idle Ideas feed materialization failureopen self-improvement store for startup recoveryrequeue interrupted self-improvement runs before checkpoint recoverystartup:self_improvement_recoveryrequeued interrupted self-improvement run in place after daemon restartenter_tool_environmententer-tool-environmentcommand is requiredfailed to prepare exec cgroup; continuing without cgroup attributionread enter-tool-environment requestwrite enter-tool-environment responsechecklegacy_fallbackavatar generation metadata predates the DAG runtime; completion job seededmetadata_validationhatchlegacy_metadataavatar generation metadata predates the DAG runtimeavatar_video_completionfinalize_reconcilefailed to seed avatar video completion after finalize reconciliationpublish_pathavatar subprocess output already exists after restartwork_id_parseavatar finalize work row has empty work idrehydrate_workavatar finalize runtime work is no longer activeavatar finalize runtime work metadata has invalid message_idmetadata_parseparse avatar finalize runtime work metadataroot_sessionroot_session_not_loadedavatar finalize root session is not loadedroot_session_missingavatar finalize was superseded by a choreography replan during restart recoveryavatar finalize restart recovery failedavatar finalize reconciliation resumed the interrupted enrichmentavatar finalize recovery pass completed with videos pendingavatar finalize restarted successfullyavatar finalize was superseded during restart recoveryfinalization_guardreplan_supersededstalesupersededresume_generationresume_errorresume_generation_errorresume avatar finalize generationresume_failedresumed_generation_failedauthenticationresumed_generationload active runtime work items for avatar finalize reconciliationavatar finalize startup reconciliation failedload active space generation runtime workspace generation ended by a daemon restartblocked result has no valid user-facing messageworkflow terminal handoff abandoned because its blocked result is invalidworkflow terminal handoff contains an invalid durable presentation routeworkflow terminal handoff contains an invalid launching agent identityworkflow terminal handoff contains an invalid execution root identityworkflow-terminal-root-followupcheck predecessor workflow terminal mailbox receiptworkflow terminal handoff abandoned because its durable identity is unresolvableworkflow terminal handoff suppressed because source message was cancelledopen browser task queuereload terminal browser taskskipping non-terminal browser task terminal transitionskipping stale browser task terminal transitionterminal browser task row is missingrescueidle_deferred_reasonqueue_claim_ownerqueue_claim_boot_ididle_gateidle_deferredidle_defer_reasonidle_deferred_lost_raceidle deferral lost queue-claim raceidle.sweepinternal.self_improvementquiet_window_secsmin_exchange_pairsrecent_exchange_pairsidle_sessionidle_session_since_utcidle_session_last_user_activity_utcidle_session_until_utcidle_runs_today_beforeceiling_remaining_afterdefcon_level_3_daily_capshopping_daily_capdaily cadence read failed; admitting signal-triggered objective cyclethrottledscheduler_grace_secondsprevious_cycle_idprevious_admitted_atsignal_admitted_runssignal_admission_limithatch_inference_defcon_level_3_enabledgatekeeperdefcon_cadencedaily cadence throttled objective cycledaily cadence read failed; admitting automatic objective cycleobjectivestartfailed to stamp boot generation on inline-triggered runproactivity_context_profileretired historical backfill state before objective runfailed to retire historical backfill state; continuing objective runrestart_checkpoint_parkeddurable_owner_retainedrestart_checkpoint_parked_agent_idrestart_checkpoint_parked_atprior_diagnosticsterminal_step_error_coderecovery staging lost current queue or objective lease ownershiprecovery admission cancelled after stagingrestart recovery staging write failed; retaining lease and retryingrecovery admission cancelledobjective execution gate wait cancelledrestart recovery admission cleanup failed; retrying atomicallyqueue_drainlease_wait_reasonlease_wait_requeued_atobjective lease claim result was ambiguous; retrying the same fenced ownerrequeue_lost_racequeued self-improvement runrecovery_pending_lease_ownerbackfill_completehistorical backfill retired; pending march marked completeOnly Internal announcements accept fallback copyInternal announcement requires public fallback copyinternal_fallback_messageInternal fallback exceeds message limitWWW messages require agent-written deliveryInternal announcement requires delivery instructionsInternalWorker priority is reserved for worker owner noticesInternal priority is reserved for code-owned main-chat deliveriesfollow-up metadata must be a JSON objectfollow-up must expire after it becomes deliverablefollow-up message must not be emptyfollow-up key must not be emptyfollow-up producer must not be emptyhardcoded product campaign producer is retiredpresentation_localeenqueue follow-upfollow_up_queue_deliveryfollow-up enqueued but the delivery worker could not be kickedfailed to read user time file for proactive delivery timezonespace_preview_repairspace preview repair: handler not registeredspace preview repair: handler registry unavailablespace_preview_missingspace preview repair: runtime work store unavailablequeued Space preview repairspace preview repair: seeding failedspace preview repair: catalog read failed on viewload browser task presentation root statuscheck browser task terminal update mailbox receiptcheck browser task terminal update queue receiptopen browser task queue for completion relay ownershipload browser task relocation predecessorload browser task terminal-update ownershipparse browser task execution root for completion relay ownershiponboarding_starterbundled Ideas localization catalog is unavailablefailed to load bundled Ideas localization provenancefailed to load bundled Ideas dogfood provenanceIdea catalog sharing context read failedIdea share variant projection read failedIdea share revision projection read failedIdea direct sharing read failedIdea publication hold read failedconnector_status_cachemessenger_companioninstagram_messagesrefresh_token_rejectedfailed to resolve local authd account status; keeping legacy statusfailed to resolve Plaid Item statusauth status row concurrency limiter closedauth status row task failedmessenger-companion-auth-statusfailed to load paired devices for healthkit skill statusUnable to load paired device permissionsfailed to persist skill statuses to user configavatar-state: adopted a concurrently seeded DB rowavatar-state: seeded the authoritative DB rowstandaloneroot admission cancellation signaled without a resultfailed to register space runtime egress context; falling back to runtime.unknowndelivery_modechunkedfinalization_fencedreconciliation_storage_failedfinalization_failedclaim reconciliation finalizationfinalization_ignored_staleinvalid_stream_uploadfinalization_fence_failedfence invalid reconciliation uploadinvalid_source_snapshotsettle invalid device reconciliation for retrydevice_sync_stateHealth reconciliation applied but device-sync worker wake failedfinalize device reconciliationclient rendering snapshot read failed; keeping lifts inline this turnSELECT DISTINCT "table" FROM pragma_foreign_key_list(?)SELECT name FROM pragma_table_info(?1)
+        SELECT COUNT(*)
+        FROM sqlite_master
+        WHERE type = 'table'
+          AND name NOT LIKE 'sqlite_%'
+          AND name != ?1
+          AND name != ?2
+        __drizzle_migrations__hatch_cloudflare_migrationsapplied_atdrizzle_journal.jsonread drizzle journalread drizzle migration

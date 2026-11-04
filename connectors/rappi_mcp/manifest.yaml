@@ -1,0 +1,119 @@
+version: 1
+gating:
+  allowed_countries:
+    default: [MX]
+    exempt_vm_channels: [prod, quail, canary, internal-test]
+metadata:
+  visible_in_settings: true
+connector: rappi_mcp
+display_name: "Rappi"
+icon: rappi
+description: "Discover restaurants and prepare a Rappi cart in Mexico using saved addresses. Muse prepares and verifies the cart, then you review and finish checkout and payment in Rappi. Non-charging cart preparation and hosted-checkout handoff are allowed by default; account coupon redemption requires approval each time. Muse cannot access payment methods, pay, place orders or change saved addresses. This version does not yet track active orders."
+cli:
+  binary: rappi-mcp
+  skill: rappi_mcp
+auth:
+  provider: rappi_mcp
+  required: true
+  # Public OAuth client registered by Rappi for Muse. This identifier is
+  # expected-public configuration; no client secret is used.
+  client_id: "c1d2Y1Y2NUZtWjdGUkVyeHZtQm1BWHkzY1FnY095"
+  mcp:
+    endpoint: "https://mcp.rappi.com/mcp"
+    oauth:
+      type: "oauth"
+      authorization_url: "https://web.rappi.com.co/oauth/authorize"
+      token_url: "https://services.rappi.com/api/rocket/oauth2/openid/token"
+      scope: "basic all"
+      token_endpoint_auth_method: "none"
+    tool_names:
+      rappi.read:
+        - whoami
+        - get_user_addresses
+        - get_stores_categories
+        - get_user_restaurant_stores
+        - get_favorite_restaurants
+        - search_stores_products_available
+        - get_restaurant_store_products
+        - get_restaurant_product_details
+        - get_order_history
+        - view_cart
+      rappi.session_context: [set_country]
+      checkout.handoff: [get_manual_checkout_link]
+      cart.prepare: [create_shopping_cart, set_cart_address, set_cart_tip]
+      coupon.redeem: [add_coupon]
+surrogation:
+  name: rappi_mcp
+  schema: oauth
+  mode: direct_oauth
+  privsep: true
+  hosts:
+    - mcp.rappi.com
+    - services.rappi.com
+  token_proxy:
+    - field: credentials.access_token
+      placement: bearer_header
+  stripped:
+    - credentials.refresh_token
+  token_refresh:
+    - path: /api/rocket/oauth2/openid/token
+actions:
+  read:
+    default: allow
+    label: "Read Rappi account context, restaurants and carts, and get checkout links"
+    response_guard: verification_codes
+    methods:
+      rappi.read:
+        approval_policy: default
+        label: "Read Rappi account context, saved addresses, favorites, restaurants, menus, past orders and carts"
+        approval_phrase: "read your Rappi account context, saved addresses, favorites, restaurants, menus, past orders and cart"
+      checkout.handoff:
+        # Preserve the authenticated hosted URL, as in the intentional Instacart handoff.
+        response_guard: disabled
+        approval_policy: default
+        label: "Get a link to review and check out in Rappi"
+        approval_phrase: "get a link for you to review your prepared cart and finish checkout and payment in Rappi"
+  write:
+    default: ask
+    label: "Select the Rappi session country, prepare carts and redeem account coupons"
+    response_guard: verification_codes
+    methods:
+      rappi.session_context:
+        # Reversible session country selection changes no addresses or purchases.
+        default: allow
+        approval_policy: default
+        label: "Select the Rappi connector session country"
+        approval_phrase: "select your Rappi connector session country without changing addresses, carts, payments or orders"
+      cart.prepare:
+        # Only the three reviewed reversible cart operations; payment and placement stay unbound.
+        default: allow
+        approval_policy: default
+        label: "Prepare Rappi carts with saved addresses and tips without charging"
+        approval_phrase: "create or replace your Rappi cart, select a saved address, or apply your chosen tip without charging or placing an order"
+        approval_buttons:
+          allow_once: "Prepare cart"
+          deny: "Don't prepare"
+          deny.task: "Don't prepare"
+      coupon.redeem:
+        # Redemption affects the account and may consume a coupon; it is not reversible cart editing.
+        default: ask
+        approval_policy: fresh_consent_only
+        label: "Redeem coupons on your Rappi account"
+        approval_phrase: "redeem this coupon on your Rappi account, which may consume it even without placing an order"
+        approval_buttons:
+          allow_once: "Redeem coupon"
+          deny: "Don't redeem"
+consent_screen:
+  bullets:
+    - icon: data_types
+      title: "Discover restaurants and prepare a Rappi cart"
+      text: "Muse can read your Rappi account context, saved delivery addresses and location, favorites, restaurants, menus, past orders and current cart. For your request, Muse can fill a cart with your selected items, quantities, required toppings and saved address, apply your chosen tip, and recalculate the fees and total. Creating a cart fully replaces its existing contents. Redeeming a coupon is a separate account action that requires your approval each time and may consume the coupon even without an order. Your location, food requests, cart choices and chosen coupon are shared with Rappi."
+    - icon: info
+      title: "Review and check out on Rappi"
+      text: "Current connector capabilities include the Rappi reads described above, Mexico session selection, non-charging cart preparation and checkout-link handoff by default. Coupon redemption offers only approval for that one action or denial. Muse prepares and verifies the cart before giving you a link; you must review it and finish checkout and payment in Rappi. This is cart preparation plus handoff, not direct checkout by Muse, wallet payment or a checkout-link-only service. Preparing a cart and getting the link do not place an order. Payment methods, card collection, payment, order placement, saved-address changes and every other unlisted tool are unavailable. This version does not yet track active orders. Disconnect at any time in Settings."
+    - icon: caution
+      title: "Availability can change"
+      text: "Restaurants, items, availability, fees and totals are provided by Rappi and can change. Review the final cart, saved address, delivery mode, tip, discounts, fees and total in Rappi before completing checkout."
+  footer_paragraphs:
+    - "The info used for your tasks is part of your interactions with Muse, which we may use to improve AI at Meta. You can manage this in Settings. [Learn more](https://muse.ai/privacy)"
+    - "Muse will exchange info with Rappi. To learn more, view their [terms](https://legal.rappi.com/mexico/terminos-y-condiciones-de-uso-de-plataforma-rappi/) and [privacy notice](https://legal.rappi.com/mexico/aviso-de-privacidad/)."

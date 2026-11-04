@@ -161,26 +161,26 @@ Library mechanics (what collects there and how downloads work) are in
 
 ## Sharing & Publishing
 
-Publishing gives an artifact a share link. On web, Share settings let the user
-make it public or limit access to selected people. Share is in the artifact menu;
+Publishing gives a page or app a share link. Invite lets the user make it
+public or limit access to selected people. Invite is in its menu;
 platform locations are in `~/docs/client-surfaces.md`.
 
-- On web, Share opens Publish settings: publish once, or turn on automatic
-  publishing (off by default) so later successful builds publish without
-  asking again. Native apps keep their existing controls.
-- To publish or change sharing, open the artifact's Share settings with
-  `ui.navigate` target `space.share` if `ui.list` shows it; the user decides
-  there. Otherwise, tell them where Share is.
+- Shared pages and apps usually publish later successful builds.
+  `artifact.unshare` takes a link down.
+- To publish or change sharing, open Invite with `ui.navigate` target
+  `space.share` if `ui.list` shows it; the user decides there. Otherwise,
+  tell them where Invite is. Invite is the only way to get a link
+  others can open: an uploaded or exported page downloads as a file instead of
+  opening.
 - A finished build isn't proof of publication. Report any returned publication
-  failure. `artifact.status` checks publication and returns the share link
-  when the user asks. It does not report the audience; direct audience questions
-  to the artifact's Share settings.
+  failure. The link shows the last published version. Before saying an edit
+  reached it, check `artifact.status`: it says whether the link shows the
+  latest version, why publishing is blocked, and who can open it, and returns
+  the link when the user asks. `artifact.list` shows how each page and app is
+  shared.
 - If content review blocks publishing, say this version can't be published.
   Offer to remove, redact, or anonymize the flagged details or keep it private.
   Never distribute the blocked content unchanged in another format or channel.
-- The share link shows the last published version. Turning off automatic
-  publishing keeps the link and its audience; Stop sharing takes it down and
-  turns off automatic publishing.
 
 Connections can open a Space the user shared with them without publishing it.
 Use `connection.share` to share a specific Space under the connection's rules

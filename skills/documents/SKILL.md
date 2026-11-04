@@ -12,11 +12,13 @@
 
 ## Read with evidence
 
-- Work from extracted text with source locations instead of loading a whole document at once. [Extract document evidence](references/pipelines.md) covers the bundled PDF, DOCX and XLSX extractors and how to cite their output.
+- Work from extracted text and rendered pages with source locations instead of loading a whole document at once. [Extract document evidence](references/pipelines.md) covers the bundled PDF, DOCX and XLSX extractors and how to cite their output.
 
 - Split a long, multi-file or high-stakes review between a coordinator and extraction tasks, as [Review several documents](references/orchestration.md) describes.
 
 - Tie every quotation and finding to a file and its page, section, slide or cell. Inspect rendered pages when scans, charts or layout affect the answer.
+
+- For reading a PDF, prefer reviewing pages visually: render them and read the images. Use the extracted text for wording and quick checks, not to understand layout or other visual aspects. If you can't render the pages, say what you couldn't check. [Extract document evidence](references/pipelines.md) has the steps.
 
 - A failed extraction does not mean the source lacks the information. Say which parts could not be read.
 

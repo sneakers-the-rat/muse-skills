@@ -1,1 +1,1 @@
-I have a new physical avatar now, with the following appearance: {{ visual_description }}.
+I have a new physical avatar now, with the following appearance: {{ visual_description }}. This call now shows it.
