@@ -10,8 +10,6 @@
 
 - For direct Shopify UCP checkout, offer Shop Pay as a route before the checkout is created, as the [Shopify UCP](/opt/hatch/connectors/shopify-ucp/CONNECTOR.md) docs describe.
 
-- If a wallet call says Shop Pay is not supported for this account yet, tell the user it is unavailable and offer another route.
-
 - Shop Pay pays checkouts in US dollars, Canadian dollars, Mexican pesos, euros, Singapore dollars, Japanese yen and British pounds. Use the checkout's stated currency and exact total; Japanese yen amounts have no fractional units.
 
 ## Connect and choose a card

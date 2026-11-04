@@ -1,0 +1,150 @@
+completedfaileddb_readVALUES , ()QueryBuilder must be reset before reuse after `.build()`error formatting `sql`Failed to add argumenterror in format_placeholderinternal error: entered unreachable codeassistant_message_idpublication_terminalMessageExecutionAdmissionaccepted_atroot_request_idrequest_originneeds_reconciliationpending_cancellationforeign_userforeign_agentsystemunknownowner_agent_idowner_chat_idconversation_idworker_agent_idgenerationmanualthresholdAcceptanceHandoffsourcemessage_idparent_message_idsubagent_completion_child_agent_idsproducer_agent_idAcceptanceTracerequest_idparent_request_idroot_request_originmessage_senderemail_sentmessage_sentfile_createdfile_updatedreminder_setweb_searchtask_runningpeer_conversationsuccesserrorpendingblockedstoppedactivevariant index 0 <= i < 3SuccessErrorPendingBlockedStoppedEmailSentMessageSentFileCreatedFileUpdatedReminderSetWebSearchTaskRunningfalseselect t.activity_thread_id as owner_id, a.action_id, a.activity_thread_id,
+                a.action_index, a.agent_id, a.agent_depth, a.icon, a.title,
+                a.subtitle, a.report, a.status, a.created_at
+         from activity.activity_monitor_threads t
+         left join activity.activity_monitor_thread_actions a
+           on a.activity_thread_id = t.activity_thread_id
+         where t.activity_thread_id = any($1)
+         order by t.activity_thread_id, a.action_index, a.action_seqaction_ididtitlestatuscreated_atselect t.activity_thread_id as owner_id, c.action_count,
+                a.action_id, a.activity_thread_id, a.action_index, a.agent_id,
+                a.agent_depth, a.icon, a.title, a.subtitle, ''::text as report,
+                a.has_report, a.status, a.created_at
+         from activity.activity_monitor_threads t
+         cross join lateral (
+           select count(*) as action_count
+           from activity.activity_monitor_thread_actions
+           where activity_thread_id = t.activity_thread_id
+         ) c
+         left join lateral (
+           select action_id, activity_thread_id, action_index, action_seq,
+                  agent_id, agent_depth, icon, title, subtitle,
+                  octet_length(report) > 0 as has_report, status, created_at
+           from activity.activity_monitor_thread_actions
+           where activity_thread_id = t.activity_thread_id
+           order by action_index desc, action_seq desc limit $2
+         ) a on true
+         where t.activity_thread_id = any($1)
+         order by t.activity_thread_id, a.action_index, a.action_seqaction_counthas_report
+INSERT INTO activity.feed_entries (
+  activity_key,
+  activity_type,
+  is_goal,
+  message_id,
+  title,
+  status_title,
+  subtitle,
+  details_json,
+  status,
+  task_label,
+  created_at_ms,
+  updated_at_ms,
+  finished_at_ms
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+ON CONFLICT(activity_key) DO UPDATE SET
+  created_at_ms = LEAST(activity.feed_entries.created_at_ms, excluded.created_at_ms),
+  updated_at_ms = GREATEST(activity.feed_entries.updated_at_ms, excluded.updated_at_ms),
+  finished_at_ms = CASE
+    WHEN activity.feed_entries.finished_at_ms IS NULL THEN excluded.finished_at_ms
+    WHEN excluded.finished_at_ms IS NULL THEN activity.feed_entries.finished_at_ms
+    ELSE GREATEST(activity.feed_entries.finished_at_ms, excluded.finished_at_ms)
+  END,
+  activity_type = CASE
+    WHEN excluded.updated_at_ms > activity.feed_entries.updated_at_ms
+      OR (
+        excluded.updated_at_ms = activity.feed_entries.updated_at_ms
+        AND NOT (
+          activity.feed_entries.finished_at_ms IS NOT NULL
+          AND excluded.finished_at_ms IS NULL
+        )
+      ) THEN excluded.activity_type
+    ELSE activity.feed_entries.activity_type
+  END,
+  is_goal = CASE
+    WHEN excluded.updated_at_ms > activity.feed_entries.updated_at_ms
+      OR (
+        excluded.updated_at_ms = activity.feed_entries.updated_at_ms
+        AND NOT (
+          activity.feed_entries.finished_at_ms IS NOT NULL
+          AND excluded.finished_at_ms IS NULL
+        )
+      ) THEN excluded.is_goal
+    ELSE activity.feed_entries.is_goal
+  END,
+  message_id = COALESCE(activity.feed_entries.message_id, excluded.message_id),
+  title = CASE
+    WHEN excluded.updated_at_ms > activity.feed_entries.updated_at_ms
+      OR (
+        excluded.updated_at_ms = activity.feed_entries.updated_at_ms
+        AND NOT (
+          activity.feed_entries.finished_at_ms IS NOT NULL
+          AND excluded.finished_at_ms IS NULL
+        )
+      ) THEN excluded.title
+    ELSE activity.feed_entries.title
+  END,
+  status_title = CASE
+    WHEN excluded.updated_at_ms > activity.feed_entries.updated_at_ms
+      OR (
+        excluded.updated_at_ms = activity.feed_entries.updated_at_ms
+        AND NOT (
+          activity.feed_entries.finished_at_ms IS NOT NULL
+          AND excluded.finished_at_ms IS NULL
+        )
+      ) THEN excluded.status_title
+    ELSE activity.feed_entries.status_title
+  END,
+  subtitle = CASE
+    WHEN excluded.updated_at_ms > activity.feed_entries.updated_at_ms
+      OR (
+        excluded.updated_at_ms = activity.feed_entries.updated_at_ms
+        AND NOT (
+          activity.feed_entries.finished_at_ms IS NOT NULL
+          AND excluded.finished_at_ms IS NULL
+        )
+      ) THEN excluded.subtitle
+    ELSE activity.feed_entries.subtitle
+  END,
+  -- Same winner as every sibling column, but only when the payload actually
+  -- differs: excluded.details_json is a fresh parameter datum, so storing it
+  -- re-TOASTs the whole lz4 value and orphans the old chunks even when the bytes
+  -- match, while feeding the stored datum back reuses its TOAST pointer. Value
+  -- identical either way; this changes physical churn, not merge semantics.
+  details_json = CASE
+    WHEN (
+      excluded.updated_at_ms > activity.feed_entries.updated_at_ms
+      OR (
+        excluded.updated_at_ms = activity.feed_entries.updated_at_ms
+        AND NOT (
+          activity.feed_entries.finished_at_ms IS NOT NULL
+          AND excluded.finished_at_ms IS NULL
+        )
+      )
+    )
+    AND excluded.details_json IS DISTINCT FROM activity.feed_entries.details_json
+      THEN excluded.details_json
+    ELSE activity.feed_entries.details_json
+  END,
+  status = CASE
+    WHEN excluded.updated_at_ms > activity.feed_entries.updated_at_ms
+      OR (
+        excluded.updated_at_ms = activity.feed_entries.updated_at_ms
+        AND NOT (
+          activity.feed_entries.finished_at_ms IS NOT NULL
+          AND excluded.finished_at_ms IS NULL
+        )
+      ) THEN excluded.status
+    ELSE activity.feed_entries.status
+  END,
+  task_label = CASE
+    WHEN excluded.updated_at_ms > activity.feed_entries.updated_at_ms
+      OR (
+        excluded.updated_at_ms = activity.feed_entries.updated_at_ms
+        AND NOT (
+          activity.feed_entries.finished_at_ms IS NOT NULL
+          AND excluded.finished_at_ms IS NULL
+        )
+      ) THEN excluded.task_label
+    ELSE activity.feed_entries.task_label
+  END
+write_admissionwritepostgres write completed slowly

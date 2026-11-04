@@ -1,0 +1,92 @@
+peer_id, muse_id, x25519_pub, key_epoch, binding, binding_expires_at_ms, fqdn, vm_id, endpoint_hints, display_name, agent_name, account_claim, relationship_generation_id, relationship_direction, relationship_started_at_ms, request_expires_at_ms, request_terminal_cause, relationship_revision, remote_confirmed_ceremony_id, remote_confirmed_at_ms, status, trust_preset, sas_confirmed_local, active_sas_ceremony_id, attested, person_slug, provenance, paired_at_ms, last_activity_ms, created_at_ms, updated_at_msselect distinct idea_id,
+                            metadata_json -> 'publication_hold' ->> 'fingerprint',
+                            metadata_json -> 'publication_hold' ->> 'reason'
+                       from ideas.idea_sources
+                      where idea_id = any($1::text[])
+                        and (source_namespace, source_kind) in (
+                          ('idea_share', 'pending_share'),
+                          ('user', 'http_create'),
+                          ('shared_www', 'shared_idea')
+                        )
+                        and metadata_json -> 'publication_hold' ->> 'fingerprint' is not null
+                        and metadata_json -> 'publication_hold' ->> 'reason' is not nullhandoff event sequence
+SELECT e.event_seq, e.event_name, coalesce(e.message_id, '') AS message_id,
+       e.payload_json
+FROM events e
+WHERE e.idempotency_key = $1
+  AND e.payload_json IS NOT NULL
+context event identity already belongs to another writerSELECT event_seq FROM events WHERE idempotency_key = $1runtime_events_main_public_root_message_uidxSELECT request_id, root_request_id, parent_request_id,
+                                        event_name, visibility::text, role::text, source,
+                                        transcript_surface::text, message_id, reply_to_message_id,
+                                        agent_id, parent_agent_id, parent_message_id
+                                 FROM events WHERE event_seq = $1runtime.messages.body
+INSERT INTO messages (message_id, event_seq, role, body, created_at)
+VALUES ($1, $2, $3::runtime.message_role, $4, to_timestamp($5::double precision / 1000.0))
+ON CONFLICT (message_id) DO NOTHING
+
+SELECT event_seq AS seq, event_name, role::text AS role
+FROM events
+WHERE message_id = $1
+  AND transcript_surface = 'main_chat'
+  AND visibility = 'public'
+  AND event_name IN ('message.user', 'message.assistant')
+  AND (parent_message_id IS NULL OR TRIM(parent_message_id) = '')
+LIMIT 1
+seqreply_to_message_idDELETE FROM chat.event_transports WHERE event_seq = $1INSERT INTO chat.event_transports (event_seq, provider) VALUES  ON CONFLICT (provider, event_seq) DO NOTHING, ()
+SELECT e.event_seq, e.payload_json
+FROM events e
+WHERE e.idempotency_key = $1
+LIMIT 1
+FOR UPDATE OF e
+select actor_muse,request_sha256,result_json from goals.shared_mutations where goal_id=$1 and mutation_id=$2the mutation ID belongs to a different editSELECT connection_id FROM goals.goals WHERE goal_id=$1insert into goals.shared_tasks (goal_id,task_id,title,assigned_to,completed,updated_by,updated_at_ms) values ($1,$2,$3,$4,$5,$6,$7)
+                        on conflict(goal_id,task_id) do update set title=excluded.title,assigned_to=excluded.assigned_to,completed=excluded.completed,updated_by=excluded.updated_by,updated_at_ms=excluded.updated_at_ms
+                        where (shared_tasks.title,shared_tasks.assigned_to,shared_tasks.completed)
+                            is distinct from (excluded.title,excluded.assigned_to,excluded.completed)a shared goal supports at most 200 tasksdelete from goals.shared_tasks where goal_id=$1 and task_id=$2update goals.goals set title=coalesce($2,title),summary=coalesce($3,summary),description=coalesce($4,description),status=coalesce($5,status),
+                completed_at=case when $5='completed' then coalesce(completed_at,$6) when $5 is not null then null else completed_at end,
+                completed_at_ts=case when $5='completed' then coalesce(completed_at_ts,$7) when $5 is not null then null else completed_at_ts end,
+                escalation=case when $5='completed' then null else escalation end,
+                escalation_due_at=case when $5='completed' then null else escalation_due_at end,
+                updated_at=$6, updated_at_ts=$7 where goal_id=$1Goal pausedGoal retiredGoal completedinsert into goals.shared_mutations (goal_id,mutation_id,actor_muse,request_sha256,result_json,created_at_ms) values ($1,$2,$3,$4,$5,$6)INSERT INTO runtime.maintenance_markers (marker_key, detail_json) VALUES ('event_hook_admissions_v1', '{}') ON CONFLICT (marker_key) DO NOTHINGINSERT INTO runtime.event_hook_admissions (hook_id, revision, definition_sha256, script_sha256, enabled)  ON CONFLICT (hook_id) DO NOTHINGAwaiting decisionapproval_typehttps://muse.ai/peer/accept#pairing.invite_acceptedpeer_pairinginvite_acceptedfailed to resolve owning root session from chat event record
+SELECT action_index, action_seq, action_id, activity_thread_id, agent_id, agent_depth, icon, title, subtitle, report, status, created_at
+FROM activity_monitor_thread_actions
+WHERE activity_thread_id = $1
+ORDER BY action_index ASC, action_seq ASC
+
+SELECT action_index, action_id, activity_thread_id, agent_id, agent_depth, icon, title, subtitle, report, status, created_at
+FROM (
+    SELECT
+        action_index,
+        action_id,
+        activity_thread_id,
+        agent_id,
+        agent_depth,
+        icon,
+        title,
+        subtitle,
+        report,
+        status,
+        created_at,
+        action_seq AS insertion_order
+    FROM activity_monitor_thread_actions
+    WHERE activity_thread_id = $1
+    ORDER BY action_index DESC, insertion_order DESC
+    LIMIT $2
+)
+ORDER BY action_index ASC, insertion_order ASC
+
+SELECT b.activity_thread_id
+FROM activity_monitor_message_threads b
+WHERE b.message_id = $1
+
+SELECT b.activity_thread_id
+FROM activity_monitor_message_threads b
+JOIN activity_monitor_threads g ON g.activity_thread_id = b.activity_thread_id
+WHERE b.message_id = $1
+  AND g.status = $2
+
+SELECT activity_thread_id, name, subtitle, icon, emoji, status, created_at, finished_at, finish_message,
+       finish_status, finish_status_reason, activity_thread_kind, space_slug, status_title,
+       expected_finish_description
+FROM activity_monitor_threads
+WHERE activity_thread_id = $1
+blobsread idea card detailnot_foundresolve pathpath escapes mount rootforbiddenthe turn is unavailabledefaultexplicit chat event seqobserved_decisionpeerd mirror status read timed out/mirror/statusconnection snapshot timed outfailed to serialize localized activity.updated payload; falling back to canonical framecompleted startup quota rejection has no eventnegative startup quota rejection event sequencecompleted startup quota rejection event is absentartifact body length overflowverify activity feed tableruntime event hub closedavatar-state: authoritative DB row missingnegative cancellation event sequencecontext item sequence space is exhaustedcommitted cancellation has no context sequencestartup quota rejection payload is not an objectstartup quota rejection metadata is not an objectpublication has no chat ownerinvalid publication tracepublication owner does not match its transcript/metadata/message_kindpublication has no execution ownerinvalid publication authorityJARVIS_STEFI_PROXY_SOCKsuppression_eligibleguide_pathcomplimentary_subscriptionepoch-scoped nutrition presentation could not load its root sessionnutrition presentation belongs to a stale conversation epochruntimemain_chatfailed to persist delta.presentation eventshopping_results_v2navigation.scheduled_tasknode_card.notification_opt_inview ideaview canonical idearesolve canonical on not-foundlist ideas by idsGatekeeper response omitted requested gate; using defaultruntime.resources.metadata_jsonchild_agent_idcompleted_atrecordRehomedChildRecordsubmission_idadmitted_byhumanimage_optionsbuild edge client failededge probe failedhttps://www.facebook.com/ras/v2/?id=AQAEJIP8TT2M&cfg=d$4xsaved_spacejob_idmessage.assistantMissing preview attachmentinvalid prepared attachmentThey receive a copy of this item. Later changes are not shared automatically.They can open this Space and use its shared actions, including future changes, until access is removed.They can view and edit this goal and its tasks, including future changes, until access is removed.approval denied or expiredprofile upload conflict response was malformedprofile publication conflict response was malformedfailed to persist Hatch profile checkpointconfined profile media open failedidle_videoworking_videoimage_frameprofile media read failedprofile media rewind failedprofile media metadata read failedTaglinefailed to read avatar state for Hatch profile syncfailed to classify default avatar for Hatch profile syncrequesting stale execution recovery after newer user messageproduct_name%3E%3Cavatar image is outside the home directoryload the side chatload the conversationload grantsmalformed_requestInvalid resource requestrecord the owner's approval
