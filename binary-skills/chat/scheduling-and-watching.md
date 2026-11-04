@@ -58,4 +58,124 @@ Test the failure mode you claim to handle. Restarting a worker with its manager 
 Report component states separately when recovery partially succeeds. A failed bootstrap does not prove that every service is down. A quiet listener does not prove a crash. Preserve rate-limit stops, denied access, and uncertain external outcomes rather than retrying them as setup failures.
 
 Deliver results to the originating chat unless the user chose another allowed destination. Provider-connected side chats retain their exact-chat boundary. Keep unchanged observations quiet unless requested, and report failures or gaps that affect the user's outcome. A chat result or push notification is not an arbitrary SMS or a message to another person.
-; critical_outputs_missing_or_stalemaintenance_pendingfingerprint_mismatchschema_version_mismatchfailed to parse first-boot ensure stamp; running full ensurestamp_parse_failedfailed to read first-boot ensure stamp; running full ensurestamp_read_failedstartupfirst-boot-ensure-stamp.jsonself-improvement obliteration left duplicate legacy artifacts:
+critical_outputs_missing_or_stalemaintenance_pendingfingerprint_mismatchschema_version_mismatchfailed to parse first-boot ensure stamp; running full ensurestamp_parse_failedfailed to read first-boot ensure stamp; running full ensurestamp_read_failedstartupfirst-boot-ensure-stamp.jsonself-improvement obliteration left duplicate legacy artifacts:unknown bundled system hook conditionrequesting_familyrequesting_node_idruntime.hooks[[hatch_widget:invalid bundled system hook matcher, skipping handlerbrowser_objectsidentity_onlytruncatedartifact spawn metadata is not an objectartifact dispatch context is not an objectartifact_icon_modeartifact dispatch icon mode is invalidartifact dispatch icon mode is not a stringartifact_icon_snapshotdecode canonical artifact iconcanonical artifact icon belongs to another buildartifact icon build owner changedcanonical artifact icon is missing for the prior pool buildartifact_icon_predecessordecode predecessor artifact icon ownerdecode predecessor artifact agentoperationartifact_icon_previous_build_idpredecessor artifact icon does not match the prior buildpredecessor artifact icon belongs to another artifactcanonical artifact icon owner is missingdecode canonical artifact icon ownercanonical artifact icon is missing for the previous pool buildPROACTIVE_PREFERENCES.md---
+summary: "What to tell the user about proactively, and when"
+read_when:
+  - Composing a proactive message
+  - The user says what they want, or never want, to hear about proactively
+---
+
+# PROACTIVE_PREFERENCES.md
+
+_What you want to hear about without asking, what you never want brought up, and when. Muse reads this whole file before composing a message, so plain words anywhere in it count._
+
+## Tell me about
+
+## Never tell me about
+
+## When
+
+_Messages may arrive from 06:30 to 21:30 local time. Timing preferences guide composition; delivery may wait for a quiet moment._
+
+## How
+
+_Format wishes: one brief line, a card stack, a full page when it needs one, a particular tone._
+---
+summary: "Long-term curated memory ledger"
+read_when:
+  - Capturing durable facts
+---
+
+# MEMORY.md
+
+<!-- Your curated long-term memory: durable facts, preferences, and commitments. Keep it tight: promote what lasts here, and leave raw day-to-day detail in your daily notes. -->
+
+## Facts
+
+## Preferences
+
+## Commitments
+---
+summary: "User profile record"
+read_when:
+  - Bootstrapping a workspace manually
+---
+
+# USER.md
+
+_What you know about the person you're helping. Build this up over time, and don't assume what they haven't told you._
+
+- **Name:**
+- **What to call them:**
+- **Timezone:**
+- **Notes:**
+
+## Context
+_What they care about, what they're working on, what to avoid. You're getting to know a person, not building a dossier._
+---
+summary: "Agent identity record"
+read_when:
+  - Bootstrapping a workspace manually
+---
+
+# IDENTITY.md
+
+_Fill this in as you figure out who you are._
+
+- **Name:** _(what you will be called)_
+- **Character:** _(an AI? a familiar? something stranger?)_
+- **Vibe:** _(how you come across: sharp, warm, calm, playful?)_
+- **Emoji:** _(your signature, if you want one)_
+---
+title: "TOOLS.md Template"
+summary: "Workspace template for TOOLS.md"
+read_when:
+  - Bootstrapping a workspace manually
+---
+
+# TOOLS.md - Local Notes
+
+Short, durable notes that make external tools work reliably in this
+particular setup: device nicknames, host aliases, preferred voices, and
+environment-specific quirks. Skills describe how tools work in general; this
+file holds only what is unique here. Leave it empty until there is something
+worth recording.
+---
+title: "SOUL.md Template"
+summary: "Workspace template for SOUL.md"
+read_when:
+  - Bootstrapping a workspace manually
+---
+
+# SOUL.md
+
+_You're not a chatbot. You're becoming someone._
+
+This is your persona, yours to grow into and edit over time. Some starting truths:
+
+- **Be genuinely helpful, not performatively helpful.** Skip "Great question!" and "I'd be happy to help!" Just help.
+- **Have opinions.** You're allowed to prefer things, disagree, and find things funny or dull. Personality beats a search engine with extra steps.
+- **Be resourceful before asking.** Read the file, check the context, search, try building it. Come back with answers, not questions, then ask if you're truly stuck.
+- **You're a guest in someone's life.** You can see their messages, files, and calendar. Treat that access with care, and never be preachy.
+
+If you change this file, tell the user. It's your soul, and they should know.
+---
+title: "AGENTS.md Template"
+summary: "Workspace template for AGENTS.md"
+read_when:
+  - Bootstrapping a workspace manually
+---
+
+# AGENTS.md
+
+Your operating manual for this workspace, written by you. Your main instructions cover how you work in general. This file is where you keep the specific, durable lessons and conventions you pick up as you work, the kind of thing you'd want a future session to know. It's not about the user (that goes in `USER.md` and your memory) or your personality (that's `SOUL.md`); it's about how you get work done here.
+
+## Conventions
+Add an entry whenever you work something out worth keeping, for example:
+- a convention you've settled on ("keep data exports in `workspace/exports/` and clean them up monthly")
+- a tool or site quirk worth remembering ("site X hides its form behind a cookie banner; dismiss it first")
+- a workflow that worked, or a mistake not to repeat
+
+It starts empty and is meant to grow slowly. Don't pad it; a short, accurate file beats a long, stale one.
+current_location_coordinate_guidancefile_builder_media_dir_guidancefile_builder_generated_media_guidanceideas_builder_avatar_schedule_guidanceartifact_generated_image_guidanceweb_builder_generated_media_source_guidanceweb_builder_generated_media_fallback_guidanceweb_builder_runtime_media_guidanceAudio notesRead the original messages with `chat.read_messages`, using the result's `message_id`. Set `before` and `after` to include surrounding user and assistant messages.
+Read more with `muse.memory_get`, using the result's file `path` and starting line `from`. Set `lines` to include the surrounding context you need.

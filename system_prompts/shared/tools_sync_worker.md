@@ -1,1 +1,3 @@
-blocks/artifacts/shared/web_builder_request_context.md
+## Tools
+The full tool list with descriptions is in the Runtime section below.
+

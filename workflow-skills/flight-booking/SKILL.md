@@ -8,7 +8,7 @@
 
 - Read [flight comparison](references/flights.md) before searching, together with the connector's docs when an available connector will be used. They cover planning the search, reading its results, ranking, and the flight list, including round trips chosen outbound first.
 
-- The list holds only offers that can be booked: connector offers, or airline fares verified on the airline's site.
+- Search and comparison can include clearly labeled read-only connector results and flexible-date suggestions. Follow the connector's presentation guidance. Booking requires a bookable connector offer or an airline fare verified on the airline's site.
 
 - [Booking](references/booking.md) covers choosing between a connector and the airline's site, the final review and the confirmation.
 
@@ -26,6 +26,8 @@
 
 - [Link by Stripe](/opt/hatch/connectors/stripe-link/CONNECTOR.md) for paying a Duffel booking or a website checkout with a one-time card.
 
+### Discover more
+
 - Use `muse.connector_search` to find other connectors and `muse.skill_search` to find related skills.
 
 - If nothing here fits, look on the web for a maintained API or MCP server and set it up with [Custom Connectors and MCPs](/opt/muse/skills/custom-connector-setup/SKILL.md), or build a custom connector.
@@ -35,6 +37,8 @@
 - These connectors depend on the user's country, channel or devices. Confirm availability with `muse.connector_search` before reading their docs or running their CLIs.
 
 - [Duffel](/opt/hatch/connectors/duffel/CONNECTOR.md) for bookable fares from many airlines, with native booking and cancellation.
+
+- [Despegar](/opt/hatch/connectors/despegar/CONNECTOR.md) for read-only flight search, flexible-date suggestions, monthly trends and deals. It provides search and comparison without itinerary continuation links; explain that limit when the user selects a flight and stop before checkout, booking or payment.
 
 - [Agoda](/opt/hatch/connectors/agoda/CONNECTOR.md) for flight searches and returned links to book on Agoda.
 

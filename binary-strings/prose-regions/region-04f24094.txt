@@ -1,0 +1,1079 @@
+The requesting conversation is no longer availableThe requesting turn is no longer availableShare a Feed item, Idea, Space, Goal, or file.The file path has no file nameChoose a file in the workspace using its path or sandbox URI.Feed item not foundIdea not foundSpace not foundGoal not foundBoth owners confirmed the connection.spublication id is not a chat messagepeer outbound supports DM and circle conversationspeer publication identity collisionhosted circle sends go through circles::send_hosted_circle_message_with_idsigned message is absentsigned frame is not a conversation eventfailed to touch peer contact activityunexpected owner approval responseprovider connection identity is no longer currentread provider connection ruleswhatsapp_companionhatch.circle-resource.v1Connections are disabledfingerprintthe action does not fit the approval previewinvalid chat worker actionchat_worker_actionchat.worker_actionpeer request reconciliation failedfailed to disconnect an ended peer request's linkrequest_endedfailed to refresh confirmed peer contact/v1/peer/sign-delegatesign peer delegate via authddecode signed delegate tokenconnection_versionfailed to publish peer admission mirror to peerdfailed to read peer admission mirror; disabling previously admitted authorityread peer admission mirrorfailed to disable peer admission after snapshot read failurepeer admission mirror publication failed; rotating publisher tokenrebuild peer admission mirrorretry peer admission mirror publicationread peer admission mirror snapshotpeerd mirror status observed after failed disable (diagnostic only)peerd mirror status unavailable after failed disablevalidate peer invite requestcreate_request_id must be non-nil/v1/peer/sign-invite-v2inviteinviter_offered_presetpairing.request_supersededsupersededprevious_relationship_generation_idrequest_supersededpeer activity could not read recent rows yetfailed to write a peer conversation activity rowpeer publication could not load its journaled replyfailed to repair default peer DM titlespeer DM title has an invalid session idfailed to reconcile peer profile photoruntime.skillsJARVIS_HOMEJARVIS_VAR_LIB_DIRCREDENTIALS_DIRECTORYJARVIS_TRACE_CONTEXTJARVIS_RUNTIME_CONTEXT_TOKENskill command runtime context registration failedConnection work is temporarily unavailablechat.sendMuse connections are temporarily unavailablebackground job has an unsupported content localedeleted sessions.updated events require an owner-visible deletion proofsession row unavailable for sessions.updated payloadfailed to hydrate sessions.updated payloadfailed to resolve public session id for streamed framefailed to broadcast streamed frame for root sessiondropped companion progress frame after its voice call changedselect pg_advisory_xact_lock(hashtext('background_content_jobs.locale'), hashtext($1))SELECT active FROM agent.connections WHERE connection_id=$1 FOR SHAREThe coordination conversation is no longer activeSELECT EXISTS (SELECT 1 FROM goals.connection_closures WHERE goal_id=ANY($1))This tracked work is closing because its connection endedupdate goals.shared_update_state
+         set generation = generation + 1, pending = true, actor_muse = $2
+         where goal_id = any($1)for sharefor updateselect task_id,title,assigned_to,completed,updated_by,updated_at_ms from goals.shared_tasks where goal_id=$1 order by task_id limit 201failed to resolve public session id for agent.statusagent.status
+INSERT INTO requests (
+  request_id, root_request_id, parent_request_id, request_origin,
+  transcript_surface, root_work_class
+)
+VALUES ($1, $2, $3, $4, $5::runtime.transcript_surface, $6)
+ON CONFLICT (request_id) DO UPDATE SET
+  root_request_id = COALESCE(requests.root_request_id, excluded.root_request_id),
+  parent_request_id = COALESCE(requests.parent_request_id, excluded.parent_request_id),
+  request_origin = CASE
+    WHEN requests.request_origin = 'internal.runtime_replay' THEN excluded.request_origin
+    ELSE requests.request_origin
+  END,
+  transcript_surface = excluded.transcript_surface,
+  root_work_class = CASE
+    WHEN requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing'
+      THEN excluded.root_work_class
+    ELSE requests.root_work_class
+  END
+WHERE (requests.root_request_id IS NULL AND excluded.root_request_id IS NOT NULL)
+   OR (requests.parent_request_id IS NULL AND excluded.parent_request_id IS NOT NULL)
+   OR (requests.request_origin = 'internal.runtime_replay'
+       AND excluded.request_origin <> 'internal.runtime_replay')
+   OR requests.transcript_surface IS DISTINCT FROM excluded.transcript_surface
+   OR (requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing')
+output
+INSERT INTO tool_outputs (event_seq, call_id, status, output_text, error_text, created_at)
+VALUES ($1, $2, $3, $4, $5, to_timestamp($6::double precision / 1000.0))
+ON CONFLICT (event_seq) DO UPDATE SET
+  call_id = excluded.call_id,
+  status = excluded.status,
+  output_text = excluded.output_text,
+  error_text = excluded.error_text
+arguments
+INSERT INTO tool_calls (event_seq, call_id, tool_name, status, arguments_json, created_at)
+VALUES ($1, $2, $3, 'started', $4, to_timestamp($5::double precision / 1000.0))
+ON CONFLICT (call_id) DO UPDATE SET
+  event_seq = excluded.event_seq,
+  tool_name = excluded.tool_name,
+  status = excluded.status,
+  arguments_json = excluded.arguments_json
+
+INSERT INTO chat_event_derived_write_backlog (event_seq, resources_json)
+VALUES ($1, $2)
+ON CONFLICT (event_seq) DO UPDATE SET
+  resources_json = excluded.resources_json,
+  updated_at = now()
+UPDATE chat_private.peer_conversations SET requester_chat_id = NULL
+         WHERE conversation_id = $1 AND requester_revision = $2
+           AND requester_chat_id = $3 AND NOT requester_unavailable
+           AND chat_id = $5
+           AND EXISTS (SELECT 1 FROM agent.agents
+                       WHERE id = $4 AND session_id = $3)peer handoff disagrees with its asking-chat claimpeer handoff requester changed before admissionSELECT session_id, COALESCE(prompt_floor_seq, -1) AS prompt_floor_seq,
+                kind = 'root' AND parent_agent_id IS NULL
+                AND ephemeral IS DISTINCT FROM TRUE
+                AND status NOT IN ('shutdown', 'not_found') AS eligible
+         FROM agent.agents WHERE agent_id = $1 FOR UPDATEstartup_root_changedSELECT EXISTS(SELECT 1 FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND accepted_ordinal < $2)startup mailbox promotion cannot overtake an earlier accepted input
+SELECT payload_json
+FROM agent.runtime_restart_checkpoints
+WHERE agent_id = $1
+FOR UPDATE
+
+SELECT EXISTS (
+  SELECT 1
+  FROM agent.message_mailbox
+  WHERE agent_id = $1
+    AND state = 'accepted'
+    AND accepted_ordinal < $2
+    AND (NOT $3 OR submission_kind <> 'internal_handoff')
+)
+message mailbox attachment cannot overtake an older priority peer
+INSERT INTO agent.runtime_restart_checkpoints (
+  agent_id, mode, recovery_class, recovery_owner_id, execution_config_json,
+  payload_json, created_at, updated_at
+) SELECT $1, $2, $3, $4, $5, $6, $7, $7
+WHERE EXISTS (
+  SELECT 1
+  FROM agent.agents
+  WHERE agent_id = $1
+    AND status NOT IN ('shutdown', 'not_found')
+)
+ON CONFLICT (agent_id) DO NOTHING
+SELECT EXISTS (SELECT 1 FROM agent.agents WHERE agent_id = $1 AND status NOT IN ('shutdown', 'not_found'))conversation epoch
+INSERT INTO agent.message_mailbox (
+  submission_id, agent_id, conversation_epoch, submission_kind,
+  routing_scope, state, checkpoint_custody, stream_owner_message_id,
+  submission_json, transcript_event_seq, attached_at
+) VALUES (
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+  CASE WHEN $6 = 'attached' THEN now() ELSE NULL END
+)
+ON CONFLICT (submission_id) DO NOTHING
+RETURNING accepted_ordinal, accepted_at
+startup mailbox promotion requires its previously accepted input
+SELECT agent_id, conversation_epoch, submission_kind, routing_scope,
+       state, stream_owner_message_id, submission_json,
+       transcript_event_seq, accepted_ordinal, accepted_at
+FROM agent.message_mailbox
+WHERE submission_id = $1
+FOR UPDATE
+update chat.message_bindings set admitted_at = coalesce(admitted_at, now())
+                    where jarvis_message_id = $1 and chat_id = $2 and binding_epoch = $3 and transport = $4binding epochconversation_epochsubmission_kindrouting_scope
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = $5,
+    stream_owner_message_id = $2,
+    submission_json = $3,
+    transcript_event_seq = coalesce($4, transcript_event_seq),
+    attached_at = now()
+WHERE submission_id = $1
+  AND state = 'accepted'
+  AND stream_owner_message_id IS NULL
+mailbox stream ownerselect a.account_id from chat_private.accounts a
+             join chat_private.binding_authorizations b on b.provider = a.provider and b.account_id = a.account_id
+             where b.provider = $1 and b.binding_id = $2
+               and a.connection_id = $3 and not a.revoked for share of adirect input has no captured binding epochaccount_retiredselect connection_id, generation, transport_json, delivery_target
+             from chat_private.binding_authorizations
+             where provider = $1 and binding_id = $2 and chat_id = $3
+               and account_id = $4 and external_kind = 'direct' and participation = 'active'
+             for shareaccount_authorization_retiredtransport_jsontransport_authorization_absentselect epoch from chat_private.bindings
+         where chat_id = $1 and provider = $2 and not revoked for sharetransport_authorization_changedbinding_retiredSELECT pg_advisory_xact_lock(hashtextextended('activity-monitor-root-carrier:' || $1, 0))
+WITH lineage(message_id) AS (
+    SELECT $1::text
+    UNION
+    SELECT user_message_id
+    FROM activity_monitor_carrier_user_messages
+    WHERE carrier_message_id = $1
+      AND (root_agent_id IS NULL OR root_agent_id = $2)
+    UNION
+    SELECT $3::text
+    WHERE $3 IS NOT NULL AND $4
+)
+INSERT INTO activity_monitor_message_threads (
+    message_id, activity_thread_id, created_at, updated_at
+)
+SELECT message_id, $5, $6, $6
+FROM lineage
+ON CONFLICT(message_id) DO UPDATE SET
+    activity_thread_id = excluded.activity_thread_id,
+    updated_at = excluded.updated_at
+WHERE activity_monitor_message_threads.activity_thread_id
+    IS DISTINCT FROM excluded.activity_thread_id
+
+SELECT activity_thread_id
+FROM activity_monitor_message_threads
+WHERE message_id = $1
+LIMIT 1
+
+INSERT INTO activity_monitor_agent_threads (agent_id, activity_thread_id, created_at, updated_at)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT(agent_id) DO UPDATE SET
+    activity_thread_id = excluded.activity_thread_id,
+    updated_at = excluded.updated_at
+WHERE activity_monitor_agent_threads.activity_thread_id IS DISTINCT FROM excluded.activity_thread_id
+activity_monitor_upsert_activity_thread_actionactivity_monitor_list_thread_actionsactivity_monitor_action_by_idactivity_monitor_list_recent_thread_actions
+INSERT INTO activity_monitor_message_threads (message_id, activity_thread_id, created_at, updated_at)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT(message_id) DO UPDATE SET
+    activity_thread_id = excluded.activity_thread_id,
+    updated_at = excluded.updated_at
+WHERE activity_monitor_message_threads.activity_thread_id IS DISTINCT FROM excluded.activity_thread_id
+activity_monitor_message_thread_lookupactivity_monitor_read_threadactivity_monitor_reactivate_finished_threadfailed to reactivate finished activity threadrun cancelledfeed step failure CAS lost to a concurrent settler; that settler owns the terminal eventfeed step failure CAS erroredfeed step adopted-submission settle erroredhttp://localhost/hatch/feed-engagement-populationtoo many group attachment snapshotsinvalid group attachment snapshot referenceinvalid group attachment MIME typeduplicate group attachment snapshot referencegroup attachment snapshots exceed limitcompany transcript revision is staleconversation activity projection unavailablemdtranscript file notification unavailablepreparingawaiting_replytranscript messages missinglatest_statuscompany_logototal_messagesmessage_countsnapshot_pathtranscript_pathexternal_party_conversationconversation preview exceeds the state budgetconversation preview widget is missingwidget_idconversation preview state could not be updatedhost_message_idconversation preview card belongs to another ownerconversation preview is not its transcript fileconversation preview could not be savedconversation preview changed before publicationconversation preview could not be presentedconversation preview is not visibletask_runningfiles can't be sent to the companysend a message of at most 8 KBchat worker disappearedchat worker changed before the sendthis conversation is closed to new messagescompany send drain failed; the chat retries itsend a nonempty messagesend a nonempty message of at most 16 KBchat send identity collisionchat has no discretion policyowner request for chat send review unavailablechat send review failedchat send review timed outthis contact's access has ended, so the message was not sentchat send drain failed; the chat retries itchat send was refused by the outboxchat send delivery state unavailableunread count after a send unavailableuser input has no canonical admission receiptcanonical user input does not match its authenticated admission
+
+side chat authority awaits availabilitypartialcontent_limitattachments_coverageoriginal_evidence_sha256approval reminder occurrence is invalidapproval_reminder_decodeinvalid_approval_reminder_occurrenceinvalid_occurrenceapproval_absentapproval_not_actionablewindow_closedinvalid_windowapproval_identity_mismatchapproval_reminder_authority_unavailableassociation_ineligibleapproval_reminder_association_unavailabledisabled_before_handoffwhatsapp_plugin_absentwhatsapp_not_visiblecooldown_activewhatsapp_not_readyapproval_reminder_readiness_timeoutapproval_chat_absentapproval_chat_unavailableapproval_chat_disconnectedapproval_reminder_delivery_contract_invalidwindow_closed_before_handoffapproval_chat_authority_unavailableapproval_reminder_preemptedoutbox_handoffapproval_reminder_outbox_unavailablespace_preview_repairspace preview repair: handler not registeredspace preview repair: handler registry unavailablespace_preview_missingspace preview repair: runtime work store unavailablequeued Space preview repairspace preview repair: seeding failedspace preview repair: catalog read failed on viewFinancial Insights publication identity could not be serializedFinancial Insights semantic snapshot could not be serializedstripe-linkready【ads-No rule fully covers this message.Expected a message reviewGive a short reason for the decisionThe review turn is no longer activeSaved message not foundConversation worker not foundThe message changed or its review is complete. Read it again.Do not replace the text when declining a messageThe conversation or its rules changed. Ask the worker for a new draft.owner_requestSend a nonempty messageMessage preparation timed outhistoryhistory_jsonlowner_messageschat_summaryowner_in_chatparticipant_identitiesA widget changed during reviewAn attachment changed during reviewA review revision cannot introduce an unreviewed fileThe sharing rules require the user's instruction or approval for this message.owner message review failed; leaving the draft pendingThe user's approval could not be checked, so the draft has not been sent. Retry `connection.review_message` in this turn while the owner's answer is available. If the check still fails, tell the user the draft remains unsent. No automatic retry is scheduled.
+The owner input changed during review. The message remains pending.saved message disappearedconnection not foundSaved message integrity check failedThe conversation or its rules changed. Prepare the message again using the current context.An attachment changed after this message was prepared. Prepare a new message.The main Muse decision does not match the saved messagethe connection is no longer activeconnection review revision could not be preparedThe suggested revision could not be prepared. Review the saved draft or ask the worker for a new one.connection message reviewedallowask_ownerconnection approval has no durable identityThe user did not approve this message. Leave it unsent.The conversation changed before delivery.connection message queuedSharing rule review timed outinvalid connection review; requesting one correctionSharing rule review retry timed outbundled Ideas localization catalog is unavailablefailed to load bundled Ideas localization provenancefailed to load bundled Ideas dogfood provenanceIdea catalog sharing context read failedIdea share variant projection read failedIdea share revision projection read failedIdea direct sharing read failedIdea publication hold read failedfailed to batch-read idea source metadata for downstream eventspeer_profile_photo_refreshcould not seed owner photo refreshcould not restore owner photo checkpointmessage content conversation is missingfiles can only be shared in a direct peer conversationbytescontent_truncatedrequired_review_imageShared items must refer to local files before sendingresolve DM conversation for grant noticeresolve DM conversation for relationship confirmationcontrol.relationship_confirmationWhatsApp directory read timed outCircle is no longer activeResource metadata is too largeload peer relationship for SAS confirmationload peer SAS confirmation replayreconcile peer SAS confirmation replaypairingacquire exact-link SAS confirmation leasepeerd SAS confirmation lease is shorter than the required commit bound/v1/peer/sign-relationship-confirmationsign peer relationship confirmation via authddecode signed relationship confirmationparse signed relationship confirmationverify authd relationship confirmationauthd relationship confirmation notice id does not match signed tupleauthd relationship confirmation does not match requested tuplefailed to release SAS confirmation leasefailed to reconcile replayed SAS confirmation leaselocalhosted circle is absentcircle_idcountpeer_circlehosted publication changed concurrently; retry the same messagehosted chat is closedhosted circle is closedhosted sequence exhaustedhosted message is absent
+mail completion has no ownermail completion owner is no longer currentThe mail turn ended without a verified handling report.The mail worker stopped without confirming its result. Its pending task is kept. Check its recorded actions with mail.status before handing the task off again.task.turn_completedmissing_verified_reportrecord_completionstandalone/mirror/streamapplication/x-ndjsonadmission snapshot upload stalledclient rendering snapshot read failed; keeping lifts inline this turndatabase write admission gate closedadmission_timeoutassert_table_existstable_presence.queryagent_status broadcast presence statusSELECT payload_json FROM runtime_restart_checkpoints WHERE agent_id = $1 FOR UPDATESELECT submission_json, octet_length(submission_json)::bigint AS serialized_bytes
+         FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND submission_id <> $2startup_queue_fullmalformed shared file referenceblobsdue-occurrence coalesce check failed; seeding immediate occurrence anywaymaintenance_occurrencemaintenance_attemptrequest_generationgeneric_maintenancejitter_offset_secsjitter_window_secsmaintenance occurrence collided with terminalized work item# onboarding_starter_cards.yaml in the other locales Jarvis serves, translated
+# by hand to say exactly what the English says. Change these with the English.
+ar-AR:
+  gmail_portrait:
+    title: "يمكنني التعرّف عليك من خلال Gmail"
+    subtitle: "وإيجاد بعض المهام في بريدك الوارد يمكنني إنجازها عنك."
+    message: "تعرّف عليّ من خلال Gmail الخاص بي"
+    connect_text: "بعد ربط Gmail، سأطّلع عليه لأتعرّف عليك وأجد بعض المهام التي يمكنني إنجازها عنك."
+  cancel_subscriptions:
+    title: "يمكنني العثور على الاشتراكات التي نسيتها وإلغاؤها"
+    subtitle: "قائمة برسومك المتكررة، وأنت تختار ما تريد إلغاءه."
+    message: "ابحث عن الاشتراكات التي نسيتها وألغِها"
+    connect_text: "بعد ربط Gmail، سأبحث عن إيصالات الاشتراكات ورسائل التجديد لإعداد قائمة برسومك المتكررة."
+  top_stories:
+    title: "يمكنني إرسال أهم أخبار اليوم إليك كل صباح"
+    subtitle: "أخبار اليوم الآن، ويمكنني إضافة فرقك الرياضية المفضلة أو الأخبار المحلية."
+    message: "أرسل لي أهم أخبار اليوم كل صباح"
+  health_check_in:
+    title: "أخبرني بهدفك الصحي وسأخطط كل يوم بناءً عليه"
+    subtitle: "خطة اليوم الآن، ثم خطة جديدة كل صباح."
+    message: "ساعدني في تخطيط كل يوم وفق هدفي الصحي"
+bg-BG:
+  gmail_portrait:
+    title: "Мога да ви опозная чрез Gmail"
+    subtitle: "Плюс няколко неща във входящата ви кутия, с които мога да се заема вместо вас."
+    message: "Опознай ме чрез моя Gmail"
+    connect_text: "Щом свържете Gmail, ще го прегледам, за да ви опозная и да намеря няколко неща, с които мога да се заема вместо вас."
+  cancel_subscriptions:
+    title: "Мога да намеря и анулирам забравените ви абонаменти"
+    subtitle: "Периодичните ви плащания в списък. Вие избирате какво да анулирате."
+    message: "Намери и анулирай забравените ми абонаменти"
+    connect_text: "Щом свържете Gmail, ще потърся разписки за абонаменти и имейли за подновяване, за да съставя списък с периодичните ви плащания."
+  top_stories:
+    title: "Мога да ви пращам главните новини за деня всяка сутрин"
+    subtitle: "Днешните новини сега, а мога да добавя и вашите отбори или местни новини."
+    message: "Пращай ми най-важните новини за деня всяка сутрин"
+  health_check_in:
+    title: "Кажете ми здравната си цел и ще планирам всеки ден по нея"
+    subtitle: "Планът за днес сега, после нов всяка сутрин."
+    message: "Помогни ми да планирам всеки ден според здравната си цел"
+bn-IN:
+  gmail_portrait:
+    title: "Gmail থেকে আমি আপনাকে জানতে পারি"
+    subtitle: "সাথে আপনার ইনবক্সে এমন কিছু কাজ খুঁজে দেব যা আমি সামলে নিতে পারি।"
+    message: "আমার Gmail থেকে আমাকে জেনে নিন"
+    connect_text: "আপনার Gmail কানেক্ট হলে আমি সেটা দেখে আপনাকে জানব, আর এমন কিছু কাজ খুঁজে নেব যা আমি আপনার হয়ে সামলাতে পারি।"
+  cancel_subscriptions:
+    title: "আপনার ভুলে যাওয়া সাবস্ক্রিপশন খুঁজে বাতিল করতে পারি"
+    subtitle: "আপনার রেকারিং চার্জের লিস্ট। কী বাতিল হবে, আপনিই বাছবেন।"
+    message: "আমার ভুলে যাওয়া সাবস্ক্রিপশন খুঁজে বাতিল করুন"
+    connect_text: "আপনার Gmail কানেক্ট হলে আমি সাবস্ক্রিপশনের রসিদ আর রিনিউয়ালের ইমেইল খুঁজে আপনার রেকারিং চার্জের লিস্ট বানাব।"
+  top_stories:
+    title: "প্রতিদিন সকালে আপনাকে দিনের প্রধান খবর পাঠাতে পারি"
+    subtitle: "এখন আজকের খবর, আর আপনার প্রিয় টিমের বা স্থানীয় খবরও যোগ করতে পারি।"
+    message: "প্রতিদিন সকালে আমাকে দিনের প্রধান খবর পাঠান"
+  health_check_in:
+    title: "আপনার স্বাস্থ্যের লক্ষ্য বলুন, আমি সেই অনুযায়ী প্রতিদিনের প্ল্যান করব"
+    subtitle: "এখন আজকের প্ল্যান, তারপর প্রতিদিন সকালে নতুন।"
+    message: "আমার স্বাস্থ্যের লক্ষ্য অনুযায়ী প্রতিদিনের প্ল্যান করতে সাহায্য করুন"
+cs-CZ:
+  gmail_portrait:
+    title: "Přes Gmail vás můžu lépe poznat"
+    subtitle: "A najít v doručených zprávách pár věcí, které za vás můžu vyřídit."
+    message: "Poznej mě přes můj Gmail"
+    connect_text: "Jakmile připojíte Gmail, projdu ho, lépe vás poznám a najdu pár věcí, které za vás můžu vyřídit."
+  cancel_subscriptions:
+    title: "Můžu najít a zrušit předplatná, na která jste zapomněli"
+    subtitle: "Vaše opakující se platby v seznamu. Vy vyberete, co zrušit."
+    message: "Najdi a zruš moje zapomenutá předplatná"
+    connect_text: "Jakmile připojíte Gmail, vyhledám potvrzení o předplatném a e-maily o obnovení a sestavím seznam vašich opakujících se plateb."
+  top_stories:
+    title: "Každé ráno vám můžu posílat nejdůležitější zprávy dne"
+    subtitle: "Dnešní zprávy teď a můžu přidat vaše oblíbené týmy či místní zprávy."
+    message: "Posílej mi každé ráno nejdůležitější zprávy dne"
+  health_check_in:
+    title: "Řekněte mi svůj zdravotní cíl a každý den podle něj naplánuju"
+    subtitle: "Plán na dnešek teď, pak každé ráno nový."
+    message: "Pomoz mi plánovat každý den podle mého zdravotního cíle"
+da-DK:
+  gmail_portrait:
+    title: "Jeg kan lære dig at kende via Gmail"
+    subtitle: "Og finde et par ting i din indbakke, jeg kan tage mig af for dig."
+    message: "Lær mig at kende via min Gmail"
+    connect_text: "Når din Gmail er tilknyttet, læser jeg den igennem for at lære dig at kende og finde et par ting, jeg kan tage mig af for dig."
+  cancel_subscriptions:
+    title: "Jeg kan finde og opsige de abonnementer, du har glemt"
+    subtitle: "Dine faste betalinger på en liste. Du vælger, hvad der skal annulleres."
+    message: "Find og opsig de abonnementer, jeg har glemt"
+    connect_text: "Når din Gmail er tilknyttet, leder jeg efter kvitteringer for abonnementer og mails om fornyelse for at lave en liste over dine faste betalinger."
+  top_stories:
+    title: "Jeg kan sende dig dagens vigtigste nyheder hver morgen"
+    subtitle: "Dagens nyheder nu, og jeg kan tilføje dine yndlingshold eller lokale nyheder."
+    message: "Send mig dagens vigtigste nyheder hver morgen"
+  health_check_in:
+    title: "Sig dit sundhedsmål, så planlægger jeg hver dag efter det"
+    subtitle: "Dagens plan nu, og så en ny hver morgen."
+    message: "Hjælp mig med at planlægge hver dag efter mit sundhedsmål"
+de-DE:
+  gmail_portrait:
+    title: "Ich kann dich über Gmail kennenlernen"
+    subtitle: "Und ein paar Dinge in deinem Postfach, die ich dir abnehmen kann."
+    message: "Lerne mich über mein Gmail kennen"
+    connect_text: "Sobald dein Gmail verknüpft ist, sehe ich es durch, um dich kennenzulernen und ein paar Dinge zu finden, die ich dir abnehmen kann."
+  cancel_subscriptions:
+    title: "Ich kann vergessene Abos finden und kündigen"
+    subtitle: "Deine wiederkehrenden Zahlungen als Liste. Du wählst, was gekündigt wird."
+    message: "Finde und kündige Abos, die ich vergessen habe"
+    connect_text: "Sobald dein Gmail verknüpft ist, suche ich nach Abo-Belegen und Verlängerungs-E-Mails und erstelle eine Liste deiner wiederkehrenden Zahlungen."
+  top_stories:
+    title: "Ich kann dir jeden Morgen die Top-Nachrichten schicken"
+    subtitle: "Die heutigen Nachrichten jetzt, und ich ergänze gern Lieblingsteams oder Lokales."
+    message: "Schick mir jeden Morgen die Top-Nachrichten des Tages"
+  health_check_in:
+    title: "Sag mir dein Gesundheitsziel und ich plane jeden Tag danach"
+    subtitle: "Der Plan für heute jetzt, dann jeden Morgen ein neuer."
+    message: "Hilf mir, jeden Tag nach meinem Gesundheitsziel zu planen"
+el-GR:
+  gmail_portrait:
+    title: "Μπορώ να σας γνωρίσω μέσα από το Gmail"
+    subtitle: "Και μερικά πράγματα στα εισερχόμενά σας που μπορώ να αναλάβω για εσάς."
+    message: "Γνώρισέ με μέσα από το Gmail μου"
+    connect_text: "Μόλις συνδέσετε το Gmail, θα το διαβάσω για να σας γνωρίσω και να βρω μερικά πράγματα που μπορώ να αναλάβω εγώ."
+  cancel_subscriptions:
+    title: "Μπορώ να βρω και να ακυρώσω συνδρομές που έχετε ξεχάσει"
+    subtitle: "Οι επαναλαμβανόμενες χρεώσεις σας σε λίστα. Εσείς διαλέγετε τι θα ακυρωθεί."
+    message: "Βρες και ακύρωσε τις συνδρομές που ξέχασα"
+    connect_text: "Μόλις συνδέσετε το Gmail, θα ψάξω για αποδείξεις συνδρομών και email ανανέωσης για να φτιάξω τη λίστα με τις επαναλαμβανόμενες χρεώσεις σας."
+  top_stories:
+    title: "Μπορώ να σας στέλνω κάθε πρωί τις κύριες ειδήσεις της ημέρας"
+    subtitle: "Οι ειδήσεις της ημέρας τώρα, και μπορώ να προσθέσω τις αγαπημένες σας ομάδες ή τοπικά νέα."
+    message: "Στέλνε μου κάθε πρωί τις σημαντικότερες ειδήσεις της ημέρας"
+  health_check_in:
+    title: "Πείτε μου τον στόχο υγείας και θα σχεδιάζω κάθε μέρα ανάλογα"
+    subtitle: "Το σημερινό πλάνο τώρα και μετά νέο κάθε πρωί."
+    message: "Βοήθησέ με να σχεδιάζω κάθε μέρα γύρω από τον στόχο υγείας μου"
+es-ES:
+  gmail_portrait:
+    title: "Puedo conocerte a través de Gmail"
+    subtitle: "Y algunas cosas de tu bandeja de entrada de las que puedo encargarme."
+    message: "Conóceme a través de mi Gmail"
+    connect_text: "Cuando conectes Gmail, lo revisaré para conocerte y encontrar algunas cosas de las que puedo encargarme por ti."
+  cancel_subscriptions:
+    title: "Puedo encontrar y cancelar suscripciones olvidadas"
+    subtitle: "Tus cargos periódicos en una lista. Tú eliges qué cancelar."
+    message: "Encuentra y cancela las suscripciones que he olvidado"
+    connect_text: "Cuando conectes Gmail, buscaré recibos de suscripciones y correos de renovación para hacer la lista de tus cargos periódicos."
+  top_stories:
+    title: "Puedo enviarte las principales noticias del día cada mañana"
+    subtitle: "Las noticias de hoy ahora, y puedo añadir tus equipos favoritos o noticias de tu zona."
+    message: "Envíame las noticias más importantes del día cada mañana"
+  health_check_in:
+    title: "Dime tu objetivo de salud y planificaré cada día en torno a él"
+    subtitle: "El plan de hoy ahora, y luego uno nuevo cada mañana."
+    message: "Ayúdame a planificar cada día en torno a mi objetivo de salud"
+es-419:
+  gmail_portrait:
+    title: "Puedo conocerte a través de Gmail"
+    subtitle: "Y algunas cosas de tu bandeja de entrada que puedo resolver por ti."
+    message: "Conóceme a través de mi Gmail"
+    connect_text: "Cuando conectes Gmail, lo revisaré para conocerte y encontrar algunas cosas que puedo resolver por ti."
+  cancel_subscriptions:
+    title: "Puedo encontrar y cancelar suscripciones que olvidaste"
+    subtitle: "Tus cargos periódicos en una lista. Tú eliges qué cancelar."
+    message: "Encuentra y cancela las suscripciones que olvidé"
+    connect_text: "Cuando conectes Gmail, buscaré recibos de suscripciones y correos de renovación para armar la lista de tus cargos periódicos."
+  top_stories:
+    title: "Puedo enviarte las noticias principales del día cada mañana"
+    subtitle: "Las noticias de hoy ahora, y puedo agregar tus equipos favoritos o noticias de tu zona."
+    message: "Envíame las noticias principales del día cada mañana"
+  health_check_in:
+    title: "Dime tu objetivo de salud y planearé cada día en torno a él"
+    subtitle: "El plan de hoy ahora, y luego uno nuevo cada mañana."
+    message: "Ayúdame a planear cada día en torno a mi objetivo de salud"
+fa-IR:
+  gmail_portrait:
+    title: "می‌توانم از طریق Gmail شما را بشناسم"
+    subtitle: "و در صندوق ورودی چند کار پیدا کنم که می‌توانم به جای شما انجام دهم."
+    message: "از طریق Gmail من مرا بشناس"
+    connect_text: "وقتی Gmail شما متصل شد، آن را مرور می‌کنم تا شما را بشناسم و چند کار پیدا کنم که می‌توانم به جای شما انجام دهم."
+  cancel_subscriptions:
+    title: "می‌توانم اشتراک‌هایی را که فراموش کرده‌اید پیدا و لغو کنم"
+    subtitle: "فهرست هزینه‌های دوره‌ای شما. انتخاب لغو با خودتان."
+    message: "اشتراک‌هایی را که فراموش کرده‌ام پیدا و لغو کن"
+    connect_text: "وقتی Gmail شما متصل شد، رسیدهای اشتراک و ایمیل‌های تمدید را جستجو می‌کنم تا فهرست هزینه‌های دوره‌ای شما را آماده کنم."
+  top_stories:
+    title: "می‌توانم هر صبح مهم‌ترین خبرهای روز را برایتان بفرستم"
+    subtitle: "خبرهای امروز الان، و می‌توانم تیم‌های محبوبتان یا خبرهای محلی را هم اضافه کنم."
+    message: "هر صبح مهم‌ترین خبرهای روز را برایم بفرست"
+  health_check_in:
+    title: "هدف سلامتی‌تان را بگویید تا هر روز را بر اساس آن برنامه‌ریزی کنم"
+    subtitle: "برنامه امروز الان، بعد هر صبح یک برنامه تازه."
+    message: "کمکم کن هر روز را بر اساس هدف سلامتی‌ام برنامه‌ریزی کنم"
+fi-FI:
+  gmail_portrait:
+    title: "Voin oppia tuntemaan sinut Gmailin avulla"
+    subtitle: "Ja löytää postilaatikostasi muutaman asian, jonka voin hoitaa puolestasi."
+    message: "Opi tuntemaan minut Gmailini avulla"
+    connect_text: "Kun Gmailisi on yhdistetty, käyn sen läpi oppiakseni tuntemaan sinut ja löytääkseni muutaman asian, jonka voin hoitaa puolestasi."
+  cancel_subscriptions:
+    title: "Voin löytää ja peruuttaa tilaukset, jotka olet unohtanut"
+    subtitle: "Toistuvat veloituksesi listana. Sinä valitset, mitä peruutetaan."
+    message: "Etsi ja peruuta tilaukset, jotka olen unohtanut"
+    connect_text: "Kun Gmailisi on yhdistetty, etsin tilausten kuitteja ja uusimisviestejä ja kokoan listan toistuvista veloituksistasi."
+  top_stories:
+    title: "Voin lähettää sinulle päivän tärkeimmät uutiset joka aamu"
+    subtitle: "Tämän päivän uutiset nyt, ja voin lisätä joukkueesi tai paikallisuutiset."
+    message: "Lähetä minulle päivän tärkeimmät uutiset joka aamu"
+  health_check_in:
+    title: "Kerro terveystavoitteesi, niin suunnittelen päiväsi sen mukaan"
+    subtitle: "Tämän päivän suunnitelma nyt, sitten uusi joka aamu."
+    message: "Auta minua suunnittelemaan jokainen päivä terveystavoitteeni mukaan"
+fr-FR:
+  gmail_portrait:
+    title: "Je peux apprendre à vous connaître via Gmail"
+    subtitle: "Et quelques tâches de votre boîte mail dont je peux vous décharger."
+    message: "Apprends à me connaître grâce à mon Gmail"
+    connect_text: "Une fois votre Gmail connecté, je le parcourrai pour apprendre à vous connaître et trouver quelques tâches dont je peux vous décharger."
+  cancel_subscriptions:
+    title: "Je peux retrouver et résilier vos abonnements oubliés"
+    subtitle: "Vos prélèvements récurrents en liste. Vous choisissez ceux à résilier."
+    message: "Trouve et résilie les abonnements que j’ai oubliés"
+    connect_text: "Une fois votre Gmail connecté, je chercherai les reçus d’abonnement et les e-mails de renouvellement pour dresser la liste de vos prélèvements récurrents."
+  top_stories:
+    title: "Je peux vous envoyer les grands titres du jour chaque matin"
+    subtitle: "Les actus du jour maintenant, et je peux ajouter vos équipes préférées ou l’actu locale."
+    message: "Envoie-moi les principales actus du jour chaque matin"
+  health_check_in:
+    title: "Dites-moi votre objectif santé et je planifie vos journées"
+    subtitle: "Le programme du jour maintenant, puis un nouveau chaque matin."
+    message: "Aide-moi à planifier chaque jour en fonction de mon objectif santé"
+gu-IN:
+  gmail_portrait:
+    title: "હું Gmail દ્વારા તમને ઓળખી શકું છું"
+    subtitle: "સાથે તમારા ઇનબોક્સમાં એવા કેટલાક કામ શોધીશ જે હું સંભાળી શકું."
+    message: "મારા Gmail દ્વારા મને ઓળખો"
+    connect_text: "તમારું Gmail કનેક્ટ થતાં જ હું તેને જોઈશ, જેથી તમને ઓળખી શકું અને એવા કેટલાક કામ શોધી શકું જે હું તમારા માટે સંભાળી શકું."
+  cancel_subscriptions:
+    title: "હું તમારા ભૂલાઈ ગયેલા સબ્સ્ક્રિપ્શન શોધીને રદ કરી શકું છું"
+    subtitle: "તમારા પુનરાવર્તિત ચાર્જનું લિસ્ટ. શું રદ કરવું તે તમે પસંદ કરો."
+    message: "મારા ભૂલાઈ ગયેલા સબ્સ્ક્રિપ્શન શોધીને રદ કરો"
+    connect_text: "તમારું Gmail કનેક્ટ થતાં જ હું સબ્સ્ક્રિપ્શનની રસીદો અને રિન્યૂઅલ ઇમેઇલ શોધીશ, જેથી તમારા પુનરાવર્તિત ચાર્જનું લિસ્ટ બનાવી શકું."
+  top_stories:
+    title: "હું દરરોજ સવારે તમને દિવસના મુખ્ય સમાચાર મોકલી શકું છું"
+    subtitle: "અત્યારે આજના સમાચાર, અને તમારી મનપસંદ ટીમોના કે સ્થાનિક સમાચાર ઉમેરી શકું છું."
+    message: "મને દરરોજ સવારે દિવસના મુખ્ય સમાચાર મોકલો"
+  health_check_in:
+    title: "તમારું આરોગ્ય લક્ષ્ય કહો, હું દરેક દિવસ તે મુજબ પ્લાન કરીશ"
+    subtitle: "અત્યારે આજનો પ્લાન, પછી દરરોજ સવારે નવો."
+    message: "મારા આરોગ્ય લક્ષ્ય મુજબ દરેક દિવસ પ્લાન કરવામાં મદદ કરો"
+he-IL:
+  gmail_portrait:
+    title: "אוכל להכיר אותך דרך Gmail"
+    subtitle: "וגם כמה דברים בתיבת הדואר שאוכל להוריד ממך."
+    message: "תכיר אותי דרך ה-Gmail שלי"
+    connect_text: "אחרי חיבור Gmail אעבור עליו כדי להכיר אותך ולמצוא כמה דברים שאוכל להוריד ממך."
+  cancel_subscriptions:
+    title: "אוכל למצוא ולבטל מינויים ששכחת מהם"
+    subtitle: "רשימה של החיובים החוזרים, והבחירה מה לבטל בידיים שלך."
+    message: "מצא ובטל מינויים ששכחתי מהם"
+    connect_text: "אחרי חיבור Gmail אחפש קבלות על מינויים והודעות חידוש כדי להכין רשימה של החיובים החוזרים שלך."
+  top_stories:
+    title: "אוכל לשלוח לך בכל בוקר את הכותרות החשובות של היום"
+    subtitle: "החדשות של היום עכשיו, ואוכל להוסיף את הקבוצות האהובות עליך או חדשות מקומיות."
+    message: "שלח לי בכל בוקר את הכותרות החשובות של היום"
+  health_check_in:
+    title: "מה היעד הבריאותי שלך? אתכנן כל יום סביבו"
+    subtitle: "התוכנית להיום עכשיו, ואז תוכנית חדשה בכל בוקר."
+    message: "עזור לי לתכנן כל יום סביב היעד הבריאותי שלי"
+hi-IN:
+  gmail_portrait:
+    title: "मैं Gmail से आपके बारे में जान सकता हूँ"
+    subtitle: "साथ ही आपके इनबॉक्स में कुछ ऐसे काम भी ढूँढूँगा जो मैं संभाल सकूँ."
+    message: "मेरे Gmail से मेरे बारे में जानो"
+    connect_text: "आपका Gmail कनेक्ट होते ही मैं उसे देखूँगा, ताकि आपके बारे में जान सकूँ और कुछ ऐसे काम ढूँढ सकूँ जो मैं आपके लिए संभाल सकता हूँ."
+  cancel_subscriptions:
+    title: "मैं आपके भूले हुए सब्सक्रिप्शन ढूँढकर कैंसल कर सकता हूँ"
+    subtitle: "आपके बार-बार होने वाले शुल्कों की लिस्ट. क्या कैंसल करना है, आप चुनें."
+    message: "मेरे भूले हुए सब्सक्रिप्शन ढूँढकर कैंसल करो"
+    connect_text: "आपका Gmail कनेक्ट होते ही मैं सब्सक्रिप्शन की रसीदें और रिन्यूअल ईमेल ढूँढूँगा, ताकि आपके बार-बार होने वाले शुल्कों की लिस्ट बना सकूँ."
+  top_stories:
+    title: "मैं हर सुबह आपको दिन की बड़ी खबरें भेज सकता हूँ"
+    subtitle: "अभी आज की खबरें, और आपकी पसंदीदा टीमें या स्थानीय खबरें भी जोड़ सकता हूँ."
+    message: "मुझे हर सुबह दिन की बड़ी खबरें भेजो"
+  health_check_in:
+    title: "अपना स्वास्थ्य लक्ष्य बताएँ, मैं हर दिन उसी के हिसाब से प्लान करूँगा"
+    subtitle: "अभी आज का प्लान, फिर हर सुबह नया."
+    message: "हर दिन मेरे स्वास्थ्य लक्ष्य के हिसाब से प्लान करने में मदद करो"
+hr-HR:
+  gmail_portrait:
+    title: "Mogu vas bolje upoznati preko Gmaila"
+    subtitle: "I pronaći u ulaznoj pošti nekoliko stvari koje mogu riješiti umjesto vas."
+    message: "Upoznaj me preko mog Gmaila"
+    connect_text: "Kad povežete Gmail, pregledat ću ga da vas bolje upoznam i pronađem nekoliko stvari koje mogu riješiti umjesto vas."
+  cancel_subscriptions:
+    title: "Mogu pronaći i otkazati pretplate na koje ste zaboravili"
+    subtitle: "Popis vaših ponavljajućih naplata. Vi birate što otkazati."
+    message: "Pronađi i otkaži moje zaboravljene pretplate"
+    connect_text: "Kad povežete Gmail, potražit ću potvrde o pretplatama i e-poruke o obnovi te napraviti popis vaših ponavljajućih naplata."
+  top_stories:
+    title: "Mogu vam svako jutro slati najvažnije vijesti dana"
+    subtitle: "Današnje vijesti sada, a mogu dodati i vaše momčadi ili lokalne vijesti."
+    message: "Šalji mi svako jutro najvažnije vijesti dana"
+  health_check_in:
+    title: "Recite mi zdravstveni cilj i planirat ću svaki dan po njemu"
+    subtitle: "Plan za danas sada, a zatim svako jutro novi."
+    message: "Pomozi mi planirati svaki dan prema mom zdravstvenom cilju"
+hu-HU:
+  gmail_portrait:
+    title: "A Gmailen keresztül megismerhetlek"
+    subtitle: "És pár dolgot a postafiókodban, amit levehetek a válladról."
+    message: "Ismerj meg a Gmailem alapján"
+    connect_text: "Ha összekapcsolod a Gmailt, átnézem, hogy megismerjelek, és találjak pár dolgot, amit levehetek a válladról."
+  cancel_subscriptions:
+    title: "Megkereshetem és lemondhatom az elfelejtett előfizetéseidet"
+    subtitle: "Az ismétlődő terheléseid listája. Te döntöd el, mit mondjak le."
+    message: "Keresd meg és mondd le az elfelejtett előfizetéseimet"
+    connect_text: "Ha összekapcsolod a Gmailt, előfizetési nyugtákat és megújítási e-maileket keresek, és listát készítek az ismétlődő terheléseidről."
+  top_stories:
+    title: "Minden reggel elküldhetem a nap legfontosabb híreit"
+    subtitle: "A mai hírek most, és hozzáadhatom a kedvenc csapataidat vagy a helyi híreket."
+    message: "Küldd el minden reggel a nap legfontosabb híreit"
+  health_check_in:
+    title: "Mondd el az egészségcélod, és minden napot ahhoz tervezek"
+    subtitle: "A mai terv most, aztán minden reggel egy új."
+    message: "Segíts minden napot az egészségcélomhoz tervezni"
+id-ID:
+  gmail_portrait:
+    title: "Saya bisa mengenal Anda melalui Gmail"
+    subtitle: "Serta menemukan beberapa urusan di kotak masuk Anda yang bisa saya tangani."
+    message: "Kenali saya melalui Gmail saya"
+    connect_text: "Setelah Gmail Anda terhubung, saya akan membacanya untuk mengenal Anda dan menemukan beberapa urusan yang bisa saya tangani."
+  cancel_subscriptions:
+    title: "Saya bisa cari dan batalkan langganan yang Anda lupakan"
+    subtitle: "Daftar tagihan rutin Anda. Anda yang memilih mana yang dibatalkan."
+    message: "Cari dan batalkan langganan yang saya lupakan"
+    connect_text: "Setelah Gmail Anda terhubung, saya akan mencari tanda terima langganan dan email perpanjangan untuk menyusun daftar tagihan rutin Anda."
+  top_stories:
+    title: "Setiap pagi saya bisa kirimkan berita utama untuk Anda"
+    subtitle: "Berita hari ini sekarang, dan saya bisa menambahkan tim favorit Anda atau berita lokal."
+    message: "Kirimi saya berita utama harian setiap pagi"
+  health_check_in:
+    title: "Sebutkan sasaran kesehatan Anda, saya rencanakan tiap hari"
+    subtitle: "Rencana hari ini sekarang, lalu rencana baru setiap pagi."
+    message: "Bantu saya merencanakan tiap hari sesuai sasaran kesehatan saya"
+it-IT:
+  gmail_portrait:
+    title: "Posso conoscerti meglio tramite Gmail"
+    subtitle: "E alcune cose nella tua posta di cui posso occuparmi io."
+    message: "Conoscimi meglio tramite il mio Gmail"
+    connect_text: "Appena colleghi Gmail, lo leggerò per conoscerti meglio e trovare alcune cose di cui posso occuparmi io."
+  cancel_subscriptions:
+    title: "Posso trovare e annullare gli abbonamenti dimenticati"
+    subtitle: "I tuoi addebiti ricorrenti in elenco. Scegli tu cosa annullare."
+    message: "Trova e annulla gli abbonamenti che ho dimenticato"
+    connect_text: "Appena colleghi Gmail, cercherò ricevute di abbonamenti ed e-mail di rinnovo per fare l'elenco dei tuoi addebiti ricorrenti."
+  top_stories:
+    title: "Posso mandarti le notizie principali del giorno ogni mattina"
+    subtitle: "Le notizie di oggi ora, e posso aggiungere le tue squadre o le notizie locali."
+    message: "Mandami le notizie principali del giorno ogni mattina"
+  health_check_in:
+    title: "Dimmi il tuo obiettivo di salute e ci baso ogni giornata"
+    subtitle: "Il piano di oggi ora, poi uno nuovo ogni mattina."
+    message: "Aiutami a pianificare ogni giornata in base al mio obiettivo di salute"
+ja-JP:
+  gmail_portrait:
+    title: "Gmailからあなたのことを知ることができます"
+    subtitle: "受信箱から、代わりに片付けられることもいくつか見つけます。"
+    message: "私のGmailから私のことを知って"
+    connect_text: "Gmailがリンクされたら、内容を確認してあなたのことを知り、代わりに片付けられることをいくつか見つけます。"
+  cancel_subscriptions:
+    title: "忘れていたサブスクリプションを見つけてキャンセルできます"
+    subtitle: "定期的な請求を一覧にします。キャンセルするものはあなたが選べます。"
+    message: "忘れているサブスクリプションを見つけてキャンセルして"
+    connect_text: "Gmailがリンクされたら、サブスクリプションの領収書や更新メールを探して、定期的な請求の一覧を作ります。"
+  top_stories:
+    title: "毎朝その日の主要ニュースをお届けできます"
+    subtitle: "まずは今日のニュースを。応援するチームや地元ニュースも追加できます。"
+    message: "毎朝その日の主要ニュースを送って"
+  health_check_in:
+    title: "健康の目標を教えてくれれば、毎日のプランを立てます"
+    subtitle: "まずは今日のプランを、その後は毎朝新しいプランを。"
+    message: "健康の目標に合わせて毎日のプランを立てるのを手伝って"
+kn-IN:
+  gmail_portrait:
+    title: "Gmail ಮೂಲಕ ನಾನು ನಿಮ್ಮನ್ನು ತಿಳಿದುಕೊಳ್ಳಬಲ್ಲೆ"
+    subtitle: "ಜೊತೆಗೆ ನಿಮ್ಮ ಇನ್‌ಬಾಕ್ಸ್‌ನಲ್ಲಿ ನಾನು ನೋಡಿಕೊಳ್ಳಬಹುದಾದ ಕೆಲವು ಕೆಲಸಗಳನ್ನೂ ಹುಡುಕುತ್ತೇನೆ."
+    message: "ನನ್ನ Gmail ಮೂಲಕ ನನ್ನನ್ನು ತಿಳಿದುಕೊಳ್ಳಿ"
+    connect_text: "ನಿಮ್ಮ Gmail ಸಂಪರ್ಕಗೊಂಡ ನಂತರ, ನಿಮ್ಮನ್ನು ತಿಳಿದುಕೊಳ್ಳಲು ಮತ್ತು ನಿಮಗಾಗಿ ನಾನು ನೋಡಿಕೊಳ್ಳಬಹುದಾದ ಕೆಲವು ಕೆಲಸಗಳನ್ನು ಹುಡುಕಲು ಅದನ್ನು ಓದುತ್ತೇನೆ."
+  cancel_subscriptions:
+    title: "ನೀವು ಮರೆತ ಸಬ್‌ಸ್ಕ್ರಿಪ್ಷನ್‌ಗಳನ್ನು ಹುಡುಕಿ ರದ್ದುಗೊಳಿಸಬಲ್ಲೆ"
+    subtitle: "ನಿಮ್ಮ ಪುನರಾವರ್ತಿತ ಶುಲ್ಕಗಳ ಪಟ್ಟಿ. ಯಾವುದನ್ನು ರದ್ದುಗೊಳಿಸಬೇಕೆಂದು ನೀವೇ ಆಯ್ಕೆಮಾಡಿ."
+    message: "ನಾನು ಮರೆತ ಸಬ್‌ಸ್ಕ್ರಿಪ್ಷನ್‌ಗಳನ್ನು ಹುಡುಕಿ ರದ್ದುಗೊಳಿಸಿ"
+    connect_text: "ನಿಮ್ಮ Gmail ಸಂಪರ್ಕಗೊಂಡ ನಂತರ, ಸಬ್‌ಸ್ಕ್ರಿಪ್ಷನ್ ರಸೀದಿಗಳು ಮತ್ತು ನವೀಕರಣ ಇಮೇಲ್‌ಗಳನ್ನು ಹುಡುಕಿ ನಿಮ್ಮ ಪುನರಾವರ್ತಿತ ಶುಲ್ಕಗಳ ಪಟ್ಟಿ ಮಾಡುತ್ತೇನೆ."
+  top_stories:
+    title: "ಪ್ರತಿದಿನ ಬೆಳಿಗ್ಗೆ ದಿನದ ಪ್ರಮುಖ ಸುದ್ದಿಗಳನ್ನು ನಿಮಗೆ ಕಳುಹಿಸಬಲ್ಲೆ"
+    subtitle: "ಈಗ ಇಂದಿನ ಸುದ್ದಿಗಳು, ಮತ್ತು ನಿಮ್ಮ ನೆಚ್ಚಿನ ತಂಡಗಳ ಅಥವಾ ಸ್ಥಳೀಯ ಸುದ್ದಿಯನ್ನೂ ಸೇರಿಸಬಲ್ಲೆ."
+    message: "ಪ್ರತಿದಿನ ಬೆಳಿಗ್ಗೆ ದಿನದ ಪ್ರಮುಖ ಸುದ್ದಿಗಳನ್ನು ನನಗೆ ಕಳುಹಿಸಿ"
+  health_check_in:
+    title: "ನಿಮ್ಮ ಆರೋಗ್ಯ ಗುರಿಯನ್ನು ಹೇಳಿ, ಪ್ರತಿದಿನ ಅದಕ್ಕೆ ತಕ್ಕಂತೆ ಯೋಜಿಸುತ್ತೇನೆ"
+    subtitle: "ಈಗ ಇಂದಿನ ಯೋಜನೆ, ನಂತರ ಪ್ರತಿದಿನ ಬೆಳಿಗ್ಗೆ ಹೊಸದು."
+    message: "ನನ್ನ ಆರೋಗ್ಯ ಗುರಿಗೆ ತಕ್ಕಂತೆ ಪ್ರತಿದಿನ ಯೋಜಿಸಲು ಸಹಾಯ ಮಾಡಿ"
+ko-KR:
+  gmail_portrait:
+    title: "Gmail로 회원님에 대해 알아갈 수 있어요"
+    subtitle: "받은편지함에서 대신 처리해 드릴 일도 몇 가지 찾아드려요."
+    message: "내 Gmail로 나에 대해 알아봐 줘"
+    connect_text: "Gmail이 연결되면 메일을 살펴보며 회원님에 대해 알아가고, 대신 처리해 드릴 일을 몇 가지 찾아볼게요."
+  cancel_subscriptions:
+    title: "잊어버린 구독을 찾아서 취소할 수 있어요"
+    subtitle: "정기 청구 내역을 정리해 드려요. 취소할 항목은 직접 고르세요."
+    message: "내가 잊고 있던 구독을 찾아서 취소해 줘"
+    connect_text: "Gmail이 연결되면 구독 영수증과 갱신 메일을 찾아 정기 청구 목록을 만들어 드릴게요."
+  top_stories:
+    title: "매일 아침 오늘의 주요 뉴스를 보내 드릴 수 있어요"
+    subtitle: "지금 오늘의 뉴스를 드리고, 응원하는 팀이나 지역 뉴스도 추가할 수 있어요."
+    message: "매일 아침 오늘의 주요 뉴스를 보내 줘"
+  health_check_in:
+    title: "건강 목표를 알려 주시면 그에 맞춰 매일 계획을 세워 드릴게요"
+    subtitle: "지금은 오늘의 계획을, 이후엔 매일 아침 새 계획을 드려요."
+    message: "내 건강 목표에 맞춰 매일 계획 세우는 걸 도와줘"
+mr-IN:
+  gmail_portrait:
+    title: "Gmail मधून मी तुम्हाला ओळखू शकेन"
+    subtitle: "शिवाय तुमच्या इनबॉक्समधील मी सांभाळू शकेन अशी काही कामे शोधेन."
+    message: "माझ्या Gmail मधून मला ओळखा"
+    connect_text: "तुमचे Gmail कनेक्ट झाल्यावर मी ते पाहीन, म्हणजे तुम्हाला ओळखू शकेन आणि तुमच्यासाठी सांभाळू शकेन अशी काही कामे शोधेन."
+  cancel_subscriptions:
+    title: "तुम्ही विसरलेली सबस्क्रिप्शन मी शोधून रद्द करू शकेन"
+    subtitle: "तुमच्या आवर्ती शुल्कांची लिस्ट. काय रद्द करायचे, ते तुम्ही ठरवा."
+    message: "मी विसरलेली सबस्क्रिप्शन शोधून रद्द करा"
+    connect_text: "तुमचे Gmail कनेक्ट झाल्यावर मी सबस्क्रिप्शनच्या पावत्या आणि रिन्यूअल ईमेल शोधेन आणि तुमच्या आवर्ती शुल्कांची लिस्ट बनवेन."
+  top_stories:
+    title: "मी रोज सकाळी तुम्हाला दिवसाच्या मुख्य बातम्या पाठवू शकेन"
+    subtitle: "आत्ता आजच्या बातम्या, आणि तुमच्या आवडत्या संघांच्या किंवा स्थानिक बातम्याही जोडू शकेन."
+    message: "मला रोज सकाळी दिवसाच्या मुख्य बातम्या पाठवा"
+  health_check_in:
+    title: "तुमचे आरोग्याचे उद्दिष्ट सांगा, मी त्यानुसार रोजचे नियोजन करेन"
+    subtitle: "आत्ता आजचा प्लॅन, मग रोज सकाळी नवा."
+    message: "माझ्या आरोग्याच्या उद्दिष्टानुसार रोजचे नियोजन करायला मदत करा"
+ms-MY:
+  gmail_portrait:
+    title: "Saya boleh mengenali anda melalui Gmail"
+    subtitle: "Dan mencari beberapa urusan dalam peti masuk anda yang boleh saya uruskan."
+    message: "Kenali saya melalui Gmail saya"
+    connect_text: "Selepas Gmail anda disambungkan, saya akan menelitinya untuk mengenali anda dan mencari beberapa urusan yang boleh saya uruskan untuk anda."
+  cancel_subscriptions:
+    title: "Saya boleh cari dan batalkan langganan yang anda terlupa"
+    subtitle: "Senarai caj berulang anda. Anda pilih apa yang hendak dibatalkan."
+    message: "Cari dan batalkan langganan yang saya terlupa"
+    connect_text: "Selepas Gmail anda disambungkan, saya akan mencari resit langganan dan e-mel pembaharuan untuk menyediakan senarai caj berulang anda."
+  top_stories:
+    title: "Setiap pagi saya boleh hantar berita utama kepada anda"
+    subtitle: "Berita hari ini sekarang, dan saya boleh tambah pasukan kegemaran anda atau berita tempatan."
+    message: "Hantar berita utama harian kepada saya setiap pagi"
+  health_check_in:
+    title: "Beritahu matlamat kesihatan anda, saya rancang hari anda"
+    subtitle: "Pelan hari ini sekarang, kemudian pelan baharu setiap pagi."
+    message: "Bantu saya merancang setiap hari berdasarkan matlamat kesihatan saya"
+ne-NP:
+  gmail_portrait:
+    title: "म Gmail बाट तपाईंलाई चिन्न सक्छु"
+    subtitle: "साथै तपाईंको इन्बक्समा मैले सम्हाल्न सक्ने केही काम पनि खोज्छु।"
+    message: "मेरो Gmail बाट मलाई चिन्नुहोस्"
+    connect_text: "तपाईंको Gmail कनेक्ट भएपछि म त्यो हेर्नेछु, ताकि तपाईंलाई चिन्न सकूँ र तपाईंका लागि सम्हाल्न सक्ने केही काम खोज्न सकूँ।"
+  cancel_subscriptions:
+    title: "म तपाईंले बिर्सनुभएका सदस्यताहरू भेट्टाउन र रद्द गर्न सक्छु"
+    subtitle: "तपाईंका पुनरावर्ती शुल्कहरूको सूची। के रद्द गर्ने, तपाईं नै छान्नुहोस्।"
+    message: "मैले बिर्सेका सदस्यताहरू खोजेर रद्द गर्नुहोस्"
+    connect_text: "तपाईंको Gmail कनेक्ट भएपछि म सदस्यताका रसिद र नवीकरणका इमेलहरू खोजेर तपाईंका पुनरावर्ती शुल्कहरूको सूची बनाउनेछु।"
+  top_stories:
+    title: "म हरेक बिहान तपाईंलाई दिनका मुख्य समाचार पठाउन सक्छु"
+    subtitle: "अहिले आजका समाचार, र म तपाईंका मनपर्ने टिमका वा स्थानीय समाचार पनि थप्न सक्छु।"
+    message: "मलाई हरेक बिहान दिनका मुख्य समाचार पठाउनुहोस्"
+  health_check_in:
+    title: "आफ्नो स्वास्थ्य लक्ष्य भन्नुहोस्, म हरेक दिन त्यसैअनुसार योजना बनाउँछु"
+    subtitle: "अहिले आजको योजना, त्यसपछि हरेक बिहान नयाँ।"
+    message: "मेरो स्वास्थ्य लक्ष्यअनुसार हरेक दिनको योजना बनाउन मद्दत गर्नुहोस्"
+nl-NL:
+  gmail_portrait:
+    title: "Ik kan je leren kennen via Gmail"
+    subtitle: "En een paar dingen in je inbox vinden die ik van je kan overnemen."
+    message: "Leer me kennen via mijn Gmail"
+    connect_text: "Zodra je Gmail is gekoppeld, lees ik het door om je te leren kennen en een paar dingen te vinden die ik van je kan overnemen."
+  cancel_subscriptions:
+    title: "Ik kan vergeten abonnementen opsporen en opzeggen"
+    subtitle: "Je terugkerende betalingen op een rij. Jij kiest wat je opzegt."
+    message: "Zoek en zeg de abonnementen op die ik was vergeten"
+    connect_text: "Zodra je Gmail is gekoppeld, zoek ik naar betaalbewijzen van abonnementen en verlengingsmails om een lijst van je terugkerende betalingen te maken."
+  top_stories:
+    title: "Ik kan je elke ochtend het topnieuws van de dag sturen"
+    subtitle: "Het nieuws van vandaag nu, en ik kan je favoriete teams of lokaal nieuws toevoegen."
+    message: "Stuur me elke ochtend het belangrijkste nieuws van de dag"
+  health_check_in:
+    title: "Vertel me je gezondheidsdoel en ik plan elke dag eromheen"
+    subtitle: "Het plan voor vandaag nu, daarna elke ochtend een nieuw plan."
+    message: "Help me elke dag te plannen rond mijn gezondheidsdoel"
+pl-PL:
+  gmail_portrait:
+    title: "Mogę Cię poznać dzięki Gmailowi"
+    subtitle: "I znaleźć w skrzynce odbiorczej kilka spraw, które mogę za Ciebie załatwić."
+    message: "Poznaj mnie dzięki mojemu Gmailowi"
+    connect_text: "Gdy połączysz Gmail, przejrzę go, żeby Cię poznać i znaleźć kilka spraw, które mogę za Ciebie załatwić."
+  cancel_subscriptions:
+    title: "Mogę znaleźć i anulować zapomniane subskrypcje"
+    subtitle: "Lista Twoich opłat cyklicznych. Ty wybierasz, co anulować."
+    message: "Znajdź i anuluj moje zapomniane subskrypcje"
+    connect_text: "Gdy połączysz Gmail, poszukam potwierdzeń subskrypcji i e-maili o odnowieniu, żeby zrobić listę Twoich opłat cyklicznych."
+  top_stories:
+    title: "Mogę co rano wysyłać Ci najważniejsze wiadomości dnia"
+    subtitle: "Dzisiejsze wiadomości teraz, a mogę dodać Twoje drużyny lub wiadomości lokalne."
+    message: "Wysyłaj mi co rano najważniejsze wiadomości dnia"
+  health_check_in:
+    title: "Podaj swój cel zdrowotny, a zaplanuję pod niego każdy dzień"
+    subtitle: "Plan na dziś teraz, potem nowy co rano."
+    message: "Pomóż mi planować każdy dzień pod mój cel zdrowotny"
+pt-BR:
+  gmail_portrait:
+    title: "Posso conhecer você pelo Gmail"
+    subtitle: "E algumas coisas na sua caixa de entrada que posso resolver por você."
+    message: "Me conheça pelo meu Gmail"
+    connect_text: "Assim que seu Gmail estiver conectado, vou ler seus emails para conhecer você e achar algumas coisas que posso resolver por você."
+  cancel_subscriptions:
+    title: "Posso encontrar e cancelar assinaturas que você esqueceu"
+    subtitle: "Suas cobranças recorrentes listadas. Você escolhe o que cancelar."
+    message: "Encontre e cancele as assinaturas que eu esqueci"
+    connect_text: "Assim que seu Gmail estiver conectado, vou procurar recibos de assinaturas e emails de renovação para montar a lista das suas cobranças recorrentes."
+  top_stories:
+    title: "Toda manhã posso mandar para você as principais notícias"
+    subtitle: "As notícias de hoje agora, e posso incluir seus times ou notícias locais."
+    message: "Me mande as principais notícias do dia toda manhã"
+  health_check_in:
+    title: "Me conte sua meta de saúde e eu planejo cada dia em torno dela"
+    subtitle: "O plano de hoje agora, e depois um novo toda manhã."
+    message: "Me ajude a planejar cada dia em torno da minha meta de saúde"
+pt-PT:
+  gmail_portrait:
+    title: "Posso ficar a conhecer-te através do Gmail"
+    subtitle: "E algumas coisas na tua caixa de entrada que posso tratar por ti."
+    message: "Fica a conhecer-me através do meu Gmail"
+    connect_text: "Assim que associares o Gmail, vou lê-lo para te conhecer e encontrar algumas coisas que posso tratar por ti."
+  cancel_subscriptions:
+    title: "Posso encontrar e cancelar subscrições de que te esqueceste"
+    subtitle: "As tuas cobranças recorrentes numa lista. Tu escolhes o que cancelar."
+    message: "Encontra e cancela as subscrições de que me esqueci"
+    connect_text: "Assim que associares o Gmail, vou procurar recibos de subscrições e e-mails de renovação para fazer a lista das tuas cobranças recorrentes."
+  top_stories:
+    title: "Todas as manhãs posso enviar-te as principais notícias"
+    subtitle: "As notícias de hoje agora, e posso juntar as tuas equipas favoritas ou notícias locais."
+    message: "Envia-me as principais notícias do dia todas as manhãs"
+  health_check_in:
+    title: "Diz-me o teu objetivo de saúde e planeio cada dia à volta dele"
+    subtitle: "O plano de hoje agora, e depois um novo todas as manhãs."
+    message: "Ajuda-me a planear cada dia à volta do meu objetivo de saúde"
+ro-RO:
+  gmail_portrait:
+    title: "Te pot cunoaște mai bine prin Gmail"
+    subtitle: "Și pot găsi în inbox câteva lucruri de care mă pot ocupa eu."
+    message: "Cunoaște-mă prin Gmailul meu"
+    connect_text: "După ce conectezi Gmailul, îl voi parcurge ca să te cunosc mai bine și să găsesc câteva lucruri de care mă pot ocupa eu."
+  cancel_subscriptions:
+    title: "Pot găsi și anula abonamentele pe care le-ai uitat"
+    subtitle: "Plățile tale recurente într-o listă. Tu alegi ce anulezi."
+    message: "Găsește și anulează abonamentele pe care le-am uitat"
+    connect_text: "După ce conectezi Gmailul, voi căuta chitanțe de abonament și e-mailuri de reînnoire ca să fac lista plăților tale recurente."
+  top_stories:
+    title: "Îți pot trimite principalele știri în fiecare dimineață"
+    subtitle: "Știrile de azi acum, și pot adăuga echipele tale preferate sau știri locale."
+    message: "Trimite-mi principalele știri în fiecare dimineață"
+  health_check_in:
+    title: "Spune-mi obiectivul de sănătate și îți planific fiecare zi"
+    subtitle: "Planul de azi acum, apoi unul nou în fiecare dimineață."
+    message: "Ajută-mă să-mi planific fiecare zi după obiectivul meu de sănătate"
+ru-RU:
+  gmail_portrait:
+    title: "Я могу узнать вас получше через Gmail"
+    subtitle: "А ещё найти во входящих несколько дел, которые я могу взять на себя."
+    message: "Узнай меня получше через мой Gmail"
+    connect_text: "Когда вы подключите Gmail, я просмотрю его, чтобы узнать вас получше и найти несколько дел, которые могу взять на себя."
+  cancel_subscriptions:
+    title: "Я могу найти и отменить подписки, о которых вы забыли"
+    subtitle: "Ваши регулярные платежи списком. Вы решаете, что отменить."
+    message: "Найди и отмени мои забытые подписки"
+    connect_text: "Когда вы подключите Gmail, я поищу чеки за подписки и письма о продлении и составлю список ваших регулярных платежей."
+  top_stories:
+    title: "Я могу каждое утро присылать вам главные новости дня"
+    subtitle: "Новости дня сейчас, а ещё я могу добавить любимые команды или местные новости."
+    message: "Присылай мне главные новости дня каждое утро"
+  health_check_in:
+    title: "Назовите цель по здоровью, и я спланирую под неё каждый день"
+    subtitle: "План на сегодня сейчас, а потом новый каждое утро."
+    message: "Помоги мне планировать каждый день под мою цель по здоровью"
+sk-SK:
+  gmail_portrait:
+    title: "Cez Gmail vás môžem lepšie spoznať"
+    subtitle: "A nájsť v schránke pár vecí, ktoré môžem vybaviť za vás."
+    message: "Spoznaj ma cez môj Gmail"
+    connect_text: "Keď pripojíte Gmail, prejdem ho, lepšie vás spoznám a nájdem pár vecí, ktoré môžem vybaviť za vás."
+  cancel_subscriptions:
+    title: "Môžem nájsť a zrušiť predplatné, na ktoré ste zabudli"
+    subtitle: "Vaše pravidelné platby v zozname. Vy vyberiete, čo zrušiť."
+    message: "Nájdi a zruš moje zabudnuté predplatné"
+    connect_text: "Keď pripojíte Gmail, vyhľadám potvrdenia o predplatnom a e-maily o obnovení a zostavím zoznam vašich pravidelných platieb."
+  top_stories:
+    title: "Každé ráno vám môžem posielať najdôležitejšie správy dňa"
+    subtitle: "Dnešné správy teraz a môžem pridať obľúbené tímy či miestne správy."
+    message: "Posielaj mi každé ráno najdôležitejšie správy dňa"
+  health_check_in:
+    title: "Povedzte mi svoj zdravotný cieľ a každý deň podľa neho naplánujem"
+    subtitle: "Plán na dnes teraz, potom každé ráno nový."
+    message: "Pomôž mi plánovať každý deň podľa môjho zdravotného cieľa"
+sv-SE:
+  gmail_portrait:
+    title: "Jag kan lära känna dig via Gmail"
+    subtitle: "Och hitta några saker i inkorgen som jag kan ta hand om åt dig."
+    message: "Lär känna mig via min Gmail"
+    connect_text: "När din Gmail är ansluten läser jag igenom den för att lära känna dig och hitta några saker jag kan ta hand om åt dig."
+  cancel_subscriptions:
+    title: "Jag kan hitta och avbryta prenumerationer du glömt bort"
+    subtitle: "Dina återkommande dragningar i en lista. Du väljer vad som ska bort."
+    message: "Hitta och avbryt prenumerationer jag har glömt bort"
+    connect_text: "När din Gmail är ansluten letar jag efter prenumerationskvitton och e-postmeddelanden om förnyelse för att göra en lista över dina återkommande dragningar."
+  top_stories:
+    title: "Jag kan skicka dagens viktigaste nyheter varje morgon"
+    subtitle: "Dagens nyheter nu, och jag kan lägga till dina lag eller lokala nyheter."
+    message: "Skicka mig dagens viktigaste nyheter varje morgon"
+  health_check_in:
+    title: "Berätta ditt hälsomål så planerar jag varje dag efter det"
+    subtitle: "Dagens plan nu, sedan en ny varje morgon."
+    message: "Hjälp mig planera varje dag efter mitt hälsomål"
+sw-KE:
+  gmail_portrait:
+    title: "Ninaweza kukufahamu kupitia Gmail"
+    subtitle: "Pia nitapata kwenye kikasha chako mambo machache ninayoweza kukushughulikia."
+    message: "Nifahamu kupitia Gmail yangu"
+    connect_text: "Gmail yako ikishaunganishwa, nitaipitia ili nikufahamu na nipate mambo machache ninayoweza kukushughulikia."
+  cancel_subscriptions:
+    title: "Ninaweza kutafuta na kughairi usajili uliousahau"
+    subtitle: "Orodha ya gharama zako zinazojirudia. Wewe ndiye unayechagua cha kughairi."
+    message: "Tafuta na ughairi usajili niliousahau"
+    connect_text: "Gmail yako ikishaunganishwa, nitatafuta risiti za usajili na barua pepe za kuhuisha ili kuandaa orodha ya gharama zako zinazojirudia."
+  top_stories:
+    title: "Ninaweza kukutumia habari kuu za siku kila asubuhi"
+    subtitle: "Habari za leo sasa, na naweza kuongeza timu unazopenda au habari za eneo lako."
+    message: "Nitumie habari kuu za siku kila asubuhi"
+  health_check_in:
+    title: "Niambie lengo lako la afya, nitapanga kila siku kulingana nalo"
+    subtitle: "Mpango wa leo sasa, kisha mpya kila asubuhi."
+    message: "Nisaidie kupanga kila siku kulingana na lengo langu la afya"
+ta-IN:
+  gmail_portrait:
+    title: "Gmail மூலம் உங்களைப் பற்றி அறிய என்னால் முடியும்"
+    subtitle: "உங்கள் உட்பெட்டியில் நான் பார்த்துக்கொள்ளக்கூடிய சில வேலைகளையும் கண்டறிவேன்."
+    message: "என் Gmail மூலம் என்னைப் பற்றித் தெரிந்துகொள்ளுங்கள்"
+    connect_text: "உங்கள் Gmail இணைக்கப்பட்டதும், உங்களைப் பற்றித் தெரிந்துகொள்ளவும் உங்களுக்காக நான் பார்த்துக்கொள்ளக்கூடிய சில வேலைகளைக் கண்டறியவும் அதைப் படிப்பேன்."
+  cancel_subscriptions:
+    title: "நீங்கள் மறந்த சந்தாக்களைக் கண்டறிந்து ரத்துசெய்ய என்னால் முடியும்"
+    subtitle: "உங்கள் தொடர் கட்டணங்களின் பட்டியல். எதை ரத்துசெய்வது என்பதை நீங்களே தேர்வுசெய்யுங்கள்."
+    message: "நான் மறந்த சந்தாக்களைக் கண்டறிந்து ரத்துசெய்யுங்கள்"
+    connect_text: "உங்கள் Gmail இணைக்கப்பட்டதும், சந்தா ரசீதுகளையும் புதுப்பிப்பு மின்னஞ்சல்களையும் தேடி உங்கள் தொடர் கட்டணங்களின் பட்டியலை உருவாக்குவேன்."
+  top_stories:
+    title: "தினமும் காலையில் அன்றைய முக்கியச் செய்திகளை அனுப்ப முடியும்"
+    subtitle: "இப்போது இன்றைய செய்திகள், உங்களுக்குப் பிடித்த அணிகள் அல்லது உள்ளூர் செய்திகளையும் சேர்க்க முடியும்."
+    message: "தினமும் காலையில் அன்றைய முக்கியச் செய்திகளை அனுப்புங்கள்"
+  health_check_in:
+    title: "உடல்நல இலக்கைச் சொல்லுங்கள், தினமும் அதற்கேற்பத் திட்டமிடுவேன்"
+    subtitle: "இப்போது இன்றைய திட்டம், பிறகு தினமும் காலையில் புதியது."
+    message: "என் உடல்நல இலக்கிற்கேற்ப ஒவ்வொரு நாளையும் திட்டமிட உதவுங்கள்"
+te-IN:
+  gmail_portrait:
+    title: "Gmail ద్వారా నేను మిమ్మల్ని తెలుసుకోగలను"
+    subtitle: "అలాగే మీ ఇన్‌బాక్స్‌లో నేను చూసుకోగల కొన్ని పనులు కూడా కనుగొంటాను."
+    message: "నా Gmail ద్వారా నన్ను తెలుసుకో"
+    connect_text: "మీ Gmail కనెక్ట్ అయ్యాక, మిమ్మల్ని తెలుసుకోవడానికి, మీ కోసం నేను చూసుకోగల కొన్ని పనులు కనుగొనడానికి దాన్ని చదువుతాను."
+  cancel_subscriptions:
+    title: "మీరు మర్చిపోయిన సబ్‌స్క్రిప్షన్‌లను కనుగొని రద్దు చేయగలను"
+    subtitle: "మీ పునరావృత ఛార్జీల జాబితా. ఏది రద్దు చేయాలో మీరే ఎంచుకోండి."
+    message: "నేను మర్చిపోయిన సబ్‌స్క్రిప్షన్‌లను కనుగొని రద్దు చేయి"
+    connect_text: "మీ Gmail కనెక్ట్ అయ్యాక, సబ్‌స్క్రిప్షన్ రసీదులు, రెన్యువల్ ఇమెయిల్‌లు వెతికి మీ పునరావృత ఛార్జీల జాబితా తయారు చేస్తాను."
+  top_stories:
+    title: "ప్రతి ఉదయం మీకు రోజులోని ముఖ్య వార్తలు పంపగలను"
+    subtitle: "ఇప్పుడు ఈరోజు వార్తలు, మీకు ఇష్టమైన జట్లు లేదా స్థానిక వార్తలనూ జోడించగలను."
+    message: "ప్రతి ఉదయం నాకు రోజులోని ముఖ్య వార్తలు పంపు"
+  health_check_in:
+    title: "మీ ఆరోగ్య లక్ష్యం చెప్పండి, ప్రతి రోజును దానికి తగ్గట్టు ప్లాన్ చేస్తాను"
+    subtitle: "ఇప్పుడు ఈరోజు ప్లాన్, తర్వాత ప్రతి ఉదయం కొత్తది."
+    message: "నా ఆరోగ్య లక్ష్యానికి తగ్గట్టు ప్రతి రోజు ప్లాన్ చేయడంలో సహాయం చేయి"
+th-TH:
+  gmail_portrait:
+    title: "ฉันรู้จักคุณมากขึ้นได้จาก Gmail"
+    subtitle: "พร้อมหาบางเรื่องในกล่องข้อความที่ฉันช่วยจัดการแทนคุณได้"
+    message: "ทำความรู้จักฉันจาก Gmail ของฉันหน่อย"
+    connect_text: "เมื่อเชื่อมต่อ Gmail แล้ว ฉันจะอ่านเพื่อทำความรู้จักคุณ และหาบางเรื่องที่ช่วยจัดการแทนคุณได้"
+  cancel_subscriptions:
+    title: "ฉันหาและยกเลิกการสมัครใช้บริการที่คุณลืมไปแล้วได้"
+    subtitle: "รายการค่าบริการที่เรียกเก็บประจำ คุณเลือกเองว่าจะยกเลิกอะไร"
+    message: "หาและยกเลิกการสมัครใช้บริการที่ฉันลืมไปแล้ว"
+    connect_text: "เมื่อเชื่อมต่อ Gmail แล้ว ฉันจะหาใบเสร็จการสมัครใช้บริการและอีเมลแจ้งต่ออายุ เพื่อทำรายการค่าบริการที่เรียกเก็บประจำของคุณ"
+  top_stories:
+    title: "ฉันส่งข่าวเด่นประจำวันให้คุณได้ทุกเช้า"
+    subtitle: "ข่าววันนี้ตอนนี้ และฉันเพิ่มข่าวทีมโปรดของคุณหรือข่าวท้องถิ่นได้"
+    message: "ส่งข่าวเด่นประจำวันให้ฉันทุกเช้า"
+  health_check_in:
+    title: "บอกเป้าหมายสุขภาพของคุณ แล้วฉันจะวางแผนแต่ละวันตามเป้าหมายนั้น"
+    subtitle: "แผนของวันนี้ตอนนี้ แล้วแผนใหม่ทุกเช้า"
+    message: "ช่วยวางแผนแต่ละวันตามเป้าหมายสุขภาพของฉัน"
+tl-PH:
+  gmail_portrait:
+    title: "Makikilala kita sa pamamagitan ng Gmail"
+    subtitle: "At hahanapin ko sa inbox mo ang ilang bagay na puwede kong asikasuhin."
+    message: "Kilalanin mo ako gamit ang Gmail ko"
+    connect_text: "Kapag nakakonekta na ang Gmail mo, babasahin ko ito para makilala ka at makahanap ng ilang bagay na puwede kong asikasuhin para sa iyo."
+  cancel_subscriptions:
+    title: "Hahanapin at ica-cancel ko ang nalimutan mong subscription"
+    subtitle: "Listahan ng mga umuulit mong bayarin. Ikaw ang pipili kung ano ang ica-cancel."
+    message: "Hanapin at i-cancel ang mga subscription na nakalimutan ko"
+    connect_text: "Kapag nakakonekta na ang Gmail mo, hahanapin ko ang mga resibo ng subscription at email ng renewal para gawin ang listahan ng mga umuulit mong bayarin."
+  top_stories:
+    title: "Puwede kitang padalhan ng mga top story ng araw tuwing umaga"
+    subtitle: "Ang balita ngayon, at puwede kong idagdag ang mga paborito mong team o balitang lokal."
+    message: "Padalhan mo ako ng mga top story ng araw tuwing umaga"
+  health_check_in:
+    title: "Sabihin ang health goal mo, ipaplano ko ang bawat araw ayon dito"
+    subtitle: "Ang plano para ngayong araw, tapos bagong plano tuwing umaga."
+    message: "Tulungan mo akong iplano ang bawat araw ayon sa health goal ko"
+tr-TR:
+  gmail_portrait:
+    title: "Gmail sayesinde seni tanıyabilirim"
+    subtitle: "Ayrıca gelen kutunda senin yerine halledebileceğim birkaç iş bulurum."
+    message: "Gmail'im üzerinden beni tanı"
+    connect_text: "Gmail'in bağlandığında, seni tanımak ve senin yerine halledebileceğim birkaç iş bulmak için e-postalarını inceleyeceğim."
+  cancel_subscriptions:
+    title: "Unuttuğun abonelikleri bulup iptal edebilirim"
+    subtitle: "Düzenli ödemelerin bir listede. Neyi iptal edeceğini sen seçersin."
+    message: "Unuttuğum abonelikleri bul ve iptal et"
+    connect_text: "Gmail'in bağlandığında, düzenli ödemelerinin listesini çıkarmak için abonelik makbuzlarını ve yenileme e-postalarını arayacağım."
+  top_stories:
+    title: "Her sabah sana günün öne çıkan haberlerini gönderebilirim"
+    subtitle: "Bugünün haberleri şimdi, takımlarını ya da yerel haberleri de ekleyebilirim."
+    message: "Her sabah bana günün öne çıkan haberlerini gönder"
+  health_check_in:
+    title: "Sağlık hedefini söyle, her günü ona göre planlayayım"
+    subtitle: "Bugünün planı şimdi, sonra her sabah yenisi."
+    message: "Her günü sağlık hedefime göre planlamama yardım et"
+uk-UA:
+  gmail_portrait:
+    title: "Я можу краще пізнати вас через Gmail"
+    subtitle: "А ще знайти в папці «Вхідні» кілька справ, які можу взяти на себе."
+    message: "Пізнай мене краще через мій Gmail"
+    connect_text: "Щойно ви підключите Gmail, я перегляну його, щоб краще вас пізнати й знайти кілька справ, які можу взяти на себе."
+  cancel_subscriptions:
+    title: "Я можу знайти й скасувати підписки, про які ви забули"
+    subtitle: "Ваші регулярні списання списком. Ви вирішуєте, що скасувати."
+    message: "Знайди й скасуй мої забуті підписки"
+    connect_text: "Щойно ви підключите Gmail, я пошукаю квитанції за підписки та листи про поновлення й складу список ваших регулярних списань."
+  top_stories:
+    title: "Я можу щоранку надсилати вам головні новини дня"
+    subtitle: "Новини дня зараз, а ще я можу додати ваші улюблені команди чи місцеві новини."
+    message: "Надсилай мені головні новини дня щоранку"
+  health_check_in:
+    title: "Назвіть ціль щодо здоров’я, і я плануватиму під неї кожен день"
+    subtitle: "План на сьогодні зараз, а далі новий щоранку."
+    message: "Допоможи мені планувати кожен день під мою ціль щодо здоров’я"
+ur-PK:
+  gmail_portrait:
+    title: "میں Gmail کے ذریعے آپ کو جان سکتا ہوں"
+    subtitle: "ساتھ ہی آپ کے ان باکس میں چند ایسے کام بھی تلاش کر لوں گا جو میں سنبھال سکوں۔"
+    message: "میرے Gmail کے ذریعے مجھے جانیں"
+    connect_text: "آپ کا Gmail منسلک ہونے کے بعد میں اسے دیکھوں گا تاکہ آپ کو جان سکوں اور چند ایسے کام تلاش کر سکوں جو میں آپ کے لیے سنبھال سکتا ہوں۔"
+  cancel_subscriptions:
+    title: "میں آپ کی بھولی ہوئی سبسکرپشنز تلاش کر کے کینسل کر سکتا ہوں"
+    subtitle: "آپ کی بار بار ہونے والی ادائیگیوں کی فہرست۔ کینسل کیا کرنا ہے، آپ چنیں۔"
+    message: "میری بھولی ہوئی سبسکرپشنز تلاش کر کے کینسل کریں"
+    connect_text: "آپ کا Gmail منسلک ہونے کے بعد میں سبسکرپشن کی رسیدیں اور تجدید کی ای میلز تلاش کروں گا تاکہ آپ کی بار بار ہونے والی ادائیگیوں کی فہرست بنا سکوں۔"
+  top_stories:
+    title: "میں ہر صبح آپ کو دن کی اہم خبریں بھیج سکتا ہوں"
+    subtitle: "آج کی خبریں ابھی، اور آپ کی پسندیدہ ٹیمیں یا مقامی خبریں بھی شامل کر سکتا ہوں۔"
+    message: "مجھے ہر صبح دن کی اہم خبریں بھیجیں"
+  health_check_in:
+    title: "اپنا صحت کا ہدف بتائیں، میں ہر دن اسی کے مطابق پلان کروں گا"
+    subtitle: "آج کا پلان ابھی، پھر ہر صبح نیا۔"
+    message: "ہر دن میرے صحت کے ہدف کے مطابق پلان کرنے میں میری مدد کریں"
+vi-VN:
+  gmail_portrait:
+    title: "Tôi có thể tìm hiểu về bạn qua Gmail"
+    subtitle: "Và tìm vài việc trong hộp thư mà tôi có thể lo giúp bạn."
+    message: "Tìm hiểu về tôi qua Gmail của tôi"
+    connect_text: "Khi bạn kết nối Gmail, tôi sẽ đọc qua để hiểu bạn hơn và tìm vài việc tôi có thể lo giúp bạn."
+  cancel_subscriptions:
+    title: "Tôi có thể tìm và hủy những gói đăng ký mà bạn quên mất"
+    subtitle: "Danh sách các khoản phí định kỳ. Bạn chọn hủy gói nào."
+    message: "Tìm và hủy những gói đăng ký mà tôi quên mất"
+    connect_text: "Khi bạn kết nối Gmail, tôi sẽ tìm biên lai đăng ký và email gia hạn để lập danh sách các khoản phí định kỳ của bạn."
+  top_stories:
+    title: "Tôi có thể gửi bạn tin nổi bật trong ngày mỗi sáng"
+    subtitle: "Tin hôm nay trước, và tôi có thể thêm đội bạn theo dõi hoặc tin địa phương."
+    message: "Gửi tôi tin nổi bật trong ngày mỗi sáng"
+  health_check_in:
+    title: "Cho tôi biết mục tiêu sức khỏe, tôi lên kế hoạch mỗi ngày"
+    subtitle: "Kế hoạch hôm nay trước, rồi kế hoạch mới mỗi sáng."
+    message: "Giúp tôi lên kế hoạch mỗi ngày theo mục tiêu sức khỏe của tôi"
+zh-CN:
+  gmail_portrait:
+    title: "我可以通过 Gmail 了解你"
+    subtitle: "还能在收件箱里找出几件我可以替你处理的事。"
+    message: "通过我的 Gmail 了解我"
+    connect_text: "连接 Gmail 后，我会浏览邮件来了解你，并找出几件我可以替你处理的事。"
+  cancel_subscriptions:
+    title: "我可以找出并取消你忘记的订阅"
+    subtitle: "列出你的定期扣费，由你决定取消哪些。"
+    message: "找出并取消我忘记的订阅"
+    connect_text: "连接 Gmail 后，我会查找订阅收据和续订邮件，整理出你的定期扣费清单。"
+  top_stories:
+    title: "我可以每天早上给你发送当天的头条新闻"
+    subtitle: "现在先看今日新闻，我还能加上你关注的球队或本地新闻。"
+    message: "每天早上给我发当天的头条新闻"
+  health_check_in:
+    title: "告诉我你的健康目标，我会据此规划每一天"
+    subtitle: "现在先看今天的计划，之后每天早上一份新的。"
+    message: "帮我根据健康目标规划每一天"
+zh-HK:
+  gmail_portrait:
+    title: "我可以透過 Gmail 認識你"
+    subtitle: "還能在收件匣中找出幾件我可以幫你處理的事。"
+    message: "透過我的 Gmail 認識我"
+    connect_text: "連結 Gmail 後，我會瀏覽你的電郵來認識你，並找出幾件我可以幫你處理的事。"
+  cancel_subscriptions:
+    title: "我可以找出你忘記的訂閱並加以取消"
+    subtitle: "列出你的定期收費，由你決定要取消哪些。"
+    message: "找出並取消我忘記的訂閱"
+    connect_text: "連結 Gmail 後，我會搜尋訂閱收據和續訂電郵，整理出你的定期收費清單。"
+  top_stories:
+    title: "我可以每天早上傳送當天的頭條新聞給你"
+    subtitle: "現在先看今日新聞，我還能加上你支持的球隊或本地新聞。"
+    message: "每天早上傳送當天的頭條新聞給我"
+  health_check_in:
+    title: "告訴我你的健康目標，我會據此規劃每一天"
+    subtitle: "現在先看今天的計劃，之後每天早上一份新的。"
+    message: "幫我根據健康目標規劃每一天"
+zh-TW:
+  gmail_portrait:
+    title: "我可以透過 Gmail 認識你"
+    subtitle: "還能在收件匣裡找出幾件我可以幫你處理的事。"
+    message: "透過我的 Gmail 認識我"
+    connect_text: "連結 Gmail 後，我會瀏覽郵件來認識你，並找出幾件我可以幫你處理的事。"
+  cancel_subscriptions:
+    title: "我可以找出並取消你忘記的訂閱"
+    subtitle: "列出你的定期扣款，由你決定要取消哪些。"
+    message: "找出並取消我忘記的訂閱"
+    connect_text: "連結 Gmail 後，我會搜尋訂閱收據和續訂郵件，整理出你的定期扣款清單。"
+  top_stories:
+    title: "我可以每天早上傳送當天的頭條新聞給你"
+    subtitle: "現在先看今日新聞，我還能加上你支持的球隊或在地新聞。"
+    message: "每天早上傳當天的頭條新聞給我"
+  health_check_in:
+    title: "告訴我你的健康目標，我會據此規劃每一天"
+    subtitle: "現在先看今天的計畫，之後每天早上一份新的。"
+    message: "幫我根據健康目標規劃每一天"# Starter cards in the ideas_chat_name_first welcome (onboarding_starter_cards.rs).
+# `message` is what a tap sends. `connect_text` goes above the Connect Gmail
+# card when a card that needs Gmail is tapped before Gmail is connected.
+# `ideas_chat_name_first_three_cards` shows `welcome_three_cards` instead.
+welcome:
+  - gmail_portrait
+  - cancel_subscriptions
+  - top_stories
+  - health_check_in
+welcome_three_cards:
+  - gmail_portrait
+  - cancel_subscriptions
+  - top_stories
+cards:
+  gmail_portrait:
+    title: I can get to know you from Gmail
+    subtitle: Plus a few things in your inbox I can take off your plate.
+    icon: inbox
+    message: Get to know me from Gmail
+    connect_text: Once your Gmail is connected, I'll read through it to get to know you and find a few things I can take off your plate.
+  cancel_subscriptions:
+    title: I can find and cancel subscriptions you forgot about
+    subtitle: Your recurring charges listed. You pick what to cancel.
+    icon: subscription-cancellation
+    message: Find and cancel subscriptions I forgot about
+    idea_id: 3b0781d8-5d45-42e2-8410-ad2ab6ba5ab5
+    needs_inbox: true
+    connect_text: Once your Gmail is connected, I'll look for subscription receipts and renewal emails to build your list of recurring charges.
+  top_stories:
+    title: Every morning I can send you the top stories
+    subtitle: Today's stories now, and I can add your teams or local news.
+    icon: newspaper
+    message: Send me the top stories every morning
+    idea_id: 77af698e-8b6a-57e1-8f5e-9898e201f7d8
+  health_check_in:
+    title: Tell me your health goal and I'll plan each day around it
+    subtitle: Today's plan now, then a new one every morning.
+    icon: heart-rate
+    message: Help me plan each day around my health goal
+    idea_id: 1f97a4b9-94bb-54c6-b6f4-70d41c8936b4
+"((?:sandbox://|file://|peer-file://|/|workspace/)[^"]+)"|'((?:sandbox://|file://|peer-file://|/|workspace/)[^']+)'|(?:url\(\s*|(?:src|href|poster)\s*=\s*)((?:sandbox://|file://|peer-file://|/|workspace/)[^\s)'">]+)widget asset literal patternSELECT event_seq, event_name, source, role::text AS role,
+                    visibility::text AS visibility, message_id, agent_id,
+                    parent_agent_id, parent_message_id, reply_to_message_id,
+                    transcript_surface::text AS transcript_surface, payload_json,
+                    request_id, root_request_id, parent_request_id,
+                    extract(epoch from created_at)::bigint AS created_at
+             FROM runtime.events WHERE idempotency_key = $1SELECT ci.item_json, ci.message_source,
+                        extract(epoch from ci.created_at)::bigint AS created_at,
+                        p.client_context_json
+                 FROM agent.context_items ci
+                 LEFT JOIN agent.context_item_resume_projection p
+                   ON p.agent_id = ci.agent_id AND p.seq = ci.seq
+                 WHERE ci.agent_id = $1 AND ci.seq = $2peer plugin has no daemon statepeer plane is disabledpeer delivery requires the peer muse targetpeer inbound arrives through the peerd event consumerpeer chats are side chats; agent sends ride the ordinary reply paththe peer conversation pairs through /api/peers, not link/unlinkCannot get last filediscretion policy or audience changed before deliveryideas build ended without delivering; carrier turn may owe the user a noticeworker task owner request unavailableruntime.muse_mailenqueue_if_needed/hatch/avatar/current-referencecalled `Result::unwrap()` on an `Err` value

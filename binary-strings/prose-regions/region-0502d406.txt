@@ -1,0 +1,93 @@
+select p.* from agent.connection_participants p
+                join agent.connections c using(connection_id)
+                where p.connection_id=$1 and c.active and p.audience=c.audience
+                order by p.kind,p.display_name,p.participant_idSELECT bool_and(coalesce(i.indisvalid, false)) FROM unnest($1::text[]) AS n(name)
+                 LEFT JOIN pg_index i ON i.indexrelid=to_regclass(n.name)runtime_bookkeeping_transcript_window_idx(created_at, event_seq) WHERE event_name IN ('message.user','message.assistant','message.internal')runtime_events_conversation_parent_window(parent_agent_id, created_at, event_seq) WHERE event_name IN ('message.user','message.assistant','message.internal')runtime_events_conversation_root_window(agent_id, created_at, event_seq) WHERE parent_agent_id IS NULL AND event_name IN ('message.user','message.assistant','message.internal')SELECT pg_try_advisory_lock(hashtext('hatch.connection_grounding_index'))SET lock_timeout='5s'SET statement_timeout='10min'SELECT indisvalid FROM pg_index WHERE indexrelid=to_regclass($1)BEGIN ISOLATION LEVEL READ COMMITTED; SET LOCAL statement_timeout = '250ms'SELECT pg_try_advisory_xact_lock(hashtextextended($1, 0))agent.volatile_context_pins.lifecycle
+DELETE FROM agent.volatile_context_pin_bodies AS body
+WHERE body.body_hash = ANY($1::bytea[])
+  AND NOT EXISTS (
+      SELECT 1 FROM agent.volatile_context_pins AS pin
+      WHERE pin.body_hash = body.body_hash
+  )
+SELECT body_hash FROM agent.volatile_context_pin_bodies ORDER BY body_hash LIMIT $1SELECT body_hash FROM agent.volatile_context_pin_bodies WHERE body_hash > $1 ORDER BY body_hash LIMIT $2BEGIN READ ONLY; SET LOCAL statement_timeout = '250ms'; SET LOCAL lock_timeout = '50ms'SELECT agent_id, variant_hash, CASE WHEN variant_hash <> 'handoff_policy' THEN octet_length(body)::bigint END AS inline_bytes FROM agent.volatile_context_pins WHERE (agent_id, variant_hash) > ($1, $2) ORDER BY agent_id, variant_hash LIMIT $3SELECT pg_total_relation_size('agent.volatile_context_pin_bodies')transaction.acquire_and_beginregistry_lockselect id, domains from context.subscriptions where subscription_key = $1 for updatesubscription.lookup_for_updatedomainssources.enroll_previousinsert into context.subscriptions (id, subscription_key, domains) values ($1,$2,$3)subscription.insertupdate context.group_cursors g set lease_token=null, lease_expires_at=null, evidence_expires_at=null,
+                        window_position=null, batch_position=null, retry_at=null,
+                        available_position=coalesce((select max(e.append_position) from context.events e
+                          where e.source_id=g.source_id and e.group_id=g.group_id
+                          and e.append_position>g.acknowledged_position and e.append_position<=g.available_position
+                          and (e.expires_at is null or e.expires_at>statement_timestamp())
+                          and ($2 or e.content_hints && $3::text[])),g.acknowledged_position)
+                        where subscription_id=$1hints.reconcile_leasestransaction.commitsources.enroll_desiredupdate context.subscription_sources ss set active = ($2 or s.source_domain = any($3))
+                from context.sources s where ss.subscription_id = $1 and s.id = ss.source_idupdate context.group_cursors g set lease_token = null, lease_expires_at = null, evidence_expires_at = null
+                from context.subscription_sources ss where g.subscription_id = $1
+                and ss.subscription_id = g.subscription_id and ss.source_id = g.source_id and not ss.activeleases.invalidate_removedupdate context.subscriptions set domains = $2, updated_at = now() where id = $1 and domains <> $2coverage.updateen-USphone live transcript observation unavailablewith candidates as (
+                       select work_id,
+                              state as prior_state,
+                              lease_owner as prior_lease_owner,
+                              heartbeat_at as prior_heartbeat_at,
+                              deadline_at as prior_deadline_at,
+                              (metadata_json::jsonb)->>'schedule_reason'
+                                as prior_schedule_reason,
+                              (metadata_json::jsonb)->>'maintenance_occurrence'
+                                as occurrence,
+                              (metadata_json::jsonb)->>'maintenance_attempt'
+                                as attempt,
+                              coalesce(
+                                (metadata_json::jsonb)->>'schedule_reason',
+                                ''
+                              ) = $5::text as recovery_phase_already_assigned
+                       from runtime.work_items
+                       where work_class = 'maintenance_job'
+                         and terminalized_at is null
+                         and (metadata_json::jsonb)->>'maintenance_kind' = $1
+                         and ($10::text is null or work_id > $10::text)
+                         and (
+                           (
+                             state = 'queued'
+                             and (deadline_at is null or deadline_at <= now())
+                           )
+                           or (
+                             state = 'running'
+                             and (lease_owner is null or lease_owner <> $2)
+                           )
+                         )
+                       order by work_id
+                       limit $9
+                       for update
+                     ),
+                     updated as (
+                       update runtime.work_items work
+                       set lease_owner = null,
+                           state = 'queued',
+                           deadline_at = case
+                             when candidates.recovery_phase_already_assigned
+                               then work.deadline_at
+                             else $3::timestamptz
+                           end,
+                           updated_at = now(),
+                           metadata_json = case
+                             when candidates.recovery_phase_already_assigned
+                               then work.metadata_json
+                             else (
+                               work.metadata_json::jsonb || jsonb_build_object(
+                                 'schedule_policy', $4::text,
+                                 'schedule_reason', $5::text,
+                                 'cadence_secs', $6::bigint,
+                                 'jitter_offset_secs', $7::bigint,
+                                 'jitter_window_secs', $8::bigint
+                               )
+                             )::text
+                           end
+                       from candidates
+                       where work.work_id = candidates.work_id
+                       returning work.work_id, work.request_id, work.request_origin,
+                                 work.deadline_at, $1::text as maintenance_kind,
+                                 candidates.occurrence,
+                                 candidates.attempt, candidates.prior_state,
+                                 candidates.prior_lease_owner,
+                                 candidates.prior_heartbeat_at,
+                                 candidates.prior_deadline_at,
+                                 candidates.prior_schedule_reason,
+                                 not candidates.recovery_phase_already_assigned
+                                   as recovery_phase_assigned
+                     )
+                     select * from updated order by work_idmissing conditional maintenance schedule stateprivacy_identifier_eventrelationships.chat_lookupfailurecontext_store.initialize`DateTime + TimeDelta` overflowedstore_initsync_localebackground locale observation lockrefresh_enqueuebackground locale refresh wake deferred to maintenancelocale_changedcommittedGatekeeper response omitted requested gate; using defaultdevice_reconciliation_retry_settlement_faileddevice_reconciliation_terminal_settlement_faileddevice_reconciliation_claim_failedconditional input planning failedstorageschedule_readscheduling_disabledexisting_queued_successorregular_successorretrycontinuous maintenance successor is already terminal without queued workthe daemon is shutting down/apps/0/chat/messagesConnection not foundinternal_catalog_idphase-stagingcandidatescursor_errorvolatile_context_pin_backfill_progress_v2recovery owner reconcile idle check failed; keeping the sweeppost-call persistence worker shutdown timed outsourcescontext_table.sourceseventscontext_table.eventsingest_attemptscontext_table.ingest_attemptssubscriptionscontext_table.subscriptionssubscription_sourcescontext_table.subscription_sourcesgroup_cursorscontext_table.group_cursorscontextcontext_store.accesscontext_store.reuseruntimeprivate_client_uploadscheck_live_private_uploadsruntime config state retains the completion senderconnections.resourcesconnections.resource_countsconnections.participantsUDS HTTP request path must start with '/'acquired connection, but time to acquire exceeded slow thresholdacquired connectionprivate maintenance has not settled/identityuncertain connection settingschat connection snapshotconnections.grounding_readyconnections.prepare_groundingcollect_volatile_context_pin_bodies_batchlist_volatile_context_pin_body_gc_candidatesvolatile context pin body GC deferred a body after a statement timeoutlist_volatile_context_pin_backfill_pageat most 100content_hints1–100 hintscontext.subscription.ensurefollow_up_queue_deliveryfailed to read the next due maintenance work itemfailed to claim due maintenance work itemsreleased maintenance work another owner left running with a stale heartbeatfailed to release stale foreign maintenance leasesfailed to read the oldest foreign maintenance leasecatalog custom filter timed outinvalid catalog user IDcatalog brief timed outwork_items.recover_due_maintenance_kindwork_itemsJoinHandle polled after completioninternal error: entered unreachable code: unexpected stagebackground_content_jobsruntime_work_pending_terminal
