@@ -1,0 +1,172 @@
+ordered browser task card projection failedbrowser broker returned an unexpected local browser testing responseparked browser activity publication deferred to reconciliationparked browser runway checkpoint arm is unconfirmedmissing_tool_call_idmissing_message_idagent_handle_missingtracked_tool_not_foundfailed to mark tracked tool process pending approvalruntime.monitoringfailed to deliver disconnected approval result to agentfailed to deliver terminal approval follow-up to agentfailed to open event-hook run storage for approval push localefailed to decode event-hook run locale for approval pushfailed to load event-hook run locale for approval pushfailed to open scheduler storage for approval push localefailed to load cron run locale for approval pushfailed to decode approval checkpoint localefailed to read approval checkpoint localeawaiting-approval checkpoint payload version is unsupportedfailed to decode runtime restart checkpoint payloadawaiting-approval checkpoint row was missing payload_jsonfailed to load runtime restart checkpointfailed to enrich approval snapshot with live wallet; preserving eligible mint-time optionsBrowser node admission is not currently enabled.read runtime-orphan approval response bodyparse runtime-orphan approval response bodyrefusing to publish a chat frame without an owning chatfailed to resolve public session id for streamed framefailed to broadcast streamed frame for root sessiondropped companion progress frame after its voice call changedfailed to resolve public session id for agent.statusagent.status
+INSERT INTO requests (
+  request_id, root_request_id, parent_request_id, request_origin,
+  transcript_surface, root_work_class
+)
+VALUES ($1, $2, $3, $4, $5::runtime.transcript_surface, $6)
+ON CONFLICT (request_id) DO UPDATE SET
+  root_request_id = COALESCE(requests.root_request_id, excluded.root_request_id),
+  parent_request_id = COALESCE(requests.parent_request_id, excluded.parent_request_id),
+  request_origin = CASE
+    WHEN requests.request_origin = 'internal.runtime_replay' THEN excluded.request_origin
+    ELSE requests.request_origin
+  END,
+  transcript_surface = excluded.transcript_surface,
+  root_work_class = CASE
+    WHEN requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing'
+      THEN excluded.root_work_class
+    ELSE requests.root_work_class
+  END
+WHERE (requests.root_request_id IS NULL AND excluded.root_request_id IS NOT NULL)
+   OR (requests.parent_request_id IS NULL AND excluded.parent_request_id IS NOT NULL)
+   OR (requests.request_origin = 'internal.runtime_replay'
+       AND excluded.request_origin <> 'internal.runtime_replay')
+   OR requests.transcript_surface IS DISTINCT FROM excluded.transcript_surface
+   OR (requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing')
+output
+INSERT INTO tool_outputs (event_seq, call_id, status, output_text, error_text, created_at)
+VALUES ($1, $2, $3, $4, $5, to_timestamp($6::double precision / 1000.0))
+ON CONFLICT (event_seq) DO UPDATE SET
+  call_id = excluded.call_id,
+  status = excluded.status,
+  output_text = excluded.output_text,
+  error_text = excluded.error_text
+arguments
+INSERT INTO tool_calls (event_seq, call_id, tool_name, status, arguments_json, created_at)
+VALUES ($1, $2, $3, 'started', $4, to_timestamp($5::double precision / 1000.0))
+ON CONFLICT (call_id) DO UPDATE SET
+  event_seq = excluded.event_seq,
+  tool_name = excluded.tool_name,
+  status = excluded.status,
+  arguments_json = excluded.arguments_json
+
+INSERT INTO chat_event_derived_write_backlog (event_seq, resources_json)
+VALUES ($1, $2)
+ON CONFLICT (event_seq) DO UPDATE SET
+  resources_json = excluded.resources_json,
+  updated_at = now()
+
+UPDATE events
+SET display_text_ready = $2,
+    reply_target_message_id = $3,
+    payload_json = $4
+WHERE event_seq = $1
+
+INSERT INTO messages (message_id, event_seq, role, body, created_at)
+SELECT e.message_id, e.event_seq, e.role, $2, e.created_at
+FROM events e
+WHERE e.event_seq = $1
+  AND e.message_id IS NOT NULL
+  AND e.role IS NOT NULL
+ON CONFLICT (message_id) DO UPDATE SET
+  body = excluded.body
+UPDATE chat_private.peer_conversations SET requester_chat_id = NULL
+         WHERE conversation_id = $1 AND requester_revision = $2
+           AND requester_chat_id = $3 AND NOT requester_unavailable
+           AND chat_id = $5
+           AND EXISTS (SELECT 1 FROM agent.agents
+                       WHERE id = $4 AND session_id = $3)peer handoff disagrees with its asking-chat claimpeer handoff requester changed before admissionSELECT session_id, COALESCE(prompt_floor_seq, -1) AS prompt_floor_seq,
+                kind = 'root' AND parent_agent_id IS NULL
+                AND ephemeral IS DISTINCT FROM TRUE
+                AND status NOT IN ('shutdown', 'not_found') AS eligible
+         FROM agent.agents WHERE agent_id = $1 FOR UPDATEstartup_root_changedSELECT EXISTS(SELECT 1 FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND accepted_ordinal < $2)startup mailbox promotion cannot overtake an earlier accepted input
+SELECT payload_json
+FROM agent.runtime_restart_checkpoints
+WHERE agent_id = $1
+FOR UPDATE
+
+SELECT EXISTS (
+  SELECT 1
+  FROM agent.message_mailbox
+  WHERE agent_id = $1
+    AND state = 'accepted'
+    AND accepted_ordinal < $2
+    AND (NOT $3 OR submission_kind <> 'internal_handoff')
+)
+message mailbox attachment cannot overtake an older priority peer
+INSERT INTO agent.runtime_restart_checkpoints (
+  agent_id, mode, recovery_class, recovery_owner_id, execution_config_json,
+  payload_json, created_at, updated_at
+) SELECT $1, $2, $3, $4, $5, $6, $7, $7
+WHERE EXISTS (
+  SELECT 1
+  FROM agent.agents
+  WHERE agent_id = $1
+    AND status NOT IN ('shutdown', 'not_found')
+)
+ON CONFLICT (agent_id) DO NOTHING
+SELECT EXISTS (SELECT 1 FROM agent.agents WHERE agent_id = $1 AND status NOT IN ('shutdown', 'not_found'))conversation epoch
+INSERT INTO agent.message_mailbox (
+  submission_id, agent_id, conversation_epoch, submission_kind,
+  routing_scope, state, checkpoint_custody, stream_owner_message_id,
+  submission_json, transcript_event_seq, attached_at
+) VALUES (
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+  CASE WHEN $6 = 'attached' THEN now() ELSE NULL END
+)
+ON CONFLICT (submission_id) DO NOTHING
+RETURNING accepted_ordinal, accepted_at
+startup mailbox promotion requires its previously accepted input
+SELECT agent_id, conversation_epoch, submission_kind, routing_scope,
+       state, stream_owner_message_id, submission_json,
+       transcript_event_seq, accepted_ordinal, accepted_at
+FROM agent.message_mailbox
+WHERE submission_id = $1
+FOR UPDATE
+update chat.message_bindings set admitted_at = coalesce(admitted_at, now())
+                    where jarvis_message_id = $1 and chat_id = $2 and binding_epoch = $3 and transport = $4binding epochconversation_epochsubmission_kindrouting_scope
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = $5,
+    stream_owner_message_id = $2,
+    submission_json = $3,
+    transcript_event_seq = coalesce($4, transcript_event_seq),
+    attached_at = now()
+WHERE submission_id = $1
+  AND state = 'accepted'
+  AND stream_owner_message_id IS NULL
+mailbox stream ownerselect a.account_id from chat_private.accounts a
+             join chat_private.binding_authorizations b on b.provider = a.provider and b.account_id = a.account_id
+             where b.provider = $1 and b.binding_id = $2
+               and a.connection_id = $3 and not a.revoked for share of adirect input has no captured binding epochaccount_retiredselect connection_id, generation, transport_json, delivery_target
+             from chat_private.binding_authorizations
+             where provider = $1 and binding_id = $2 and chat_id = $3
+               and account_id = $4 and external_kind = 'direct' and participation = 'active'
+             for shareaccount_authorization_retiredtransport_jsontransport_authorization_absentconnection_iddelivery_targetselect epoch from chat_private.bindings
+         where chat_id = $1 and provider = $2 and not revoked for sharetransport_authorization_changedbinding_retiredactivity_monitor_list_thread_actionsactivity_monitor_list_recent_thread_actionsactivity_monitor_carrier_user_messagesactivity_monitor_message_thread_lookupactivity_monitor_read_threadhistoryall_chatschannelstream_scopethread_idall_sessionschat_id must match the routeuse all_chats on the chats APIall_chats is exclusive with chat_id and only valid for searchall_chats must be a booleanuse an explicit chat_id on the chats APIparent_agent_id must belong to chat_idchat.resume only supports the primary chat/message not found in chateffects_unsettledjournal_unavailableparked browser task lifecycle settlement is still in progressbrowser sensitive-site system update exceeds policy capacitybrowser sensitive-site settings synchronization deferredbrowser blocked-site summary is unavailablebrowser blocked-site telemetry is unavailablebrowser takeover restore for a client request is inconclusivebrowser user control has an invalid retained outcomebrowser user-control lifecycle settlement is still in progressambiguous takeover slot release response was inconclusiveambiguous browser takeover remains fail-closed in UserBlockedanother browser task owns user controlrestored browser outcome runway is inconclusiverecovered needs-user browser runway is inconclusivebrowser_task_goal_category_v1browser task lifecycle rows skipped: terminal row unavailableterminal browser activity publication deferred to reconciliationopen browser task queuereload terminal browser taskskipping non-terminal browser task terminal transitionskipping stale browser task terminal transitionterminal browser task row is missinghealth: runtime-cell process observation is unknown; browser node retention was not applied: its effects are unreadablebrowser node retention was not appliedretained browser outcome store is unavailableretained browser outcome commit is inconclusiveretained browser outcome projection reload is inconclusivebrowser outcome retained under user control is inconclusivecompletion_resultreportbrowser node platform left out: device unreadablevmrelocated_from_routebrowser run facts left out: browser task queue unavailablecould not reconcile approval runtime waitersstandaloneselect invocation_id from runtime.browser_invocations
+         where task_id = $1 and result_json is null
+           and ($2::text is null or planner_agent_id = $2)
+         order by ordinal for updateupdate runtime.browser_invocations i set state = $3, suspended_state = null,
+         result_json = $2, terminal_reason = $4, finished_at = now(), updated_at = now(),
+         handoff_state = case when i.parent_invocation_id is null then $5::text end,
+         handoff_submission_id = case when i.parent_invocation_id is null
+           then ended.handoff end
+         from unnest($6::text[], $7::text[]) as ended(invocation_id, handoff)
+         where i.invocation_id = ended.invocation_id and i.task_id = $1
+           and i.result_json is nullforbiddenX-Hatch-Granted-Scopesroute not allowed for this credentialscope_route_refusedowner background locale update skipped or deferredrefusing non-canonical request pathnon_canonical_pathpeer not classified by listener PeerAclrejecting HTTP API request: peer presented an ingress uid but is not external to the runtime cell (forged SO_PEERCRED uid)peer not external to runtime cellrejecting HTTP API request: matched route is missing from endpoint ACLmatched route missing from endpoint ACLrejecting HTTP API request: endpoint does not admit this trust classendpoint not allowed for this listenertext/html; charset=utf-8application/json; charset=utf-8text/plain; charset=utf-8database write admission gate closedadmission_timeoutassert_table_existstable_presence.queryagent_status broadcast presence statusagent_status cleared activity-thread presencefailed to resolve root session for presence updateSELECT payload_json FROM runtime_restart_checkpoints WHERE agent_id = $1 FOR UPDATESELECT submission_json, octet_length(submission_json)::bigint AS serialized_bytes
+         FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND submission_id <> $2startup_queue_fullparamsphone_numbertimeout_secswait_for_authtokensession_id must be a stringall_sessions cannot be combined with session_idlegacy routes use session_id; use /api/chats for chat_idmethodfreshlifecyclebefore_session_idbefore_chat_idafter_chat_idlegacy routes use `session_id`; use /api/chats for `chat_id`invalid session origin or lifecyclesession not foundcheckout has materially different approved termsan ended browser task's payment card was not withdrawnavatar-finalize:unknown-workruntime_config_and_models.home_config_loadfailed to evaluate onboarding state at daemon startup; defaulting to inactivefailed to read chat event sequence watermark at daemon startup; defaulting websocket seq to zeroinitialize egress approvalsruntime_config_and_models.local_model_setup/run/hatch/runtime-cell/shellworks-daemon-lifecycle-identity.jsonservice.noticehttp://localhost/statsretained cleanup cannot resolve endpointretained browser slot release is unconfirmedretained browser lifecycle settlement is still in progressbrowser release changed the presented taskbrowser viewer did not drain after target losslost browser target has inconsistent presentation statebrowser takeover recovery is still settlingclose-viewerrelease-controlretained browser control release is inconclusiveretained browser demotion runway is inconclusiveinsert into runtime.browser_task_tabs (task_id, tab_id, alias)
+         select $1, $2, 't' || (coalesce(max(substring(alias from 2)::integer), 0) + 1)
+         from runtime.browser_task_tabs where task_id = $1
+         on conflict (task_id, tab_id) do nothingupdate runtime.browser_task_tabs set actor_invocation_id = $3, actor_agent_id = $4
+             where task_id = $1 and tab_id = $2 and holder_invocation_id is not nullupdate runtime.browser_task_tabs set holder_invocation_id = null,
+                 actor_invocation_id = null, actor_agent_id = null, held_at = null
+                 where task_id = $1 and tab_id = $2update runtime.browser_task_tabs set holder_invocation_id = $3,
+                 actor_invocation_id = $4, actor_agent_id = $5, held_at = now()
+                 where task_id = $1 and tab_id = $2 and holder_invocation_id is nullbrowser tab hold changedtab_id, alias, holder_invocation_id, actor_invocation_id, actor_agent_id, (select holder.kind from runtime.browser_invocations holder where holder.invocation_id = browser_task_tabs.holder_invocation_id) as holder_kindupdate runtime.browser_task_tabs set holder_invocation_id = null,
+             actor_invocation_id = null, actor_agent_id = null, held_at = null
+             where task_id = $1 and tab_id = any($2)update runtime.browser_task_tabs set actor_invocation_id = $3, actor_agent_id = $4
+             where task_id = $1 and tab_id = any($2) and holder_invocation_id is not nullhatchgoogleappleamazon1passwordThe sign-in form changed while the user decided, so nothing was filled. Assess the page again with login.advance.stoppedderived write projection worker lane failedderived write projection worker lane discovery failedapproval_cleanup_deferred_for_coalesced_ownercoalesced approval checkpoint ownership is unavailableSELECT event_seq, event_name, source, role::text AS role,
+                    visibility::text AS visibility, message_id, agent_id,
+                    parent_agent_id, parent_message_id, reply_to_message_id,
+                    transcript_surface::text AS transcript_surface, payload_json,
+                    request_id, root_request_id, parent_request_id,
+                    extract(epoch from created_at)::bigint AS created_at
+             FROM runtime.events WHERE idempotency_key = $1SELECT ci.item_json, ci.message_source,
+                        extract(epoch from ci.created_at)::bigint AS created_at,
+                        p.client_context_json
+                 FROM agent.context_items ci
+                 LEFT JOIN agent.context_item_resume_projection p
+                   ON p.agent_id = ci.agent_id AND p.seq = ci.seq
+                 WHERE ci.agent_id = $1 AND ci.seq = $2
