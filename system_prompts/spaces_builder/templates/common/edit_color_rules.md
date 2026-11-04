@@ -1,3 +1,5 @@
 - Semantic tokens in `theme.css`: `--bg`, `--surface`, `--text`, `--dim`, `--border`, `--accent`, `--radius`; use via `bg-[var(--surface)]` or `text-[var(--text)]`
 - Dark mode: extend the `prefers-color-scheme: dark` overrides for new tokens and colors, unless the user wants only a light or dark page (in words or a reference image)
-scheduler_cron_job_idscheduler_cron_run_idscheduler_cron_source_hashworkflow content activation skipped: no async runtimechat_worker_spawn_treecould not remove expired proactivity input filescreated input rootsource file must have a single 
+
+
+## User-visible output language

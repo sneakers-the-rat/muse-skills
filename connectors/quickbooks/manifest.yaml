@@ -10,7 +10,7 @@ auth:
 connector: quickbooks
 category: business
 display_name: QuickBooks
-description: Manage invoices, payments and financial reports
+description: Manage accounting, payroll, employees and financial reports
 icon: quickbooks
 gating:
   allowed_countries: [US, PR]
@@ -42,6 +42,16 @@ declarable_scopes:
   - sales.tools.settings
   - contact.tools.customer
   - catalog.tools.item
+  - payroll.tools.employer.read
+  - payroll.tools.employer.manage
+  - payroll.tools.run.read
+  - payroll.tools.run.manage
+  - payroll.tools.employee.read
+  - payroll.tools.employee.manage
+  - worker-mgmt.tools.employee.read
+  - worker-mgmt.tools.employee.manage
+  - payroll.tools.tax.read
+  - time-tracking.tools.timeentry.read
 actions:
   read:
     default: allow
@@ -86,6 +96,20 @@ actions:
         label: Use public business tools and check import status
         approval_phrase: use public business tools and check import status in QuickBooks
         requires_scopes: *read_scopes
+      payroll.data.read:
+        label: Read employee, payslip, payroll and tax information
+        approval_phrase: read payroll and employee information in QuickBooks Payroll
+        requires_scopes:
+          - >-
+            payroll.tools.employer.read
+            payroll.tools.run.read
+            payroll.tools.employee.read
+            worker-mgmt.tools.employee.read
+            payroll.tools.tax.read
+            time-tracking.tools.timeentry.read
+      lending.help.read:
+        label: Read QuickBooks lending help
+        approval_phrase: read lending help information in QuickBooks
   write:
     default: ask
     label: Create or change QuickBooks records
@@ -139,6 +163,30 @@ actions:
         label: Change sales settings
         approval_phrase: change sales settings in QuickBooks
         requires_scopes: *all_scopes
+      payroll.employees.write:
+        label: Create or edit employees and assign work locations
+        approval_phrase: create or change an employee record in QuickBooks Payroll
+        requires_scopes: &payroll_scopes
+          - >-
+            payroll.tools.employer.read
+            payroll.tools.employer.manage
+            payroll.tools.run.read
+            payroll.tools.run.manage
+            payroll.tools.employee.read
+            payroll.tools.employee.manage
+            worker-mgmt.tools.employee.read
+            worker-mgmt.tools.employee.manage
+            payroll.tools.tax.read
+            time-tracking.tools.timeentry.read
+        # Employment and work-location changes affect payroll/tax setup.
+        # Standing or task Allow must not authorize a later change.
+        approval_policy: fresh_consent_only
+      payroll.contracts.manage:
+        label: Create or change employee contract details
+        approval_phrase: create or change employee contract details in QuickBooks Payroll
+        requires_scopes: *payroll_scopes
+        # A contract change requires approval of this exact employee and terms.
+        approval_policy: fresh_consent_only
   delete:
     default: ask
     label: Delete QuickBooks records
