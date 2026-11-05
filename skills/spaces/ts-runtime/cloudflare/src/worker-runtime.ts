@@ -73,6 +73,7 @@ type CloudflareEnv = {
   BUCKET: R2Bucket;
   DB: SharedDatabase;
   SPACE_SHORTCODE?: string;
+  SPACE_NEEDS_NO_AUTH?: string;
   SPACE_VERSION?: string;
 };
 
@@ -699,9 +700,13 @@ export function createWorker(
     try {
       if (actions.size > 0) {
         try { viewer = viewerFromHeaders(request.headers); } catch { /* Invalid trusted context is denied. */ }
-        if (!viewer || !viewer.spaceId ||
-            `${viewer.spaceSlug}-${viewer.spaceId}` !== env.SPACE_SHORTCODE ||
-            (viewer.isOwner && viewer.viewerFbid !== viewer.ownerFbid)) {
+        const publicGuest = env.SPACE_NEEDS_NO_AUTH === "true" && Boolean(env.SPACE_SHORTCODE)
+          && request.headers.get("x-cloudflare-spaces-public-access") === env.SPACE_SHORTCODE
+          && !request.headers.has("x-cloudflare-spaces-viewer-authenticated");
+        const authenticatedViewer = viewer && viewer.spaceId
+          && `${viewer.spaceSlug}-${viewer.spaceId}` === env.SPACE_SHORTCODE
+          && (!viewer.isOwner || viewer.viewerFbid === viewer.ownerFbid);
+        if (!authenticatedViewer && !publicGuest) {
           return jsonResponse({ error: "Sign in to open this shared app", code: "viewer_required" }, 401);
         }
         if (request.method === "GET" || request.method === "HEAD") {
@@ -722,6 +727,7 @@ export function createWorker(
           if (actions.size === 0) return assetResponse;
           const response = new Response(assetResponse.body, assetResponse);
           response.headers.set("cache-control", "no-store");
+          response.headers.set("x-cloudflare-spaces-shared-state-version", "1");
           return response;
         }
       }

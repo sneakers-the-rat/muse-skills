@@ -1,0 +1,257 @@
+
+        CREATE TABLE IF NOT EXISTS __drizzle_migrations (
+            id SERIAL PRIMARY KEY,
+            hash text NOT NULL,
+            created_at numeric
+        )
+        INSERT INTO __drizzle_migrations (hash, created_at) VALUES (?1, ?2)read migrationsread migration--> statement-breakpointupdate runtime.browser_invocations set suspended_state = 'running'
+                 where invocation_id = $1 and suspended_state = 'waiting_child'avatar-state: adopted a concurrently seeded DB rowavatar-state: seeded the authoritative DB rowidle_deferred_reasonqueue_claim_ownerqueue_claim_boot_ididle_gateidle_deferredidle_defer_reasonidle_deferred_lost_raceidle deferral lost queue-claim raceidle.sweepruninternal.self_improvementquiet_window_secsmin_exchange_pairsrecent_exchange_pairsrun_scopeidle_sessionidle_session_since_utcidle_session_last_user_activity_utcidle_session_until_utcidle_runs_today_beforeceiling_remaining_afterdefcon_level_3_daily_capshopping_daily_capdaily cadence read failed; admitting signal-triggered objective cyclethrottledscheduler_grace_secondsprevious_cycle_idprevious_admitted_atsignal_admitted_runssignal_admission_limithatch_inference_defcon_level_3_enabledgatekeeperdefcon_cadencedaily cadence throttled objective cycledaily cadence read failed; admitting automatic objective cycleobjectivestartfailed to stamp boot generation on inline-triggered runproactivity_context_profileretired historical backfill state before objective runfailed to retire historical backfill state; continuing objective runrestart_checkpoint_parkeddurable_owner_retainedrestart_checkpoint_parked_agent_idrestart_checkpoint_parked_atprior_diagnosticsterminal_step_error_coderecovery staging lost current queue or objective lease ownershiprecovery admission cancelled after stagingrestart recovery staging write failed; retaining lease and retryingrecovery admission cancelledobjective execution gate wait cancelledrestart recovery admission cleanup failed; retrying atomicallyqueue_drainlease_wait_reasonlease_wait_requeued_atobjective lease claim result was ambiguous; retrying the same fenced ownerrequeue_lost_racequeued self-improvement runrecovery_pending_lease_ownerbackfill_completehistorical backfill retired; pending march marked completegoal_slugstandaloneroot admission cancellation signaled without a resultfailed to register space runtime egress context; falling back to runtime.unknowndelivery_modechunkedfinalization_fencedreconciliation_storage_failedfinalization_failedclaim reconciliation finalizationfinalization_ignored_staleinvalid_stream_uploadfinalization_fence_failedfence invalid reconciliation uploadinvalid_source_snapshotsettle invalid device reconciliation for retrydevice_sync_stateHealth reconciliation applied but device-sync worker wake failedfinalize device reconciliationclient rendering snapshot read failed; keeping lifts inline this turndevice node_idfull_sync_idreconciliation.finalizeHealth source snapshot belongs to another devicereconciliation.ingest_source_changereconciliation.delete_all_source_dataselect data_source, next_full_sync_at, current_full_sync_id,
+            current_full_sync_requester_root_session_id,
+            current_full_sync_requester_presentation_locale,
+            current_full_sync_expires_at, current_full_sync_range_start,
+            current_full_sync_range_end, changed_during_full_sync,
+            last_full_sync_at, last_full_sync_range_start, last_full_sync_range_end
+     from device.data_sync_stateselect pairing_status, data_sources_json
+         from device.nodes where node_id = $1 for updatepairing_statusdata_sources_jsonupdate device.data_sync_state
+         set next_full_sync_at = $4, search_trigger_pending = false,
+             current_full_sync_id = null,
+             current_full_sync_requester_root_session_id = null,
+             current_full_sync_requester_presentation_locale = null,
+             current_full_sync_expires_at = null,
+             current_full_sync_range_start = null,
+             current_full_sync_range_end = null,
+             changed_during_full_sync = false
+         where node_id = $1 and data_source = $2 and current_full_sync_id = $3update device.data_sync_state
+         set next_full_sync_at = null, last_full_sync_at = $4,
+             last_full_sync_range_start = current_full_sync_range_start,
+             last_full_sync_range_end = current_full_sync_range_end,
+             current_full_sync_id = null,
+             current_full_sync_requester_root_session_id = null,
+             current_full_sync_requester_presentation_locale = null,
+             current_full_sync_expires_at = null,
+             current_full_sync_range_start = null,
+             current_full_sync_range_end = null,
+             changed_during_full_sync = false
+         where node_id = $1 and data_source = $2 and current_full_sync_id = $3update device.data_sync_state set changed_during_full_sync = true
+         where node_id = $1 and data_source = $2
+           and current_full_sync_id is not nullupdate device.data_sync_state
+         set next_full_sync_at = null, current_full_sync_id = null,
+             current_full_sync_requester_root_session_id = null,
+             current_full_sync_requester_presentation_locale = null,
+             current_full_sync_expires_at = null,
+             current_full_sync_range_start = null,
+             current_full_sync_range_end = null,
+             changed_during_full_sync = false
+         where node_id = $1 and data_source = $2 and current_full_sync_id = $3insert into device.data_sync_state (node_id, data_source)
+         values ($1, $2) on conflict (node_id, data_source) do nothinginsert into device.comms_announcements as stored (
+           producer_id, received_at_unix_ms, first_received_at_unix_ms,
+           announcing_device_id, event_id,
+           provider, kind, occurred_at_unix_ms, announced_at_unix_ms,
+           outcome, reason, producer, announced_ms_ago
+         )
+         select $1, $2, $2, rows.* from unnest(
+           $3::text[], $4::text[], $5::text[], $6::text[],
+           $7::bigint[], $8::bigint[], $9::text[], $10::text[],
+           $11::text[], $12::bigint[]
+         ) as rows
+         on conflict (producer_id, announcing_device_id, event_id) do update set
+           provider = excluded.provider, kind = excluded.kind,
+           occurred_at_unix_ms = excluded.occurred_at_unix_ms,
+           announced_at_unix_ms = excluded.announced_at_unix_ms,
+           outcome = excluded.outcome, reason = excluded.reason,
+           producer = excluded.producer,
+           announced_ms_ago = excluded.announced_ms_ago,
+           -- `first_received_at_unix_ms` is deliberately NOT in this list. It
+           -- is the retention clock, and refreshing it on replay is what let a
+           -- republished event outlive retention forever: the producer
+           -- naturally re-delivers the same event id minutes apart, each
+           -- delivery moving the only expiry anchor forward, so an
+           -- announcement from hours ago could still be sitting in the table.
+           -- The row ages from when Hatch FIRST saw it, which no later publish
+           -- can change.
+           -- Refreshed with `announced_ms_ago`, never without it. The anchor is
+           -- `received_at_unix_ms - announced_ms_ago`, so the two halves have to
+           -- come from the SAME publish: a producer measures the duration
+           -- relative to the delivery that carries it. Leaving the receipt at
+           -- the first delivery while refreshing the duration anchors a replay
+           -- roughly one replay-gap too far into the past, which then reads as
+           -- an aged-out referent. Re-deliveries of the same event id about
+           -- eleven minutes apart were observed on device, so this is the
+           -- ordinary path rather than a rare one.
+           received_at_unix_ms = excluded.received_at_unix_ms
+         where row(
+           stored.provider, stored.kind, stored.occurred_at_unix_ms,
+           stored.announced_at_unix_ms, stored.outcome, stored.reason,
+           stored.producer, stored.announced_ms_ago
+         ) is distinct from row(
+           excluded.provider, excluded.kind, excluded.occurred_at_unix_ms,
+           excluded.announced_at_unix_ms, excluded.outcome, excluded.reason,
+           excluded.producer, excluded.announced_ms_ago
+         )
+         returning (xmax = 0) as inserted, announcing_device_id, event_idannouncing_device_idselect count(*)::bigint as received_chunks,
+                max(c.chunk_index) as max_chunk_index,
+                coalesce(sum(octet_length(c.payload)), 0)::bigint as total_bytes
+         from device.upload_chunks c
+         where c.upload_session_id = $1max_chunk_indexreceived_chunkstotal_bytesselect node_id, route_kind, request_id, datatype, sync_mode,
+                chunk_count, status, updated_at_text, expires_at
+         from device.upload_sessions
+         where upload_session_id = $1
+         for updatedelete from device.upload_sessions
+         where upload_session_id = $1
+           and route_kind = 'data_source_reconciliation'conflicting reconciliation upload session identityreconciliation upload phase conflicts with finalizationreconciliation upload is missing during finalizationreconciliation upload no longer has its exact sealed chunk setdelete from device.calendar_events
+         where node_id = $1 and start_at < $3 and end_at > $2
+           and not (external_event_id = any($4::text[]))delete from device.calendar_events
+             where node_id = $1 and start_at < $2 and end_at <= $2insert into device.calendar_events as stored (
+           node_id, external_event_id, title, start_at, end_at, is_all_day,
+           external_calendar_id, calendar_name, availability, location, notes,
+           time_zone, start_local_date, end_local_date, is_recurring, url,
+           event_status, calendar_color
+         )
+         select $1, rows.* from unnest(
+           $2::text[], $3::text[], $4::timestamptz[], $5::timestamptz[],
+           $6::boolean[], $7::text[], $8::text[], $9::text[], $10::text[],
+           $11::text[], $12::text[], $13::date[], $14::date[], $15::boolean[],
+           $16::text[], $17::text[], $18::text[]
+         ) as rows
+         on conflict (node_id, external_event_id) do update set
+           title = excluded.title, start_at = excluded.start_at,
+           end_at = excluded.end_at, is_all_day = excluded.is_all_day,
+           external_calendar_id = excluded.external_calendar_id,
+           calendar_name = excluded.calendar_name,
+           availability = excluded.availability, location = excluded.location,
+           notes = excluded.notes, time_zone = excluded.time_zone,
+           start_local_date = excluded.start_local_date,
+           end_local_date = excluded.end_local_date,
+           is_recurring = excluded.is_recurring, url = excluded.url,
+           event_status = excluded.event_status,
+           calendar_color = excluded.calendar_color
+         where row(
+           stored.title,
+           stored.start_at,
+           stored.end_at,
+           stored.is_all_day,
+           stored.external_calendar_id,
+           stored.calendar_name,
+           stored.availability,
+           stored.location,
+           stored.notes,
+           stored.time_zone,
+           stored.start_local_date,
+           stored.end_local_date,
+           stored.is_recurring,
+           stored.url,
+           stored.event_status,
+           stored.calendar_color
+         ) is distinct from row(
+           excluded.title,
+           excluded.start_at,
+           excluded.end_at,
+           excluded.is_all_day,
+           excluded.external_calendar_id,
+           excluded.calendar_name,
+           excluded.availability,
+           excluded.location,
+           excluded.notes,
+           excluded.time_zone,
+           excluded.start_local_date,
+           excluded.end_local_date,
+           excluded.is_recurring,
+           excluded.url,
+           excluded.event_status,
+           excluded.calendar_color
+         )
+         returning (xmax = 0) as inserteddelete from device.calendar_events
+         where node_id = $1 and external_event_id = any($2::text[])insert into device.call_log as stored (
+           producer_id, external_id, phone_number, contact_name,
+           call_type, occurred_at_unix_ms, duration_seconds, platform
+         )
+         select $1, rows.*, $8 from unnest(
+           $2::text[], $3::text[], $4::text[], $5::text[],
+           $6::bigint[], $7::bigint[]
+         ) as rows
+         on conflict (producer_id, external_id) do update set
+           phone_number = excluded.phone_number, contact_name = excluded.contact_name,
+           call_type = excluded.call_type,
+           occurred_at_unix_ms = excluded.occurred_at_unix_ms,
+           duration_seconds = excluded.duration_seconds, platform = excluded.platform
+         where row(
+           stored.phone_number, stored.contact_name, stored.call_type,
+           stored.occurred_at_unix_ms, stored.duration_seconds, stored.platform
+         ) is distinct from row(
+           excluded.phone_number, excluded.contact_name, excluded.call_type,
+           excluded.occurred_at_unix_ms, excluded.duration_seconds, excluded.platform
+         )
+         returning (xmax = 0) as insertedcall_log upsert into device.call_loginsert into device.contact_emails (contact_id, label, email)
+             select * from unnest($1::bigint[], $2::text[], $3::text[])insert into device.contact_phones (contact_id, label, phone_raw, phone_e164)
+             select * from unnest($1::bigint[], $2::text[], $3::text[], $4::text[])insert into device.contact_addresses (
+               contact_id, label, street, city, state, postal_code, country
+             )
+             select * from unnest(
+               $1::bigint[], $2::text[], $3::text[], $4::text[],
+               $5::text[], $6::text[], $7::text[]
+             )update device.contacts
+         set deleted_at = now(), updated_at = now()
+         where node_id = $1 and deleted_at is null
+           and not (external_contact_id = any($2::text[]))insert into device.contacts (
+           node_id, platform, external_contact_id, display_name, organization,
+           job_title, birthday_text, note, thumbnail,
+           synced_at_text, deleted_at, updated_at
+         )
+         select $1, $2, rows.*, $9, null, now()
+         from unnest(
+           $3::text[], $4::text[], $5::text[], $6::text[], $7::text[],
+           $8::text[], $10::text[]
+         ) as rows
+         on conflict (node_id, external_contact_id) do update set
+           platform = excluded.platform,
+           display_name = excluded.display_name,
+           organization = excluded.organization,
+           job_title = excluded.job_title,
+           birthday_text = excluded.birthday_text,
+           note = excluded.note,
+           thumbnail = excluded.thumbnail,
+           synced_at_text = excluded.synced_at_text,
+           deleted_at = null,
+           updated_at = excluded.updated_at
+         returning contact_id, external_contact_id, (xmax = 0) as inserteddelete from device.contact_phones where contact_id = any($1)external_contact_idcontact_iddelete from device.contact_emails where contact_id = any($1)delete from device.contact_addresses where contact_id = any($1)
+        update device.nodes
+        set platform = $1,
+            contacts_last_synced_at = $2,
+            contacts_last_received_at = $3,
+            contacts_last_sync_status = 'success',
+            contacts_last_sync_error = null,
+            contacts_contact_count = $4,
+            contacts_content_sha256 = $5
+        where node_id = $6
+        device node disappeared while recording contacts snapshot metadataupdate device.contacts
+             set deleted_at = now(), updated_at = now()
+             where node_id = $1 and deleted_at is null
+               and external_contact_id = any($2::text[])update device.nodes n
+         set platform = $1,
+             contacts_last_synced_at = $2,
+             contacts_last_received_at = $3,
+             contacts_last_sync_status = 'success',
+             contacts_last_sync_error = null,
+             contacts_contact_count = (
+               select count(*)
+               from device.contacts c
+               where c.node_id = $4 and c.deleted_at is null
+             ),
+             contacts_content_sha256 = case
+               when $5 then null
+               else contacts_content_sha256
+             end
+         where n.node_id = $4device node disappeared while recording contacts mutation metadatacron worker preserving active Spaces builders beyond descendant settlement deadlinecron worker failed to interrupt subagent handoff follow-up at execution deadlinecron worker subagent handoff follow-up interrupted at execution deadlinecron worker waiting for descendant subagents before resolutioncron worker deferring active Spaces builders after drain reached deadlinecron worker timed out draining descendant subagents before resolutioncron worker descendant subagents settled while drain reached deadlinecron worker timed out waiting for descendant subagents before resolutioncron worker descendant subagents settled before resolutioncron worker timeout resolve phase reopened terminalized descendantcron worker timeout resolve phase skipped hard-closed descendantcron worker timeout resolve phase descendant durable owner is missingcron worker timeout resolve phase failed to reopen terminalized descendantcron worker timeout resolve phase failed to interrupt descendantcron worker timeout resolve phase prompted descendantcron worker timeout resolve phase failed to prompt descendantcron worker timeout resolve phase failed to resume descendantcron worker timeout resolve phase missing descendant handle after resumecron worker timeout resolve phase descendant did not restart before prompt-start timeoutcron worker timeout resolve phase descendant restarted resolve turncron worker timeout resolve phase interrupt settled before promptcron worker timeout resolve phase targeting deepest active descendantscron worker timeout resolve phase exhausted before descendants settledalready_settledexisting_handoff_readmitcron.scheduler.worker.executesubmit_failedcron worker failed to submit subagent handoff follow-up before resolutionsubmittedcron worker accepted subagent handoff follow-up before resolutionaccept_channel_droppedcron worker subagent handoff follow-up acceptance channel droppedcron worker rejected subagent handoff follow-up before resolutionwait_for_settlement_failedterminal_proof_missing_after_waitdevice data source deleteddevice data deletion response must serializedevice data source deletion failed{"ok":false,"error":"device data deletion failed"}sensitive sources do not support reconciliation admissionfull_snapshotdatatype is requirednodes.notify route does not match its admission metadatachunked /nodes/sync uploads are no longer supported; send a full payloadephemeral payload handle is requiredproactive{"redacted":true,"redaction_reason":"notification and sms payloads are not stored raw"}node notification admitted but worker wake failedunauthorized; authenticated ingress request is missing verified identityended the live call's turn before restartthe live call's turn did not end before restartwallet request reached the checkout operation dispatcherread checkout spend requestwrite checkout spend responsefailed to initialize published spaces snapshotfailed to start published spaces watcherpublished spaces DB change channel closed; recreating subscriberpublished spaces DB change subscriber lagged; forcing snapshot refreshpublished spaces watcher event errorpublished spaces watcher channel disconnected; recreating watcherfailed to recreate published spaces watcherspace.deleteddeletespace.createdfailed to snapshot published spacesdevice sync worker skipped comms announcement without a proactive inference consumerdevice sync worker failed redacted sync because live payload was unavailableredacted device sync payload was unavailable in noded memorymissing_ephemeral_payloadredacted device sync payload is awaiting noded notificationdevice sync worker rejected unsafe ephemeral payload releasedevice sync worker could not prepare inference request; marking failedprepare_inference_faileddevice sync inference failed; marking faileddevice sync worker discarded a result invalidated by source deletiondevice sync worker skipped trajectory persistence for ephemeral raw payloaddevice sync worker could not persist trajectory; continuing with decisiondevice sync worker received invalid tool response; defaulting to nothing_to_dobrowser task tagging history did not settle before timeout; continuing with available evidencebrowser task tagging evidence unavailable; continuing with metadatabrowser task tagging row has invalid root agent idfailed to resolve public session for browser task tagging inferencemedia upload worker deferred lane by accumulation windowmedia upload worker deferred lane by cooldownmedia upload proactive handoff is disabled; marking batch as nothing to domedia upload worker could not prepare inference request; marking failedmedia upload worker received invalid tool response; defaulting to nothing_to_domedia upload inference failed; marking failedidle-session internalization skippedidle-session internalization detector failedidle-session internalization firedidle-gated queue drained under live quiet windowidle-gated queue drain under live signal failedidle detector could not open self-improvement storeidle detector could not read recent self-improvement runstravel profile upkeep lineage lock was poisonedtravel activity reached the idle boundaryruntime.completed_travel_turntravel_activity_idletrigger_message_idtravel_turn_completed_at_msidle travel profile upkeep failed; retry remains pendingshopping activity reached the idle boundaryruntime.completed_shopping_turnshopping_activity_idleshopping_turn_completed_at_msshopping profile upkeep lineage lock was poisonedidle shopping profile upkeep failed; retry remains pendingidle_internalize:ideas_feedidle.self_improvementfailed to materialize Ideas feed after idle internalizationself_improvement_baseline_ideasidle_ideas_feed_materialize_failedfailed to seed retry after idle Ideas feed materialization failureopen self-improvement store for startup recoveryrequeue interrupted self-improvement runs before checkpoint recoverystartup:self_improvement_recoveryrequeued interrupted self-improvement run in place after daemon restartenter_tool_environmententer-tool-environmentcommand is requiredfailed to prepare exec cgroup; continuing without cgroup attributionread enter-tool-environment requestwrite enter-tool-environment responselegacy_fallbackavatar generation metadata predates the DAG runtime; completion job seededmetadata_validationlegacy_metadataavatar generation metadata predates the DAG runtimeavatar_video_completionfinalize_reconcilefailed to seed avatar video completion after finalize reconciliationpublish_pathavatar subprocess output already exists after restartwork_id_parseavatar finalize work row has empty work idrehydrate_workavatar finalize runtime work is no longer activeavatar finalize runtime work metadata has invalid message_idmetadata_parseparse avatar finalize runtime work metadataroot_sessionroot_session_not_loadedavatar finalize root session is not loadedroot_session_missingavatar finalize was superseded by a choreography replan during restart recoveryavatar finalize restart recovery failedavatar finalize reconciliation resumed the interrupted enrichmentavatar finalize recovery pass completed with videos pendingavatar finalize restarted successfullyavatar finalize was superseded during restart recoveryreplan_supersededresume_generationresume_errorresume_generation_errorresume avatar finalize generationresume_failedresumed_generation_failedresumed_generationload active runtime work items for avatar finalize reconciliationavatar finalize startup reconciliation failedload active space generation runtime workspace generation ended by a daemon restartblocked result has no valid user-facing messageworkflow terminal handoff abandoned because its blocked result is invalidworkflow terminal handoff contains an invalid durable presentation routeworkflow terminal handoff contains an invalid launching agent identityworkflow terminal handoff contains an invalid execution root identityworkflow-terminal-root-followupcheck predecessor workflow terminal mailbox receiptworkflow terminal handoff abandoned because its durable identity is unresolvableworkflow terminal handoff suppressed because source message was cancelledopen browser task queuereload terminal browser taskskipping non-terminal browser task terminal transitionskipping stale browser task terminal transitionterminal browser task row is missingrescuecould not load cron worker lease for browser gracecould not load cron worker allowance for browser graceagent_status broadcast presence statusfailed to resolve root session for runtime-work activity-thread presenceagent_status ignored voice Companion activity-thread presence with ambiguous root sessionsfailed to resolve runtime-work bindings for activity-thread presenceagent_status ignored runtime-work activity-thread presence with ambiguous root sessionsfailed to resolve root session candidate for activity-thread presence updateagent_status cleared activity-thread presenceagent_status ignored blocked activity-thread fallback for non-waiting threadagent_status ignored blocked activity-thread activity for unloaded root sessionagent_status blocked activity-thread fallback did not changeagent_status accepted blocked activity-thread fallbackagent_status ignored runtime-work activity-thread activity for unloaded root sessionagent_status runtime-work activity-thread status did not changeagent_status accepted runtime-work activity-thread statusagent_status accepted voice Companion activity-thread statusagent_status ignored retained forwarded activity-thread presence with ambiguous root sessionsagent_status accepted retained forwarded activity-thread statusdatabase write admission gate closedadmission_timeoutassert_table_existstable_presence.queryinvitespeer_conversationspeer_remote_conversationscirclescircle_membersheld_grantsaction_auditpeer_user_stateingestdata_source_eventsmedia_upload_eventsmedia_upload_batchesbackground_workersturnscontextsourcesingest_attemptssubscriptionssubscription_sourcesgroup_cursorsdeliverieswebhook_custodywebhook_custody_lockwebhook_fetch_workwebhook_eventsidea_execution_pendingcontext_snapshotscontext_itemsrecovery_ownersdelivery_outboxassert_required_tablesstream_lanesearch_vectorsearch_textwork_idsnapshot_kindstate_jsondelivery_keynext_attempt_at_utcskill_namepending_invalidation_hashlast_seen_version_idlast_seen_badge_versiontext_contentrecovery_classjob_idrun_idretired_chat_ids_pkeyruntime_search_documents_events_fts_idxruntime_search_documents_media_fts_idxruntime_search_documents_memory_fts_idxruntime_events_main_history_seq_desc_idxruntime_events_main_history_parent_kind_seq_idxruntime_events_public_runtime_user_seq_idxruntime_work_items_active_idxruntime_work_items_terminalized_idxdeliveries_retry_idxdeliveries_terminal_retention_idxruntime_chat_event_derived_write_backlog_created_idxruntime_chat_event_derived_write_backlog_ready_idxagent_subagent_progress_message_child_pending_idxagent_subagent_spawns_open_global_created_idxagent_agents_spawn_metadata_gin_idxagent_agents_active_subagent_liveness_idxagent_context_item_derived_write_backlog_created_idxagent_context_item_derived_write_backlog_ready_idxagent_runtime_restart_checkpoints_updated_idxagent_recovery_owners_active_scan_idxagent_recovery_owners_terminal_retention_idxagent_recovery_owners_terminal_status_idxscheduler_jobs_due_idxscheduler_runs_status_scheduled_utc_idxscheduler_delivery_outbox_retry_idxscheduler_delivery_outbox_retention_idxself_improvement_runs_queue_idle_gated_idxself_improvement_runs_queue_non_idle_gated_idxmedia_items_description_retry_idxmedia_items_ready_media_idxmedia_locations_geocode_retry_idxmessage_roledeveloperassistantevent_kindmessagetool_starttool_donetask_statuscontext_item_kindmessage_texttext_segmentstool_calltool_outputrun_statustimeoutapplied_migration_max_versioncredential_resolutionshared_pool_mutexresolve_database_urlshared_pool_reuse_checkpool_connectshared_pool_reusedHATCH_DATABASE_URLenvironment_overridecredential_task_queuecredential_decodenull-state adoption read failedDiscovery Pool null-state import found no cardsfull_catalog_importbundled catalog ownership read failed; skipping content upserts and membership prunediscovery_pool_source_iddiscovery_pool_source_kindDiscovery Pool null-state import failed to persist cardDiscovery Pool null-state import persisted cardsbundled_new_user_rotationnull-state rotation index read failednull-state rotation index write failednull-state exposure decay impression signalnull-state local impression read failedidea_cards.null_state_rowspruned legacy external new-user source membershipsfailed to prune legacy external new-user source membershipsdiscovery_poolbundled onboarding ownership read failed; skipping content upserts and membership pruneDiscovery Pool onboarding starter import failed to persist cardDiscovery Pool onboarding starter import failed to prune stale membershipDiscovery Pool onboarding starter import refreshed membershipDiscovery Pool null-state import pruned demoted/de-tagged cardsDiscovery Pool null-state import failed to prune stale membershipskipping bundled new-user import while limited Ideas feed is activenew-user catalog is unavailablebundled new-user catalog is unavailableskipping broad bundled new-user import while limited Ideas feed is activefailed to normalize Discovery Pool null-state idea card rowcould not read avatar status for dance idealatchedchat_historynative_idea_cards_readyreadiness_versionnative_idea_countuser_message_countsignal_family_countmin_light_native_idea_countmin_ready_native_idea_countmin_light_signal_familiesmin_ready_signal_familiesmin_user_message_countuser_message_count_limitlatched_atapi.idea_cards.readinessfailed to count goal signal familyfailed to open memory signal family storefailed to count memory signal familyfailed to count space signal familyfailed to load materialized idea card selection contextsidea_cards.materialized_feedmaterialized_idea_cards_selectionskipping materialized idea card selection for missing idea rowfailed to record materialized idea card selection batchideas feed composer attempt failed; retrying with a fresh turnideas feed composer declined; rendering deterministic feedideas_feed_composerideas feed composersearch-debug-configWEB_SEARCH_SERVING_CONFIG_PATHignoring invalid WEB_SEARCH_SERVING_CONFIG_PATHignoring WEB_SEARCH_SERVING_CONFIG_PATH: confidential VMs search through CAGIsearch debug developer options set from WEB_SEARCH_SERVING_CONFIG_PATHSELECT payload_json FROM runtime_restart_checkpoints WHERE agent_id = $1 FOR UPDATESELECT submission_json, octet_length(submission_json)::bigint AS serialized_bytes
+         FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND submission_id <> $2startup_queue_fullsuppressed device sync follow-up invalidated by source deletionload terminal background follow-up outcome for delivery settlementfollow-up has no durable presentation chat ownerartifact_share_disclosure_content_changedThe artifact changed after its disclosure check.rejecting malformed restart replay fence transitionfailed to persist replay fence before successor activationfailed to persist restart replay fencereplay-forbidden checkpoint had no durable payload fingerprintrejecting malformed replay-forbidden checkpointfailed to reconcile durable cancellation handoff before checkpoint replayfailed to read durable cancellation handoff evidencereplay-forbidden checkpoint changed before successor activationrestart checkpoint changed before successor activationfailed to persist replay-forbidden checkpoint successorfailed to persist restart checkpoint successorrejecting restart checkpoint with contradictory tool output evidencefailed to reconcile checkpoint tool outputs with the durable transcriptfailed to read durable tool output evidencefailed to terminalize invalid restart checkpoint ownerfailed to check for a live session before closing a refused browser checkpointbrowser_input_unsupported_kindbrowser_input_classification_failedbrowser_input_refusedclosing browser restart checkpoint refused by browser input admissionrestart checkpoint payload was invalidfailed to decode runtime restart checkpoint payloadpayload_decode_failedruntime restart checkpoint payload was missingpayload_missingrestart checkpoint payload version was invalidunsupported runtime restart checkpoint version was invalidunsupported_payload_versionruntime restart checkpoint required the retired voice executorlegacy_voice_execution_unsupportedruntime restart execution config was invalidexecution_config_invalidexplicit restart recovery identity had no execution configexplicit_execution_config_missingruntime restart approval correlation was invalidapproval_wait_invalidremoving invalid runtime restart checkpoint without executing itprimary_root_checkpoint_owner_terminalizationprimary_root_checkpoint_closefailed to terminalize owner of invalid restart checkpointprimary_root_checkpoint_metadata_readprimary_root_checkpoint_envelope_validationvalidprimary_root_checkpoint_terminal_cleanupterminal restart checkpoint classification lacked conversation metadataprimary_root_checkpoint_owner_validationprimary_root_checkpoint_invalid_cleanupfailed to load conversation meta before restart envelope validationfailed to resolve restart recovery policy inputsfailed to terminalize owner of terminal restart checkpointclosing legacy checkpoint without an exact execution configprimary_root_checkpoint_legacy_cleanupprimary_root_checkpoint_replay_preparationclosing runtime restart checkpoint without resume: recovery class has no proven live owner workprimary_root_checkpoint_owner_cleanupprimary_root_checkpoint_deferred_marker_storeprimary_root_checkpoint_agent_resumefailed to resume agent for runtime restart checkpointprimary_root_checkpoint_active_message_readvalidated restart checkpoint is missing its durable payload tokenprimary_root_checkpoint_message_activationcheckpoint agent is running a different message; leaving row unresolvedfailed to inspect active message during checkpoint rehydrateprimary_root_checkpoint_deletefailed to resume message from runtime restart checkpointfailed to delete runtime restart checkpoint after successful rehydrateHEIF FileRef could not be stored as JPEG; preserving original referenceHEIF FileRef check failed; preserving original referencetask_failedvideo FileRef MIME type cannot be canonicalized; preserving original referencevideo FileRef could not be materialized; preserving original referencevideo FileRef store task failed; preserving original referencemaintenance scheduler could not open runtime work storeresolved the boot overdue-recovery window for this wakecontext subscriber registration finishedqueued daily wake could not be read for the phase movequeued daily wake moved to the resolved daily phasevoice call end teardown skipped: a newer call already owns the session&quot;runtime.voice_call_markervoice end marker skipped: execution transcript did not settlevoice end marker deferred until owned handoff history settlesfailed to resolve public session_id for call-ended actionssuspended voice call media ended; blocking re-adopt and waiting before end presentationvoice-media end-call delivery failedvoice-media end-call skipped for stale callvoice call released after media endedvoice media drop finalize skipped after call lifecycle changedpost-call persistence skipped because no start marker was recordedinsert into runtime.browser_task_tabs (task_id, tab_id, alias)
+         select $1, $2, 't' || (coalesce(max(substring(alias from 2)::integer), 0) + 1)
+         from runtime.browser_task_tabs where task_id = $1
+         on conflict (task_id, tab_id) do nothingupdate runtime.browser_task_tabs set actor_invocation_id = $3, actor_agent_id = $4
+             where task_id = $1 and tab_id = $2 and holder_invocation_id is not nullupdate runtime.browser_task_tabs set holder_invocation_id = null,
+                 actor_invocation_id = null, actor_agent_id = null, held_at = null
+                 where task_id = $1 and tab_id = $2update runtime.browser_task_tabs set holder_invocation_id = $3,
+                 actor_invocation_id = $4, actor_agent_id = $5, held_at = now()
+                 where task_id = $1 and tab_id = $2 and holder_invocation_id is nullbrowser tab hold changedtab_id, alias, holder_invocation_id, actor_invocation_id, actor_agent_id, (select holder.kind from runtime.browser_invocations holder where holder.invocation_id = browser_task_tabs.holder_invocation_id) as holder_kindupdate runtime.browser_task_tabs set holder_invocation_id = null,
+             actor_invocation_id = null, actor_agent_id = null, held_at = null
+             where task_id = $1 and tab_id = any($2)update runtime.browser_task_tabs set actor_invocation_id = $3, actor_agent_id = $4
+             where task_id = $1 and tab_id = any($2) and holder_invocation_id is not nullreconciliation_idchunk_indexchunk_ignored_stalechunk_stagedchunk_countchunk_set_readychunk_fencedchunk_failedstage reconciliation pagedue-occurrence coalesce check failed; seeding immediate occurrence anywaymaintenance readiness unknown; preserving scheduled checkdeferred maintenance readiness deadline is not in the futuredeferred maintenance readiness reason changeddeferred maintenance occurrence collided with terminal workconditional maintenance cursor collided with completed workoffenforceadmission_tracking_completedb_memory_active_deltaactive_user_facingtracked_subprocessruntime_owned_countpreemption_policy_causesevent-hook Space owner lookup failed; using unscoped approvalevent-hook Space id lookup failed; telemetry falls back to slug-onlyevent hook could not withdraw a wake its definition change supersededevent hook wake could not wake the execute-resolve workeradmission_refusedevent hook self-disable failedevent hook self-disable task failedevent hook log append failedevent hook log task failedhook_supersededthe hook changed before this wake startedthe hook changed while it was pollingevent hook poll schedule save failedevent hook poll schedule save task failedThe hook changed while its script was runningopen wallet spend storageopen BrowserTask storage for wallet checkoutload authoritative BrowserTask for wallet checkoutwallet checkout requires the exact BrowserTask to be runningthis browser checkout has payment state from before provider-qualified wallet storage; its outcome may be ambiguous, so automatic retry is disabledcheckout origin has no hostcompensating wallet cancellation is limited to Shop Pay application rollbackBrowserTask has no active wallet spend requestwallet deciding client is available only during spend creationwallet spend request belongs to a different approvalStripe Link begin unexpectedly resolved a pending creation retrybrowser wallet merchant origin changed before durable creationcheckout has no owned fundingcheckout funding changedShop Pay browser card delivery is not enabled for this accountmerchant checkout lookup authorization timed outresolve merchant checkout lookup authorizationunexpected merchant checkout lookup authorization responseread existing merchant payment setup for cancellationOpenTable approved terms lookup timed outunexpected OpenTable approved terms responseOpenTable checkout has no original requestOpenTable checkout lookup identity changedOpenTable modification approval is missingOpenTable modification approval has the wrong resourceOpenTable modification requires an approved modification operationOpenTable predecessor belongs to another reservationOpenTable predecessor approval is missingOpenTable checkout has no original approvalOpenTable booking permission recheck timed outunexpected OpenTable booking permission responseread existing merchant checkoutread OpenTable approved termsdecode checkout spend terminal resultapproved pending checkout spend operation has no approval ownercheckout approval lookup returned a different approval ownerdevice sync worker conversation bootstrap failed; continuing without guaranteed trajectory persistencefailed to load root transcript for device sync worker; continuing with event-only contextfailed to refresh latest public runtime user timezone for device sync promptfailed to read home timezone for device sync promptno device sync model was availabledevice_sync_workersaved arrival context unavailableproactive_sync_workerfailed to load prior device sync decisions; continuing without prior-decision contextephemeral payload handle changed during fetchnotification payload release is temporarily unavailablegeofence registry unavailable; the crossing stays an ordinary device-sync eventrequested Health backfill completion is missing its requested rangerequested Health backfill completed without a message to its requester[HEALTH BACKFILL COMPLETE]The requested Health backfill completed. Use `health-cli` to answer against the updated data.requested_rangeHealth backfill completed.device_sync.observeddevice_syncreceived_at_unix_mspayload/device_sync/payloadreload parked browser taskskipping browser task parked transition after status advancedskipping stale browser task parked transitionparked browser task row is missingprovisional browser purchase tagging could not reload parked taskprovisional browser purchase tagging could not revalidate parked taskcart_reviewpaymenteffectsjournalbrowser specialist tagging skipped: browser task queue unavailablebrowser specialist tagging skipped: invocations unreadablebrowser specialist tagging skipped an invocation without run attributionfailed to load recent media upload transcript context; continuing with batch-only contextfailed to load latest user client timezone for media upload promptmedia_upload_workerno media upload model was availableruntime_media_uploadx-request-idAction request exceeds 12 MiBCloudflare actions share has no stored share keyCloudflare actions URL does not match its share origininclude_recipient_identities/hatch/mint_cloudflare_spaces_viewer_tokenCloudflare viewer assertion response was emptysaved versions of artifacts are not available here yetartifact version restored; projection retry scheduledrestore: could not mark closed builders' results seenrestore closed interrupted buildersrestored version: could not read the automatic update preferencerestored version has no publication manifest; the shared link keeps the previous onerestored version: could not read the artifact rowrestored version: the shared link was not updatedscheduled action has no exact occurrence ownerscheduler.cron.space_actionshared_artifact_vm_capability_unavailableruntime.space_action_invokerread deciding client context response bodydecode deciding client context response envelopeSentinel refused the deciding client context readcheckpointed work lost its restart checkpoint owner during daemon restartskipping checkpointed RuntimeWork retirement: retained checkpoint evidence is incompletereconciled checkpointed RuntimeWork at startupretrying checkpointed RuntimeWork orphan retirementstartup ideas seed failedresume_epoch_installresume_verdict_reportingresume_maintainer_scheduleresume epoch installedcore_loop_runtime.orchestrator_startup.required_pre_readyrequired orchestrator startup work failedfailed to migrate legacy goal association into goal workspaceinspect goal workspace migration markergoal workspace consolidation already completed; skipping legacy migrationlist goals for workspace reconciliationstage legacy goal rootsinspect legacy goal cron associations for shared schedules%migrate legacy associations for goal À

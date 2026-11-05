@@ -1,1 +1,11 @@
-The user declined the payment. Report that outcome in `browser.report`. Do not start another checkout.
+Complete any payment through the checkout agent.
+
+Call this when your task asks you to buy, pay or place an order. This includes signing up for paid subscriptions and making paid bookings, such as hotel reservations.
+
+Give the checkout agent the full purchase assignment in `instruction`. Include relevant progress, previous attempts and any item, contact, delivery or payment details it needs. Pass the `checkout` reference from an earlier result to continue the same recorded checkout.
+
+The checkout agent owns cart preparation, cart review and associated changes, payment approval, submission and confirmation. It prepares checkouts and requests payment approval with `checkout.prepare` and `status: ready`, then places the order with `checkout.submit` after approval. The runtime reuses an existing approval when it still covers the checkout.
+
+The call returns at once with the specialist's ID. Its result arrives automatically as a handoff when it finishes; do not poll or sleep to wait. A window runs one checkout at a time. To continue an unfinished purchase, send changes to the working specialist, or call again with the same `checkout` reference after it finishes. Leave further checkout actions to the specialist. An unresolved submission may have gone through; report it as awaiting the merchant's confirmation and never start a replacement purchase.
+
+Name the selected wallet provider. Include the payment-method label only when a particular method was chosen; use its masked label for a card. A provider-only choice needs no card label before payment preparation. Preserve a preference for a merchant-saved method in `instruction`. Do not pass credit card numbers, payment-method IDs or passwords in `instruction`. For takeover, tell the checkout agent to prepare checkout as far as it can, then return the remaining steps for the user to complete. When it reports that payment needs the user, relay that handoff through `browser.report` with `status: needs_input` and `reason: payment`. An error or blocked result does not authorize checking out yourself.

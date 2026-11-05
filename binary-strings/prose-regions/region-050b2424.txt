@@ -1,0 +1,19 @@
+en-USskipping a Muse Mail reply that failed to loadprunedcompleted_through_secsowner-mail sender lookup timed outowner-mail sender address is invalidowner-mail sender identity changedunreadable legacy hook was not admittedinvalid legacy hook path was not admittedinvalid legacy hook was not admittedhttp://localhost/hatch/cvm_appeal/statusWITH requested AS (
+           SELECT * FROM unnest($1::text[], $2::bigint[]) AS r(goal_id, revision)
+         ), locked AS MATERIALIZED (
+           SELECT g.goal_id, g.connection_request_id, g.connection_revision,
+                  g.connection_follow_up_at, r.revision
+           FROM goals.goals g JOIN requested r USING (goal_id)
+           WHERE g.connection_id=$3 AND g.source='assistant_tracking'
+           ORDER BY g.goal_id FOR UPDATE OF g
+         ), claimed AS (
+           UPDATE goals.goals g
+           SET connection_follow_up_at=NULL, connection_request_id=$4,
+               connection_revision=g.connection_revision+1
+           FROM locked l WHERE g.goal_id=l.goal_id
+             AND g.status='active' AND l.connection_revision=l.revision
+             AND l.connection_follow_up_at <= now()
+             AND l.connection_request_id IS DISTINCT FROM $4
+           RETURNING g.goal_id
+         ) SELECT (SELECT count(*) FROM claimed) +
+                  (SELECT count(*) FROM locked WHERE connection_request_id=$4)A follow-up must name work from its conversationTracked work changed before the follow-up was queuedparticipationsweep of open step attempts after terminal transition failedobjective state read failed; recurring window uses its first-run lookbackcoalesced_into_existing_incomplete_runworkflow-skills-v1content_schemawindow_lower_boundenqueuecoalescedleaseactive_runwait_cancelledobjective_not_registeredcoalesced_into_existing_occurrencechat_historygoalsspacesconnector inventory read failedfeed prompt text is empty; the cold-start gate abstainsfeed cold-start verdict cache read failed; reclassifyingfeed cold-start verdict cache write failed; the next fire reclassifiespropertiesneeds_interpretationstringadditionalPropertiesfeed:cold_startfeed_generatethe prompt's scope depends on the reader's own signalsfeed prompt scope classification answered off-schema; the fire generatesfeed prompt scope classification failed; the fire generatesfeed prompt scope classification timed out; the fire generatesfeed prompt read failed for the tier-1 visit arm; the arm abstainsfeed step died to execution infrastructure; retrying after backoffagentattempt lost its executorattempt deadline elapsed across restartexecutor lost across restart without a durable submissionremoved a prior attempt's leftover selection file before a fresh editor attemptleftover selection file removal failed; the fresh editor attempt may reject writescancelledfeed visit-run preemption could not terminalize; the preempting work collapses onto the visit run insteada named pulse lane resolved to the wire laneadhoc reading day clamped forward to the active dayactive-day anchor read failed; adhoc keeps its basin dayscheduled slot already failed a run; admission skipped as spentscheduled feed fire preempted an open visit run

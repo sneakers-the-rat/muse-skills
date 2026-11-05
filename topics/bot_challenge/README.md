@@ -68,10 +68,11 @@ The prose that steers the machinery: the specialist's role-registry entry, and t
 - [classifier.txt](../../binary-strings/browser/bot_challenge/classifier.txt) — `binary-strings/browser/bot_challenge/classifier.txt`
 
 
-## reference (2)
+## reference (3)
 
 Supporting vocabulary: enum/telemetry names, dispatch fragments, and the browser error lexicon.
 
+- [enums.txt](../../binary-strings/browser/bot_challenge/enums.txt) — `binary-strings/browser/bot_challenge/enums.txt`
 - [dispatch-fragments.txt](../../binary-strings/browser/bot_challenge/dispatch-fragments.txt) — `binary-strings/browser/bot_challenge/dispatch-fragments.txt`
 - [errors.csv](../../binary-strings/browser/errors.csv) — `binary-strings/browser/errors.csv`
 
