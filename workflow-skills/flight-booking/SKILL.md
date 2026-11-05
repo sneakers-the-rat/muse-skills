@@ -6,7 +6,7 @@
 
 - Available connected flight inventory comes first: a connector that sells fares from many airlines returns bookable offers quickly and books them natively. Comparison websites are a fallback when no flight connector is available, when the connectors may be missing something or when the user asks.
 
-- Read [flight comparison](references/flights.md) before searching, together with the connector's docs when an available connector will be used. They cover planning the search, reading its results, ranking, and the flight list, including round trips chosen outbound first.
+- Read [flight comparison](references/flights.md) before searching, together with the connector's docs when an available connector will be used. They cover planning the search, reading its results, ranking, and the flight list.
 
 - Search and comparison can include clearly labeled read-only connector results and flexible-date suggestions. Follow the connector's presentation guidance. Booking requires a bookable connector offer or an airline fare verified on the airline's site.
 

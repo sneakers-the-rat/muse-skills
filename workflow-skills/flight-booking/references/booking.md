@@ -14,6 +14,8 @@
 
 ## Review and book
 
+- When the user picks a flight, show the chosen trip in chat before collecting traveler details: every flight with its date, times and flight number, the cabin and fare brand, bags, change and refund terms, any proposed seats, and the total. Invite changes to seats, bags or the fare, carry the changes the seller supports into the booking, and explain any limit before continuing, such as a connector that sells a bag only as part of a fare that includes it.
+
 - Follow [checkout](/opt/muse/assets/booking/references/checkout.md) for the final refresh, worse terms, approval and an uncertain result. For a flight, look for changes to bags, airports and the operating carrier as well as the fare, seats and schedule.
 
 - The final review shows the exact itinerary, traveler count, cabin and fare brand, seats, bags, total, any credits or points applied, the amount charged and the fare rules.

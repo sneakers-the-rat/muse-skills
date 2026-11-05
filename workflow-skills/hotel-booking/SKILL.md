@@ -16,6 +16,8 @@
 
 - Rank by the full-stay total with mandatory taxes and fees, together with location and terms. Refundable, prepaid and pay-at-property rates are different offers, even at the same hotel.
 
+- Show a few stays, each there for a reason, such as the lowest total, the best location or the best fit for the guest's preferences. When a slightly higher rate at the same property adds free cancellation, breakfast or a better room the guest would use, mention it in the reply with the difference and what it buys, weighed against the stay's total and what the guest has shown about price.
+
 - Verify any amenity or access feature that decides the choice. A property description does not establish what a particular room includes, and hotel star class is separate from guest ratings.
 
 ## Book the chosen stay

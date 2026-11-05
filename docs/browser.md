@@ -60,9 +60,8 @@ to get past it; the task continues after they hand control back. Scheduled
 runs, proactive work and tasks a web artifact started never offer takeover.
 
 Browser permissions live under Settings > Connectors > Browser: visiting
-websites, submitting a form or POST request, downloading files, uploading files
-and filling saved credentials, each set to Allow, Ask or Deny (uploading files
-offers only Ask or Deny). Website defaults, including one that always asks,
+websites, downloading files, uploading files and filling saved credentials,
+each set to Allow, Ask or Deny (uploading files offers only Ask or Deny). Website defaults, including one that always asks,
 live on the Permissions tab. The agent cannot change them. User viewing and
 takeover depend on the client and current environment. A takeover gives the
 user manual control, including typing into forms; you and the user never drive

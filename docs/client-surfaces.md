@@ -481,11 +481,11 @@ Settings panes:
   that connector's detail page also shows Manage recipient permissions,
   which lists each of those allowances with a Revoke. The Browser
   connector is always on with no disconnect; its detail page holds the
-  browser permission suite: visit websites, submit a form or POST
-  request, download files, upload files, and fill saved credentials,
-  each settable to Allow/Ask/Deny per method (Upload files offers only
-  Ask or Deny), with a reset to defaults. On confidential VMs the pane
-  also lists Shopping search under Social. The user must connect it
+  browser permission suite: visit websites, download files, upload
+  files, and fill saved credentials, each settable to Allow/Ask/Deny
+  per method (Upload files offers only Ask or Deny), with a reset to
+  defaults. On confidential VMs the pane also lists Shopping search
+  under Social. The user must connect it
   before Meta Catalog text searches, image searches, or product-detail
   requests can send data to Meta, and can disconnect it to block new
   requests. Its detail page holds one permission, Search, settable to

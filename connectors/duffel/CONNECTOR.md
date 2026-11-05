@@ -8,6 +8,10 @@
 - It also searches and reserves pay-at-pickup rental cars with `car-search`, `car-quote` and `car-book`.
 <!-- duffel-rental-cars-only:end -->
 
+<!-- duffel-bags-only:start -->
+- It also adds paid bags to a flight booking with `bag-options` and `--bag`, as [Booking](references/booking.md) describes.
+<!-- duffel-bags-only:end -->
+
 - `car-booking-status` and `car-cancel` check and cancel rental-car reservations made here. Read [rental cars](references/cars.md) before any rental-car command; the flight sections below do not apply to cars.
 
 - Before a user-facing search, read [Flight Booking](/opt/muse/skills/flight-booking/SKILL.md), which compares flight sources and builds the flight list. Read [checkout](/opt/muse/assets/booking/references/checkout.md) once the user picks a flight to book, not before searching. [Flight Tracking](/opt/muse/skills/flight-tracking/SKILL.md) uses Duffel only for the fare check on a booked trip. Duffel does not report live flight status.
@@ -38,7 +42,7 @@
 
 - Duffel searches at most one connection per direction unless you pass `--max-connections 2`. Use 2 when the route has few one-stop options or the user accepts longer trips, and 0 for nonstop only.
 
-- Set `--depart-window HH:MM-HH:MM` and `--return-window HH:MM-HH:MM` (local time) when the user named a time of day, such as `--depart-window 06:00-12:00` for a morning flight. Duffel filters these itself, which is faster than filtering afterwards.
+- Set `--depart-window HH:MM-HH:MM` and `--return-window HH:MM-HH:MM` (local time) when the user named a time of day, such as `--depart-window 06:00-12:00` for a morning flight. `--arrive-window` and `--return-arrive-window` filter by local arrival time of day, with no date, so use them when the traveler must land within a time of day on the travel date, such as `--arrive-window 05:00-09:30` for a 10:30 meeting downtown. For a deadline an earlier arrival also meets, such as landing the evening before, search without them and compare each flight's arrival date and time. Duffel filters these itself, which is faster than filtering afterwards.
 
 - Narrow with `--airlines` (comma-separated names or IATA codes), `--max-price` and `--refundable` only when the user set that limit. `--refundable` keeps only offers marked refundable before departure without a penalty, which is not the same as cancel anytime, and it counts offers with unstated refund terms in `refundable_unknown_excluded`. Those offers are unknown, not non-refundable.
 
@@ -46,13 +50,15 @@
 
 ## Read the digest
 
-- `lines` are the options to show, lettered and ranked, each with its price, airline, flights with local times, stops and duration; `rows` are their pointers into the file, in the same order. They cover the cheapest, the fastest, the best tradeoffs, a few airlines and the cheapest nonstop. Fare variants of one schedule appear once. Make one flight row per pointer: `{"type":"flight","data":{"flight_details_file":"FILE","json_pointer":"POINTER"}}`.
+- `lines` are the ranked options to choose the shown trips from, lettered, each with its price, airline, flights with local times, stops, duration, fare brand with bags and change and refund terms, and why it is shown, such as cheapest or fastest; `rows` are their pointers into the file, in the same order. Each line is the cheapest fare on its flights, so fare variants of one schedule appear once. They cover the cheapest, the fastest, the cheapest nonstop, the best tradeoffs, the flights of the cheapest fares with free changes and with a checked bag, and a few airlines. Make one flight row for each line you show, from its pointer: `{"type":"flight","data":{"flight_details_file":"FILE","json_pointer":"POINTER"}}`.
 
-- A two-slice trip, such as a round trip, is chosen outbound first: its lines are outbound flights, each priced "from" the cheapest complete round trip with it rather than a one-way fare, and each ends with the `jq` path of its return options. Once the user picks an outbound, its path's lines and rows hold everything for the next step, such as `jq '.returns_by_outbound[2] | {lines, rows}' FILE`. Those are the return flights sold with it, each a complete, bookable round trip with its total. No new search is needed.
+- Lines lettered with `+`, such as `A+` and `A++`, follow their row: fares on the same flights that include more, cheapest first, each with the price difference and what it adds or lacks. One is the next fare up: the cheapest that includes more and lacks nothing, at most 50% more. The others are the search's cheapest fares with free changes and with a checked bag, at any price, when they are on these flights. They don't list every fuller fare. Each pointer is a complete, bookable offer. Show one as a row or mention it in the reply when what it adds fits this traveler.
+
+- A round trip's lines are complete round trips, each with both directions, one total and each direction's stops and duration, such as "out nonstop 5h58m, back 1 stop 8h45m". Each row books as one offer.
 
 - A requested or expected carrier missing from the lines may still be in the file: check `jq '[.digest.cheapest_by_airline[].airline]' FILE` before concluding Duffel has none. A carrier Duffel returned no offers for may still fly the route. Run one targeted `--airlines` search for it before turning to the airline's site.
 
-- A command that searched several airports, cabins or dates puts each search's own result under `searches`, with `searches_run` and `searches_failed`, and its digest ranks them all. Each search's result keeps only the offers its options and return options point to, so an offer missing from the file may still be sold by Duffel. Name the failed searches when they could change the choice.
+- A command that searched several airports, cabins or dates puts each search's own result under `searches`, with `searches_run` and `searches_failed`, and its digest ranks them all. Each search's result keeps only the offers its digest points to, so an offer missing from the file may still be sold by Duffel. Name the failed searches when they could change the choice.
 
 ## Keep the original results
 
@@ -68,13 +74,11 @@
 
 - Point each flight row at its pointer in the unchanged file, such as `/offers/0`, or `/searches/1/result/offers/0` for a parallel search. Partial results use `/partial_results/offers/INDEX`.
 
-- An outbound row (`/outbounds/N`) is for choosing the outbound flight; it holds one slice, no price and no bookable offer, since a card would show its price as the whole trip's total. The booking uses the complete offer the user picks from its return options.
-
 - A tap on a native flight row selects that row's complete offer. For a trip that is still being planned, return it to the plan and stop before seats, traveler details or validation. Otherwise validate and book that same complete offer, with every leg.
 
 - If the original file was lost or altered, rerun the search into a new file; an offer rebuilt from truncated output or a summary can't be validated or booked.
 
-- Keep a second fare for the same schedule only when its cabin, bags, refund or change terms, or price make a real difference.
+- Keep a second fare for the same schedule only when its cabin, bags, refund or change terms, or price make a real difference. A `+` line is usually that fare.
 
 - Keep differences between passengers and segments. A missing fare brand, cabin, bag, refund or change fact is unknown, so it reads as not stated rather than none, non-refundable or an airline's usual fee. Convert airport-local times only when the airport's timezone is known.
 
@@ -98,15 +102,15 @@
 
 - `code: duffel_quote_receipt_missing`, `duffel_quote_expired` or `duffel_quote_team_mismatch` stops use of that offer or quote. Before any approval or submission for this purchase, run a fresh search before continuing offer reads, seat lookup or checkout; do not retry that ID. After approval or submission, follow [Uncertain results](references/recovery.md) using the original checkout evidence. These codes do not resolve booking or funding uncertainty or permit a retry or replacement purchase. Fresh successful searches can rebuild a malformed disposable quote cache; rebuilding it does not resolve an earlier purchase.
 
-- `code: duffel_quote_storage_unavailable` means the quote cache could not be accessed or saved. This connector cannot repair that storage failure. Stop `search`, `seat-options`, `validate-booking` and `book` for the rest of the turn. Before any approval or submission for this purchase, use Flight Booking's browser fallback for shopping; after flight selection, keep the chosen itinerary and follow Flight Booking's airline-booking guidance using `browser.browse`. After approval or submission, follow [Uncertain results](references/recovery.md) using the original checkout evidence; this refusal does not resolve booking or funding uncertainty or permit retry or replacement.
+- `code: duffel_quote_storage_unavailable` means the quote cache could not be accessed or saved. This connector cannot repair that storage failure. Stop `search`, `seat-options`, `bag-options`, `validate-booking` and `book` for the rest of the turn. Before any approval or submission for this purchase, use Flight Booking's browser fallback for shopping; after flight selection, keep the chosen itinerary and follow Flight Booking's airline-booking guidance using `browser.browse`. After approval or submission, follow [Uncertain results](references/recovery.md) using the original checkout evidence; this refusal does not resolve booking or funding uncertainty or permit retry or replacement.
 
 - `code: duffel_quote_capacity_exceeded` requires a narrower search before selecting an offer.
 
-- `ok: false` with `code: duffel_unavailable` means the Duffel rollout gate is off, even if connector search returned Duffel. Stop `search`, `places`, `seat-options`, `validate-booking` and `book` for the rest of the turn; changing the query will not help. The rollout gate leaves existing-booking management available. Use Flight Booking's browser fallback for flight shopping. Scheduled fare searches wait for the next run.
+- `ok: false` with `code: duffel_unavailable` means the Duffel rollout gate is off, even if connector search returned Duffel. Stop `search`, `places`, `seat-options`, `bag-options`, `validate-booking` and `book` for the rest of the turn; changing the query will not help. The rollout gate leaves existing-booking management available. Use Flight Booking's browser fallback for flight shopping. Scheduled fare searches wait for the next run.
 
 - For other errors, an unchanged failed search fails the same way again, even when its response says `retriable: true`, so a changed query or another source is the next step.
 
-- Other failed reads, such as `booking-status`, `seat-options` and `validate-booking`, may be retried unless an availability or rate-limit rule stops that command.
+- Other failed reads, such as `booking-status`, `seat-options`, `bag-options` and `validate-booking`, may be retried unless an availability or rate-limit rule stops that command.
 
 - A 429 rate-limit response ends Duffel calls for the current task. When it carries `rate_limit_resets_at`, say when Duffel can be searched again. Report the limit without changing the query to get around it.
 

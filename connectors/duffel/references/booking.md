@@ -4,13 +4,21 @@
 
 ## Prepare passengers and seats
 
-- `seat-options --offer-id OFFER` returns bookable seats for each passenger, and the flag repeats for a short list of offers. A zero price means no added fee, and an omitted seat is unavailable. Adjacent seats share a row and section on the same side of the aisle.
+- `seat-options --offer-id OFFER` returns bookable seats for each passenger with their `position` (window, aisle or middle), and the flag repeats for a short list of offers. A zero price means no added fee, and an omitted seat is unavailable. Adjacent seats share a row and section on the same side of the aisle.
 
-- Choose at most one seat per passenger and segment. Repeat `--seat PASSENGER:SEGMENT:SEAT`, with one-based numbers, once per seat, such as `--seat 1:1:28B --seat 2:1:28C`; the CLI reads each flag as one seat. Mention seat choice once without letting it block the booking.
+- Choose at most one seat per passenger and segment. Repeat `--seat PASSENGER:SEGMENT:SEAT`, with one-based numbers, once per seat, such as `--seat 1:1:28B --seat 2:1:28C`; the CLI reads each flag as one seat.
+
+- When the user picks an offer, run `seat-options` for it and propose a free seat for each traveler on each flight: their saved or stated preference, otherwise a window or aisle, with travelers who fly together side by side. When no free seat meets those needs or the seat map can't be read, mention seat choice once, with the cheapest suitable seat's fee or that the airline assigns seats at check-in, and keep the booking moving without waiting for a seat choice.
+
+<!-- duffel-bags-only:start -->
+- The fare's own bag allowance is on each flight row. When the user wants more checked bags than it includes, or asks to add one, `bag-options --offer-id OFFER` lists the bags the airline sells with that offer: each traveler's bags per journey, with type, weight limit, how many can be added and the price per bag. An empty list means Duffel sells no extra bags for it, so the airline's site is the place to add them after booking.
+
+- Add each bag with `--bag BAG:QUANTITY` on `validate-booking` and `book`, using `bag` from that list, such as `--bag 1-1.1-checked-23kg:1`. Bag prices are added to the total the user approves, so the user should know each bag and its price before they approve.
+<!-- duffel-bags-only:end -->
 
 - When the user picks an offer, call `wallet.list_payment_methods` with `provider: "stripe-link"` and `wallet.get_user_info` in the same turn. Fill the trip email and phone from the conversation, `~/USER.md` and `wallet.get_user_info`. Use the user's own name for a passenger only when the conversation shows the user is flying; each other passenger needs their own legal name. Show the prefilled name, email and phone in your question so the user can correct a name that differs from their ID.
 
-- Then ask in one message for what is still missing: usually each traveler's birth date and gender (`m` or `f`), and each traveler's legal given and family name when not already known. If Link is `not_connected`, ask for what is still missing first, then end that message with Link's connection link (`next_action.markdown`, unchanged), so the user connects while answering.
+- Show the chosen trip in that same message, so the traveler can ask for changes before validation: each flight with its date, times and flight number, the cabin and fare brand, bags, change and refund terms, any proposed seats, and the total. Then ask for what is still missing: usually each traveler's birth date and gender (`m` or `f`), and each traveler's legal given and family name when not already known. If Link is `not_connected`, ask for what is still missing first, then end that message with Link's connection link (`next_action.markdown`, unchanged), so the user connects while answering.
 
 - Validation also needs the adult with each lap infant, and passport details only when it asks. The CLI sets `title` from gender and gives every passenger the first passenger's email and phone, so ask for a title or a second contact only when the traveler wants one. Ask for a loyalty account number only when the user wants credit.
 

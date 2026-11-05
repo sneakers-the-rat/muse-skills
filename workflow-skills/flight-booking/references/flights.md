@@ -12,6 +12,8 @@
 
 - Use relevant preferences for airlines, airports, seats and connections. One past trip is a hint, not a standing preference. Identity, accessibility needs and room to exceed a budget come from the user rather than inference.
 
+- Work out what this trip needs before ranking: when the traveler has to arrive or leave, whether they will check a bag, seats together or a preferred seat, and status that brings free bags, seats or upgrades on a carrier. Take these from the request, the travel profile, the calendar and the trip itself, such as a long stay or children making a checked bag likely. Search with a time limit the trip sets, such as a meeting the traveler must reach, and compare each flight's full arrival date and time with it.
+
 - Check loyalty status, credits and card benefits when they could change the choice, and confirm that a credit applies to the operating or marketing carrier and has not expired. A linked card shows which card the user holds, not its reward rules or a points balance. Mention a useful program and tier name once, without the membership number.
 
 ## Search available connectors first
@@ -48,17 +50,19 @@
 
 - Check the cabin on every segment. A business-class label can include an economy leg, so describe a mixed cabin as mixed.
 
-- Compare bags, seats, change and refund terms, and who services the ticket afterward. Add required bag and seat fees before calling a fare the cheapest. An unknown term is neither restrictive nor flexible.
+- Compare bags, seats, change and refund terms, and who services the ticket afterward. Count the bags and seats this traveler will need before calling a fare the cheapest; a fare that already includes them adds no fee. An unknown term is neither restrictive nor flexible.
 
 - Treat separate tickets and self-transfers as their own kind of trip. Account for collecting and rechecking bags, transit entry rules, connection time and a missed connection that no airline will protect, and label them clearly.
 
-## Rank a short list
+## Rank for this traveler
 
-- Rank verified total price and total travel time together, within the requested cabin. When the shortest practical trip and the cheapest worthwhile trip differ, show both and say what the extra money or time buys.
+- Compare what each option costs this traveler for this trip, not the headline fare, together with total travel time within the requested cabin. A fare without a bag or seat they need costs more than it shows, and status can make a pricier carrier the better deal. When the shortest practical trip and the cheapest worthwhile trip differ, show both and say what the extra money or time buys.
 
 - Drop any option that costs more and takes longer than another with equivalent terms. Then weigh the number of legs, ground transfers, arrival time, connection reliability and flexibility.
 
-- Recommend the tradeoff that fits this request without inventing a universal price for the user's time. Include a flexible fare when it is a meaningful alternative, and leave out near-duplicates.
+- Show three to five complete trips chosen from the connector's lines, each there for a reason: the cheapest, the best fit for this trip's needs, and any that buy clearly more for a little more, such as a nonstop, a better arrival time, a checked bag or a flexible fare on the same flights. A round trip is shown as complete round trips, both directions with one total, and only nonstop trips when the user asked for direct flights.
+
+- Judge "a little more" against the ticket price and what the traveler has shown about price: a stated budget, past choices, the cabin and the trip's purpose. State a difference and what it buys rather than calling it small. When their price sensitivity is unclear, show both and let them choose.
 
 - A fare is the lowest found among the sources checked, which is different from the lowest available anywhere.
 
@@ -66,20 +70,15 @@
 
 ## Present the flight list
 
-- Load the `widget` namespace with `tool_search.load_tool_namespace`, and show the options as a native flight list with `widget.create_list_widget`: one flight row per offer pointer the connector gives. When the tool is absent or a valid call returns an explicit unsupported or rendering error, the connector's option lines read well as a short list, as they are; they already carry what a table would. Rows point at bookable offers, which a Google Flights lead isn't.
+- Load the `widget` namespace with `tool_search.load_tool_namespace`, and show the options as a native flight list with `widget.create_list_widget`: one flight row per chosen offer, using the pointer the connector gives for it. When the tool is absent or a valid call returns an explicit unsupported or rendering error, the connector's option lines read well as a short list, as they are; they already carry what a table would. Rows point at bookable offers, which a Google Flights lead isn't.
 
-- Create the list in the main conversation. Add a short recommendation and the decisive tradeoff in a sentence or two. The list already shows the flights, so repeating them as prose, a table, a shopping widget or an options picker adds noise.
+- Create the list in the main conversation and reply with one message: the list's embed token first, then one short paragraph. Put the search assumptions, such as travelers, cabin or a time filter, in the list's subtitle. Notes the connector's docs require, such as failed searches, incomplete coverage or split tickets with their caveat, follow the paragraph in the same message.
 
-- A one-way trip is one list. For a trip that is ready to book, omit `flight_action` so the runtime supplies its booking action.
+- In that paragraph, recommend one trip and say why it fits this traveler's needs, such as their arrival time, bags, airline or budget, then give the main tradeoff of one or two alternatives in a clause each. The cards already show times, prices, stops and bags, so mention them only where they decide the choice, and leave the booking prompt to the cards' button.
 
-- A round trip is two lists when the connector groups return flights by outbound. First the outbound flights, with the action below. Their cards show no price, since each is half a trip, so give each outbound's lowest round-trip price from the connector's lines in the reply. When the user picks one, by tapping or describing it, show the complete round trips sold with it, read from the saved search as the connector's docs describe, with the booking action. Run no new search, and book only an offer from the return list.
+- Text before the list splits the answer into separate messages. Before a slow search, follow the chat's acknowledgment guidance; only when no reaction is available, send a short note before the search starts.
 
-```json
-{
-  "cta_text": "Choose outbound",
-  "response_message_prefix": "Show return flights for outbound"
-}
-```
+- Each row is a complete trip, a round trip included, so one list covers it. For a trip that is ready to book, omit `flight_action` so the runtime supplies its booking action.
 
 - For a trip that is still being planned, put this action on the final list instead of the booking action, and return the selection to Trip Planning:
 
