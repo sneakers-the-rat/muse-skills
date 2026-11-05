@@ -1,0 +1,136 @@
+load appeal violationswebhook_fetchwebhook_requestwebhook fetch wake unavailable; durable recovery pending/hatch/webhooks/deliveries/acklease_expires_at_ms_flight_presentationitemsflight_actionIDENTITY.mdfailed to hydrate native letter widget title because briefing path is invalidfailed to hydrate native letter widget title because briefing is too largefailed to hydrate native letter widget title metadatafailed to hydrate native letter widget titlecontentfailed to hydrate native letter widget identity metadatafailed to hydrate native letter widget because briefing was not foundfailed to hydrate native letter widgetfailed to resolve Letter artifactartifact_slugfailed to hydrate native letter widget because self-improvement storage was unavailablefailed to hydrate native letter widget because relationship brief was not foundcomplimentary plan-name lookup failedfailed to load root session for SxS alternate selectionfallback_textwidget_idsterminal assistant payload is not valid JSON; refusing SxS alternate selectionfailed to load terminal assistant payload for SxS alternate selectionfailed to persist SxS alternate into the terminal assistant rowfailed to clear primary resources on the swapped SxS assistant rowterminal assistant row carries no context_seq; transcript row swapped without model contextSxS selection kept existing model context; transcript row swapped without live context replacementfailed to swap SxS model context; transcript row swapped without model contextroot session unloaded before SxS terminal refresh; live bubbles reconcile from historyno retained terminal frame to refresh after SxS selection; live bubbles reconcile from historyfailed to broadcast the refreshed SxS terminal frame{bin}sh-c--enable-app-redirectOAuth authorize URL command returned a failure statusOAuth authorize URL response omitted state; returning URL without request provenanceauthd socket unavailable; returning OAuth authorize URL without request provenancereturning OAuth authorize URL without updating request provenanceauthd socket unavailable; suppressing Shop Pay authorize URLShop Pay authorize URL omitted a unique OAuth stateOAuth authorize URL command response was missing a usable URLOAuth authorize URL command returned invalid JSONOAuth authorize URL command failedShop Pay request provenance binding failed; suppressing authorize URLruntime.skillsruntime.skills.paced_probeconnector_call_reasonJARVIS_TRACE_CONTEXTJARVIS_HOMEJARVIS_VAR_LIB_DIRCREDENTIALS_DIRECTORYJARVIS_RUNTIME_CONTEXT_TOKENskill command runtime context registration faileddeleted sessions.updated events require an owner-visible deletion proofsession row unavailable for sessions.updated payloadfailed to hydrate sessions.updated payloaddropped companion progress frame after its voice call changedambiguous root sessions for activity thread projectionfailed to resolve root session for activity thread projectionstandaloneroot admission cancellation signaled without a result
+INSERT INTO requests (
+  request_id, root_request_id, parent_request_id, request_origin,
+  transcript_surface, root_work_class
+)
+VALUES ($1, $2, $3, $4, $5::runtime.transcript_surface, $6)
+ON CONFLICT (request_id) DO UPDATE SET
+  root_request_id = COALESCE(requests.root_request_id, excluded.root_request_id),
+  parent_request_id = COALESCE(requests.parent_request_id, excluded.parent_request_id),
+  request_origin = CASE
+    WHEN requests.request_origin = 'internal.runtime_replay' THEN excluded.request_origin
+    ELSE requests.request_origin
+  END,
+  transcript_surface = excluded.transcript_surface,
+  root_work_class = CASE
+    WHEN requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing'
+      THEN excluded.root_work_class
+    ELSE requests.root_work_class
+  END
+WHERE (requests.root_request_id IS NULL AND excluded.root_request_id IS NOT NULL)
+   OR (requests.parent_request_id IS NULL AND excluded.parent_request_id IS NOT NULL)
+   OR (requests.request_origin = 'internal.runtime_replay'
+       AND excluded.request_origin <> 'internal.runtime_replay')
+   OR requests.transcript_surface IS DISTINCT FROM excluded.transcript_surface
+   OR (requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing')
+call_idoutput
+INSERT INTO tool_outputs (event_seq, call_id, status, output_text, error_text, created_at)
+VALUES ($1, $2, $3, $4, $5, to_timestamp($6::double precision / 1000.0))
+ON CONFLICT (event_seq) DO UPDATE SET
+  call_id = excluded.call_id,
+  status = excluded.status,
+  output_text = excluded.output_text,
+  error_text = excluded.error_text
+arguments
+INSERT INTO tool_calls (event_seq, call_id, tool_name, status, arguments_json, created_at)
+VALUES ($1, $2, $3, 'started', $4, to_timestamp($5::double precision / 1000.0))
+ON CONFLICT (call_id) DO UPDATE SET
+  event_seq = excluded.event_seq,
+  tool_name = excluded.tool_name,
+  status = excluded.status,
+  arguments_json = excluded.arguments_json
+
+INSERT INTO chat_event_derived_write_backlog (event_seq, resources_json)
+VALUES ($1, $2)
+ON CONFLICT (event_seq) DO UPDATE SET
+  resources_json = excluded.resources_json,
+  updated_at = now()
+UPDATE chat_private.peer_conversations SET requester_chat_id = NULL
+         WHERE conversation_id = $1 AND requester_revision = $2
+           AND requester_chat_id = $3 AND NOT requester_unavailable
+           AND chat_id = $5
+           AND EXISTS (SELECT 1 FROM agent.agents
+                       WHERE id = $4 AND session_id = $3)peer handoff disagrees with its asking-chat claimpeer handoff requester changed before admissionSELECT session_id, COALESCE(prompt_floor_seq, -1) AS prompt_floor_seq,
+                kind = 'root' AND parent_agent_id IS NULL
+                AND ephemeral IS DISTINCT FROM TRUE
+                AND status NOT IN ('shutdown', 'not_found') AS eligible
+         FROM agent.agents WHERE agent_id = $1 FOR UPDATEstartup_root_changedSELECT EXISTS(SELECT 1 FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND accepted_ordinal < $2)startup mailbox promotion cannot overtake an earlier accepted input
+SELECT payload_json
+FROM agent.runtime_restart_checkpoints
+WHERE agent_id = $1
+FOR UPDATE
+
+SELECT EXISTS (
+  SELECT 1
+  FROM agent.message_mailbox
+  WHERE agent_id = $1
+    AND state = 'accepted'
+    AND accepted_ordinal < $2
+    AND (NOT $3 OR submission_kind <> 'internal_handoff')
+)
+message mailbox attachment cannot overtake an older priority peer
+INSERT INTO agent.runtime_restart_checkpoints (
+  agent_id, mode, recovery_class, recovery_owner_id, execution_config_json,
+  payload_json, created_at, updated_at
+) SELECT $1, $2, $3, $4, $5, $6, $7, $7
+WHERE EXISTS (
+  SELECT 1
+  FROM agent.agents
+  WHERE agent_id = $1
+    AND status NOT IN ('shutdown', 'not_found')
+)
+ON CONFLICT (agent_id) DO NOTHING
+SELECT EXISTS (SELECT 1 FROM agent.agents WHERE agent_id = $1 AND status NOT IN ('shutdown', 'not_found'))conversation epoch
+INSERT INTO agent.message_mailbox (
+  submission_id, agent_id, conversation_epoch, submission_kind,
+  routing_scope, state, checkpoint_custody, stream_owner_message_id,
+  submission_json, transcript_event_seq, attached_at
+) VALUES (
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+  CASE WHEN $6 = 'attached' THEN now() ELSE NULL END
+)
+ON CONFLICT (submission_id) DO NOTHING
+RETURNING accepted_ordinal, accepted_at
+startup mailbox promotion requires its previously accepted input
+SELECT agent_id, conversation_epoch, submission_kind, routing_scope,
+       state, stream_owner_message_id, submission_json,
+       transcript_event_seq, accepted_ordinal, accepted_at
+FROM agent.message_mailbox
+WHERE submission_id = $1
+FOR UPDATE
+update chat.message_bindings set admitted_at = coalesce(admitted_at, now())
+                    where jarvis_message_id = $1 and chat_id = $2 and binding_epoch = $3 and transport = $4binding epochconversation_epochsubmission_kindrouting_scope
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = $5,
+    stream_owner_message_id = $2,
+    submission_json = $3,
+    transcript_event_seq = coalesce($4, transcript_event_seq),
+    attached_at = now()
+WHERE submission_id = $1
+  AND state = 'accepted'
+  AND stream_owner_message_id IS NULL
+mailbox stream ownerselect a.account_id from chat_private.accounts a
+             join chat_private.binding_authorizations b on b.provider = a.provider and b.account_id = a.account_id
+             where b.provider = $1 and b.binding_id = $2
+               and a.connection_id = $3 and not a.revoked for share of adirect input has no captured binding epochaccount_retiredselect connection_id, generation, transport_json, delivery_target
+             from chat_private.binding_authorizations
+             where provider = $1 and binding_id = $2 and chat_id = $3
+               and account_id = $4 and external_kind = 'direct' and participation = 'active'
+             for shareaccount_authorization_retiredtransport_jsontransport_authorization_absentconnection_iddelivery_targetselect epoch from chat_private.bindings
+         where chat_id = $1 and provider = $2 and not revoked for sharetransport_authorization_changedbinding_retiredactivity_monitor_list_assigned_agentsactivity_monitor_list_thread_actionsactivity_monitor_list_recent_thread_actionsactivity_monitor_read_threadcapture new heartbeat occurrence languagescheduler source path holder lookup failedspace_preview_repairspace preview repair: handler not registeredspace preview repair: handler registry unavailablespace_preview_missingspace preview repair: runtime work store unavailablequeued Space preview repairspace preview repair: seeding failedspace preview repair: catalog read failed on viewbundled Ideas localization catalog is unavailablefailed to load bundled Ideas localization provenancefailed to load bundled Ideas dogfood provenanceIdea catalog sharing context read failedIdea share variant projection read failedIdea share revision projection read failedIdea direct sharing read failedIdea publication hold read failedconnector_status_cachemessenger_companioninstagram_messagescredentialsrefresh_token_rejectedfailed to resolve local authd account status; keeping legacy statusfailed to resolve Plaid Item statuscheckmessenger-companion-auth-statusconnector catalog could not resolve Privacy Jurisdiction countrydatabase write admission gate closedadmission_timeoutassert_table_existstable_presence.querydue-occurrence coalesce check failed; seeding immediate occurrence anywaySELECT payload_json FROM runtime_restart_checkpoints WHERE agent_id = $1 FOR UPDATESELECT submission_json, octet_length(submission_json)::bigint AS serialized_bytes
+         FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND submission_id <> $2startup_queue_fullprivate, no-storeContent-Lengthdata.jsonContent-Dispositionno-store, no-transformCache-ControlX-Appeal-Sha256chat.resume is disabledchat.searchbefore_seq and after_seq are mutually exclusiveserialize chat.history payloadchat.stream_eventschat.history_windowmodel.set`model` is requiredmodel_selection_hiddenmodel selection is disabled while this VM hides its assigned modelthe in-VM connector OAuth flowcron definition sync failed after HTTP task deletemanualfailed to open scheduler DB for task schedule labelsfailed to load scheduler DB state for task schedule labelsfailed to refresh latest public runtime user timezone cache for task schedulesactivity.logpodcast_owner_unavailablecannot resolve the VM owner to recover a podcast feed (retryable)failed to persist healed podcast feedfailed to heal podcast feed from remote manifestslug cannot be emptyfeed_title cannot be emptypodcast_episode_url_unparseablecannot resolve the VM owner to clean up podcast audio; delete not performed (retryable)podcast delete: episode_url owner is not the VM owner; removing catalog row only, not touching the foreign blobfailed to read podcast catalog after delete; leaving feed intactfailed to drop podcast feed after emptying itfailed to clear podcast feed id after emptying the feedaudio_artifact_id cannot be emptyPOST /api/podcasts/publish-review with {audio_artifact_id}widget_id, message_id and citation_id are only valid for clicked_add_to_cartdisplayed_cart is only valid for clicked_checkout_cart`product_url` must be an absolute HTTP(S) URLvisibility must be one of: public, internal, allmessage_id cannot be emptyfailed to resolve public session id for chat.message_getstream_events_replay_failedfailed to resolve public session id for chat.stream_events replayquery cannot be emptyfailed to resolve public session id for chat.searchfailed to resolve owning root session from chat.search recordfailed to resolve session title from chat.search recordmaintenance_occurrencemaintenance_attemptrequest_generationgeneric_maintenancejitter_offset_secsjitter_window_secsmaintenance occurrence collided with terminalized work item/v1/poppy/connectors/connectTailscale could not connect. Please try again.connectors.tailscale.connect_failedError shown when Tailscale refuses a connection or does not return an approval linksxs_id and candidate_id are requiredSxS response is stale, unavailable, or was lost during restartcandidate_id is not a candidate for this SxS responsethe alternate SxS candidate is not ready`chat_id` is required for `/api/chats/fork`HTTP session fork failed; rechecking target writability before responding`chat_id` is required for `/api/chats/delete`/api/chats/delete`chat_id` is required for `/api/chats/rename`deleted_at_msinvalid activity cursorinvalid activity step cursorInvalid displayed_cart contextclicked_checkout_cart accepts only widget_id, displayed_cart and optional session_idCart checkout is unavailableInvalid widget_idShopping connector is unavailablestefi_shipping_returns_invalid_jsonInvalid shopping widgetInvalid shopping product nameInvalid shopping retailerShopping product has no unique add-to-cart actionInvalid shopping citation messageInvalid shopping citationwidget_id and product_id are required and must be at most 160 bytesInvalid message_id or citation_idphoto_urlfailed to resolve `session_id`startup cancellation requires its durable admission envelopestartup cancellation requires a canonical user message IDstartup cancellation requires its canonical contentchat.cancelstartup cancellation snapshot has no admission envelopestartup cancellation crossed an uncaptured execution handoffstartup cancellation belongs to another rootstartup cancellation execution target changed before cancellationfailed to resolve public session id for chat.seenchat.seenfailed to broadcast chat.seen for root sessionanchor_seq must be greater than 0main avatar image URL has no supported extensionfailed to broadcast persisted public message for root sessionSELECT event_seq, event_name, source, role::text AS role,
+                    visibility::text AS visibility, message_id, agent_id,
+                    parent_agent_id, parent_message_id, reply_to_message_id,
+                    transcript_surface::text AS transcript_surface, payload_json,
+                    request_id, root_request_id, parent_request_id,
+                    extract(epoch from created_at)::bigint AS created_at
+             FROM runtime.events WHERE idempotency_key = $1SELECT ci.item_json, ci.message_source,
+                        extract(epoch from ci.created_at)::bigint AS created_at,
+                        p.client_context_json
+                 FROM agent.context_items ci
+                 LEFT JOIN agent.context_item_resume_projection p
+                   ON p.agent_id = ci.agent_id AND p.seq = ci.seq
+                 WHERE ci.agent_id = $1 AND ci.seq = $2called `Result::unwrap()` on an `Err` valueinstagramMessengerInstagrampdp_v1assertion failed: self.is_char_boundary(new_len)foreground_rootpeer_chat_rootgroup_chat_rootexternal_party_chat_rootcompany_conversation_rootmail_conversationdelegate_main_requestworkflow_subagentspaces_builderspaces_builder_litespaces_builder_editspaces_builder_python_editbrowser_taskdeep_researchideas_builderspace_taskself_improvement_stepflight_tracking_steppeer_sync_stepfeed_workflow_stepephemeral_agent_stepscheduler_cron_executescheduler_cron_resolveexecute_resolve_workersystem_cron_productvoice_delegaterealtime_voicecompaniondeveloperassistantinternal error: entered unreachable code: invalid Once stateworkerafter_inferenceawaiting_approvalafter_tool_dispatchaddupdaterenamedunarchivedopportunisticcomplete_when_awakeobjectiveproactive_notificationflight_trackingvoice_persistencestartup_reconcileloop_reconcilemutation_reconcileprovider chat route has no provider

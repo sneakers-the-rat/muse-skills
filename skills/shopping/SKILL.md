@@ -126,8 +126,10 @@
 
 - Run parallel browser tasks only for distinct discovery angles, such as different retailers or product types. Refine an angle inside the task already pursuing it by continuing its `task_id`, and let one task cover several retailers when separate tasks would add nothing.
 
+<!-- purchase-preapproval-off-only:start -->
 - For a purchase request, follow the purchase workflow and let the checkout flow present the cart. Do not add a separate product-choice confirmation when the requested item and variant are already clear.
 
+<!-- purchase-preapproval-off-only:end -->
 - When a task completes, write its `completion_result.product_results` object verbatim to a JSON file and select products by `result_id`. Never rebuild products from the prose report or supply a missing image URL.
 
 ```json
@@ -325,15 +327,25 @@
 
 - Route the purchase from the main conversation, through direct checkout or `browser.browse`. The browser owns its focused login and payment workers. Do not delegate live shopping to a subagent.
 
+<!-- purchase-preapproval-off-only:start -->
 - Before checkout, continue the task that found the chosen product. Leave the other product-search tasks running; they end on their own, and you can ignore their late results.
+<!-- purchase-preapproval-off-only:end -->
+<!-- purchase-preapproval-on-only:start -->
+- Leave other product-search tasks running; they end on their own, and you can ignore their late results.
+<!-- purchase-preapproval-on-only:end -->
 
 - Choosing items or building a cart moves no money. When a connector provides checkout instructions, follow those instead of the routing below.
 
 - For catalog products, confirm each selected product's exact variant as the [Meta Catalog](/opt/hatch/connectors/meta_catalog_search/CONNECTOR.md) docs describe. When its product details carry a `checkout_token`, check out as the [Shopify UCP](/opt/hatch/connectors/shopify-ucp/CONNECTOR.md) docs describe, whatever its checkout flags say.
 
+<!-- purchase-preapproval-off-only:start -->
 - Otherwise follow [browser checkout](/opt/muse/skills/shopping/references/browser-checkout.md). For a request to buy, assign the browser task to complete checkout and confirm the order was placed.
+<!-- purchase-preapproval-off-only:end -->
+<!-- purchase-preapproval-on-only:start -->
+- Otherwise follow [browser checkout](/opt/muse/skills/shopping/references/browser-checkout.md). For a purchase with a known product URL or a request to approve before checkout or complete the purchase later, request approval now through `~/docs/chat/browser-purchase-preapproval.md`, unless the user asks to approve at checkout.
+<!-- purchase-preapproval-on-only:end -->
 
-- Products with a `checkout_token` keep their merchant cart as the Shopify UCP connector docs describe, and a connector with its own cart support keeps it there. Otherwise, have the browser task build the merchant cart with the specified variants and quantities. Continue the same task when the user changes the cart. The store holds, prices and discounts that basket, so do not keep a list of your own as a cart. Follow the connector's instructions for cart reads, changes and widgets.
+- Products with a `checkout_token` keep their merchant cart as the Shopify UCP connector docs describe, and a connector with its own cart support keeps it there. Otherwise, have the browser task build the merchant cart with the specified variants and quantities. Continue the same task when the user changes the cart<!-- purchase-preapproval-on-only:start -->, unless the changes require renewed purchase preapproval<!-- purchase-preapproval-on-only:end -->. The store holds, prices and discounts that basket, so do not keep a list of your own as a cart. Follow the connector's instructions for cart reads, changes and widgets.
 
 - Keep the catalog `cart_id` or browser `task_id` in context. Do not show internal IDs to the user. Cart reviews return through the browser task to this conversation as questions. Answer with `browser.browse`, the same `task_id`, `answer_to` set to the `question_id`, and your review in `task`. Payment authorization uses the payment approval interface. Do not ask for either decision twice.
 

@@ -5,6 +5,16 @@ integrations retain their own checkout and approval contract. For a live
 website, assign the work through `browser.browse`; the browser's checkout
 workflow owns cart review, payment choice, approval, submission and verification.
 
+<!-- purchase-preapproval-only:start -->
+## Payment preapproval
+
+For browser purchase preapproval, follow
+`~/docs/chat/browser-purchase-preapproval.md` before preparing checkout.
+It requires chat confirmation followed by an approval card and covers Link
+only. During checkout, use the saved approved terms in browser questions.
+The wallet defaults and provider changes below do not expand that approval.
+<!-- purchase-preapproval-only:end -->
+
 ## Assign the purchase
 
 Include the requested stage, whether research, cart preparation or purchase,
@@ -24,7 +34,8 @@ supply them again; keep any confirmation that connector's checkout
 instructions require. Wallet profile details do not identify which merchant
 account to sign in to.
 
-Continue the existing task for its cart and checkout. Use a new task for
+Continue the existing task for its cart and checkout<!-- purchase-preapproval-only:start -->,
+except after purchase preapproval or its renewal, which requires a new task<!-- purchase-preapproval-only:end -->. Use a new task for
 separate work, checking `browser.windows` when necessary. Tell the worker about
 earlier refusals and uncertain outcomes. Different profiles can still share a
 merchant's server-side account cart; do not initiate overlapping purchases of
@@ -62,18 +73,6 @@ needs a decision outside the request, and name the open choice in your final
 message. The payment choice carries over unless you change it with `wallet`
 as below. Payments require the user's checkout approval unless an existing
 approval or provider policy covers the purchase.
-
-When `permissions.preapprove` is available and checkout will happen after the
-user leaves, pre-approve one order with connector `browser` and method
-`page.submit`. Set its binding to `merchant`, the store's https origin;
-`item`, the exact product name with `item_match: specific`, or a description
-whose every word must appear in the name with `item_match: generic`; and
-`max_total: {amount, currency}`, the most the whole order may cost. This covers
-only a matching Link one-time card; cart review still runs. For a future
-purchase, create a run-once task with `cron.add` first and put its id in the
-pre-approval action's `schedule_id`. Each task holds one purchase pre-approval;
-a new one replaces it. Tell the user before starting additional orders that
-those checkouts will still ask for payment approval.
 
 Naming a wallet in `task` does not select it. Set `wallet` in `browser.browse`
 for an explicit wallet provider preference from the user, including a preference

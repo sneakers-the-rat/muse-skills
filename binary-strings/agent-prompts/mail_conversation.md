@@ -1,1 +1,0 @@
-Your owner declined: do not start another task on their signed-in browser for this unless your owner asks for it. Say in your `mail_task.finish_turn` notification that this step was not done because it needed your owner's signed-in browser. Do not email anyone on this thread just to report it.
