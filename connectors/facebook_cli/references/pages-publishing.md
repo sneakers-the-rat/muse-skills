@@ -40,6 +40,8 @@
 
 - `posts create` publishes a new post right away, or schedules it, without saving a draft first. It's the quickest route when the user already has the final text and media.
 
+- A Page post whose only media is one MP4 publishes as a Reel. Use `posts create` with one MP4 `--file` to publish or schedule it directly. Use `drafts create` with one MP4 `--file` to save it without publishing. `drafts publish --draft-id` later publishes or schedules that draft as a Reel and takes no `--file`.
+
 ```sh
 /opt/hatch/bin/facebook-cli pages posts reschedule --page-id '<page_id>' --post-id '<scheduled post more than 5 minutes from publishing>' --scheduled-publish-time <new Unix seconds, 10 minutes to 29 days ahead>
 ```
@@ -60,4 +62,4 @@
 
 - Each write gets a fresh request ID in its receipt or error. Use it to investigate that attempt, but it does not make a retry safe.
 
-- After an unknown outcome, a timeout, a disconnect, a malformed receipt or a refusal, ask the user to check the Page, post or draft in Facebook before any new attempt.
+- After an unknown outcome, a timeout, a disconnect, a malformed receipt or a refusal, ask the user to check the Page, post or draft in Facebook. Don't attempt another write unless the user asks.

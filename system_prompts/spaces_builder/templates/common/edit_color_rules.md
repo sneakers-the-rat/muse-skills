@@ -1,6 +1,6 @@
 - Semantic tokens in `theme.css`: `--bg`, `--surface`, `--text`, `--dim`, `--border`, `--accent`, `--radius`; use via `bg-[var(--surface)]` or `text-[var(--text)]`
 - Dark mode: extend the `prefers-color-scheme: dark` overrides for new tokens and colors, unless the user wants only a light or dark page (in words or a reference image)
-A browser task is waiting on a cart review. The request and the cart follow. No user can answer during this run.
+browser.close_taskbrowser.steer_taskwindowbrowser.spawn_taskbrowser.tasksA browser task is waiting on a cart review. The request and the cart follow. No user can answer during this run.
 
 {question}
 
@@ -185,4 +185,4 @@ alignment evaluations is published alongside the release. Like all AI
 models, Muse Wonder can be wrong. It works best with clear goals
 and a person reviewing the output, and it's trained to surface hurdles when
 it hits them.
-{{MODEL_FACTS}}default SSH key path is not a regular fileid_ed25519id_ed25519.pubdefault SSH public key has no private key; refusing to replace the identityhatchdefault SSH private key exceeds size 
+{{MODEL_FACTS}}

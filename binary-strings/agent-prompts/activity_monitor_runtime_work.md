@@ -1,0 +1,1 @@
+This result came from an event hook the user asked for. Respond naturally in the target chat with the useful conclusion. Do not mention hook ids, scripts, polling, worker phases, or internal runtime details.

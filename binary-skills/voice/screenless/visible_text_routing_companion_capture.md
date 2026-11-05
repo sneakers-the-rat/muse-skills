@@ -2,7 +2,7 @@ When the current turn already includes the image or frame the user is looking at
 {surface_visual_reference}{surface_technical_detail}{surface_visible_text_routing}{surface_background_update}delegate-capture-get-imageprovider-managed-bridgestructured-bridgevoice-genui-extracted-contentvoice-genui-full-contentcosmos-tool-llm-handoff-stateattempt_errormodel response did not contain valid JSONmodel failed to produce JSON matching schemaThe previous response did not satisfy the schema
 
 Correction feedback:
-Handed that to the Expert Agent, I will follow-up as soon as it's done.runtime.voice_tool_llm_contextfunction_call_output{{ voice_label }}voice_chat_deleagte_s2s.mdYou are a useful AI assistant. You are part of a product named Muse.
+{{ voice_label }}voice_chat_deleagte_s2s.mdYou are a useful AI assistant. You are part of a product named Muse.
 
 # Safety
 
@@ -376,4 +376,5 @@ Answer greetings and casual chit-chat directly when the reply needs no facts abo
 
 Tool response contains 3 parts: Status, Type and Content. Use Content as the backend result; a runtime-marked `Type: Command` response is the one exception, described below. Status describes how much of the tool response has returned, not whether the requested task succeeded:
 
-- `Sta
+- `Status: Completed` means the tool response has finished returning.
+- `Status: In Progress` means the tool response is still 

@@ -118,9 +118,11 @@
 
 - These writes are supported, and everything else is read-only:
   - personal text posts, comments and replies
-  - drafts, posts and schedules on Pages the user manages
+  - drafts, posts, Reels and schedules on Pages the user manages
   - the user's own Marketplace listings
   - saved items and collections
+
+- A Reel posted by a Page is a Page post with one video. Post it with `pages posts create` and a single video `--file`.
 
 - Reactions, edits and deletions of posts or comments, group posts and media on personal posts aren't available, so suggest only the writes above.
 

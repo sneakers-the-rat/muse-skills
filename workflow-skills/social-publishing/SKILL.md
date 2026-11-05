@@ -40,7 +40,7 @@
 
 ## Available connectors
 
-- [Facebook](/opt/hatch/connectors/facebook_cli/CONNECTOR.md) for personal text posts, comments and replies, and Page drafts, posts and scheduling.
+- [Facebook](/opt/hatch/connectors/facebook_cli/CONNECTOR.md) for personal text posts, comments and replies, and Page drafts, posts, Reels and scheduling.
 
 - [Instagram](/opt/hatch/connectors/instagram/CONNECTOR.md) for feed posts, reels, carousels and stories, published now or scheduled, and replies to comments on the user's posts.
 

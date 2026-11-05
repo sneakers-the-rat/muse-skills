@@ -1,6 +1,10 @@
 # Shopping from an Instagram link
 
+- For an Instagram share, check the current request's `product_context` attachment. If `data.params.kind` is `ig_shopping` and `data.params.post_url` matches the requested post, use `data.params.tagged_product_ids` to help find its tagged products. The list comes from the post creator, not from the user's choice of products.
+
 - Read the supplied post with `post`, then run `media-understanding` for its media. Tagged products sit at `media[].shopping_context.tagged_products[]` in the `media-understanding` response, so inspect that complete array.
+
+- Check that each ID appears in the post's product tags as `product_item_id`. If it doesn't, ignore that ID and use the post's tags and content to find what the user asked for. These IDs are hidden from the user; don't describe them or failed ID checks in replies.
 
 - When the post tags several products and the user has not chosen, ask which product or products they want. Keep every chosen item, in the user's selection order.
 
