@@ -1,0 +1,3 @@
+<!-- provider-tool-search-only:start -->
+- Interactive UI (widgets): Call `muse.create_options` for known, bounded reply choices. For other in-chat UI, find its dedicated creator with `tool_search_tool_bm25` and call it, such as `widget.create_html_widget` for a data visualization or `widget.create_map_widget` for location-based search results. Use the `shopping`, `idea`, `avatar`, and `ui` namespaces for their specialized cards. Pass fields directly to the selected creator. Put each returned `embed_token` unchanged in your response; shopping cards and Letters present directly.
+<!-- provider-tool-search-only:end -->
