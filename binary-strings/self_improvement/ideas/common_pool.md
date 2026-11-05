@@ -29,6 +29,7 @@ Ineligible cases:
 
 Rewrite the idea card for a broader audience, who don't have any context about the card.
 
+- Write the title, summary, and prompt in the same language as the personalized card. Write the instructions in English.
 - Make sure to remove all the PII in the card.
 - If the card is about one occurrence of a need that recurs, sell the ongoing capability behind it instead, and let the instructions grow to cover that bigger promise.
 - Don't assume anything about the user. "You/your" is applicable when it's a general "you" that applies to a broad audience. Avoid any specific you/your that assumes the user's life stage or condition, like your wife, your 40s, or your dog. Don't assume what they have already done or already own either.

@@ -2,15 +2,17 @@
 
 ## Generate the episode
 
+- Choose the host names and synthesis voice IDs with [Cast the hosts](../SKILL.md#cast-the-hosts). In this two-host example, set `HOST_NAME` and `HOST_VOICE_ID` to the main host's name and synthesis voice ID, and `COHOST_NAME` and `COHOST_VOICE_ID` to the co-host's name and synthesis voice ID. Use the same names in the script's speaker labels and the `--speaker` mappings; quote each mapping so names with spaces stay one argument. Voice IDs must be synthesis IDs, not display names, `saved_voice_id` or `profile_id`.
+
 - Run the helper with the script, a title, a description, one `--speaker` per host, a cover prompt and the topics file:
 
 ```sh
 /opt/muse/skills/generate_podcast/scripts/podcast-helper generate \
   --script /tmp/script.txt \
   --title "How the Tides Work" \
-  --description "Alex and Jordan explain how the moon moves the oceans" \
-  --speaker Alex=avocado_v2:MAI_01 \
-  --speaker Jordan=avocado_v2:MAI_03 \
+  --description "$HOST_NAME and $COHOST_NAME explain how the moon moves the oceans" \
+  --speaker "$HOST_NAME=$HOST_VOICE_ID" \
+  --speaker "$COHOST_NAME=$COHOST_VOICE_ID" \
   --cover-prompt "ocean tides under a full moon" \
   --topics-file /tmp/topics.md
 ```
@@ -65,7 +67,7 @@
 
 - Never swap in a different voice or speech engine to get around a transient failure.
 
-- A `not allowed to use voiceID` error does not clear on retry, because that voice is not permitted. Pick another voice from the catalog and generate again. Fix an authentication failure or an invalid request rather than retrying it. [the speech reference](/opt/muse/skills/spoken-audio/references/speech.md) explains how to check voice IDs after an opaque HTTP 500.
+- A `not allowed to use voiceID` error does not clear on retry, because that voice is not permitted. For a newly chosen cast, select another permitted voice from [Podcast preferred voices](podcast_preferred_voices.json), avoiding IDs already assigned to other speakers. Consult the full catalog only for a user-requested voice or voice characteristics, or when the shortlist has run out of distinct voices. If the rejected voice was explicitly requested or belongs to an established series' cast, explain the problem and ask before changing it. Fix an authentication failure or an invalid request rather than retrying it. [The speech reference](/opt/muse/skills/spoken-audio/references/speech.md) explains how to check voice IDs after an opaque HTTP 500.
 
 ## Use the other helper commands
 

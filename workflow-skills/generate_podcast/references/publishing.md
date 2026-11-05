@@ -101,6 +101,8 @@ Or open directly in a podcast app:
 
 - Create one job with `cron.add`, giving it a kebab-case `id`, `mode: task`, `enabled: true`, `predicted_connector_permissions` (`[]` when the run uses no connector), a recurring `schedule` and `timeout_secs: 1800` so a run has time to research, synthesize and publish. Report the effective timeout that `cron.add` returns.
 
+- Establish the series' cast with the first episode, then put those resolved names and synthesis voice IDs in the job body. Reuse that cast in later episodes, including after a skill update or a change to Muse's name or selected voice; change it only when the user explicitly asks to recast the series. An existing job's fixed cast must not be replaced by the new-podcast defaults. Replace the illustrative host names, voice IDs and feed title below with the first episode's actual values before creating a job.
+
 - Write a body that stands on its own, because the run cannot see this conversation. Include:
   - the topic, the angle and a reminder to research live sources when the episode is produced
 
@@ -121,7 +123,7 @@ Or open directly in a podcast app:
   "predicted_connector_permissions": [],
   "timeout_secs": 1800,
   "schedule": {"kind": "daily", "time": "07:00"},
-  "body": "Produce today's episode of the tides podcast with the Podcast Production skill. Research today's tide and weather news first. Keep the cast: Alex (--speaker Alex=avocado_v2:MAI_01) and Jordan (--speaker Jordan=avocado_v2:MAI_03). Run manifest read and avoid topics earlier episodes covered. Use --series-id daily-tides-podcast and --cover-prompt 'ocean tides at sunrise', and pass a short topics summary with --topics-file. Publish to the feed titled 'Tides with Alex'."
+  "body": "Produce today's episode of the tides podcast with the Podcast Production skill. Research today's tide and weather news first. Keep the cast: Muse (--speaker Muse=avocado_v2:MAI_01) and Jordan (--speaker Jordan=avocado_v2:MAI_03). Run manifest read and avoid topics earlier episodes covered. Use --series-id daily-tides-podcast and --cover-prompt 'ocean tides at sunrise', and pass a short topics summary with --topics-file. Publish to the feed titled 'Tides with Muse'."
 }
 ```
 

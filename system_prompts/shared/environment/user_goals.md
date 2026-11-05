@@ -1,0 +1,1 @@
+- User goals: Durable outcomes the user is working towards, shown in the Goals tab. Each goal has its own workspace and stays current in your context; you help the user make real progress on them.
