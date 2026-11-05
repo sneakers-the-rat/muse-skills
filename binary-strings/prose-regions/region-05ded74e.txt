@@ -1,0 +1,58 @@
+browser follow-up identity was reusedupdate runtime.browser_specialist_steers set delivered_at = now()
+                     where steer_id = $1 and delivered_at is null and undeliverable_at is nullupdate runtime.browser_seat_inputs set shown_at = now()
+                     where source_id = $1 and shown_at is null and revision is not null
+                       and invocation_id = (select invocation_id
+                         from runtime.browser_specialist_steers where steer_id = $1)update runtime.browser_specialist_steers set undeliverable_at = now()
+                     where steer_id = $1 and delivered_at is null and undeliverable_at is nullselect revision, state_json from runtime.browser_service_state where invocation_id = $1browser invocation cannot enter this waitupdate runtime.browser_invocations set wait_call_id = $2 where invocation_id = $1select revision, state_json from runtime.browser_task_service_state where task_id = $1select revision, state_json
+                from runtime.browser_service_state where invocation_id = $1 for updatebrowser invocation is terminalselect revision, state_json
+                from runtime.browser_task_service_state where task_id = $1 for updateupdate runtime.browser_service_state set revision = $2,
+                    state_json = $3, updated_at = now() where invocation_id = $1browser service state changedinsert into runtime.browser_service_state (invocation_id, revision, state_json)
+                    values ($1, $2, $3)browser task service state is missinginsert into runtime.browser_task_service_state (task_id, revision, state_json)
+                values ($1,$2,$3) on conflict (task_id) do update set revision=excluded.revision,
+                state_json=excluded.state_json, updated_at=now()update runtime.browser_invocations set
+                state=case when state='waiting_user' then 'running' else state end,
+                suspended_state=case when state='waiting_control' and suspended_state='waiting_user'
+                    then 'running' else suspended_state end,
+                wait_call_id=null,updated_at=now()
+                where invocation_id=$1 and wait_call_id=$2 and result_json is nulltab_id, alias, holder_invocation_id, actor_invocation_id, actor_agent_id, (select holder.kind from runtime.browser_invocations holder where holder.invocation_id = browser_task_tabs.holder_invocation_id) as holder_kindselect 1 from runtime.browser_tasks where task_id = $1 for updateselect detail_json from runtime.browser_seat_inputs
+                 where invocation_id=$1 and kind='interrupt_wait' and source_id=$2 limit 1select s.detail_json from runtime.browser_seat_inputs s
+                 join runtime.browser_specialist_steers f on f.steer_id=s.source_id
+                 where s.invocation_id=$1 and s.kind='interrupt_wait' and f.delivered_at is not null
+                 order by s.revision descselect i.task_id,i.invocation_id,s.state_json from runtime.browser_invocations i
+                 join runtime.browser_tasks t on t.task_id=i.task_id
+                 join runtime.browser_service_state s on s.invocation_id=i.invocation_id
+                 where i.kind='login' and i.result_json is null and i.stop_requested_at is null
+                   and i.planner_agent_id=t.owner_agent_id and t.status in ('running','user_controlled')
+                 order by i.invocation_id limit 257too many active login capturesselect owner_agent_id from runtime.browser_tasks
+                 where task_id=$1 and status in ('running','user_controlled') for updateselect exists(select 1 from runtime.browser_invocations
+                     where invocation_id=$1 and task_id=$2 and planner_agent_id=$3
+                     and result_json is null and stop_requested_at is null)select approval_id, user_control_revision, operation_id, receipt_digest, receipt_text, purchase_json
+                     from runtime.browser_purchase_receipts
+                     where task_id = $1 and checkout_id = $2purchase completion conflicts with its receiptinsert into runtime.browser_purchase_receipts
+                    (task_id, checkout_id, approval_id, invocation_id, operation_id,
+                     receipt_digest, receipt_text, purchase_json, user_control_revision) values ($1,$2,$3,$4,$5,$6,$7,$8,$9)select approval_id, user_control_revision, operation_id, receipt_digest, receipt_text, purchase_json
+                from runtime.browser_purchase_receipts where task_id = $1 and checkout_id = $2background_locale_owner_checkattemptdispatch_delay_usowner_id_rpcobserve_and_flushnot_ownerowner_observedt.task_id, t.root_session_id, t.owner_agent_id as planner_agent_idselect state_revision from runtime.browser_tasks where task_id = $1 for updateselect exists(select 1 from runtime.browser_seat_inputs
+                     where task_id = $1 and kind = 'code' and source_id = $2)input_id, task_id, invocation_id, revision, kind, source_id, site, detail_json, (extract(epoch from created_at) * 1000)::bigint as created_at_ms, (extract(epoch from shown_at) * 1000)::bigint as shown_at_msinsert into runtime.browser_seat_inputs
+                         (input_id, task_id, kind, source_id, site)
+                         values ($1, $2, $3, $4, $5) on conflict (input_id) do nothingupdate runtime.browser_invocations set sign_in_site = $2
+                     where invocation_id = $1 and result_json is null
+                       and sign_in_site is distinct from $2update runtime.browser_seat_inputs set shown_at=now()
+                 where input_id=$1 and task_id=$2 and invocation_id is not distinct from $3
+                   and kind <> 'interrupt_wait' and shown_at is nullselect i.invocation_id, i.kind, i.sign_in_site
+    from runtime.browser_invocations i
+    join runtime.browser_tasks t on t.task_id = i.task_id
+    where i.task_id = $1 and i.result_json is null
+      and i.planner_agent_id = t.owner_agent_id
+    order by i.ordinalselect state_revision, wallet_choice_revision from runtime.browser_tasks where task_id=$1select checkout_wait_json from runtime.browser_calls
+                 where operation_id=$1 and task_id=$2 and agent_id=$3 and kind='service' for updatecheckout wait has no service callupdate runtime.browser_calls set checkout_wait_json=$2,
+                        checkout_wait_state='waiting' where operation_id=$1checkout wait changed its purchase or callerupdate runtime.browser_calls set checkout_wait_state='settled'
+                where operation_id=$1 and checkout_wait_state='waiting'update runtime.browser_calls set checkout_approval_id=$3,
+                    checkout_wait_state=case
+                      when checkout_wait_state='awaiting_card' then 'waiting'
+                      when checkout_wait_state='withdraw_on_arrival' then 'withdraw_pending'
+                      else checkout_wait_state end
+                where operation_id=$1 and checkout_wait_json=$2
+                  and checkout_wait_state in ('waiting', 'withdraw_pending', 'awaiting_card', 'withdraw_on_arrival')
+                  and (checkout_approval_id is null or checkout_approval_id=$3)operation_id, task_id, agent_id, checkout_wait_json,
+    checkout_approval_id, checkout_resume_agent_id,
+    (checkout_wait_state in ('withdraw_pending', 'withdraw_on_arrival')) as withdrawal_pending

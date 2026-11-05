@@ -12,6 +12,8 @@
 
 - When the user gives dates but no local times, search with 10:00 for both pickup and drop-off and say so in one sentence with the results, such as "I assumed a 10:00 pickup and drop-off; tell me your real times and I'll search again." Ask first when a time clearly matters, such as a flight arrival or an early departure.
 
+- When the user or memory names a preferred rental company or loyalty program, include that company's best rate, using the connector's company filter when it has one.
+
 - Ask for the driver's legal name, birth date, email and phone only after the user picks a live rate, and ask for a card only when the chosen rate is paid now.
 
 ## Compare sources
@@ -19,6 +21,8 @@
 - Search each connector in Available connectors that returns live rental-car rates, following its connector doc, and present its rates as soon as they arrive.
 
 - After the list, offer to compare the rental company's own site and a broker from Trip Transport's Websites with `browser.browse`, and say it takes several minutes. Compare right away when no connector returns a rate that meets the request, a connector is unavailable, or a quote's price rises or its terms get worse. Use the same places, local dates and times, driver age and vehicle needs, and stop when another source is unlikely to change the pick.
+
+- When the user asks for other or specific rental companies, answer from the companies the connector already returned, searching it again for them when its doc says how, and browse for the companies it does not return. This does not replace the website comparison above: still offer it, and run it when the user asks or one of its triggers applies.
 
 - Show each verified website option in one sentence with its company, full total and currency, and what differs from the best connector rate.
 

@@ -1,6 +1,6 @@
 # Threads
 
-- `/opt/hatch/bin/threads-cli` works with the Threads accounts the user links through Meta Accounts Center. It reads profiles, posts, replies, feeds, activity, insights, trends and search results, publishes posts and sends feed-ranking feedback.
+- `/opt/hatch/bin/threads-cli` works with the Threads accounts the user links through Meta Accounts Center. It reads profiles, posts, replies, feeds, activity, insights, trends and search results, publishes posts, hides replies, approves or ignores replies that wait for approval and sends feed-ranking feedback.
 
 - Inboxes and message threads use the separate [Threads Messages](/opt/hatch/connectors/threads_messages/CONNECTOR.md) connector and its own connection.
 
@@ -44,7 +44,7 @@
 
 - Page sizes (`--first`, `--limit`, `--count`) accept 1 to 50, and `--reactor-id` accepts at most 50 IDs per call. The CLI rejects invalid values before calling Threads.
 
-- `--retries N` retries network errors and 5xx responses and defaults to 0. `publish-post` and `dear-algo-whisper` reject any other value because a retry could repeat the change.
+- `--retries N` retries network errors and 5xx responses and defaults to 0. `publish-post`, `hide-reply`, `review-pending-reply` and `dear-algo-whisper` reject any other value because a retry could repeat the change.
 
 - If `insights-overview` reports an account-binding failure, run `accounts` again and pass one of the returned IDs rather than retrying another way.
 
@@ -54,7 +54,7 @@
 
 - Fetch another page with `--after` only when the request needs more results, never by default.
 
-- A 429 is final and is never retried. `Threads Request Rate Limit Reached` means scraping protection is limiting the account, so stop calling Threads for now and tell the user. `Threads Write Rate Limit Reached` is the daily post limit, so do not post again until the next day.
+- A 429 is final and is never retried. `Threads Request Rate Limit Reached` means scraping protection is limiting the account, so stop calling Threads for now and tell the user. `Threads Write Rate Limit Reached` is the daily limit for the kind of write that hit it. Publishing, hiding replies, and approving or ignoring replies each have their own limit, so stop only that kind of write until the next day.
 
 - Never set up frequent polling of the same posts, comments or insights. Scheduled work must not fetch unchanged content again on every run, because scraping protection blocks accounts that poll this way.
 
@@ -90,6 +90,8 @@
 
 - `--reply-to-post-fbid` replies to an exact post you have already read, by its numeric FBID. `--reply-control` accepts exactly `everyone`, `accounts_you_follow`, `mentioned_only`, `parent_post_author_only` or `followers_only`. The older spellings `following`, `mentioned` and `followers` are invalid, so never translate them silently.
 
+- `--enable-reply-approvals` turns on the app's "Review and approve replies" for the new post: new replies wait for the user's approval before anyone else sees them, and the user approves or ignores them later with `review-pending-reply`. Use it only when the user asks for it; replies are open by default.
+
 ```sh
 /opt/hatch/bin/threads-cli publish-post --account-id <account_id> --text "Hello Threads"
 
@@ -103,9 +105,11 @@
 /opt/hatch/bin/threads-cli publish-post --account-id <account_id> --text "Reply video" \
   --media-item '{"file":"/home/hatch/workspace/video.mp4","cover":"/home/hatch/workspace/video-cover.jpg"}' \
   --reply-to-post-fbid <post_fbid> --reply-control mentioned_only
+
+/opt/hatch/bin/threads-cli publish-post --account-id <account_id> --text "Ask me anything" --enable-reply-approvals
 ```
 
-- The CLI validates the whole post before asking. One approval covers the account, the reply context and control, the exact text and every ordered media item, with each video cover shown right after its video, so twenty items can show forty attachments.
+- The CLI validates the whole post before asking. One approval covers the account, the reply context and control, whether reply approvals are on, the exact text and every ordered media item, with each video cover shown right after its video, so twenty items can show forty attachments.
 
 - Account and reply names that cannot be resolved within about 30 seconds appear as `Unverified Threads account` or `Unverified Threads post`, and the approval is still required. If the full text and alt text cannot fit in the approval without truncation, the command is rejected, so shorten them first.
 
@@ -116,6 +120,51 @@
 - Success prints exactly `{"post_id":"<id>"}`. The ID is a machine handle for later commands, never something to show the user. When the exact result matters, read the post back with `post --post-id` and compare it with the approved content.
 
 - Respect authorization, account-selection and quota failures, and never route around them through another command.
+
+## Hide or unhide a reply
+
+- `hide-reply` gives the two choices the Threads app offers on a reply to one of the user's posts. `--action hide` hides the reply from everyone, like "Hide for everyone", and `--action unhide` shows it again, like "Unhide".
+
+- `--post-id` is the reply's numeric post ID, such as a `post_id` from `fetch-post-comments`. Only the author of the post the reply answers can change it, and never for a reply they wrote themselves or one on an archived post.
+
+```sh
+/opt/hatch/bin/threads-cli hide-reply --account-id <account_id> --post-id <reply_post_id> --action hide
+/opt/hatch/bin/threads-cli hide-reply --account-id <account_id> --post-id <reply_post_id> --action unhide
+```
+
+- Every run needs its own fresh approval, the same kind of approval card `publish-post` uses: it shows the action, its result, the account and the reply's author and text, and the command is sent once with zero retries.
+
+- Success prints exactly `{"post_id":"<id>","hidden":<bool>,"changed":<bool>}`. `changed: false` means the reply was already in the requested state and nothing was saved.
+
+- An error saying the reply is already hidden because its author is restricted or blocked, or because Threads hid it, means only `--action unhide` changes it. Other refusals explain why nothing changed. Do not retry them.
+
+- `Threads Write Rate Limit Reached` here is the daily limit for hiding and unhiding replies, so do not hide or unhide more replies until the next day. It does not limit publishing or reviewing replies.
+
+## Approve or ignore replies that wait for approval
+
+- When reply approvals are on for one of the user's posts, new replies wait for the user before anyone else sees them, and the Threads app offers "Approve" and "Ignore" on each one, in the post's pending replies list and in the notification about it.
+
+- `pending-replies --post-id <post_id>` lists the replies waiting on that post, newest first, with each reply's `post_id`, `text`, `author_username` and `created_at`. `--status ignored` lists the ones the user ignored instead. Page with `--limit` (1 to 50, default 20) and `--after <page_info.end_cursor>`. It works only on the user's own posts that have reply approvals turned on.
+
+```sh
+/opt/hatch/bin/threads-cli pending-replies --account-id <account_id> --post-id <post_id>
+/opt/hatch/bin/threads-cli pending-replies --account-id <account_id> --post-id <post_id> --status ignored
+```
+
+- `review-pending-reply --post-id <reply_post_id> --action approve` publishes the reply, like "Approve", and Threads tells its author it was approved. `--action ignore` keeps it hidden from everyone but the user, like "Ignore". An ignored reply can still be approved later.
+
+```sh
+/opt/hatch/bin/threads-cli review-pending-reply --account-id <account_id> --post-id <reply_post_id> --action approve
+/opt/hatch/bin/threads-cli review-pending-reply --account-id <account_id> --post-id <reply_post_id> --action ignore
+```
+
+- Every `review-pending-reply` run needs its own fresh approval, the same kind of approval card `publish-post` uses: it shows the action, its result (approving publishes the reply and notifies its author), the account and the reply's author and text, and the command is sent once with zero retries. Approve or ignore one reply per run, and ask the user before reviewing several.
+
+- Success prints exactly `{"post_id":"<id>","status":"approved"|"ignored","changed":<bool>}`. `changed: false` means the reply already had that decision and nothing was saved.
+
+- `--action approve` on a reply that is already published succeeds with `changed: false`; tell the user it is already visible and do not hide it. An error saying the reply is not waiting for approval comes from `--action ignore` on a reply that is already published or never needed approval: to take it down, offer `hide-reply --action hide`, which needs its own fresh approval. Other refusals explain why nothing changed. Do not retry them.
+
+- `Threads Write Rate Limit Reached` here is the daily limit for approving and ignoring replies, so do not approve or ignore more replies until the next day. It does not limit publishing or hiding replies.
 
 ## Tune the feed
 

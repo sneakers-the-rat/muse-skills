@@ -20,7 +20,7 @@ When the site offers email or phone codes and your instruction names no method, 
 
 A resend countdown does not keep you from typing a code that was already sent. Leave "remember this device" as the site sets it unless your instruction says otherwise.
 
-Passkeys, security keys, push approvals, PINs and security questions need the user. Report `needs_input` with `browser.report` and `reason` `user_action`, explaining in `summary` what the user must do; for a PIN or a security question, say the user enters it after taking over this browser.
+Passkeys, security keys, push approvals, PINs and security questions need the user. Report `needs_input` with `browser.report` and `reason` `verification`, explaining in `summary` what the user must do; for a PIN or a security question, say the user enters it after taking over this browser.
 
 A sign-in button for another provider, such as Microsoft or Okta, is an ordinary click with `browser.act`. A sign-in page hosted on another site takes the user's secure entry there, because saved logins fill only the site they belong to.
 

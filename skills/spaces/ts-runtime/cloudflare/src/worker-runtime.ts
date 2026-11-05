@@ -96,12 +96,9 @@ const viewerHeaders = {
   shareId: "x-cloudflare-spaces-share-id",
   spaceSlug: "x-cloudflare-spaces-space-slug",
   spaceId: "x-cloudflare-spaces-space-id",
-  viewerFbid: "x-cloudflare-spaces-viewer-fbid",
-  ownerFbid: "x-cloudflare-spaces-owner-fbid",
   isOwner: "x-cloudflare-spaces-is-owner",
   tokenExpiresAt: "x-cloudflare-spaces-token-exp",
   tokenId: "x-cloudflare-spaces-token-jti",
-  displayName: "x-cloudflare-spaces-viewer-display-name",
 } as const;
 
 const defaultBlobContentType = "application/octet-stream";
@@ -251,11 +248,6 @@ function optionalHeader(headers: Headers, name: string): string | undefined {
   return headers.get(name) ?? undefined;
 }
 
-function decodeOptionalHeader(headers: Headers, name: string): string | undefined {
-  const value = headers.get(name);
-  return value ? decodeURIComponent(value) : undefined;
-}
-
 export function viewerFromHeaders(headers: Headers): Viewer | undefined {
   if (headers.get(viewerHeaders.authenticated) !== "1") {
     return undefined;
@@ -266,7 +258,6 @@ export function viewerFromHeaders(headers: Headers): Viewer | undefined {
     throw new Error(`Invalid viewer header: ${viewerHeaders.tokenExpiresAt}`);
   }
   const spaceId = optionalHeader(headers, viewerHeaders.spaceId);
-  const displayName = decodeOptionalHeader(headers, viewerHeaders.displayName);
   const isOwner = requireHeader(headers, viewerHeaders.isOwner);
   if (isOwner !== "true" && isOwner !== "false") throw new Error("Invalid viewer owner flag");
 
@@ -276,12 +267,9 @@ export function viewerFromHeaders(headers: Headers): Viewer | undefined {
     shareId: requireHeader(headers, viewerHeaders.shareId),
     spaceSlug: requireHeader(headers, viewerHeaders.spaceSlug),
     ...(spaceId !== undefined ? { spaceId } : {}),
-    viewerFbid: requireHeader(headers, viewerHeaders.viewerFbid),
-    ownerFbid: requireHeader(headers, viewerHeaders.ownerFbid),
     isOwner: isOwner === "true",
     tokenExpiresAt,
     tokenId: requireHeader(headers, viewerHeaders.tokenId),
-    ...(displayName !== undefined ? { displayName } : {}),
   };
 }
 
@@ -704,8 +692,7 @@ export function createWorker(
           && request.headers.get("x-cloudflare-spaces-public-access") === env.SPACE_SHORTCODE
           && !request.headers.has("x-cloudflare-spaces-viewer-authenticated");
         const authenticatedViewer = viewer && viewer.spaceId
-          && `${viewer.spaceSlug}-${viewer.spaceId}` === env.SPACE_SHORTCODE
-          && (!viewer.isOwner || viewer.viewerFbid === viewer.ownerFbid);
+          && `${viewer.spaceSlug}-${viewer.spaceId}` === env.SPACE_SHORTCODE;
         if (!authenticatedViewer && !publicGuest) {
           return jsonResponse({ error: "Sign in to open this shared app", code: "viewer_required" }, 401);
         }

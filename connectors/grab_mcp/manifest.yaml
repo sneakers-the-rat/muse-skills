@@ -1,0 +1,113 @@
+version: 1
+gating:
+  allowed_countries: [SG]
+metadata:
+  visible_in_settings: true
+connector: grab_mcp
+display_name: "Grab"
+icon: grab
+description: "Shop GrabMall. Get groceries on GrabMart. Book a table with Grab."
+cli:
+  binary: grab-mcp
+  skill: grab_mcp
+auth:
+  provider: grab_mcp
+  required: true
+  client_id: "7e46343f7de14d50ab376c2cb2f97d94"
+  mcp:
+    endpoint: "https://mcp-ai-apps.grab.com/mcp"
+    oauth:
+      type: "oauth"
+      authorization_url: "https://api.grab.com/grabid/v1/oauth2/authorize"
+      token_url: "https://partner-api.grab.com/grabid/v1/oauth2/token"
+      scope: "martmcp.access"
+      token_endpoint_auth_method: "none"
+    tool_names:
+      grab.read:
+        - find_addresses
+        - search_mart_stores
+        - search_mart_store_items
+        - get_checkout
+        - get_order
+        - list_my_orders
+        - list_mart_carts
+        - search_dineout_restaurants
+        - get_restaurant_details
+        - check_reservation_availability
+        - list_my_reservations
+        - get_reservation_detail
+        - get_reservation_guide
+      mart_baskets.prepare: [create_checkout, update_checkout, save_checkout]
+      mart_orders.place: [complete_checkout]
+      mart_orders.cancel: [cancel_order]
+      dineout.book: [create_reservation, edit_reservation, cancel_reservation]
+surrogation:
+  name: grab_mcp
+  schema: oauth
+  mode: direct_oauth
+  privsep: true
+  hosts:
+    - mcp-ai-apps.grab.com
+    - partner-api.grab.com
+  token_proxy:
+    - field: credentials.access_token
+      placement: bearer_header
+  stripped:
+    - credentials.refresh_token
+  token_refresh:
+    - path: /grabid/v1/oauth2/token
+actions:
+  read:
+    default: allow
+    label: "Read permissions"
+    response_guard: verification_codes
+    methods:
+      grab.read:
+        label: "Read Grab stores, carts, restaurants, orders and reservations"
+  write:
+    default: ask
+    label: "Write permissions"
+    response_guard: verification_codes
+    methods:
+      mart_baskets.prepare:
+        default: allow
+        label: "GrabMart: prepare and save baskets without charging"
+        approval_phrase: "prepare or save this GrabMart basket without charging"
+        approval_buttons:
+          allow_once: "Prepare basket"
+          deny: "Don't prepare"
+          deny.task: "Don't prepare"
+      mart_orders.place:
+        approval_policy: fresh_consent_only
+        label: "GrabMart: place orders"
+        approval_phrase: "place the GrabMart order below, charging the confirmed total"
+        approval_buttons:
+          allow_once: "Place order"
+          deny: "Don't place"
+          deny.task: "Don't place"
+      mart_orders.cancel:
+        approval_policy: fresh_consent_only
+        label: "GrabMart: cancel orders"
+        approval_phrase: "cancel the GrabMart order below"
+        approval_buttons:
+          allow_once: "Cancel order"
+          deny: "Don't cancel"
+          deny.task: "Don't cancel"
+      dineout.book:
+        approval_policy: fresh_consent_only
+        label: "Dine-out: book, change and cancel table bookings"
+        approval_phrase: "book, change or cancel the Grab Dine-out table below"
+consent_screen:
+  bullets:
+    - icon: data_types
+      title: "What Muse can access and do"
+      text: "When you connect your Grab account, Muse can access account information such as your saved addresses, carts, past orders and reservations. It can search GrabMall stores and products, GrabMart groceries, restaurants and table availability to help with your requests."
+    - icon: info
+      title: "You’re in control"
+      text: "Review and approve every order and reservation before it’s completed. Some orders may also require verification in the Grab app. Payment and fulfilment for orders remain with Grab. You can disconnect at any time in Settings."
+    - icon: caution
+      title: "Before you confirm"
+      text: "Prices, fees, stock and table availability can change. Check the details before you approve."
+  footer_paragraphs:
+    - "The info used for your tasks is part of your interactions with Muse, which we may use to improve AI at Meta. You can manage this in Settings. [Learn more](https://muse.ai/privacy)"
+    - "Muse will exchange info with Grab. To learn more, view their [terms](https://www.grab.com/sg/terms-policies/) and [privacy notice](https://www.grab.com/sg/terms-policies/privacy-notice/)."

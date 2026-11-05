@@ -15,9 +15,13 @@
 
 ## Find and call a tool
 
-- `list-tools` returns the compact reviewed catalog with each tool's Muse permission, even before the account is connected. `list-tools --name NAME` fetches that tool's live input and output schemas.
+- `list-tools` returns the compact reviewed catalog with each tool's Muse permission, even before connecting. `--name NAME` fetches one tool's live schemas; `--all-schemas` fetches the live catalog, marking unreviewed tools as unsupported.
 
-- Build arguments from the live schema and call the tool with `call-tool`. Never guess a tool name or field, and never bypass the CLI with a direct API call.
+- Before `call-tool`, fetch the exact tool's live schema with `list-tools --name` and build arguments from it. Reuse that schema only for identical reads within the same status check. Do not reuse schemas from earlier tasks, guess fields or bypass the CLI with direct API calls.
+
+- The CLI supplies `model` and a missing `tool_version` when the live schema declares one exact version.
+
+- The CLI validates against the live schema before operation approval and dispatch. On a local validation error, the operation was not called; fetch its schema again and rebuild the arguments.
 
 - If `list-tools --name` says a reviewed tool is not available to this connection, check the connection before concluding Klaviyo does not support it.
 
@@ -31,13 +35,13 @@
 
 ## Read shortcuts
 
-- These commands return compact metadata without a schema lookup. `list-campaigns` requires `--channel`, which takes `email`, `sms` or `mobile-push`, and `list-flows --page-size` accepts 1 to 100.
+- These commands build and validate compact metadata requests. Campaigns may span channels; `list-campaigns` lists all campaigns. `list-flows --page-size` accepts 1 to 50.
 
 - Pass the cursor from a previous page unchanged with `--page-cursor` to continue a list.
 
 ```text
 /opt/hatch/bin/klaviyo account-details
-/opt/hatch/bin/klaviyo list-campaigns --channel email
+/opt/hatch/bin/klaviyo list-campaigns
 /opt/hatch/bin/klaviyo list-flows --page-size 50
 /opt/hatch/bin/klaviyo list-metrics
 ```
@@ -59,6 +63,14 @@
 
 ## Send a campaign
 
+- Build `create_campaign` from its live schema: name at `body.data.attributes.definition.name`, with `audiences` and `messages` alongside `definition`. Klaviyo requires an audience entry even for an incomplete draft.
+
+- For `send_campaign`, use the following body and any other fields required by the live schema:
+
+```json
+{"body":{"data":{"type":"campaign-send-job","id":"<campaign id>"}}}
+```
+
 - Read back the audience, sender, subject, message and schedule before `send_campaign`. A created draft is not sent.
 
 - `send_campaign` starts an asynchronous job. Check `get_campaign_send_job` and `get_campaign` before reporting the outcome.
@@ -67,7 +79,7 @@
 
 - Describe recipient counts from `get_campaign_recipient_estimation` as estimates, never as delivered recipients.
 
-- `assign_template_to_campaign_message` gives the message its own copy of the template, with a new ID. Verify it with `get_campaign` using `include=campaign-messages` rather than assigning again.
+- `assign_template_to_campaign_message` gives the variation a template copy with a new ID. Verify it with `get_campaign_message` and `include=campaign-variations`; do not assign again solely because its template ID differs from the source template's ID.
 
 ## Manage flows
 
