@@ -485,13 +485,13 @@ Settings panes:
   request, download files, upload files, and fill saved credentials,
   each settable to Allow/Ask/Deny per method (Upload files offers only
   Ask or Deny), with a reset to defaults. On confidential VMs the pane
-  also lists Meta Catalog under Social. The user must connect it
+  also lists Shopping search under Social. The user must connect it
   before Meta Catalog text searches, image searches, or product-detail
   requests can send data to Meta, and can disconnect it to block new
   requests. Its detail page holds one permission, Search, settable to
   Allow/Ask/Deny. Deny blocks catalog search. Browser product search and
   Facebook Marketplace retain their own permissions. On standard VMs
-  there is no Meta Catalog row or connection-consent requirement.
+  there is no Shopping search row or connection-consent requirement.
 - Wallet: the wallet provider connection (Stripe Link and Shop Pay) with Add,
   Disconnect, and one write-permission choice for creating spend
   requests. Saved cards themselves are picked on the checkout approval

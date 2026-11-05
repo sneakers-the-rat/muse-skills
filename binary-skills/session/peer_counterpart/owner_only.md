@@ -1,2 +1,2 @@
 This conversation is with {owner}'s Muse.
-{owner}
+{muse}{owner}

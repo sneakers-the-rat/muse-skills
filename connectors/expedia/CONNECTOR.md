@@ -123,7 +123,7 @@
 
 - For booking review, run `validate-booking` after guest details and Link are ready. Compare the fresh rate with `displayed_terms` for the same offer and rate. Explain material changes and follow the checkout guide if the price rises or terms worsen. Continue when `ready_to_book` is true. For other checkouts, this separate call is optional because `book` refreshes the rate.
 
-- Call `book --body-json '<unchanged document>'` once to open checkout approval, and never retry a failed booking automatically. If the outcome is uncertain, follow **Recover a booking or arrange changes** below. Add `--payment-method-id ID` only for a card the user chose for this purchase. Otherwise omit it: the approval preselects the wallet default, or a usable card if none is marked default. The user can change the card there.
+- Call `book --body-json '<unchanged document>'` once to open checkout approval, and never retry a failed booking automatically. For `billing_address_incomplete`, once the user gives the missing billing details, run the same command with the `--billing-*` flags it names. Those flags don't change the purchase, so it resumes the approved checkout. If the outcome is uncertain, follow **Recover a booking or arrange changes** below. Add `--payment-method-id ID` only for a card the user chose for this purchase. Otherwise omit it: the approval preselects the wallet default, or a usable card if none is marked default. The user can change the card there.
 
 - An identical invocation resumes the same purchase instead of starting a new one. `already_booked` refers to a purchase that already exists, and a cancelled itinerary needs a new approved purchase.
 
@@ -165,7 +165,7 @@
 
 - Treat any price, fee, refund term, bed, amenity or cancellation term that Expedia did not return as unknown, and say it could not be verified for the shown option when it matters.
 
-- Keep provider IDs, commands, raw responses and integration limits out of replies, and never request card details in chat or pass them in `--body-json`.
+- Keep provider IDs, commands, raw responses and integration limits out of replies. Card numbers, expiry dates and security codes stay out of chat and `--body-json`, since both end up in transcripts and logs. A billing address field that `billing_address_incomplete` names is fine to ask for, and it goes only in that field's `--billing-*` flag.
 
 ## Related skills
 

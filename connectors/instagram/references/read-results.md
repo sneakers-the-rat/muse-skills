@@ -49,7 +49,7 @@
 /opt/hatch/bin/instagram-cli user-profile --account-id <user_own_fbid> --user-id <user_fbid>
 ```
 
-- `followers` reads the user's own followers in `users[]`. `--count` defaults to 200. When `has_more` is true, pass `next_max_id` as `--after`.
+- `followers` reads the user's own followers in `users[]`, newest first. `--count` defaults to 200. When `has_more` is true, pass `next_max_id` as `--after`.
 
 - `following` reads the user's own following list in `users[]`. Another
   account's following list is unsupported. `--count` defaults to 200.
@@ -67,9 +67,21 @@
 
 - Follower and following rows include `id`, `username`, `full_name` and `profile_pic_url`. Compare membership by `id` without looking up each profile.
 
+- Rows for the user's own followers also include `follower_count` and `is_verified`. When a follower's row was already fetched with `followers`, use these fields instead of a `user-profile` call for that follower.
+
+- To find every follower that matches a condition, such as every verified follower, page plain `followers` with `--after <next_max_id>` until `has_more` is false and check each row. A ranked call returns only the top rows of each batch, so it can miss matches.
+
+- To rank the user's followers by their follower counts, as in "my top followers" or "my most popular followers", run `followers --sort-by follower_count` and follow its cursor as the next bullets describe. The server ranks them, so no profile lookups are needed.
+
+- `--sort-by follower_count` ranks up to 10,000 followers per call, newest first, and returns the top `--count` of them (default 50, maximum 1,000) in `users[]`, highest `follower_count` first. Later calls do not return the rows below an earlier call's cutoff, so set `--count` to at least the number of top followers you need. `followers_ranked` is how many followers that call ranked.
+
+- When a ranked call returns `has_more: true`, older followers are not ranked yet. Run the same command with `--after <next_max_id>` until `has_more` is false, then merge every batch by `follower_count` before you answer. If you stop early, say how many followers you ranked.
+
 ```sh
 /opt/hatch/bin/instagram-cli followers --account-id <user_own_fbid> --count 25
 /opt/hatch/bin/instagram-cli followers --account-id <user_own_fbid> --after <next_max_id>
+/opt/hatch/bin/instagram-cli followers --account-id <user_own_fbid> --sort-by follower_count --count 20
+/opt/hatch/bin/instagram-cli followers --account-id <user_own_fbid> --sort-by follower_count --count 20 --after <next_max_id>
 /opt/hatch/bin/instagram-cli following --account-id <user_own_fbid> --after <end_cursor>
 ```
 
