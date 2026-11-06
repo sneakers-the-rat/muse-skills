@@ -1,0 +1,101 @@
+browser page audio was not transcribedbrowser revocation was not acknowledgedprimary_root_checkpoint_deferred_marker_cleanupcheckpoint carried duplicate pending tool identitiescheckpoint reused a tool call id for contradictory callscheckpoint carried an incomplete pending tool identitycheckpoint carried duplicate tool output identitiescheckpoint carried an incomplete tool identitydurable tool call disagreed with checkpoint evidencedurable tool call projection was malformeddurable tool call identity was not uniquedurable tool output existed without its function calldurable tool output projection was malformeddurable tool output identity was not uniquecheckpoint tool identity map was inconsistentpg_proof_oversizepg_proof_unreadablepg_proof_malformedpg_proof_remote_postgrespg_proof_not_cleanpg_proof_epoch_mismatchfailed to load durable checkpoint row during index reconstructionmemory flush inference stream timed out waiting for first model output chunkmemory flush inference stream timed out waiting for next model output chunkunexpected compaction block during memory flushmodel_output_shape_errormemory flush inference stream ended before Done eventfetchstorygroupsfriendscollectionsfunctions.runtime.subagent_progresssearchsuspiciousbrowser_suspicioussensitivegoal briefing push decision failedSELECT e.event_seq FROM runtime.events e JOIN runtime.event_payload_fields f ON f.event_seq = e.event_seq WHERE COALESCE(NULLIF(TRIM(e.agent_id), ''), e.parent_agent_id) = $1 AND event_name IN ('message.user', 'message.assistant') AND f.field_path = '/metadata/context_seq' AND NULLIF(COALESCE(f.text_value, f.scalar_value), '')::bigint = ANY($2)/metadata/exclude_from_context_window/metadata/context_exclusion/reason/metadata/context_exclusion/ts_msnumberINSERT INTO event_payload_fields (event_seq, field_path, scalar_type, scalar_value)  ON CONFLICT (event_seq, field_path) DO UPDATE SET scalar_type = excluded.scalar_type, scalar_value = excluded.scalar_value, text_value = NULL
+SELECT json_build_object(
+         'accepted_ordinal', accepted_ordinal,
+         'state', state,
+         'checkpoint_custody', checkpoint_custody,
+         'submission_json', submission_json
+       )::text
+FROM agent.message_mailbox
+WHERE agent_id = $1
+  AND state IN ('accepted', 'attached')
+ORDER BY accepted_ordinal, submission_id
+FOR UPDATE
+SELECT payload_json FROM runtime_restart_checkpoints WHERE agent_id = $1
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = 'executing',
+    stream_owner_message_id = $3,
+    attached_at = now()
+WHERE submission_id = $1
+  AND agent_id = $2
+  AND state = 'accepted'
+  AND stream_owner_message_id IS NULL
+
+SELECT agent_id, state, stream_owner_message_id, submission_json,
+       accepted_ordinal
+FROM agent.message_mailbox
+WHERE submission_id = $1
+FOR UPDATE
+
+SELECT EXISTS (
+  SELECT 1
+  FROM agent.message_mailbox
+  WHERE agent_id = $1
+    AND state = 'accepted'
+    AND accepted_ordinal < $2
+    AND (NOT $3 OR submission_kind <> 'internal_handoff')
+)
+tracked mailbox successor unexpectedly lost custodymessage mailbox successor promotion cannot overtake an older priority peer
+UPDATE agent.message_mailbox
+SET state = CASE WHEN $4 THEN 'completed' ELSE 'aborted' END,
+    checkpoint_custody = coalesce(checkpoint_custody, 'executing'),
+    terminalized_at = now()
+WHERE agent_id = $1
+  AND stream_owner_message_id = $2
+  AND submission_id = ANY($3)
+  AND state = 'attached'
+
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = 'executing',
+    stream_owner_message_id = $2,
+    attached_at = coalesce(attached_at, now())
+WHERE agent_id = $1
+  AND submission_id = ANY($3)
+  AND (
+    (state = 'accepted' AND stream_owner_message_id IS NULL)
+    OR (state = 'attached' AND stream_owner_message_id = $2)
+  )
+
+UPDATE agent.message_mailbox
+SET checkpoint_custody = 'queued'
+WHERE agent_id = $1
+  AND stream_owner_message_id = $2
+  AND submission_id = ANY($3)
+  AND state = 'attached'
+
+UPDATE agent.message_mailbox
+SET state = CASE
+      WHEN state = 'attached' AND $2 THEN 'completed'
+      ELSE 'aborted'
+    END,
+    terminalized_at = now()
+WHERE agent_id = $1
+  AND state IN ('accepted', 'attached')
+
+INSERT INTO agent.volatile_context_pins
+  (agent_id, variant_hash, variant_json, prompt_floor_seq, checkpoint_seq, body)
+SELECT $1, $2, $3, $4, $5, NULL
+WHERE EXISTS (SELECT 1 FROM agent.agents WHERE id = $1)
+ON CONFLICT (agent_id, variant_hash) DO UPDATE SET
+  variant_json = excluded.variant_json,
+  prompt_floor_seq = excluded.prompt_floor_seq,
+  checkpoint_seq = excluded.checkpoint_seq,
+  created_at = now()
+
+SELECT COALESCE(a.prompt_floor_seq, -1) AS prompt_floor_seq,
+       COALESCE(c.checkpoint_seq, -1) AS checkpoint_seq
+FROM agent.agents AS a
+LEFT JOIN LATERAL (
+    SELECT checkpoint_seq
+    FROM agent.agent_compactions
+    WHERE agent_id = $1
+      AND has_replacement_history
+    ORDER BY id DESC
+    LIMIT 1
+) AS c ON c.checkpoint_seq > COALESCE(a.prompt_floor_seq, -1)
+WHERE a.id = $1
+checkpoint_seqdatabase write admission gate closedadmission_timeoutassert_table_existstable_presence.querynodesupload_sessionsgeofencesdata_sync_statecalendar_eventscomms_announcementshealthsamplesingestdata_source_eventsmedia_upload_eventsmedia_upload_batchesavatar_stateavatar_selectionswork_itemsworkflow_runsworkflow_phase_runsworkflow_agent_callsbackground_workersexecute_resolve_runsevent_hook_space_ownerstransport_statesourcesingest_attemptssubscriptionssubscription_sourcesgroup_cursorsbinding_authorizationsfeed_entriesentriesdeliveriesphone_callswebhook_custodywebhook_custody_lockwebhook_fetch_workwebhook_eventsbackground_content_jobsidea_execution_pendingcontext_snapshotscontext_itemsrecovery_ownersdelivery_outboxassert_required_tablesevent_seqstream_lanepayload_jsonchat_context_jsonsearch_vectorsearch_textsnapshot_kindstate_jsondelivery_keynext_attempt_at_utcskill_namepending_invalidation_hashlast_seen_version_idlast_seen_badge_versioncontext_item_idtext_contentrecovery_classjob_idretired_chat_ids_pkeyruntime_search_documents_events_fts_idxruntime_search_documents_media_fts_idxruntime_search_documents_memory_fts_idxruntime_events_main_history_seq_desc_idxruntime_events_main_history_parent_kind_seq_idxruntime_events_main_public_root_message_uidxruntime_events_public_runtime_user_seq_idxruntime_work_items_active_idxruntime_work_items_terminalized_idxdeliveries_retry_idxdeliveries_terminal_retention_idxruntime_chat_event_derived_write_backlog_created_idxruntime_chat_event_derived_write_backlog_ready_idxagent_subagent_progress_message_child_pending_idxagent_subagent_spawns_open_global_created_idxagent_agents_spawn_metadata_gin_idxagent_agents_active_subagent_liveness_idxagent_context_item_derived_write_backlog_created_idxagent_context_item_derived_write_backlog_ready_idxagent_runtime_restart_checkpoints_updated_idxagent_recovery_owners_active_scan_idxagent_recovery_owners_terminal_retention_idxagent_recovery_owners_terminal_status_idxscheduler_jobs_due_idxscheduler_runs_status_scheduled_utc_idxscheduler_delivery_outbox_retry_idxscheduler_delivery_outbox_retention_idxself_improvement_runs_queue_idle_gated_idxself_improvement_runs_queue_non_idle_gated_idxmedia_items_description_retry_idxmedia_items_ready_media_idxmedia_locations_geocode_retry_idxvisibilityhiddentranscript_surfacemain_chatmessage_rolesystemdeveloperevent_kindtool_starttool_donetask_statuscontext_item_kindmessage_texttext_segmentstool_callrun_statusqueuedapplied_migration_max_versioncredential_resolutionshared_pool_mutexresolve_database_urlshared_pool_reuse_checkpool_connectshared_pool_reusedHATCH_DATABASE_URLenvironment_overrideJARVIS_AUTHD_SOCKcredential_task_queuecredential_decodeselect owner_agent_id, root_session_id
+        from runtime.browser_tasks where task_id = $1 and status = 'running' for updateselect epoch, control_revision from runtime.browser_executions
+        where task_id = $1 and planner_agent_id = $2 for updatebrowser seat changedbrowser service authority changedbrowser invocation authority changedeffects_may_have_appliedBackground `exec` command tool output for session `Link balance was missing its payment method IDStripe Link returned invalid catalog statusnext_actionShop Pay returned invalid JSONShop Pay returned invalid user infoShop Pay user info could not be projectedShop Pay returned invalid wallet dataShop Pay payment methods could not be projectedShop Pay returned invalid shipping addresses
+head top x≈ 
