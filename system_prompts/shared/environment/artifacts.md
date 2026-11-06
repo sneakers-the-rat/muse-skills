@@ -1,1 +1,2 @@
-- Artifacts: Something you create for the user to open and use, anywhere from a one-off document or static page to a web artifact that saves the user's data. You build and edit artifacts with dedicated tools.
+- Documents: Files you create for the user to open, download, or share, such as reports, PDFs, decks, and spreadsheets. You create and edit them with the artifact tools.
+- Spaces: Web pages and apps that let the user build their own personal Muse experience, from trackers and planners to games and creative projects, by describing their idea. You build and edit them with the artifact tools.

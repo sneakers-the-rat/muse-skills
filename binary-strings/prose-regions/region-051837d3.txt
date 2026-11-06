@@ -1,0 +1,43 @@
+committed memory projection planning failedcommitted goals bookkeeping input planning faileddeletededuped filesystem update eventtaglinedescriptionemojiIDENTITY.mdfailed to build identity.updated payloadhatch.name_updatedfailed to list paired devices for avatar video completion; device-family-gated variants will not be required this attemptmessenger_companionJARVIS_STEFI_PROXY_SOCK,http://localhost/hatch/resolve_skill_iconicon_namescdnstefi resolve_skill_icon returned non-success statusfailed to resolve skill icon URLs via stefi proxydefaulthttp://localhost/hatch/check_gatekeepersGatekeeper response was invalid; using defaultGatekeeper check failed; using defaultproactivity CLI pacing is unavailablewrite CLI pacing requestread CLI pacing responseCLI pacing is unavailabletitleruntime egress context registrationfailed to stat paired delete pathfailed to delete paired pathfileserver event notify failedartifact.deletion_startedartifact.deletion_failedremove artifact directoryartifact.deletion_succeededartifact.deletion_skippedmeta.jsonobfuscated_idworkspace/user/media_library/video.thumbnailsattempting to destroy shared artifactJARVIS_STEFI_PROXY_SOCK not set, skipping shared artifact destroyfailed to build stefi client for artifact destroydestroyed shared artifact via stefistefi artifact destroy failedmissing pathpath must not be emptydirectory not emptyremove file
+    select
+        node_id,
+        coalesce(display_name, node_id) as display_name,
+        platform,
+        enabled_permissions_json,
+        commands_json,
+        data_sources_json,
+        version,
+        device_family,
+        model_id,
+        metadata_json,
+        is_wakeup_supported,
+        delivery_app,
+        invoke_protocol,
+        -- Sentinel rejects a pairing identity with a space; created_at::text has one.
+        coalesce(
+            paired_at_text,
+            to_char(created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')
+        ) as paired_at,
+        coalesce(last_seen_at_text, last_seen_at::text, created_at::text) as last_seen_at,
+        status,
+        pairing_status
+    from device.nodes
+pairing_status <> 'revoked'select pg_advisory_xact_lock(4841544348435458)insert into context.ingest_attempts
+        (id, source_id, contributor_key, recorded_at, outcome,
+         submitted, inserted, duplicates, event_ids, error_code)
+        values ($1,$2,$3,clock_timestamp(),$4,$5,$6,$7,$8,$9)select last_append_position from context.sources where id = $1 for updateupdate context.sources set last_append_position = $2 where id = $1select id, (group_key is not distinct from $3
+            and payload_kind = $4
+            and occurred_at is not distinct from $5::timestamptz
+            and payload = $6 and content_hints = $7
+            and ttl_seconds is not distinct from $8) as matches
+         from context.events where source_id = $1 and dedupe_key = $2 for sharematchesinsert into context.events
+        (id, source_id, append_position, dedupe_key, group_key, payload_kind,
+         occurred_at, ingested_at, payload, content_hints, ttl_seconds, expires_at, group_id)
+        values ($1,$2,$3,$4,$5,$6,$7,statement_timestamp(),$8,$9,$10,
+            statement_timestamp() + $10::integer * interval '1 second',$11)delete from context.ingest_attempts where id in
+    (select id from context.ingest_attempts where recorded_at < now() - interval '7 days'
+     order by recorded_at, id limit 100)select pg_notify($1, '')hatch_context_committedinsert into context.sources
+    (id, source_domain, source_key, display_name, created_at, last_append_position)
+    values ($1, $2, $3, $4, clock_timestamp(), 0)
+    on conflict (source_domain, source_key) do nothingselect id, source_domain, source_key as key, display_name, created_at::text as created_at
+     from context.sources where source_domain = $1 and source_key = $2

@@ -1,0 +1,116 @@
+
+SELECT f.event_seq, f.field_path, f.scalar_type, f.scalar_value, f.text_value
+FROM event_payload_fields AS f
+WHERE f.event_seq IN (
+, ) ORDER BY f.event_seq ASC, length(f.field_path) ASC, f.field_path ASCfield_pathscalar_typescalar_valuetext_value
+SELECT event_seq, ordinal, resource_kind AS kind, resource_key AS uri, label, mime_type, size_bytes, metadata_json
+FROM resources
+WHERE event_seq IN (
+) ORDER BY event_seq ASC, ordinal ASCsize_bytesmetadata_jsonhandoff event sequence
+SELECT e.event_seq, e.event_name, coalesce(e.message_id, '') AS message_id,
+       e.payload_json
+FROM events e
+WHERE e.idempotency_key = $1
+  AND e.payload_json IS NOT NULL
+context event identity already belongs to another writerSELECT event_seq FROM events WHERE idempotency_key = $1runtime_events_main_public_root_message_uidxSELECT request_id, root_request_id, parent_request_id,
+                                        event_name, visibility::text, role::text, source,
+                                        transcript_surface::text, message_id, reply_to_message_id,
+                                        agent_id, parent_agent_id, parent_message_id
+                                 FROM events WHERE event_seq = $1delta.presentationruntime.messages.body
+INSERT INTO messages (message_id, event_seq, role, body, created_at)
+VALUES ($1, $2, $3::runtime.message_role, $4, to_timestamp($5::double precision / 1000.0))
+ON CONFLICT (message_id) DO NOTHING
+
+SELECT event_seq AS seq, event_name, role::text AS role
+FROM events
+WHERE message_id = $1
+  AND transcript_surface = 'main_chat'
+  AND visibility = 'public'
+  AND event_name IN ('message.user', 'message.assistant')
+  AND (parent_message_id IS NULL OR TRIM(parent_message_id) = '')
+LIMIT 1
+request_idroot_request_idparent_request_idDELETE FROM chat.event_transports WHERE event_seq = $1INSERT INTO chat.event_transports (event_seq, provider) VALUES  ON CONFLICT (provider, event_seq) DO NOTHING()
+SELECT event_seq, payload_json
+FROM events
+WHERE idempotency_key = $1
+LIMIT 1
+FOR UPDATE
+
+UPDATE events
+SET display_text_ready = $2,
+    reply_target_message_id = $3,
+    payload_json = $4
+WHERE event_seq = $1
+RETURNING payload_json, event_name, parent_agent_id, agent_id
+
+INSERT INTO messages (message_id, event_seq, role, body, created_at)
+SELECT e.message_id, e.event_seq, e.role, $2, e.created_at
+FROM events e
+WHERE e.event_seq = $1
+  AND e.message_id IS NOT NULL
+  AND e.role IS NOT NULL
+ON CONFLICT (message_id) DO UPDATE SET
+  body = excluded.body
+select a.id from agents a
+    join chat.chats c on c.chat_id = a.session_id
+    where a.kind = 'root' and a.parent_agent_id is null and a.session_id = $1
+      and a.ephemeral is distinct from true and c.origin in ('fresh', 'fork')
+      and c.status <> 'deleted'
+    order by a.created_at desc, a.id desc limit 1freshupdate chat_private.bindings set account_username = $1
+                         where chat_id = $2 and provider = $3 and conversation_key = $4
+                           and account_username is distinct from $1INSERT INTO agents (agent_id, id, session_id, kind, parent_id, parent_agent_id, root_session_id, depth, created_at, updated_at, model, status, last_assistant_message, ephemeral, agent_type, presentation_root_session_id, spawn_metadata_json, originating_location_context_json)
+             VALUES ($1, $1, $2, $3, $4, $4, $5, $6, $7, $8, $9, $10, NULL, $11, $12, $13, $14, $15)
+INSERT INTO agent_ancestors (descendant_id, ancestor_id, distance)
+VALUES ($1, $1, 0)
+ON CONFLICT (descendant_id, ancestor_id) DO NOTHING
+
+INSERT INTO agent_ancestors (descendant_id, ancestor_id, distance)
+SELECT $1, ancestor_id, distance + 1
+FROM agent_ancestors
+WHERE descendant_id = $2
+ON CONFLICT (descendant_id, ancestor_id) DO NOTHING
+
+INSERT INTO agent_ancestors (descendant_id, ancestor_id, distance)
+VALUES ($1, $2, 1)
+ON CONFLICT (descendant_id, ancestor_id) DO NOTHING
+failed to resolve owning root session from chat event record
+SELECT a.agent_id
+FROM activity_monitor_agent_threads a
+JOIN activity_monitor_threads g ON g.activity_thread_id = a.activity_thread_id
+WHERE a.activity_thread_id = $1
+  AND g.status = $2
+ORDER BY a.created_at ASC, a.agent_id ASC
+
+SELECT action_index, action_seq, action_id, activity_thread_id, agent_id, agent_depth, icon, title, subtitle, report, status, created_at
+FROM activity_monitor_thread_actions
+WHERE activity_thread_id = $1
+ORDER BY action_index ASC, action_seq ASC
+
+SELECT action_index, action_id, activity_thread_id, agent_id, agent_depth, icon, title, subtitle, report, status, created_at
+FROM (
+    SELECT
+        action_index,
+        action_id,
+        activity_thread_id,
+        agent_id,
+        agent_depth,
+        icon,
+        title,
+        subtitle,
+        report,
+        status,
+        created_at,
+        action_seq AS insertion_order
+    FROM activity_monitor_thread_actions
+    WHERE activity_thread_id = $1
+    ORDER BY action_index DESC, insertion_order DESC
+    LIMIT $2
+)
+ORDER BY action_index ASC, insertion_order ASC
+
+SELECT activity_thread_id, name, subtitle, icon, emoji, status, created_at, finished_at, finish_message,
+       finish_status, finish_status_reason, activity_thread_kind, space_slug, status_title,
+       expected_finish_description
+FROM activity_monitor_threads
+WHERE activity_thread_id = $1
+internal_errorpath not foundresolve pathpath escapes mount rootforbiddenalready_existscreate parent directorymedia processor not initializedsnippetechat history anchor has a negative sequenceboundary_seqexplicit chat event seqmain_chatchat search before_seqbindings_provider_conversation_key_keychannel binding changed; retry resolutionfailed to serialize localized activity.updated payload; falling back to canonical framecompleted startup quota rejection has no eventnegative startup quota rejection event sequencecompleted startup quota rejection event is absentmodel lock state read timed outverify activity feed tablenegative cancellation event sequencecontext item sequence space is exhaustedcommitted cancellation has no context sequencestartup quota rejection payload is not an objectstartup quota rejection metadata is not an objectread filefile is not valid UTF-8 textPDF export unavailablebuild file URL for temp HTMLpdf export: owned browser render failedPDF export failedpdf export: timed out waiting for a chrome slotstat filestat directoryspawn find for fs query scanfind stderr pipe unavailableread find stdout for fs query scanwait for fs query scanread find stderr for fs query scanfind stdout pipe unavailableread directory entrypublication has no chat ownerinvalid publication tracepublication owner does not match its transcript/metadata/message_kindpublication has no execution ownerinvalid publication authorityshopping_results_v2node_card.notification_opt_infailed to serialize idea for reply_to_target hydrationconnector_consent_requiredinvalid `session_id`session not foundGatekeeper response omitted requested gate; using defaultview ideaview canonical idearesolve canonical on not-foundlist ideas by idsrun find for media scanread directorystat rename sourcerename pathrewrite staged filerun find for recents scanread artifact search entryread artifact output entrystat fs.find scan segmentstat pathseek filereplace destination filecreate temporary filesync filewrite fileruntime.resources.metadata_jsonlist authoritative cron definitionsread authoritative cron definitionretire authoritative cron definitionstefi destroy request failedread stefi destroy responsehttpscontext_seqtool_call_idtool_namerequesttool_idattached mailbox input has no stream ownerstagedexecutinginput chat is absentinvalid input binding epochConversationTransportStatelink_idneeds_reconciliationpending_cancellationinput provider is absentfailed to list assigned agents for activity threadfailed to read activity thread snapshot with actionsfailed to read activity thread actionsheartbeatroot admission cancellation ended without a resultstartup input size exceeds i64startup queue size exceeds i64startup media size overflowuser/voice.jsonvalidate rename destinationappeal_changedthe appeal changed since it was reviewed; review it againroute not foundappeal_pendingan appeal from this VM is already under reviewappeal submit failedappeal_send_failedthe appeal could not be sent; try again latermissing http peer identitychat_id is requiredstefi_proxy_unavailableJARVIS_STEFI_PROXY_SOCK is not set; podcast feed recovery requires the Stefi proxyJARVIS_STEFI_PROXY_SOCK is not set; podcast blob cleanup requires the Stefi proxyStefi product_details response could not be compactedinvalid file routeDISCRETION.md requires UTF-8 textopen thumbnailthe SxS response can no longer be swappedfailed to persist the selected SxS responsechat no longer existsunsupported `app_id` for chat resolution`account_id` is required for Instagram side chatsresolved session metadata is unavailablewidget_id is required for cart checkoutdisplayed_cart is required for cart checkoutCould not read shopping widgetShopping cart widget not foundShopping cart has no providerShopping provider missingShopping product ID missingShopping widget not foundShopping citation message not foundbuild private file responserange_not_satisfiablerequested byte range is not satisfiableprivate preview task failedprivate preview is busyitem_jsonmessage_sourceclient_context_jsonmissing auth tokenhatch_daemon_http_client::daemon::http_api::chat_api::ChatRequestScopecontent_base64

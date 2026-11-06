@@ -91,8 +91,9 @@ in the task and leave `wallet` unset. The checkout records
 For payment through Muse Wallet (Link or Shop Pay), the checkout uses
 `payment_route: wallet`.
 Without an explicit provider choice, the runtime preserves an approved choice,
-then prefers sufficient Link balance when available, connected Shop Pay when
-native support is detected, otherwise Link. It handles any required payment
+then prefers sufficient Link balance when eligible, native Shop Pay when eligible,
+and otherwise chooses among wallets eligible for the current checkout.
+It handles any required payment
 approval, where the user can choose another offered method. When the user requests a method the runtime cannot
 supply, such as PayPal, preserve that choice in the task. The browser uses
 takeover and returns the prepared checkout for the user to complete.
