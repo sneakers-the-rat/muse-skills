@@ -1,0 +1,107 @@
+reconcile orphaned approval RuntimeWork during startupfailed to terminalize orphaned approval RuntimeWork at startupapproval wait lost its exact restart checkpoint during daemon restartskipping goal suggestion with missing ideacommitted goal maintenance planning failedfailed to serialize goal detail for goal.updated websocket eventfailed to load goal detail for goal.updated websocket eventfailed to serialize localized goal.updated websocket eventbroadcast goal.updated websocket eventfailed to hydrate goal Space associations from Spaces catalogvoice_restart_record_readvoice_restart_record_blocking_queueresume_directory_unsetvoice call restart record reader panickedvoice_restart_offerrecord_absentoutside_windowdiscardedarmedvoice call restart record readvoice_call_restart_rejoin_armedrecord_unreadablediscarded an unreadable voice call restart recordJARVIS_HOMEJARVIS_VAR_LIB_DIRCREDENTIALS_DIRECTORYJARVIS_TRACE_CONTEXTJARVIS_RUNTIME_CONTEXT_TOKENskill command runtime context registration failedJARVIS_TOOL_CALL_IDruntime.browser_session_joinall_chatschannelstream_scopethread_idchat_idall_sessionschat_id must match the routeuse all_chats on the chats APIall_chats is exclusive with chat_id and only valid for searchall_chats must be a booleanuse an explicit chat_id on the chats APIresumeparent_agent_idmessage_idparent_agent_id must belong to chat_idchat.resume only supports the primary chatmessage not found in chatstandalonedelivery_modechunkedfinalization_fencedreconciliation_storage_failedfinalization_failedclaim reconciliation finalizationfinalization_ignored_staleinvalid_stream_uploadfinalization_fence_failedfence invalid reconciliation uploadinvalid_source_snapshotsettle invalid device reconciliation for retrydevice_sync_stateHealth reconciliation applied but device-sync worker wake failedfinalize device reconciliation
+SELECT json_build_object(
+         'accepted_ordinal', accepted_ordinal,
+         'state', state,
+         'checkpoint_custody', checkpoint_custody,
+         'submission_json', submission_json
+       )::text
+FROM agent.message_mailbox
+WHERE agent_id = $1
+  AND state IN ('accepted', 'attached')
+ORDER BY accepted_ordinal, submission_id
+FOR UPDATE
+SELECT payload_json FROM runtime_restart_checkpoints WHERE agent_id = $1
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = 'executing',
+    stream_owner_message_id = $3,
+    attached_at = now()
+WHERE submission_id = $1
+  AND agent_id = $2
+  AND state = 'accepted'
+  AND stream_owner_message_id IS NULL
+
+SELECT agent_id, state, stream_owner_message_id, submission_json,
+       accepted_ordinal
+FROM agent.message_mailbox
+WHERE submission_id = $1
+FOR UPDATE
+
+SELECT EXISTS (
+  SELECT 1
+  FROM agent.message_mailbox
+  WHERE agent_id = $1
+    AND state = 'accepted'
+    AND accepted_ordinal < $2
+    AND (NOT $3 OR submission_kind <> 'internal_handoff')
+)
+tracked mailbox successor unexpectedly lost custodymessage mailbox successor promotion cannot overtake an older priority peer
+UPDATE agent.message_mailbox
+SET state = CASE WHEN $4 THEN 'completed' ELSE 'aborted' END,
+    checkpoint_custody = coalesce(checkpoint_custody, 'executing'),
+    terminalized_at = now()
+WHERE agent_id = $1
+  AND stream_owner_message_id = $2
+  AND submission_id = ANY($3)
+  AND state = 'attached'
+
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = 'executing',
+    stream_owner_message_id = $2,
+    attached_at = coalesce(attached_at, now())
+WHERE agent_id = $1
+  AND submission_id = ANY($3)
+  AND (
+    (state = 'accepted' AND stream_owner_message_id IS NULL)
+    OR (state = 'attached' AND stream_owner_message_id = $2)
+  )
+
+UPDATE agent.message_mailbox
+SET checkpoint_custody = 'queued'
+WHERE agent_id = $1
+  AND stream_owner_message_id = $2
+  AND submission_id = ANY($3)
+  AND state = 'attached'
+
+UPDATE agent.message_mailbox
+SET state = CASE
+      WHEN state = 'attached' AND $2 THEN 'completed'
+      ELSE 'aborted'
+    END,
+    terminalized_at = now()
+WHERE agent_id = $1
+  AND state IN ('accepted', 'attached')
+
+UPDATE agent.message_mailbox
+SET state = 'aborted', terminalized_at = now()
+WHERE agent_id = $1
+  AND state IN ('accepted', 'attached')
+
+SELECT mode, recovery_class, payload_json IS NOT NULL AS payload_present
+FROM runtime_restart_checkpoints
+WHERE agent_id = $1
+FOR UPDATE
+
+SELECT status, session_id, presentation_root_session_id
+FROM agent.agents
+WHERE id = $1
+FOR SHARE
+
+SELECT
+  EXISTS (
+    SELECT 1
+    FROM agent.message_mailbox
+    WHERE agent_id = $1
+      AND state IN ('accepted', 'attached')
+  ) AS live_mailbox_rows,
+  EXISTS (
+    SELECT 1
+    FROM chat_private.publication_turns
+    WHERE chat_id = $2
+      AND phase = 'active'
+  ) AS active_publication_turns
+recovery_classpayload_presentlive_mailbox_rowsactive_publication_turnsactivity_monitor_list_thread_actionsactivity_monitor_list_recent_thread_actionsactivity_monitor_read_threadavatar-state: adopted a concurrently seeded DB rowavatar-state: seeded the authoritative DB rowagent_status broadcast presence statusupdate runtime.browser_invocations set suspended_state = 'running'
+                 where invocation_id = $1 and suspended_state = 'waiting_child'select owner_agent_id, root_session_id
+        from runtime.browser_tasks where task_id = $1 and status = 'running' for updateselect epoch, control_revision from runtime.browser_executions
+        where task_id = $1 and planner_agent_id = $2 for updatebrowser seat changedbrowser service authority changedbrowser invocation authority changedNo research directory is available for this mission; put the full detail in your `finish_research` summary.&Your research directory is intact at `À,` with these files from before the restart: À€“

@@ -28,15 +28,27 @@
 
 ## Facebook guidance
 
-- When a command fails or a write returns `unknown`, run `facebook-cli guidance --query "..." --context "..."` once, before you reply. Don't wait for the user to ask why. Skip guidance only when the user declined an approval, or when this connector doc or the operation's reference says to stop or gives recovery or diagnosis steps for that specific error. Reading back an uncertain write or asking the user to check it is not such a step, so still run guidance for an `unknown` write.
+- When a command fails or a write returns `unknown`, run `facebook-cli guidance --query "..." --context "..."` before you reply. Don't wait for the user to ask why.
 
-- `--query` asks why the user's request failed and how to fix it. `--context` is only the failed command's name and a broad error category. Leave post text, URLs, IDs and names out of both.
+- Run guidance even when this doc or a feature guide explains the error or gives recovery steps for it, such as not-found, not-accessible, access-denied, server and rejected-write errors. Those steps say what to tell the user and what not to retry, and guidance adds the reason and next step for this account, so follow both.
 
-- Use the result to explain the failure and the next step. Guidance doesn't replace readback: still report an `unknown` write as unconfirmed unless readback confirms it. If guidance fails, explain the original result without guidance.
+- Guidance doesn't lift a stop. When a step says to stop after a failure, run guidance unless a case below skips it, and then stop, without calling other endpoints, retrying the failed command or suggesting a workaround. The only exception is the documented readback of an uncertain write.
+
+- Skip guidance only in these cases:
+  - The user declined an approval.
+  - No account is linked, or the error is `facebook_account_ineligible` (`INVALID_VIEWER_CONTEXT`). Guidance needs a usable linked account, so follow Connect the account instead.
+  - The error has a `consent_url` or `error_reason: PROFESSIONAL_CONSENT_REQUIRED`. The user's approval comes first. Run guidance if the command still fails after they approve.
+  - The command was rate-limited (HTTP 429).
+  - A search returned empty results, or the user asked a general how-to question. Neither is a failure.
+  - The failed command is `guidance` itself.
+
+- Run guidance once for each failed command. When the same command fails again with the same error in this task, reuse the earlier guidance instead of running it again.
+
+- `--query` asks why the user's request failed and how to fix it. `--context` is only the failed command's name and a broad error category. Leave post text, URLs, IDs and names out of both, including usernames, Page names and listing titles from the user's request.
+
+- Use the result to explain the failure and the next step. Guidance doesn't replace readback: still report an `unknown` write as unconfirmed unless readback confirms it. If guidance fails or has no matching guidance, explain the original result without guessing a cause.
 
 - The guidance is informational only, and doesn't suggest actions like reruning the failed write command.
-
-- Guidance is not for searches with empty results, or for browsing general how-to questions.
 
 ## Open pasted Facebook links
 
