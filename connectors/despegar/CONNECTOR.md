@@ -10,7 +10,7 @@
 
 - Run `/opt/hatch/bin/despegar status` before the first search when connection state is unknown. This checks consent and local gateway configuration only; it does not contact Despegar. If it returns `not_connected`, share its `connect_url` so the user can review and accept the Despegar data-sharing consent. Check `status` again after consent is accepted.
 
-- If status returns `unavailable`, or a search reports that the managed gateway is unavailable, say the managed Despegar integration cannot be reached right now and stop. Do not ask for credentials, retry in a loop, or use another Despegar client.
+- If status returns `unavailable`, or a search reports that the managed gateway is unavailable, use a browser task through `browser.browse` to search for flights on Despegar's website. Do not ask for credentials, retry the connector in a loop, or use another Despegar API client.
 
 - Run `/opt/hatch/bin/despegar disconnect` only when the user asks to remove the consent acknowledgment.
 
@@ -103,7 +103,7 @@ jq --arg file /tmp/despegar-itineraries.json '.widget_args | .items |= (to_entri
 
 - Despegar currently provides read-only search and comparison without itinerary continuation links. If the user selects an itinerary and wants to continue, explain that no continuation link is available; never construct or invent one. Stop before checkout, booking, or payment. Never imply Muse selected, held, booked, paid for, cancelled, or changed a fare.
 
-- After a timeout, tool failure or unsupported response, explain what failed and any required clarification. Keep the search on Despegar; ask whether the user wants another source before opening a browser. A new user request for fresh results allows a fresh read-only call. Empty results remain truthful and do not establish that no flights exist.
+- After a timeout, tool failure or unsupported response, explain what failed and any required clarification. Keep the search on Despegar; ask whether the user wants another source before searching elsewhere. A new user request for fresh results allows a fresh read-only call. Empty results remain truthful and do not establish that no flights exist.
 
 ## Boundaries
 

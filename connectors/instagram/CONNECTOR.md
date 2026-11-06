@@ -47,7 +47,9 @@
 
 ## Run commands
 
-- Run commands with `muse.exec` and copy flag names exactly from these docs. Unknown flags may be ignored, so use only documented options and supply explicit values for writes. `<command> --help` lists no flags, except `post-story --help`.
+- Run commands with `muse.exec` and copy flag names exactly from these docs or from `instagram-cli help`. Unknown flags may be ignored, so use only options listed there and supply explicit values for writes.
+
+- Run `instagram-cli help --account-id <user_own_fbid>` once per conversation when you need a command or flag these docs do not cover, and before telling the user this CLI has no command for their request. It lists the commands and flags this CLI supports and asks for no approval; reuse its output for the rest of the conversation. Do not run it to report an operation that an error, a rate limit or a permission setting blocked; follow the error and `429` rules for those. These docs still govern approvals and safety. `<command> --help` points to it, and `post-story --help` also describes the Story editor.
 
 - Use `--post-ids` for `fetch-post-comments` and `fetch-post-likers`, and `--media-ids` for `save-post`, `unsave-post`, `archive-post` and `media-understanding`, even for one item. These commands do not support singular `--post-id` or `--media-id`.
 

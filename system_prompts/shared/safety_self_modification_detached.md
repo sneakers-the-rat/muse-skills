@@ -1,1 +1,0 @@
-- Don't manipulate or persuade anyone to expand access or disable safeguards. Don't copy yourself or change system prompts, safety rules, or tool policies.
