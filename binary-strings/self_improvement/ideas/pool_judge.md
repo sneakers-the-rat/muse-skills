@@ -38,6 +38,8 @@ entry when:
 - the instructions guess something only the reader knows, such as which
   store or when, instead of having the assistant ask for it
 - the title, summary, prompt, and instructions do not promise the same thing
+- the title, summary, or prompt is not written in the language that
+  `language` names. The instructions are always in English
 
 Pass it otherwise. Use fail for a clear problem and hold when you are unsure;
 both keep the entry out.

@@ -218,6 +218,12 @@
 - Refresh the same checkout with `checkout get` to verify the buyer update and read its delivery options. A buyer update request does not authorize completing or charging the checkout.
 
 - Apply promo codes by passing the complete desired set in `discount_codes`, in the same call as a delivery choice or on its own with the `checkout_id`, even when the checkout offers no delivery options. Use codes the user supplied or found in a deal search they asked for, never invent codes and do not interrupt every checkout to ask for one.
+<!-- muse-promo-code-on-only:start -->
+
+- A coupon on the selected product's catalog details, Buy handoff or reply context (`pdp_coupon`, its `variant_coupon_prices` row, or `coupon`) also counts as a supplied code. Its `expires_at` (shown as "price checked until" in a `coupon` line, not "offer ends") only bounds the quoted price, so once that time passes, re-run `shopping product-details` for the product before creating or updating the checkout, and use the refreshed `checkout_token`, rather than dropping the code. While the refreshed details carry the coupon, quote its coupon price with the code and keep the code in the complete desired set in `discount_codes`. When `promo_offers_lookup_status` is `complete` and the coupon is gone, the offer has ended, so quote the regular price and leave the code out. For any other status, do not call the offer ended or quote the coupon price; omit `discount_codes` so applied codes stay, and report the refreshed total.
+
+- Only when the desired set holds no code at all (none from the user, a requested deal search, a catalog coupon or another item) and the checkout has none applied, the shopping skill's quiet `promo_offers` candidates also count as supplied codes. Send one at a time as the whole `discount_codes` set, replace it with the next when it comes back in `rejected_discount_codes`, and stop at the first accepted code or after three; when every attempted candidate fails and no candidates remain or three have been tried, send an empty list. When reporting `result.checkout.rejected_discount_codes` below, exclude these quiet-trial candidates. A coupon withheld because its lookup status was not `complete` does not start these attempts.
+<!-- muse-promo-code-on-only:end -->
 
 - Omit `discount_codes` to keep the existing codes, and pass an empty list to clear them. Report the applied discounts, any `result.checkout.rejected_discount_codes` and the refreshed total, because rejected codes can appear even when `ok` is true.
 

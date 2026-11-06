@@ -14,7 +14,7 @@
   - `MAILBOX_TAKEN_DOWN`: the mailbox was disabled for a policy violation. Skip `mail.setup_card` and use `mailbox create` below, which replaces it.
   - Any other error: report it as it is, never as a missing mailbox, because a lookup error does not authorize creation.
 
-- Use the handle and display name the user chose, and keep your proposal for any field they did not choose. Otherwise propose the main agent's current name in lowercase as the handle and `<main agent's name>, <user's preferred name>'s AI Assistant` as the display name.
+- Use the handle and display name the user chose, and keep your proposal for any field they did not choose. Otherwise propose the main agent's current name in lowercase as the handle and `<main agent's name>, on behalf of <user's preferred name>` as the display name.
 
 - Find the user's preferred name in the conversation, then `~/USER.md`, then `muse.memory_search`, and ask only when it is still missing or ambiguous. Ask for a handle when the main agent's name gives no usable one.
 

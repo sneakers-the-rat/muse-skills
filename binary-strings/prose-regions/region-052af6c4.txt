@@ -1,0 +1,167 @@
+errorsuccesswrite_admissionwritepostgres write completed slowlypostgres write failedretrying idempotent postgres writeone-shot postgres write invoked more than onceselect media_id from media.items where media_id = $1 for updatedelete from device.media_upload_events where media_id = $1delete from media.descriptions where media_id = $1delete from media.locations where media_id = $1delete from media.exif_values where media_id = $1delete from media.items where media_id = $1with updated_source as (
+                   update media.items
+                   set file_uri = $4,
+                       media_type = $5,
+                       byte_len = $6,
+                       taken_at = $7,
+                       taken_at_local = $8,
+                       taken_at_local_date = $9,
+                       uploaded_at = coalesce($10, now()),
+                       uploaded_at_unix = $11,
+                       local_identifier = $3
+                   where source = $2
+                     and source_media_id = coalesce($3, $1)
+                     and media_id = (
+                       select media_id
+                       from media.items
+                       where source = $2
+                         and source_media_id = coalesce($3, $1)
+                       order by uploaded_at desc, media_id desc
+                       limit 1
+                     )
+                   returning media_id
+                 ),
+                 upserted as (
+                   insert into media.items
+                     (media_id, source, source_media_id, file_uri, media_type, byte_len,
+                      taken_at, taken_at_local, taken_at_local_date, uploaded_at, uploaded_at_unix,
+                      local_identifier, description_status)
+                   select $1, $2, coalesce($3, $1), $4, $5, $6,
+                          $7, $8, $9,
+                          coalesce($10, now()), $11, $3, $12
+                   where not exists (select 1 from updated_source)
+                   on conflict (media_id) do update set
+                     source = excluded.source,
+                     source_media_id = excluded.source_media_id,
+                     file_uri = excluded.file_uri,
+                     media_type = excluded.media_type,
+                     byte_len = excluded.byte_len,
+                     taken_at = excluded.taken_at,
+                     taken_at_local = excluded.taken_at_local,
+                     taken_at_local_date = excluded.taken_at_local_date,
+                     uploaded_at = excluded.uploaded_at,
+                     uploaded_at_unix = excluded.uploaded_at_unix,
+                     local_identifier = excluded.local_identifier
+                   returning media_id
+                 )
+                 select media_id from updated_source
+                 union all
+                 select media_id from upserted
+                 limit 1select media_id from media.items where media_id = any($1)media.locations.location_textinsert into media.locations (media_id, location_text, location_source)
+                 values ($1, $2, $3)
+                 on conflict (media_id) do update set
+                   location_text = excluded.location_text,
+                   location_source = excluded.location_source,
+                   geocode_attempt_count = 0,
+                   geocode_next_retry_at_unix = nullupdate media.locations
+                 set geocode_attempt_count = geocode_attempt_count + 1,
+                     geocode_next_retry_at_unix = $2
+                 where media_id = $1
+                 returning geocode_attempt_countselect m.description_status, m.description_next_retry_at_unix, m.description_attempt_count, d.version as description_version from media.items m left join media.descriptions d on d.media_id = m.media_id where m.media_id = $1description_statusdescription_attempt_countdescription_versiondescription_next_retry_at_unixselect media_id, source, uploaded_at_unix, description_status from media.items where media_id = $1sourceselect media_id, latitude, longitude
+                 from media.locations
+                 where latitude is not null and longitude is not null
+                   and location_text is null
+                   and location_source is null
+                   and geocode_next_retry_at_unix is null
+                 order by media_id asc
+                 limit $1select media_id, latitude, longitude
+                 from media.locations
+                 where latitude is not null and longitude is not null
+                   and location_text is null
+                   and location_source is null
+                   and geocode_next_retry_at_unix <= $1
+                 order by geocode_next_retry_at_unix asc, media_id asc
+                 limit $2select m.media_id, m.media_type as mime_type, ( select jsonb_object_agg(e.tag_name, e.scalar_value order by e.tag_name)::text from media.exif_values e where e.media_id = m.media_id ) as exif_json from media.items m where m.media_id = any($1)update media.items
+                 set description_status = case
+                       when description_attempt_count + 1 >= $1 then 'rejected'
+                       else 'failed'
+                     end,
+                     description_attempt_count = description_attempt_count + 1,
+                     description_next_retry_at_unix = case
+                       when description_attempt_count + 1 >= $1 then null
+                       else $2
+                     end
+                 where media_id = $3
+                 returning description_attempt_countupdate media.items
+                 set description_status = 'ready',
+                     description_attempt_count = 0,
+                     description_next_retry_at_unix = null
+                 where media_id = $1select m.media_id, m.file_uri as rel_path
+                 from media.items m
+                 where m.description_status in ('pending', 'failed')
+                   and m.description_next_retry_at_unix is null
+                 order by m.media_id asc
+                 limit $1select m.media_id, m.file_uri as rel_path
+                 from media.items m
+                 where m.description_status in ('pending', 'failed')
+                   and m.description_next_retry_at_unix <= $1
+                 order by m.description_next_retry_at_unix asc, m.media_id asc
+                 limit $2select m.media_id, m.file_uri as rel_path
+                 from media.items m
+                 where m.description_status = 'ready'
+                   and not exists (
+                     select 1
+                     from media.descriptions d
+                     where d.media_id = m.media_id
+                       and d.version >= $1
+                 )
+                 order by m.media_id asc
+                 limit $2update media.items
+                 set description_status = 'rejected',
+                     description_next_retry_at_unix = null
+                 where media_id = $1select m.taken_at_local_date::text as taken_at_local_date,
+                                l.location_text,
+                                d.summary_short_text as summary_short
+                         from media.items m
+                         left join media.locations l on l.media_id = m.media_id
+                         left join media.descriptions d on d.media_id = m.media_id
+                         where m.media_id = any($1) and m.description_status = 'ready'select sha256, verdict from media.image_validation_verdicts
+                         where sha256 = any($1) and validator_version = $2insert into media.image_validation_verdicts
+                                 (sha256, validator_version, verdict, validated_at)
+                             select sha256, $3, verdict, now()
+                             from unnest($1::text[], $2::text[]) as t(sha256, verdict)
+                             on conflict (sha256) do update set
+                                 validator_version = excluded.validator_version,
+                                 verdict = excluded.verdict,
+                                 validated_at = excluded.validated_at
+                             where image_validation_verdicts.validator_version < excluded.validator_versionmedia.deletemedia item byte lengthmedia.insertmedia.existing_idsmedia.location_updatemedia.geocode_failuremedia.get_description_statemedia.get_upload_event_metamedia.items_needing_locationmedia.get_many_reconcile_metamedia.description_failuremedia.description_successmedia.items_needing_descriptionmedia.description_rejectedmedia.get_many_upload_example_summariesacquired connection, but time to acquire exceeded slow thresholdacquired connectionmedia.image_validation_verdictsmedia.record_image_validation_verdictsinsert into media.locations
+         (media_id, latitude, longitude, location_text, location_source)
+         values ($1, $2, $3, $4, $5)
+         on conflict (media_id) do update set
+           latitude = coalesce(excluded.latitude, media.locations.latitude),
+           longitude = coalesce(excluded.longitude, media.locations.longitude),
+           location_text = coalesce(excluded.location_text, media.locations.location_text),
+           location_source = coalesce(excluded.location_source, media.locations.location_source),
+           geocode_attempt_count = case
+             when excluded.location_source is not null then 0
+             else media.locations.geocode_attempt_count
+           end,
+           geocode_next_retry_at_unix = case
+             when excluded.location_source is not null then null
+             else media.locations.geocode_next_retry_at_unix
+           endselect media_id from media.items where media_id = $1 for key sharemedia.descriptions.description_textmedia.descriptions.summary_short_textmedia.descriptions.summary_full_textmedia.descriptions.people_textmedia.descriptions.objects_textmedia.descriptions.ocr_textmedia.descriptions.location_hint_textinsert into media.descriptions
+         (media_id, description_text, summary_short_text,
+          summary_full_text, people_text, activity_text,
+          objects_text, ocr_text, location_hint_text,
+          model, version, created_at)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, coalesce($12, now()))
+         on conflict (media_id) do update set
+           description_text = excluded.description_text,
+           summary_short_text = excluded.summary_short_text,
+           summary_full_text = excluded.summary_full_text,
+           people_text = excluded.people_text,
+           activity_text = excluded.activity_text,
+           objects_text = excluded.objects_text,
+           ocr_text = excluded.ocr_text,
+           location_hint_text = excluded.location_hint_text,
+           model = excluded.model,
+           version = excluded.version,
+           created_at = excluded.created_atmedia.items$insert into media.exif_values (media_id, tag_name, scalar_type, scalar_value)  on conflict (media_id, tag_name) do update set
+            scalar_type = excluded.scalar_type,
+            scalar_value = excluded.scalar_valueruntime.search_documents.search_textinsert into runtime.search_documents
+         (owner_table, owner_key, search_text, search_vector)
+         values ($1, $2, $3, to_tsvector('english', $4))
+         on conflict (owner_table, owner_key) do update set
+           search_text = excluded.search_text,
+           search_vector = excluded.search_vector,
+           updated_at = now()database write admission gate closedadmission_timeoutcalled `Result::unwrap()` on an `Err` valuereadyfailedpendingfalsebooleannumbermedia.exif_values.scalar_valueBUG: inner connection already taken!ConfigurationInvalidArgumentIoTlsRowNotFoundTypeNotFoundtype_nameColumnIndexOutOfBoundsindexlenColumnNotFoundColumnDecodeEncodeDecodeAnyDriverErrorPoolTimedOutPoolClosedWorkerCrashedMigrateInvalidSavePointStatementBeginFaileda Display implementation returned an error unexpectedlyError
