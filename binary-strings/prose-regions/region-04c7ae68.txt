@@ -1,0 +1,144 @@
+context_item_id
+SELECT pg_advisory_xact_lock(hashtextextended(agent_id, $2))
+FROM unnest($1::text[]) AS locked(agent_id)
+ORDER BY agent_id
+
+WITH inserted AS (
+INSERT INTO chat.chats (
+  chat_id,
+  origin,
+  lifecycle,
+  status,
+  thread_title,
+  source_session_id,
+  source_prompt_seq_upper_bound,
+  source_message_id_boundary,
+  created_at,
+  updated_at
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $12, $12)
+RETURNING chat_id
+)
+INSERT INTO chat_private.bindings(chat_id, provider, conversation_key, delivery_target)
+SELECT chat_id, $9, $10, $11 FROM inserted WHERE $9::text IS NOT NULL
+persistentactive
+WITH producer AS MATERIALIZED (
+  SELECT target.id AS agent_id,
+    CASE WHEN a.id IS NULL THEN NULL ELSE COALESCE(
+-- Highest seq of an agent's rows that no public voice import reads, or NULL
+-- when the import never reads any of them. Reads aliases `a` (the agent) and
+-- `root` (its presentation root). exempt_non_producer_rows.sql repeats it.
+CASE WHEN a.kind = 'root' AND a.depth = 0
+          AND a.agent_type = 'realtime_voice' THEN CASE
+    WHEN NOT pg_input_is_valid(a.spawn_metadata_json, 'jsonb') THEN -1
+    WHEN root.id IS NULL
+         OR a.spawn_metadata_json::jsonb #> '{realtime_voice,prompt_floor_seq}'
+            IS DISTINCT FROM to_jsonb(COALESCE(root.prompt_floor_seq, -1))
+        THEN NULL
+    WHEN pg_input_is_valid(
+        a.spawn_metadata_json::jsonb #>> '{realtime_voice,root_seed_context_seq}',
+        'bigint'
+    ) THEN GREATEST(
+        (a.spawn_metadata_json::jsonb #>> '{realtime_voice,root_seed_context_seq}')::bigint,
+        -1
+    )
+    ELSE -1
+END END
+    , 9223372036854775807) END AS exempt_through_seq
+  FROM (SELECT ::text AS id) target
+  LEFT JOIN agents a ON a.id = target.id
+  LEFT JOIN agents root ON root.id = a.presentation_root_session_id AND root.id <> a.id
+)
+INSERT INTO context_item_resume_projection (
+  agent_id, seq, context_item_id, created_at, message_source,
+  client_context_json, client_context_projected, public_import_exempt
+)
+SELECT producer.agent_id, v.seq, v.context_item_id, v.created_at, v.message_source,
+       v.client_context_json, v.client_context_projected,
+       CASE WHEN v.seq <= producer.exempt_through_seq THEN TRUE END
+FROM (VALUES ) AS v(seq, context_item_id, created_at, message_source, client_context_json,
+          client_context_projected)
+CROSS JOIN producer
+ON CONFLICT (agent_id, seq) DO UPDATE SET
+  context_item_id = excluded.context_item_id,
+  created_at = excluded.created_at,
+  message_source = COALESCE(excluded.message_source, context_item_resume_projection.message_source),
+  client_context_json = COALESCE(
+    excluded.client_context_json,
+    context_item_resume_projection.client_context_json
+  ),
+  client_context_projected = COALESCE(
+    context_item_resume_projection.client_context_projected,
+    FALSE
+  ) OR excluded.client_context_projected,
+  public_import_exempt = COALESCE(
+    context_item_resume_projection.public_import_exempt,
+    excluded.public_import_exempt
+  ),
+  updated_at = now()
+INSERT INTO context_item_resume_projection (
+  agent_id, seq, context_item_id, created_at, message_source,
+  client_context_json, reply_prefix, provenance_json,
+  client_context_projected, reply_prefix_projected, provenance_projected,
+  public_import_exempt
+)
+SELECT producer.agent_id, v.seq, v.context_item_id, v.created_at, v.message_source,
+       v.client_context_json, v.reply_prefix, v.provenance_json,
+       v.client_context_projected, v.reply_prefix_projected, v.provenance_projected,
+       CASE WHEN v.seq <= producer.exempt_through_seq THEN TRUE END
+FROM (VALUES ) AS v(seq, context_item_id, created_at, message_source, client_context_json,
+          reply_prefix, provenance_json, client_context_projected, reply_prefix_projected,
+          provenance_projected)
+CROSS JOIN producer
+ON CONFLICT (agent_id, seq) DO UPDATE SET
+  context_item_id = excluded.context_item_id,
+  created_at = excluded.created_at,
+  message_source = COALESCE(excluded.message_source, context_item_resume_projection.message_source),
+  client_context_json = excluded.client_context_json,
+  reply_prefix = excluded.reply_prefix,
+  provenance_json = excluded.provenance_json,
+  client_context_projected = excluded.client_context_projected,
+  reply_prefix_projected = excluded.reply_prefix_projected,
+  provenance_projected = excluded.provenance_projected,
+  public_import_exempt = COALESCE(
+    context_item_resume_projection.public_import_exempt,
+    excluded.public_import_exempt
+  ),
+  updated_at = now()
+
+SELECT agent_id, parent_agent_id, event_name, source, role::text AS role,
+       visibility::text AS visibility, request_id, root_request_id,
+       parent_request_id, message_id, reply_to_message_id
+FROM runtime.events
+WHERE event_seq = $1
+
+INSERT INTO context_item_resume_projection (
+  agent_id, seq, message_source, client_context_json, reply_prefix, provenance_json,
+  client_context_projected, reply_prefix_projected, provenance_projected
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+ON CONFLICT (agent_id, seq) DO UPDATE SET
+  message_source = COALESCE(context_item_resume_projection.message_source, excluded.message_source),
+  client_context_json = excluded.client_context_json,
+  reply_prefix = excluded.reply_prefix,
+  provenance_json = excluded.provenance_json,
+  client_context_projected = excluded.client_context_projected,
+  reply_prefix_projected = excluded.reply_prefix_projected,
+  provenance_projected = excluded.provenance_projected,
+  updated_at = now()
+SELECT pg_advisory_xact_lock_shared(hashtextextended($1, 0))agent.volatile_context_pins.lifecycleSELECT pg_advisory_xact_lock(hashtextextended($1, 0))
+WITH owners AS MATERIALIZED (
+    SELECT DISTINCT agent_id COLLATE "C" AS agent_id
+    FROM unnest($1::text[]) AS input(agent_id)
+)
+SELECT pg_advisory_xact_lock(hashtextextended($2 || agent_id, 0))
+FROM owners ORDER BY agent_id COLLATE "C"
+agent.volatile_context_pins:SELECT agent_id FROM agent.agents WHERE agent_id = $1SELECT handoff_state_json -> $2::text AS state,
+                (extract(epoch FROM clock_timestamp()) * 1000)::bigint AS now_ms
+         FROM agent.subagent_spawns WHERE child_agent_id = $1 FOR UPDATEnow_msagent.subagent_spawns.handoff_state_jsonUPDATE agent.subagent_spawns
+         SET handoff_state_json = jsonb_set(COALESCE(handoff_state_json, '{}'::jsonb),
+                                           ARRAY[$2]::text[], $3::jsonb)
+         WHERE child_agent_id = $1insert into chat_private.publication_turns (execution_id, chat_id, disposition, phase)
+        select $1, $2, $3, $4 where pg_try_advisory_xact_lock_shared(hashtextextended($5, 0))
+        on conflict(execution_id) do nothing returning trueselect chat_id, phase, disposition from chat_private.publication_turns
+        where execution_id = $1 for updatedispositionphasepublication execution belongs to another chatdynamic timezone unresolvedpersist reconciled scheduler statecancel queued runs for unresolved dynamic timezone jobs; failed to revoke stale Sentinel grants; cron reactivation remains quarantinedfailed to read next wake-eligible maintenance deadline; scheduled resume projection is incompletefailed to project authoritative side-chat cron fallback to the filesystemretired completed authoritative runonce definitionscheduler reconcile errordynamic scheduled-resume resolver returned unknown jobs; projection is incompletedynamic scheduled-resume eligibility could not be resolved; projection is incompletefailed to revoke Sentinel grants for removed cron schedulescheduler released source paths held by removed jobs so live definitions could persistreleased_source_pathsnext_effective_dispatch_at_utcdynamic_timezone_next_run_refreshed_jobsgrant_revocation_failuresinvalid_definitionsdeleted sessions.updated events require an owner-visible deletion proofsession row unavailable for sessions.updated payloadfailed to hydrate sessions.updated payloaddropped companion progress frame after its voice call changedno deployed artifact found in meta.json (missing obfuscated_id)artifact.destroy_urldestroy/hatch/share_artifact
