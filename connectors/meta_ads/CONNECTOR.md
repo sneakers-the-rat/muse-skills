@@ -12,6 +12,8 @@
 
 - Any question about what a Meta, Facebook or Instagram advertising policy allows, prohibits or requires belongs here, even with no account in context. So does whether an image, claim, logo, likeness or piece of copy may be used in an ad.
 
+- How-to, setup and spec questions about Facebook or Instagram ads also belong here, even with no account in context. Answer them from `ads_get_help_article`, not from memory, and follow the how-to guidance in [policy retrieval](references/policy.md). If Ads operations are not available, say that you could not check Meta's current help, and link the [Meta Business Help Center](https://www.facebook.com/business/help).
+
 - Plan campaigns with the [Advertising Campaigns](/opt/muse/skills/advertising-campaigns/SKILL.md) skill, which chooses the channel. A request to create a Facebook or Instagram ad enters [campaign creation](references/campaign-creation.md) unless the user asked only for a standalone image or an organic post.
 
 - Catalog, feed, product and audience are shared words. Treat a request as Meta Ads only when the user names Meta advertising, the object is Ads-specific, such as a pixel or Custom Audience, or a read-only Ads lookup finds exactly one match for the object the user named.

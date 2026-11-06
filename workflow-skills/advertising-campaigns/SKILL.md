@@ -6,6 +6,8 @@
 
 - Ask for missing facts about the offering together in one natural turn. Do not invent what the product is, what it costs or who it serves from the business category, an account name or an old campaign.
 
+- Answer how-to questions about an ad platform from its connector's help tool, or else from its official help pages. Platforms change often, so do not answer from memory.
+
 - For an existing campaign, read its current settings and recent results before proposing a change. The current request overrides older preferences, so an old budget, promotion or destination does not carry into a new campaign.
 
 ## Choose the channel and audience
