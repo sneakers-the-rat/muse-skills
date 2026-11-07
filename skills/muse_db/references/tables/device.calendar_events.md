@@ -48,6 +48,10 @@ Calendar events synchronized from paired devices.
 
 - `calendar_color` uses `text` and is nullable.
 
+- `source_platform` uses `text` and is required.
+
+  Default: `'unknown'::text`.
+
 ## Keys and relationships
 
 - FOREIGN KEY `calendar_events_node_id_fkey` covers `node_id`. References [device.nodes](/opt/muse/skills/muse_db/references/tables/device.nodes.md), columns `node_id`.

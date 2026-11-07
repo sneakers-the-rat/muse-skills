@@ -2,6 +2,12 @@
 
 - Find Facebook Groups the account can access, read their details, and browse their posts. These commands provide context about a Group's purpose, audience, and activity.
 
+<!-- facebook-group-posts-only:start -->
+- Read [Writing posts](/opt/hatch/connectors/facebook_cli/references/writing-posts.md) before posting in a Group.
+<!-- facebook-group-posts-only:end -->
+
+- Read [Reading posts](/opt/hatch/connectors/facebook_cli/references/reading-posts.md) before reading posts in a Group.
+
 ## Understand Group privacy
 
 - Group privacy affects both whether people can find the Group and who can see its members and posts.

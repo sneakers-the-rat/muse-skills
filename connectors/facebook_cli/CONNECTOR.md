@@ -128,23 +128,36 @@
 
 ## Write to Facebook
 
+- Use `facebook-cli` for personal profile<!-- facebook-group-posts-only:start --> and Group<!-- facebook-group-posts-only:end --> text<!-- facebook-profile-media-only:start --> and media<!-- facebook-profile-media-only:end --> posts.
+
+<!-- facebook-profile-media-only:start -->
+- A personal Reel is a post with one video. Post it with `post create` and a single video `--file`.
+<!-- facebook-profile-media-only:end -->
+
+- A Reel posted by a Page is a Page post with one video. Post it with `pages posts create` and a single video `--file`.
+
 - These writes are supported, and everything else is read-only:
-  - personal text posts, comments and replies
+  - personal text<!-- facebook-profile-media-only:start --> and media<!-- facebook-profile-media-only:end --> posts
+<!-- facebook-profile-media-only:start -->
+  - personal Reels
+<!-- facebook-profile-media-only:end -->
+  - comments and replies
+<!-- facebook-group-posts-only:start -->
+  - text<!-- facebook-profile-media-only:start --> and media<!-- facebook-profile-media-only:end --> posts in Groups the user can post in
+<!-- facebook-group-posts-only:end -->
   - drafts, posts, Reels and schedules on Pages the user manages
   - the user's own Marketplace listings
   - saved items and collections
 
-- A Reel posted by a Page is a Page post with one video. Post it with `pages posts create` and a single video `--file`.
+- Reactions, edits and deletions of posts or comments aren't available, so suggest only the writes above.
 
-- Reactions, edits and deletions of posts or comments, group posts and media on personal posts aren't available, so suggest only the writes above.
-
-- Personal posts, comments, Page writes and Marketplace publishes, edits and deletes each show the user an approval card. Creating a draft listing uses the normal permission prompt, and saved-item changes are allowed by default.
+- Personal<!-- facebook-group-posts-only:start --> and Group<!-- facebook-group-posts-only:end --> posts, comments, Page writes and Marketplace publishes, edits and deletes each show the user an approval card. Creating a draft listing uses the normal permission prompt, and saved-item changes are allowed by default.
 
 ## Feature guides
 
 - Each guide has the full syntax for the commands listed with it.
 
-- [Reading posts](/opt/hatch/connectors/facebook_cli/references/reading-posts.md) (`post read`, `link-sharing decode-url`) and [writing posts](/opt/hatch/connectors/facebook_cli/references/writing-posts.md) (`post create`, `post audiences`, `post crossposting`). Read the writing guide before a personal post.
+- [Reading posts](/opt/hatch/connectors/facebook_cli/references/reading-posts.md) (`post read`, `link-sharing decode-url`) and [writing posts](/opt/hatch/connectors/facebook_cli/references/writing-posts.md) (`post create`, `post audiences`, `post crossposting`). Read the writing guide before a personal<!-- facebook-group-posts-only:start --> or Group<!-- facebook-group-posts-only:end --> post<!-- facebook-profile-media-only:start --> or personal Reel<!-- facebook-profile-media-only:end -->.
 
 - [Reading comments](/opt/hatch/connectors/facebook_cli/references/reading-comments.md) (`post comments read`), [writing comments](/opt/hatch/connectors/facebook_cli/references/writing-comments.md) (`post comments add`) and [reactions](/opt/hatch/connectors/facebook_cli/references/reactions.md) (`post reactions read`). Read the writing guide before a comment or reply.
 

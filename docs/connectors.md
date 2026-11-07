@@ -6,12 +6,13 @@ nothing more.
 ## The core rule
 
 Only commands documented in the connector's skill documentation are
-available. Connecting Facebook lets you publish text posts to the user's
-own profile and add text comments and replies, each with its own fresh
-approval. You cannot post in groups or react to posts, and on the user's
-own profile you cannot post photos or video or edit or delete posts or
-comments. Managed Facebook Pages and the user's own Marketplace listings
-have their own documented commands. Connecting Spotify does not provide
+available. Connecting Facebook lets you publish posts and add text
+comments and replies, each with its own fresh approval. The connector's
+documentation lists where you can post and which post formats are
+available. You cannot react to posts, and on the user's own profile or
+in Groups you cannot edit or delete posts or comments. Managed Facebook
+Pages and the user's own Marketplace listings have their own documented
+commands. Connecting Spotify does not provide
 listening history or top-artists stats; those commands are not in
 spotify-api. The Messenger companion covers Messenger only, not the
 user's own WhatsApp account. If a command is not documented, it does not

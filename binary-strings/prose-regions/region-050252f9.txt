@@ -1,0 +1,608 @@
+feed_idea_unitidea slot: budget store unavailable; skippingidea slot: budget read failed; skippingidea slot: prompt read failed; centroid uses the unfiltered windowidea slot: too few units since the prompt changed; centroid uses the unfiltered windowidea slot: centroid built from units published since the prompt changedidea slot: fresh centroid read failed; falling back to the unfiltered windowidea slot: centroid read failedidea slot: anchor no-repeat read failedidea slot: candidate lookup failedidea slot: dogfood visibility read failedidea slot: onboarding-only read failedidea slot: dropped candidates too far behind the newest Ideas contextidea slot: near-duplicate memory read failedidea slot: dropped candidates restating a recent suggestionidea slot: dropped candidates with no claim on this paperidea slot: prompt declares no subject; ranking on memory affinityidea slot: memory affinity read failed; ranking without itidea slot: shortlisted candidates for the seatidea slot: newest unit read failed; skippingself_improvement.ideasgenerated_cardidea slot: card freshness read failedidea slot: Ideas context database failedidea slot: latest Ideas context read failedidea slot: prompt embed failedidea slot: prompt embed task failedselect trigger, prompt_snapshot from feed.runs where run_id = any($1)prompt_snapshottriggerselect content_locale, locale_revision from runtime.background_content_jobs
+         where job_id = 'feed'locale_revisionselect goal_id from goals.goals where goal_id=$1 for updateselect count(*) from peer.goal_grants where goal_id=$1 and grantee_muse<>$2 and revoked_at_ms is nullshared goal not foundinsert into peer.goal_grants
+                (goal_id,grantee_muse,relationship_generation_id,granted_at_ms)
+                values ($1,$2,$3,$4) on conflict(goal_id,grantee_muse) do update set
+                relationship_generation_id=excluded.relationship_generation_id,
+                granted_at_ms=excluded.granted_at_ms,revoked_at_ms=nulla goal supports at most 50 connectionsinsert into goals.shared_update_state (goal_id,generation,pending) values ($1,0,false) on conflict(goal_id) do nothingselect pg_advisory_xact_lock(hashtextextended('peer.space_grants:' || $1, 0))insert into peer.space_grants
+             (slug, grantee_muse, space_id, relationship_generation_id, granted_at_ms, revoked_at_ms)  on conflict (slug, grantee_muse) do update set
+            space_id=excluded.space_id, relationship_generation_id=excluded.relationship_generation_id,
+            granted_at_ms=excluded.granted_at_ms, revoked_at_ms=null
+INSERT INTO requests (
+  request_id, root_request_id, parent_request_id, request_origin,
+  transcript_surface, root_work_class
+)
+VALUES ($1, $2, $3, $4, $5::runtime.transcript_surface, $6)
+ON CONFLICT (request_id) DO UPDATE SET
+  root_request_id = COALESCE(requests.root_request_id, excluded.root_request_id),
+  parent_request_id = COALESCE(requests.parent_request_id, excluded.parent_request_id),
+  request_origin = CASE
+    WHEN requests.request_origin = 'internal.runtime_replay' THEN excluded.request_origin
+    ELSE requests.request_origin
+  END,
+  transcript_surface = excluded.transcript_surface,
+  root_work_class = CASE
+    WHEN requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing'
+      THEN excluded.root_work_class
+    ELSE requests.root_work_class
+  END
+WHERE (requests.root_request_id IS NULL AND excluded.root_request_id IS NOT NULL)
+   OR (requests.parent_request_id IS NULL AND excluded.parent_request_id IS NOT NULL)
+   OR (requests.request_origin = 'internal.runtime_replay'
+       AND excluded.request_origin <> 'internal.runtime_replay')
+   OR requests.transcript_surface IS DISTINCT FROM excluded.transcript_surface
+   OR (requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing')
+call_idoutput
+INSERT INTO tool_outputs (event_seq, call_id, status, output_text, error_text, created_at)
+VALUES ($1, $2, $3, $4, $5, to_timestamp($6::double precision / 1000.0))
+ON CONFLICT (event_seq) DO UPDATE SET
+  call_id = excluded.call_id,
+  status = excluded.status,
+  output_text = excluded.output_text,
+  error_text = excluded.error_text
+arguments
+INSERT INTO tool_calls (event_seq, call_id, tool_name, status, arguments_json, created_at)
+VALUES ($1, $2, $3, 'started', $4, to_timestamp($5::double precision / 1000.0))
+ON CONFLICT (call_id) DO UPDATE SET
+  event_seq = excluded.event_seq,
+  tool_name = excluded.tool_name,
+  status = excluded.status,
+  arguments_json = excluded.arguments_json
+
+INSERT INTO chat_event_derived_write_backlog (event_seq, resources_json)
+VALUES ($1, $2)
+ON CONFLICT (event_seq) DO UPDATE SET
+  resources_json = excluded.resources_json,
+  updated_at = now()
+UPDATE chat_private.peer_conversations SET requester_chat_id = NULL
+         WHERE conversation_id = $1 AND requester_revision = $2
+           AND requester_chat_id = $3 AND NOT requester_unavailable
+           AND chat_id = $5
+           AND EXISTS (SELECT 1 FROM agent.agents
+                       WHERE id = $4 AND session_id = $3)peer handoff disagrees with its asking-chat claimpeer handoff requester changed before admissionSELECT session_id, COALESCE(prompt_floor_seq, -1) AS prompt_floor_seq,
+                kind = 'root' AND parent_agent_id IS NULL
+                AND ephemeral IS DISTINCT FROM TRUE
+                AND status NOT IN ('shutdown', 'not_found') AS eligible
+         FROM agent.agents WHERE agent_id = $1 FOR UPDATEstartup_root_changedSELECT EXISTS(SELECT 1 FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND accepted_ordinal < $2)startup mailbox promotion cannot overtake an earlier accepted input
+SELECT payload_json
+FROM agent.runtime_restart_checkpoints
+WHERE agent_id = $1
+FOR UPDATE
+
+SELECT EXISTS (
+  SELECT 1
+  FROM agent.message_mailbox
+  WHERE agent_id = $1
+    AND state = 'accepted'
+    AND accepted_ordinal < $2
+    AND (NOT $3 OR submission_kind <> 'internal_handoff')
+)
+message mailbox attachment cannot overtake an older priority peer
+INSERT INTO agent.runtime_restart_checkpoints (
+  agent_id, mode, recovery_class, recovery_owner_id, execution_config_json,
+  payload_json, created_at, updated_at
+) SELECT $1, $2, $3, $4, $5, $6, $7, $7
+WHERE EXISTS (
+  SELECT 1
+  FROM agent.agents
+  WHERE agent_id = $1
+    AND status NOT IN ('shutdown', 'not_found')
+)
+ON CONFLICT (agent_id) DO NOTHING
+SELECT EXISTS (SELECT 1 FROM agent.agents WHERE agent_id = $1 AND status NOT IN ('shutdown', 'not_found'))conversation epoch
+INSERT INTO agent.message_mailbox (
+  submission_id, agent_id, conversation_epoch, submission_kind,
+  routing_scope, state, checkpoint_custody, stream_owner_message_id,
+  submission_json, transcript_event_seq, attached_at
+) VALUES (
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+  CASE WHEN $6 = 'attached' THEN now() ELSE NULL END
+)
+ON CONFLICT (submission_id) DO NOTHING
+RETURNING accepted_ordinal, accepted_at
+startup mailbox promotion requires its previously accepted input
+SELECT agent_id, conversation_epoch, submission_kind, routing_scope,
+       state, stream_owner_message_id, submission_json,
+       transcript_event_seq, accepted_ordinal, accepted_at
+FROM agent.message_mailbox
+WHERE submission_id = $1
+FOR UPDATE
+update chat.message_bindings set admitted_at = coalesce(admitted_at, now())
+                    where jarvis_message_id = $1 and chat_id = $2 and binding_epoch = $3 and transport = $4binding epochconversation_epochsubmission_kindrouting_scope
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = $5,
+    stream_owner_message_id = $2,
+    submission_json = $3,
+    transcript_event_seq = coalesce($4, transcript_event_seq),
+    attached_at = now()
+WHERE submission_id = $1
+  AND state = 'accepted'
+  AND stream_owner_message_id IS NULL
+mailbox stream ownerselect a.account_id from chat_private.accounts a
+             join chat_private.binding_authorizations b on b.provider = a.provider and b.account_id = a.account_id
+             where b.provider = $1 and b.binding_id = $2
+               and a.connection_id = $3 and not a.revoked for share of adirect input has no captured binding epochaccount_retiredselect connection_id, generation, transport_json, delivery_target
+             from chat_private.binding_authorizations
+             where provider = $1 and binding_id = $2 and chat_id = $3
+               and account_id = $4 and external_kind = 'direct' and participation = 'active'
+             for shareaccount_authorization_retiredtransport_jsontransport_authorization_absentselect epoch from chat_private.bindings
+         where chat_id = $1 and provider = $2 and not revoked for sharetransport_authorization_changedbinding_retiredSELECT pg_advisory_xact_lock(hashtextextended('activity-monitor-root-carrier:' || $1, 0))
+WITH lineage(message_id) AS (
+    SELECT $1::text
+    UNION
+    SELECT user_message_id
+    FROM activity_monitor_carrier_user_messages
+    WHERE carrier_message_id = $1
+      AND (root_agent_id IS NULL OR root_agent_id = $2)
+    UNION
+    SELECT $3::text
+    WHERE $3 IS NOT NULL AND $4
+)
+INSERT INTO activity_monitor_message_threads (
+    message_id, activity_thread_id, created_at, updated_at
+)
+SELECT message_id, $5, $6, $6
+FROM lineage
+ON CONFLICT(message_id) DO UPDATE SET
+    activity_thread_id = excluded.activity_thread_id,
+    updated_at = excluded.updated_at
+WHERE activity_monitor_message_threads.activity_thread_id
+    IS DISTINCT FROM excluded.activity_thread_id
+
+SELECT activity_thread_id
+FROM activity_monitor_message_threads
+WHERE message_id = $1
+LIMIT 1
+
+INSERT INTO activity_monitor_agent_threads (agent_id, activity_thread_id, created_at, updated_at)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT(agent_id) DO UPDATE SET
+    activity_thread_id = excluded.activity_thread_id,
+    updated_at = excluded.updated_at
+WHERE activity_monitor_agent_threads.activity_thread_id IS DISTINCT FROM excluded.activity_thread_id
+activity_monitor_upsert_activity_thread_actionactivity_monitor_list_thread_actionsactivity_monitor_action_by_idactivity_monitor_list_recent_thread_actions
+INSERT INTO activity_monitor_message_threads (message_id, activity_thread_id, created_at, updated_at)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT(message_id) DO UPDATE SET
+    activity_thread_id = excluded.activity_thread_id,
+    updated_at = excluded.updated_at
+WHERE activity_monitor_message_threads.activity_thread_id IS DISTINCT FROM excluded.activity_thread_id
+activity_monitor_message_thread_lookupactivity_monitor_read_threadactivity_monitor_reactivate_finished_threadfailed to reactivate finished activity threaddatabase write admission gate closedadmission_timeoutassert_table_existstable_presence.querystandalone/mirror/streamapplication/x-ndjsonadmission snapshot upload stalledclient rendering snapshot read failed; keeping lifts inline this turntoo many group attachment snapshotsinvalid group attachment MIME typeduplicate group attachment snapshot referencegroup attachment snapshots exceed limitcompany transcript revision is staleconversation activity projection unavailablemdtranscript file notification unavailablepreparingtranscript messages missinglatest_statuscompany_logototal_messagesmessage_countsnapshot_pathtranscript_pathexternal_party_conversationconversation preview exceeds the state budgetconversation preview widget is missingconversation preview state could not be updatedhost_message_idconversation preview card belongs to another ownerconversation preview is not its transcript fileconversation preview could not be savedconversation preview changed before publicationconversation preview could not be presentedconversation preview is not visibletask_runningfiles can't be sent to the companysend a message of at most 8 KBchat worker disappearedchat worker changed before the sendthis conversation is closed to new messagescompany send drain failed; the chat retries itsend a nonempty messagesend a nonempty message of at most 16 KBchat send identity collisionchat has no discretion policyowner request for chat send review unavailablechat send review failedchat send review timed outthis contact's access has ended, so the message was not sentchat send drain failed; the chat retries itchat send was refused by the outboxchat send delivery state unavailableunread count after a send unavailableuser input has no usable canonical admission receipt
+
+canonical user input does not match its authenticated admissionside chat authority awaits availabilityapproval reminder occurrence is invalidapproval_reminder_decodeinvalid_approval_reminder_occurrenceinvalid_occurrenceapproval_absentapproval_not_actionablewindow_closedinvalid_windowapproval_identity_mismatchapproval_reminder_authority_unavailableassociation_ineligibleapproval_reminder_association_unavailabledisabled_before_handoffwhatsapp_plugin_absentwhatsapp_not_visiblecooldown_activewhatsapp_not_readyapproval_reminder_readiness_timeoutapproval_chat_absentapproval_chat_unavailableapproval_chat_disconnectedapproval_reminder_delivery_contract_invalidwindow_closed_before_handoffapproval_chat_authority_unavailableapproval_reminder_preemptedoutbox_handoffapproval_reminder_outbox_unavailablespace_preview_repairspace preview repair: handler not registeredspace preview repair: handler registry unavailablespace_preview_missingspace preview repair: runtime work store unavailablequeued Space preview repairspace preview repair: seeding failedspace preview repair: catalog read failed on viewNo rule fully covers this message.Expected a message reviewGive a short reason for the decisionThe review turn is no longer activeSaved message not foundConversation worker not foundThe message changed or its review is complete. Read it again.Do not replace the text when declining a messageThe conversation or its rules changed. Ask the worker for a new draft.owner_requestSend a nonempty messageMessage preparation timed outhistoryhistory_jsonlowner_messageschat_summaryowner_in_chatparticipant_identitiesA widget changed during reviewAn attachment changed during reviewA review revision cannot introduce an unreviewed fileOwner task has an invalid canonical admission timeauthenticated_owner_messagesmain_muse_handoff_referenceworker_report_stateworker_result_referenceThe sharing rules require the user's instruction or approval for this message.The user's approval could not be checked, so the draft has not been sent. Retry `connection.review_message` in this turn while the owner's answer is available. If the check still fails, tell the user the draft remains unsent. No automatic retry is scheduled.
+owner task review failed; leaving the draft for the main MuseThe owner task changed during review. The message remains pending.owner message review failed; leaving the draft pendingThe owner input changed during review. The message remains pending.saved message disappearedconnection not foundSaved message integrity check failedThe conversation or its rules changed. Prepare the message again using the current context.An attachment changed after this message was prepared. Prepare a new message.The main Muse decision does not match the saved messagethe connection is no longer activeconnection review revision could not be preparedThe suggested revision could not be prepared. Review the saved draft or ask the worker for a new one.connection message reviewedask_ownerconnection approval has no durable identityThe user did not approve this message. Leave it unsent.The conversation changed before delivery.connection message queuedconnection_messageconnection.send_messageruntime.connection_messageconnection message approvalunexpected connection approval responseSharing rule review timed outinvalid connection review; requesting one correctionSharing rule review retry timed outinvalid connection review after one correction; holding the draftallow_onceallow_sessionallow_alwaysrevisenot_decisionclarification_lead_invoice approval durable option has no trusted submission scopebundled Ideas localization catalog is unavailablefailed to load bundled Ideas localization provenancefailed to load bundled Ideas dogfood provenanceIdea catalog sharing context read failedIdea share variant projection read failedIdea share revision projection read failedIdea direct sharing read failedIdea publication hold read failedanchor_kindanchor_idfailed to batch-read idea source metadata for downstream eventsowner photo checkpoint exceeds size limitjoin owner photo checkpoint writewrite owner photo checkpointpeer_profile_photo_refreshcould not seed owner photo refreshfreshrefreshedcould not restore owner photo checkpointpeer_profile_photo/opt/hatch/bin/hatchProfile photo refreshruntime.peer_profile_photohatch-runtimehttp://localhost/hatch/viewer/profileprofile_statusprofile_sizeprofile_bodyprofile_image_hostresponse_statusresponse_sizeresponse_bodymessage content conversation is missingfiles can only be shared in a direct peer conversationcontent_truncatedpeer-file://Shared items must refer to local files before sendingresolve DM conversation for grant noticeresolve DM conversation for relationship confirmationcontrol.relationship_confirmationWhatsApp directory read timed outCircle is no longer activeResource metadata is too largeload peer relationship for SAS confirmationload peer SAS confirmation replayreconcile peer SAS confirmation replaypairingacquire exact-link SAS confirmation leasepeerd SAS confirmation lease is shorter than the required commit bound/v1/peer/sign-relationship-confirmationsign peer relationship confirmation via authddecode signed relationship confirmationparse signed relationship confirmationverify authd relationship confirmationauthd relationship confirmation notice id does not match signed tupleauthd relationship confirmation does not match requested tuplefailed to release SAS confirmation leasefailed to reconcile replayed SAS confirmation leaselocalhosted circle is absentcircle_idpeer_circlehosted publication changed concurrently; retry the same messagehosted chat is closedhosted circle is closedhosted sequence exhaustedhosted message is absentmail completion has no ownermail completion owner is no longer currentThe mail turn ended without a verified handling report.The mail worker stopped without confirming its result. Its pending task is kept. Check its recorded actions with mail.status before handing the task off again.task.turn_completedmissing_verified_reportrecord_completionagent_status broadcast presence statusrun cancelledfeed step failure CAS lost to a concurrent settler; that settler owns the terminal eventfeed step failure CAS erroredfeed step adopted-submission settle erroredhttp://localhost/hatch/feed-engagement-populationSELECT payload_json FROM runtime_restart_checkpoints WHERE agent_id = $1 FOR UPDATESELECT submission_json, octet_length(submission_json)::bigint AS serialized_bytes
+         FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND submission_id <> $2startup_queue_fullmalformed shared file referenceblobsmaintenance_occurrencemaintenance_attemptrequest_generationgeneric_maintenancejitter_offset_secsjitter_window_secsmaintenance occurrence collided with terminalized work itemspace_preview_repair_slug_unparseablespace_preview_repair_refresh_failedpeer_profile_photo_refresh_failedSELECT event_seq, event_name, source, role::text AS role,
+                    visibility::text AS visibility, message_id, agent_id,
+                    parent_agent_id, parent_message_id, reply_to_message_id,
+                    transcript_surface::text AS transcript_surface, payload_json,
+                    request_id, root_request_id, parent_request_id,
+                    extract(epoch from created_at)::bigint AS created_at
+             FROM runtime.events WHERE idempotency_key = $1SELECT ci.item_json, ci.message_source,
+                        extract(epoch from ci.created_at)::bigint AS created_at,
+                        p.client_context_json
+                 FROM agent.context_items ci
+                 LEFT JOIN agent.context_item_resume_projection p
+                   ON p.agent_id = ci.agent_id AND p.seq = ci.seq
+                 WHERE ci.agent_id = $1 AND ci.seq = $2readypeer plugin has no daemon statepeer plane is disabledpeer delivery requires the peer muse targetpeer inbound arrives through the peerd event consumerpeer chats are side chats; agent sends ride the ordinary reply paththe peer conversation pairs through /api/peers, not link/unlinkdiscretion policy or audience changed before deliveryworker task owner request unavailableruntime.muse_mailgroup delivery claim is no longer currentreserve re-homed voice result custodymark already re-homed voice results seencheck re-homed voice result mailbox admissionmid > lencalled `Result::unwrap()` on an `Err` valueTimeDelta::days out of boundsTimeDelta::hours out of boundsLocal time out of range for `NaiveDateTime`impressionclickengagementfeedback_upfeedback_downheartbeatserendipityproactive_notifierdevice_syncreferral_invitationconfidential_vm_upsellinternal_messagesquota_noticesmuse_mail_owner_verifiedconnection_trackingavatar_sharelocal_mapoptionimage_optionsnavigationdiscovery_pool_idea_idspace_build_completednode_cardinternal_link_action_cardgeneric_listexternal_linkslidesforeground_rootpeer_chat_rootgroup_chat_rootexternal_party_chat_rootcompany_conversation_rootmail_conversationdelegate_main_requestworkflow_subagentspaces_builderspaces_builder_litespaces_builder_editspaces_builder_python_editbrowser_taskdeep_researchideas_builderspace_taskself_improvement_stepflight_tracking_steppeer_sync_stepfeed_workflow_stepephemeral_agent_stepscheduler_cron_executescheduler_cron_resolveexecute_resolve_workersystem_cron_productvoice_delegaterealtime_voicecompaniondeveloperassertion failed: self.is_char_boundary(new_len)feed_idea_slot_embeddinginternal error: entered unreachable code: invalid Once stateafter_inferenceawaiting_approvalafter_tool_dispatchserialization_failurelockedconnection_transientconstraintmalformed_or_corrupttransient_ioioio_transientpool_timeoutpool_closedrow_not_foundchannel_closedagent_status_parsestorage_invariantlimit_exceededquick_checkpicks_topicwrites_postedits_editioncreatedrenamedunarchivedpinnedonlineout_of_creditsneeds_approvalcompactingrespondingwaiting_for_subagentsworkinggroup_delivery_incompletepeer.contact_updatedpeer.activity_addeduser_goalassistant_trackingexpediaedition_publishedunits_changedhero_imagewidgetsocial_embedfilled overflowunresolvedopportunisticcomplete_when_awakeobjectiveproactive_notificationflight_trackingvoice_persistencewebhook_fetchlightrunninggeneratedsteady_phasecadence_then_splayoverdue_catchupretryimmediatetarget_retiredtimed_outpartialunclearstopped...preemptible_retryabledismissedimage/jpegimage/pnginternal_wakechat_retiredconversation_resettarget_not_root### Using these figures
+These are all readers' figures, not this reader's, so they only break ties.
+- The lane policy and the reader's prompt and signals decide which lanes fit. Social stays web's backup, and its one media exception holds, as the policy states them.
+- Among the lanes the policy allows that fit about equally, prefer the higher figure. When the figures do not separate them, follow the policy's default.
+- Never pick a lane for its figure alone.
+For example, if web and schedule fit about equally and web shows 1.1x against schedule's 0.8x, pick web.
+## Using the readers' topic figures
+The figures in "How readers respond to the topics of this reader's signals" are all readers', not this reader's, so they only break ties.
+- Write from the reader's prompt and signals as always. A topic not listed is no reason to pass a story over.
+- When two stories are comparable, prefer the topic with the higher figure and build the post on the signals listed under it.
+- A figure never licenses a subject the reader ruled out.
+For example, if a recipe and a grocery-deals story fit equally and Food & Nutrition shows 1.1x against Shopping & Commerce's 0.9x, write the recipe, built on the signals listed under Food & Nutrition.
+How readers respond, by laneHow readers respond to the topics of this reader's signalsno_promptno_query_vectorexclusion_read_failedsearch_failedno_candidatesno_rankable_candidateall_near_duplicatesall_below_relevance_floormorningmiddayeveningadhocfull_cadence_phasechat_kind must be one of: direct, group, channel, email, unknown, allrich transcript is no longer supported; omit transcript_modenothing_to_reportnotify_main_agentpersist_widget send_message rows require non-empty data.textpersist_widget list rows require non-empty titlesvideos[[hatch_widget:]]optionscustom_inputWrite a name herecomposer_hintmulti_selectlayoutdownloadable<div style="padding:12px;color:var(--hatch-widget-muted)">This widget is too large to display.</div>InlineWidgetpresentation context request id does not match the live executionpresentation context root does not own the claimed executionpersist_widget external_link image_url is invalidpersist_widget external_link content_type is invalidpersist_widget external_link site_name is invalidpersist_widget external_link title is invalidpersist_widget external_link URL must not contain whitespacepersist_widget external_link requires an https URLweb-artifact-build-completed-space-build-completed-space_pathbuild_onlysearch_flight_presentationbuttonbutton_labelprofessional_consent_skillwidget_idsconstruction_status<script</script>external card has no captured chat contextunsupported external presentationexternal card disagrees with its captured publication ownerdata-hatch-widget-state-persistencedata-hatch-widget-state-hydration(function() {
+  var initialHydratedStateJson = __HATCH_INITIAL_WIDGET_STATE_JSON__;
+  var selector = "input, textarea, select, [data-hatch-state-key][aria-pressed]";
+  var formStateKey = "__hatch_form_state";
+  var ignoredInputTypes = {
+    button: true,
+    file: true,
+    hidden: true,
+    image: true,
+    password: true,
+    reset: true,
+    submit: true
+  };
+  var widgetRootSelector = "[data-widget-root], [data-share-widget-root], .hatch-widget";
+  var currentScript = document.currentScript;
+
+  function isWidgetRoot(el) {
+    return el && el.matches && el.matches(widgetRootSelector);
+  }
+
+  function findWidgetRoot() {
+    var candidate = currentScript ? currentScript.parentElement : null;
+    while (candidate && candidate !== document.documentElement) {
+      if (isWidgetRoot(candidate)) {
+        return candidate;
+      }
+      candidate = candidate.parentElement;
+    }
+
+    candidate = currentScript ? currentScript.previousElementSibling : null;
+    while (candidate) {
+      if (isWidgetRoot(candidate)) {
+        return candidate;
+      }
+      candidate = candidate.previousElementSibling;
+    }
+
+    return document.getElementById("root") || document;
+  }
+
+  var widgetRoot = findWidgetRoot();
+
+  function rootElement() {
+    return widgetRoot;
+  }
+
+  function containsTarget(el) {
+    var root = rootElement();
+    return root === document || root === el || (root.contains && root.contains(el));
+  }
+
+  function inputType(el) {
+    return String(el.getAttribute("type") || el.type || "text").toLowerCase();
+  }
+
+  function isAriaPressedControl(el) {
+    return (
+      el &&
+      el.hasAttribute &&
+      el.hasAttribute("data-hatch-state-key") &&
+      el.hasAttribute("aria-pressed")
+    );
+  }
+
+  function isPersistable(el) {
+    if (!el || !el.tagName) {
+      return false;
+    }
+    if (isAriaPressedControl(el)) {
+      return true;
+    }
+    var tag = String(el.tagName).toLowerCase();
+    if (tag === "input") {
+      return !ignoredInputTypes[inputType(el)];
+    }
+    return tag === "textarea" || tag === "select";
+  }
+
+  function controls() {
+    return Array.prototype.slice
+      .call(rootElement().querySelectorAll(selector))
+      .filter(isPersistable);
+  }
+
+  function controlKey(el, index) {
+    var explicit =
+      el.getAttribute("data-hatch-state-key") ||
+      el.getAttribute("data-state-key") ||
+      el.id;
+    if (explicit) {
+      return explicit;
+    }
+    var tag = String(el.tagName || "").toLowerCase();
+    if (tag === "input") {
+      var type = inputType(el);
+      var name = el.getAttribute("name") || "";
+      var value = el.getAttribute("value") || "";
+      if (type === "radio" && name) {
+        return "radio:" + name + ":" + (value || index);
+      }
+      if (type === "checkbox" && name) {
+        return "checkbox:" + name + ":" + (value || "on") + ":" + index;
+      }
+    }
+    var fallbackName = el.getAttribute("name");
+    return fallbackName || tag + ":" + index;
+  }
+
+  function normalizeState(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return {};
+    }
+    return value;
+  }
+
+  function copyState(value) {
+    try {
+      return normalizeState(JSON.parse(JSON.stringify(normalizeState(value))));
+    } catch (_) {
+      return {};
+    }
+  }
+
+  function hasStateFields(value) {
+    return Object.keys(normalizeState(value)).length > 0;
+  }
+
+  function currentBridgeState() {
+    return window.hatchWidget && typeof window.hatchWidget.getState === "function"
+      ? normalizeState(window.hatchWidget.getState())
+      : {};
+  }
+
+  function initialHydratedState() {
+    if (typeof initialHydratedStateJson !== "string") {
+      return null;
+    }
+    try {
+      return normalizeState(JSON.parse(initialHydratedStateJson));
+    } catch (_) {
+      return {};
+    }
+  }
+
+  function valueFor(el) {
+    if (isAriaPressedControl(el)) {
+      return { pressed: el.getAttribute("aria-pressed") === "true" };
+    }
+    var tag = String(el.tagName || "").toLowerCase();
+    if (tag === "input") {
+      var type = inputType(el);
+      if (type === "checkbox" || type === "radio") {
+        return { checked: el.checked === true };
+      }
+    }
+    if (tag === "select" && el.multiple) {
+      return {
+        value: Array.prototype.slice
+          .call(el.options || [])
+          .filter(function(option) {
+            return option.selected;
+          })
+          .map(function(option) {
+            return option.value;
+          })
+      };
+    }
+    return { value: String(el.value || "") };
+  }
+
+  function applyValue(el, saved) {
+    if (!saved || typeof saved !== "object") {
+      return;
+    }
+    if (isAriaPressedControl(el)) {
+      el.setAttribute("aria-pressed", saved.pressed === true ? "true" : "false");
+      return;
+    }
+    var tag = String(el.tagName || "").toLowerCase();
+    if (tag === "input") {
+      var type = inputType(el);
+      if (type === "checkbox" || type === "radio") {
+        el.checked = saved.checked === true;
+        return;
+      }
+    }
+    if (tag === "select" && el.multiple && Array.isArray(saved.value)) {
+      var selected = {};
+      saved.value.forEach(function(value) {
+        selected[String(value)] = true;
+      });
+      Array.prototype.slice.call(el.options || []).forEach(function(option) {
+        option.selected = selected[String(option.value)] === true;
+      });
+      return;
+    }
+    if (typeof saved.value === "string" && "value" in el) {
+      el.value = saved.value;
+    }
+  }
+
+  function formState(state) {
+    var nested = normalizeState(state[formStateKey]);
+    return Object.keys(nested).length > 0 || state[formStateKey]
+      ? nested
+      : state;
+  }
+
+  function restore(state) {
+    var savedControls = formState(normalizeState(state));
+    controls().forEach(function(el, index) {
+      applyValue(el, savedControls[controlKey(el, index)]);
+    });
+  }
+
+  function postState(state) {
+    if (
+      !window.hatchWidget ||
+      typeof window.hatchWidget.setState !== "function"
+    ) {
+      return;
+    }
+    window.hatchWidget.setState(state);
+  }
+
+  function save() {
+    var savedControls = {};
+    controls().forEach(function(el, index) {
+      savedControls[controlKey(el, index)] = valueFor(el);
+    });
+    var bridgeState = currentBridgeState();
+    if (hasStateFields(bridgeState)) {
+      lastKnownState = copyState(bridgeState);
+    }
+    var state = copyState(lastKnownState);
+    state[formStateKey] = savedControls;
+    lastKnownState = copyState(state);
+    postState(state);
+  }
+
+  function persistableTarget(target) {
+    if (!target || !target.matches) {
+      return null;
+    }
+    if (!containsTarget(target)) {
+      return null;
+    }
+    if (target.matches(selector) && isPersistable(target)) {
+      return target;
+    }
+    if (target.closest) {
+      var closest = target.closest(selector);
+      if (closest && containsTarget(closest) && isPersistable(closest)) {
+        return closest;
+      }
+    }
+    return null;
+  }
+
+  function onControlChange(event) {
+    if (persistableTarget(event.target)) {
+      save();
+    }
+  }
+
+  function onWidgetState(event) {
+    var detail = event && event.detail;
+    var incomingState = normalizeState(detail && detail.state);
+    if (
+      hasStateFields(incomingState) ||
+      !rejectNextEmptyHostState ||
+      !hasStateFields(lastKnownState)
+    ) {
+      lastKnownState = copyState(incomingState);
+    }
+    rejectNextEmptyHostState = false;
+    restore(lastKnownState);
+  }
+
+  var previous = window.__hatchWidgetStatePersistence;
+  if (previous && typeof previous.destroy === "function") {
+    previous.destroy();
+  }
+
+  var initialState = initialHydratedState();
+  var bridgeInitialState = currentBridgeState();
+  var lastKnownState = hasStateFields(bridgeInitialState)
+    ? copyState(bridgeInitialState)
+    : copyState(initialState || bridgeInitialState);
+  var rejectNextEmptyHostState = hasStateFields(lastKnownState);
+
+  var eventRoot = rootElement();
+  eventRoot.addEventListener("input", onControlChange, true);
+  eventRoot.addEventListener("change", onControlChange, true);
+  eventRoot.addEventListener("click", onControlChange, false);
+  window.addEventListener("hatch-widget-state", onWidgetState);
+  window.__hatchWidgetStatePersistence = {
+    destroy: function() {
+      eventRoot.removeEventListener("input", onControlChange, true);
+      eventRoot.removeEventListener("change", onControlChange, true);
+      eventRoot.removeEventListener("click", onControlChange, false);
+      window.removeEventListener("hatch-widget-state", onWidgetState);
+    }
+  };
+
+  restore(lastKnownState);
+})();__HATCH_INITIAL_WIDGET_STATE_JSON__(function() {
+  var initialHydratedStateJson = __HATCH_INITIAL_WIDGET_STATE_JSON__;
+
+  function normalizeState(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return {};
+    }
+    return value;
+  }
+
+  function copyState(value) {
+    try {
+      return normalizeState(JSON.parse(JSON.stringify(normalizeState(value))));
+    } catch (_) {
+      return {};
+    }
+  }
+
+  var hydratedState = {};
+  if (typeof initialHydratedStateJson === "string") {
+    try {
+      hydratedState = normalizeState(JSON.parse(initialHydratedStateJson));
+    } catch (_) {}
+  }
+
+  var previous = window.__hatchWidgetStateHydration;
+  if (previous && typeof previous.destroy === "function") {
+    previous.destroy();
+  }
+
+  if (typeof initialHydratedStateJson !== "string") {
+    delete window.__hatchWidgetStateHydration;
+    return;
+  }
+
+  var bridge = window.hatchWidget;
+  var originalGetState =
+    bridge && typeof bridge.getState === "function"
+      ? bridge.getState
+      : null;
+  var seeding = false;
+
+  if (bridge && originalGetState) {
+    bridge.getState = function() {
+      return copyState(hydratedState);
+    };
+  }
+
+  function restoreGetState() {
+    if (bridge && originalGetState && bridge.getState !== originalGetState) {
+      bridge.getState = originalGetState;
+    }
+  }
+
+  function dispatchHydratedState() {
+    seeding = true;
+    try {
+      window.dispatchEvent(
+        new CustomEvent("hatch-widget-state", {
+          detail: { state: copyState(hydratedState) }
+        })
+      );
+    } finally {
+      seeding = false;
+    }
+  }
+
+  function onWidgetState(event) {
+    if (seeding) {
+      return;
+    }
+    restoreGetState();
+    window.removeEventListener("hatch-widget-state", onWidgetState);
+
+    var incomingState = normalizeState(
+      event && event.detail && event.detail.state
+    );
+    if (
+      Object.keys(incomingState).length === 0 &&
+      Object.keys(hydratedState).length > 0
+    ) {
+      if (event && typeof event.stopImmediatePropagation === "function") {
+        event.stopImmediatePropagation();
+      }
+      dispatchHydratedState();
+    }
+    delete window.__hatchWidgetStateHydration;
+  }
+
+  window.addEventListener("hatch-widget-state", onWidgetState);
+  window.__hatchWidgetStateHydration = {
+    dispatch: dispatchHydratedState,
+    destroy: function() {
+      restoreGetState();
+      window.removeEventListener("hatch-widget-state", onWidgetState);
+    }
+  };
+})();(function() {
+  var hydration = window.__hatchWidgetStateHydration;
+  if (hydration && typeof hydration.dispatch === "function") {
+    hydration.dispatch();
+  }
+})();

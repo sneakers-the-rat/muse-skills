@@ -1,1 +1,1 @@
-runtime.worker_result
+The work this note interrupted was relaying a background task's progress or result: the handoff message above this note. The user cannot see that message. If it carries the finished result of something the user asked for, deliver that result in this same reply after addressing their messages; an earlier message that already gave its substance settles it. If it is interim progress, fold in a brief update on where it stands only when the user is waiting on that work; otherwise leave it unmentioned.

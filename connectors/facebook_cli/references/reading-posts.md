@@ -6,10 +6,13 @@
 
 ```sh
 /opt/hatch/bin/facebook-cli post read --post-id '<returned post ID>'
+<!-- facebook-profile-media-only:start -->
+/opt/hatch/bin/facebook-cli post read --story-id '<story_id from a processing receipt>'
+<!-- facebook-profile-media-only:end -->
 /opt/hatch/bin/facebook-cli post read --url '<canonical Facebook URL>'
 ```
 
-- Supply one ID or URL. IDs can be numeric or PFBIDs. The response contains text, a permalink and available media context.
+- Supply one ID or URL. IDs can be numeric or PFBIDs<!-- facebook-profile-media-only:start -->, or a `story_id` returned while a video processes<!-- facebook-profile-media-only:end -->. The response contains text, a permalink and available media context.
 
 - Canonical profile and group post, photo, video and Reel URLs go directly to the reader, including Facebook's mobile URLs. The reader resolves media URLs to their containing post. Standalone media may not have a containing post
 
