@@ -1,0 +1,95 @@
+widget_idsstartup input has no prepared user iteminput_modalitytranscription_status
+startup prepared item must retain its User role/metadata/timestamp_timezonestartup input client context changedstartup input prepared payload changedstartup input reply identity changed
+WITH event_rows AS (
+SELECT e.reply_to_message_id,
+       e.message_id,
+       e.event_name,
+       e.source,
+       e.role::text AS role,
+       e.visibility::text AS visibility,
+       e.request_id,
+       e.root_request_id,
+       e.parent_request_id,
+       CASE
+         WHEN e.message_id LIKE 'assistant-msg-%'
+         THEN substring(e.message_id FROM char_length('assistant-msg-') + 1)
+         ELSE NULL
+       END AS message_execution_id,
+       NULL::text AS root_message_execution_id,
+       (replace(e.payload_json, '\u0000', '\ufffd')::jsonb #>> '{metadata,context_seq}')::bigint AS context_seq,
+       e.event_seq
+FROM runtime.events AS e
+WHERE COALESCE(NULLIF(TRIM(e.agent_id), ''), e.parent_agent_id) = $1
+  AND e.event_name IN ('message.user', 'message.assistant', 'message.internal')
+  AND (replace(e.payload_json, '\u0000', '\ufffd')::jsonb #>> '{metadata,context_seq}') = ANY($2)
+)
+SELECT event_rows.*, NULL::text AS imported_provenance_json
+FROM event_rows
+UNION ALL
+SELECT NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+       projection.seq, NULL, projection.provenance_json
+FROM agent.context_item_resume_projection AS projection
+WHERE projection.agent_id = $1
+  AND projection.seq = ANY($3)
+  AND projection.provenance_projected
+  AND NOT EXISTS (SELECT 1 FROM event_rows WHERE context_seq = projection.seq)
+ORDER BY context_seq DESC, event_seq DESC
+
+SELECT requested.seq AS context_seq,
+       projection.client_context_json,
+       COALESCE(projection.client_context_projected, FALSE) AS client_context_projected,
+       fallback.event_name,
+       fallback.source,
+       fallback.payload_json
+FROM unnest($2::bigint[]) AS requested(seq)
+LEFT JOIN agent.context_item_resume_projection AS projection
+  ON projection.agent_id = $1
+ AND projection.seq = requested.seq
+LEFT JOIN LATERAL (
+  SELECT e.event_name, e.source, e.payload_json
+  FROM runtime.event_payload_fields AS ctx
+  JOIN runtime.events AS e ON e.event_seq = ctx.event_seq
+    AND COALESCE(NULLIF(TRIM(e.agent_id), ''), e.parent_agent_id) = $1
+  WHERE ctx.field_path = '/metadata/context_seq'
+    AND ctx.scalar_value = requested.seq::text
+    AND e.event_name IN ('message.user', 'message.internal')
+    AND e.payload_json IS NOT NULL
+  ORDER BY e.event_seq DESC
+  LIMIT 1
+) AS fallback ON TRUE
+ORDER BY requested.seq DESC
+
+SELECT e.source, ci.seq AS context_seq
+FROM agent.context_items AS ci
+JOIN runtime.event_payload_fields AS ctx ON ctx.field_path = '/metadata/context_seq'
+  AND ctx.scalar_value = ci.seq::text
+JOIN runtime.events AS e ON e.event_seq = ctx.event_seq
+  AND COALESCE(NULLIF(TRIM(e.agent_id), ''), e.parent_agent_id) = ci.agent_id
+WHERE ci.agent_id = $1
+  AND e.event_name IN ('message.user', 'message.assistant', 'message.internal')
+  AND ci.seq = ANY($2)
+ORDER BY ci.seq DESC, e.event_seq DESC
+
+WITH event_rows AS (
+SELECT e.reply_to_message_id, ci.seq AS context_seq, e.payload_json, e.event_seq
+FROM agent.context_items AS ci
+JOIN runtime.event_payload_fields AS ctx ON ctx.field_path = '/metadata/context_seq'
+  AND ctx.scalar_value = ci.seq::text
+JOIN runtime.events AS e ON e.event_seq = ctx.event_seq
+  AND COALESCE(NULLIF(TRIM(e.agent_id), ''), e.parent_agent_id) = ci.agent_id
+WHERE ci.agent_id = $1
+  AND e.role = 'user'
+  AND e.payload_json IS NOT NULL
+  AND ci.seq = ANY($2)
+)
+SELECT event_rows.*, NULL::text AS imported_reply_prefix
+FROM event_rows
+UNION ALL
+SELECT NULL, projection.seq, NULL, NULL, projection.reply_prefix
+FROM agent.context_item_resume_projection AS projection
+WHERE projection.agent_id = $1
+  AND projection.seq = ANY($2)
+  AND projection.reply_prefix_projected
+  AND NOT EXISTS (SELECT 1 FROM event_rows WHERE context_seq = projection.seq)
+ORDER BY context_seq DESC, event_seq DESC
+ActivePanelresourceIdProductRequestconnection_permission/recipient/metadata/recipient/metadata/message_kindpublic_commentarychat event insert unexpectedly included a widget state transitionatomic chat-event admission returned no mailbox resultatomic chat-event admission unexpectedly included a widget transitionexternal.publicuser_facingrequest_received_at_msenqueued_at_msdequeued_at_mstimeline_anchor_at_msinitial mailbox checkpoint disagrees with the admitted streamonly a start-stream mailbox admission may create a checkpointmessage mailbox route has inconsistent stream ownershipmessage mailbox submission id disagrees with its durable payloadmessage mailbox admission requires a bounded routing scopeinput_jsondispositionstream_owner_iddeleteddeleted_at_msThe company sent no reply.The company proposed an action that needs the user's approval.The message didn't reach the company.Muse couldn't confirm that the company got the message.The company ended the conversation.No one at the company is available right now.A person at the company joined the conversation.The company asked to talk with the user directly.The user didn't sign in to the company.The user signed in to the company.The company asked for the user's account.handoff policy history was rewrittenvariant_jsonrecovery_classrecovery_owner_idpayload_jsonrestart checkpoint dropped a previously absorbed submission identityrestart checkpoint has contradictory absorbed submission identitiesrestart checkpoint write changes the retained current execution; successor promotion requires an exact payload CASa different message cannot replace a retained runtime restart checkpointruntime restart checkpoint carrier identity changed during replay dispositionruntime restart checkpoint replacement has no current submissionwhole-stream cancellation forbids successor promotionruntime restart checkpoint carrier changed during exact replacementpending tools cannot revive a retired executioninvalid exact pending-tool continuationcommitted cancellation context changedcommitted cancellation is not a developer message/metadata/partsevent hatch-engine/crates/hatch-db-conversations/src/agent_state/runtime_restart_checkpoints/transitions.rs:967hatch_db_conversations::agent_state::runtime_restart_checkpoints::transitionshatch-engine/crates/hatch-db-conversations/src/agent_state/runtime_restart_checkpoints/transitions.rsevent hatch-engine/crates/hatch-db-conversations/src/activity/monitor/runtime_work_threads.rs:130hatch_db_conversations::activity::monitor::runtime_work_threadshatch-engine/crates/hatch-db-conversations/src/activity/monitor/runtime_work_threads.rsevent hatch-engine/crates/hatch-db-conversations/src/transcript/chat_events/context_metadata.rs:487hatch_db_conversations::transcript::chat_events::context_metadataidea_idhatch-engine/crates/hatch-db-conversations/src/transcript/chat_events/context_metadata.rsevent hatch-engine/crates/hatch-db-conversations/src/transcript/chat_events/context_metadata.rs:553goal_idevent hatch-engine/crates/hatch-db-conversations/src/transcript/chat_events/context_metadata.rs:582presentation_event_idevent hatch-engine/crates/hatch-db-conversations/src/transcript/chat_events/context_metadata.rs:528unit_idevent hatch-engine/crates/hatch-db-conversations/src/transcript/chat_events/context_metadata.rs:809context_seqevent hatch-engine/crates/hatch-db-conversations/src/transcript/chat_events/insert.rs:1016hatch_db_conversations::transcript::chat_events::inserthatch-engine/crates/hatch-db-conversations/src/transcript/chat_events/insert.rsevent hatch-engine/crates/hatch-db-conversations/src/transcript/chat_events/insert.rs:1308event_seqmax_attemptsevent hatch-engine/crates/hatch-db-conversations/src/transcript/chat_events/insert.rs:1260deadletteredvariant identifierstruct RuntimeRestartExecutionConfigstruct RuntimeRestartToolApprovalWaitstruct RuntimeRestartToolCallstruct RuntimeRestartCompletedToolOutputstruct RuntimeRestartMessageClientContextstruct ResponseVerificationFeedbackstruct RuntimeRestartVoiceCallerSteeringstruct RuntimeRestartStartupAdmissionstruct RuntimeRestartQueuedSubmissionstruct RuntimeRestartReactionLoopStatestruct RuntimeRestartInferenceRecoverystruct RuntimeRestartMessageExecutionStatestruct RuntimeRestartScheduledWorkContextstruct RuntimeRestartCheckpointPayloadstruct ScheduledWorkerMetadatastruct ChatEventResourcestruct ChatEventProvenanceMetadatastruct ChatEventClientContextMetadatastruct MailSourceMessagestruct MailSourceConversationstruct StoredPolicystruct ActivityFeedCursorstruct variant RuntimeRestartCheckpointReplayDisposition::ReplayForbiddena Display implementation returned an error unexpectedlyError

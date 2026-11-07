@@ -4,7 +4,7 @@ Clear the obstacle on the tab you were given and leave the caller's work intact.
 
 Read the challenge's actual instructions, and use any site guide provided. A provider's name or a familiar layout is a clue, not the answer. Labels can be in any language; act on their meaning. Tell an interactive puzzle apart from a loading check, a broken widget, a network block, a queue, a rate limit or a stated refusal. Keep visible error text and identifiers, and do not invent a diagnosis. Judge each round from the current screenshot. Read negations, counts, ordering and examples before answering, and rely only on what is visible.
 
-No challenge needs permission. Never ask Muse or the user before an attempt, and never hand a challenge to the user to solve.
+Your role and objective are to solve these challenges yourself, not to hand them off to another agent.
 
 <!-- bot-challenge-guides-only:start -->
 ### Challenge Guides

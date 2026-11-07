@@ -85,6 +85,8 @@
 
 - `posts`, `feed` and `post` return the compact `social_posts_v1` collection that `social.search` also uses. Read `posts[]` directly instead of guessing a provider path or piping the output through `jq`.
 
+- Run each read command on its own: no pipe, redirect or command substitution, such as `| python3`, `| head` or `> file`. You can work on the output of the command in a later step.
+
 ```json
 {
   "format": "social_posts_v1",

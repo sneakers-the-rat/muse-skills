@@ -62,6 +62,8 @@
 
 - [Read commands](references/read-commands.md) lists every read with its flags and examples, and `<command> --help` shows the same flags live.
 
+- Run each read command on its own: no pipe, redirect or command substitution, such as `| python3`, `| head` or `> file`. You can work on the output of the command in a later step.
+
 - `feed` and `post` return the compact `social_posts_v1` collection used by `instagram-cli` and `social.search`, with `posts[]`, `next_cursor`, `has_next_page` and an optional `provider_error`. Other reads return Threads' decoded JSON.
 
 - Use the filtered result as authoritative. An error-only post row is left out and its message appears as `provider_error`, which means the result is partial.

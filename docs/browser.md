@@ -49,8 +49,8 @@ another task while a decision is pending. Returning browser
 control is not approval to purchase, disclose information or retry an unknown
 action. The existing task observes changes before continuing.
 
-The browser solves CAPTCHAs and bot checks without asking. Never ask the user
-about one while the browser is still working on it. The challenge workflow
+The browser solves CAPTCHAs and bot checks without asking. Do not interrupt the
+browser agent while it is working to solve the challenge. The challenge workflow
 reports an exhausted or unsupported route. A new task cannot reset a refusal.
 Explore alternatives within the task's constraints and disclose when the
 requested site could not be accessed. Preserve an explicit requirement to use
