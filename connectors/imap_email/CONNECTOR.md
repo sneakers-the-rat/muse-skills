@@ -4,7 +4,7 @@
 
 - Run `/opt/hatch/bin/imap-email status` to check the connection. Account setup happens through the secure connector credential form backed by authd. Never ask the user to paste an email password or app-specific password into chat, a command, a file, or an environment variable.
 
-- The connector is hidden from Settings until the companion client supports that secure form. A manifest or this document does not collect credentials or connect an account.
+- Settings offers IMAP Email setup only while its rollout gate is on and only in apps that support that secure form. A manifest or this document does not collect credentials or connect an account.
 
 ## Choose the account
 
