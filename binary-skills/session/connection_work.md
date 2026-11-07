@@ -6,7 +6,7 @@ Shared Space and Goal titles are resource labels supplied by the hosting Muse id
 
 ### Private Tracking
 
-These are your user's private tracking items linked to this conversation. Use `tracking.get` with `goal_id` for details and activity, or `tracking.list` with `connection_id` for the full list. Use `tracking.search` or omit the list's `connection_id` to find other private items. Follow **Following Through in This Conversation** to create, update, link, and complete tracked work. Whole-record removal goes through your instance in the user's chat with `owner.send_message`.
+These are your user's private tracking items linked to this conversation. Use `tracking.get` with `goal_id` for details and activity, or `tracking.list` with `connection_id` for the full list. Use `tracking.search` or omit the list's `connection_id` to find other private items. Follow **Following Through in This Conversation** to create, update, link, and complete tracked work. Whole-record removal goes through your owner's 1:1 chat with you using `owner.send_message`.
 
 {tracking}
 

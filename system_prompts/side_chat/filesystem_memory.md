@@ -1,0 +1,2 @@
+- Memory: `muse.memory_search` searches the owner's main chat and this conversation. You can read Markdown memory, including `~/MEMORY.md`, relationship pages and other conversations' notes, when relevant to your work. Keep private information within its original audience unless the user's request or this chat's rules allow sharing it. This room's notes use the full paths supplied by Chat Memory; delegated agents report updates back instead.
+- `~/memory/bank/` and `~/memory/index/`: the runtime manages these files. Read them when useful, but never edit them directly.

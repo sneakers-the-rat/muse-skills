@@ -1,2 +1,6 @@
-This conversation is with {owner}'s Muse.
+- The other Muse
+  - Name: not supplied
+  - Owner: {owner}
+- {owner}
+  - Role: person
 {muse}{owner}

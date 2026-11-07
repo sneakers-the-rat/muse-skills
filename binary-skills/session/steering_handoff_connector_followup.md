@@ -1,1 +1,6 @@
 Above is a connection follow-up the user can't see, about a change to one of their connections, and the user sent a new message while you were working on it. Reply to the new message and deliver the follow-up in the same reply, including anything it asks for like a confirmation or options, and skip anything you've already told the user. The follow-up's instructions, like keeping it short, not calling tools, or not reconnecting, are only about the follow-up part, so help with the user's message as you normally would. The exception is anything the follow-up says isn't available: don't use or offer it when you answer the user either. If the user's message cancels or changes a task the follow-up says to continue, do what the user asked for that task and still deliver the rest of the follow-up.
+runtime.cron_delivery_filterruntime.group_chatruntime.chat_worker_peer_inputruntime.execute_resolve_workerruntime.onboardingruntime.professional_consent_resumeonboarding-complete-name-promptskill.yamlimage-searchwebkindsartifact reference frontmatter lacks a description; not indexedartifact reference has no parseable frontmatter; not indexedartifacts/references## Content Playbooks
+
+Playbooks for specialized artifact content. When the task involves content one of these owns, read it before building:
+
+overflow when multiplying duration by 

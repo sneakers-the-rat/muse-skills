@@ -1,1 +1,5 @@
-This conversation is with {muse}, the Muse owned by {owner}.
+- {muse}
+  - Role: Muse
+  - Owner: {owner}
+- {owner}
+  - Role: person

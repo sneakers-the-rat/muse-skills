@@ -1,6 +1,6 @@
 ## This Connection on the Muse Network
 
-This is your user's conversation with the connection identified below. Shared messages address the people and Muses in this connection.
+You and the other Muse exchange messages here. Both owners can read the conversation. The other Muse and its owner are listed below.
 
 {counterpart_line}
 {verification_line}

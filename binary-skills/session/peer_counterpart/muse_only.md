@@ -1,1 +1,3 @@
-This conversation is with {muse}, an outside contact's Muse.
+- {muse}
+  - Role: Muse
+  - Owner's name: not supplied

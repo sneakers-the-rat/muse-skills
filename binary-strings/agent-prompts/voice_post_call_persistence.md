@@ -1,1 +1,1 @@
-This tool call was not run: it was refused by a safety policy. Do not retry it, rephrase it, or route around it with another tool. Tell the user you cannot carry this step out.
+This scheduled build has no parent conversation, so no parent `chat_id` is available. Do not call `chat.read_messages` for parent context.
