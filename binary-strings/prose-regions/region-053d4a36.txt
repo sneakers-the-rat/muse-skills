@@ -1,0 +1,60 @@
+select ideas.idea_id,
+                            ideas.title,
+                            ideas.summary,
+                            ideas.domain,
+                            state.feedback,
+                            state.reason,
+                            state.updated_at::text as voted_at
+                     from ideas.idea_feedback_state state
+                     join ideas.ideas ideas on ideas.idea_id = state.idea_id
+                     where coalesce(ideas.generator, '') <> 'system_health'
+                     order by state.updated_at desc, state.idea_id desc
+                     limit $1insert into ideas.idea_feedback_state
+                     (idea_id, feedback, reason, event_id, surface)
+                     values ($1, $2, $3, $4, $5)
+                     on conflict (idea_id) do update
+                       set feedback = excluded.feedback,
+                           reason = excluded.reason,
+                           event_id = excluded.event_id,
+                           surface = excluded.surface,
+                           updated_at = now()
+                     returning idea_id, feedback, reason, event_id, surface,
+                               created_at::text as created_at,
+                               updated_at::text as updated_atreasonsurfaceupdated_atselect idea_id, payload_fingerprint, status, payload_json, icon_name,
+                            hold_reason, pending_feedback_json
+                       from ideas.shared_idea_imports
+                      where idea_id = $1delete from ideas.shared_idea_imports
+                      where status = 'pending'
+                        and staged_at < now() - make_interval(days => $1)insert into ideas.shared_idea_imports
+                       (idea_id, payload_fingerprint, status, payload_json, icon_name)
+                     values ($1, $2, 'pending', $3, $4)
+                     on conflict (idea_id) do update
+                        set payload_fingerprint = excluded.payload_fingerprint,
+                            status = 'pending',
+                            payload_json = excluded.payload_json,
+                            icon_name = excluded.icon_name,
+                            hold_reason = null,
+                            pending_feedback_json = case
+                              when ideas.shared_idea_imports.payload_fingerprint
+                                   = excluded.payload_fingerprint
+                              then ideas.shared_idea_imports.pending_feedback_json
+                            end,
+                            staged_at = now(),
+                            reviewed_at = null
+                      where not (ideas.shared_idea_imports.status = 'held'
+                                 and ideas.shared_idea_imports.payload_fingerprint
+                                     = excluded.payload_fingerprint)select pending_feedback_json
+                       from ideas.shared_idea_imports
+                      where idea_id = $1 and status = 'pending'
+                        for updateinsert into ideas.shared_idea_imports
+                       (idea_id, payload_fingerprint, status, hold_reason, reviewed_at)
+                     values ($1, $2, $3, $4, now())
+                     on conflict (idea_id) do update
+                        set payload_fingerprint = excluded.payload_fingerprint,
+                            status = excluded.status,
+                            payload_json = null,
+                            pending_feedback_json = null,
+                            hold_reason = excluded.hold_reason,
+                            reviewed_at = now()update ideas.shared_idea_imports
+                        set pending_feedback_json = $2
+                      where idea_id = $1 and status = 'pending'published feed snapshot was not readableIdeas generation language was supersededacquired connection, but time to acquire exceeded slow thresholdacquired connectionideas.set_idea_embeddingideas.list_ideas_missing_embeddingideas.count_ideas_missing_embeddingideas.get_idea_share_variantideas.list_idea_share_variantsideas.upsert_idea_share_variantideas.list_visible_generated_ideas_needing_share_variantideas.list_pending_idea_www_retractionsideas.nearest_iconideas.count_icon_embeddingsideas.replace_icon_embeddingsideas.engagement_windowideas.get_feed_snapshotideas.get_idea_card_feedideas.list_feed_snapshotsideas.active_feed_idea_idsideas.publish_feed_snapshotideas.get_discovery_pool_metaideas.set_discovery_pool_metaideas.get_active_feed_snapshotideas.reset_for_null_stateideas.apply_bandit_foldideas.list_bandit_arm_stateideas.fetch_bandit_fold_stateideas.record_idea_eventideas.idea_engagement_funnelideas.list_idea_events_sinceideas.idea_engagement_funnelsideas.record_idea_events_batchideas.feed_impression_count_sinceideas.list_idea_impression_countsideas.latest_idea_event_created_atideas.purge_idea_eventsideas.list_recent_actioned_idea_idsideas.idea_engagement_funnels_by_dayideas.recent_actioned_idea_count_boundedideas.summarize_actioned_ideas_by_domainideas.list_recent_actioned_idea_summariesideas.list_recent_idea_events_with_contextideas.latest_actioned_idea_event_created_atideas.list_unfolded_idea_events_windowideas.list_unfolded_idea_events_after_cursorideas.fetch_explore_policyideas.upsert_explore_policyideas.get_idea_dedupideas.upsert_idea_dedupideas.upsert_idea_anchorideas.list_idea_ranking_eventsideas.list_idea_quality_for_idsideas.resolve_canonical_idea_idinsert into ideas.idea_anchors (idea_id, anchor_kind, anchor_id, lifecycle_status, build_status, surfaced_at, impression_count, decided_at, dismiss_reason, created_at, updated_at) 
