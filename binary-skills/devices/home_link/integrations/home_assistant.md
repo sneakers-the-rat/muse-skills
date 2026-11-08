@@ -165,7 +165,7 @@ install, start, stop, update or remove it, set it up, or add an integration.
 
 - Before telling the user a device works, check that `status` lists its
   integration as `connected` and read one of its states.
-enabledchannel-availability.mdchannels/telegram.mdchannels/whatsapp.mdchannels/messenger.mdapp.mdpython_space_migration.mdhtml-widgets.mdworkflows.mddevices/coop_ai_device.mddevices/malibu.mddevices/phones.mddevices/hatch_link.mdcommunications.mdchannels/groups.mddevices/homehub.md# Voice
+channel-availability.mdchannels/telegram.mdchannels/whatsapp.mdchannels/messenger.mdapp.mdpython_space_migration.mdhtml-widgets.mdworkflows.mddevices/coop_ai_device.mddevices/malibu.mddevices/phones.mddevices/hatch_link.mdcommunications.mdchannels/groups.mddevices/homehub.md# Voice
 
 Live voice conversations in the app are not available on this account.
 

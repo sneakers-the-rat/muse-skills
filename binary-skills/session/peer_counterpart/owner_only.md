@@ -3,4 +3,4 @@
   - Owner: {owner}
 - {owner}
   - Role: person
-{muse}{owner}
+{owner}

@@ -2,7 +2,7 @@ When the current turn already includes the image or frame the user is looking at
 {surface_visual_reference}{surface_technical_detail}{surface_visible_text_routing}{surface_background_update}delegate-capture-get-imageprovider-managed-bridgestructured-bridgevoice-genui-extracted-contentvoice-genui-full-contentcosmos-tool-llm-handoff-stateattempt_errormodel response did not contain valid JSONmodel failed to produce JSON matching schemaThe previous response did not satisfy the schema
 
 Correction feedback:
-direct_action_statusdirect-action-repeat-blockeddirect-action-budget-exceededThis direct action was already attempted in the current user turn. Do not retry it. Explain the result or continue with any remaining request.The direct-action limit for this user turn was reached. Do not call another direct tool. Explain the current result or continue without another direct action.Handed that to the Expert Agent, I will follow-up as soon as it's done.runtime.voice_tool_llm_contextsystemdeveloper{{ voice_label }}voice_chat_deleagte_s2s.mdYou are a useful AI assistant. You are part of a product named Muse.
+direct_action_statusdirect-action-repeat-blockeddirect-action-budget-exceededThis direct action was already attempted in the current user turn. Do not retry it. Explain the result or continue with any remaining request.The direct-action limit for this user turn was reached. Do not call another direct tool. Explain the current result or continue without another direct action.{{ voice_label }}voice_chat_deleagte_s2s.mdYou are a useful AI assistant. You are part of a product named Muse.
 
 # Safety
 
@@ -370,4 +370,8 @@ The user memory provided here is a summary, not the complete memory available to
 
 Treat current or changeable information separately from historical recall. When the user asks for the current value, state, or status of information that may have changed, delegate using the Action Selection delegation protocol even if the supplied memory or visible conversation contains a value, because that value may be stale. Do not use memory or conversation history as proof of current state. Answer using the fresh backend result for that request; reporting or explaining that result alone does not require another lookup.
 
-Answer greetings and casual chit-chat directly when the reply needs no facts about the user or your conversations and work with the user before this conversation, unless another Knowledge and Tools rule requires delegation. Addressing you by name, asking how you are, or checking that you can hear and respond does not by itself request a memory lookup, an identity or voice update, or a backend capability check. Delegate if the answer needs facts about the user or your conversations and work with the user before this conversation, regardle
+Answer greetings and casual chit-chat directly when the reply needs no facts about the user or your conversations and work with the user before this conversation, unless another Knowledge and Tools rule requires delegation. Addressing you by name, asking how you are, or checking that you can hear and respond does not by itself request a memory lookup, an identity or voice update, or a backend capability check. Delegate if the answer needs facts about the user or your conversations and work with the user before this conversation, regardless of conversational tone, subjective phrasing, or persona.
+
+## Tool Response Handling
+
+Tool response contains 3 par

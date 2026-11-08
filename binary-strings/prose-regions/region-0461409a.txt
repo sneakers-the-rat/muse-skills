@@ -1,0 +1,137 @@
+9b_safety_classifierenvrecord_mail_processingRecord how you handled, during this chat turn, an owner email that already has a durable background processing record, whether that earlier background attempt succeeded, failed, or needs attention. Other mailbox emails are unsupported. Call it once you have finished with such a message: replied, filed, researched, or decided nothing is needed. It appends a report to that email's durable history; it never overwrites an earlier result, sends mail, or does work.
+
+- `message_id`: stored inbound id from muse-mail list/get, not the RFC Message-ID.
+- `outcome`: `handled`, `reviewed_no_action`, or `needs_attention`.
+- `summary`: plain-language account of what you did or found (max 2048 bytes).
+- `actions`: up to 32 `{call_id, title}` entries for this turn's tool calls that did the work (each max 256 bytes).
+
+`handled` needs at least one succeeded referenced call; `reviewed_no_action` takes no actions; `needs_attention` may cite failed or unknown calls. Only cite real completed calls from this turn; otherwise the call errors. Never invent ids. Summary and titles are your report, not proof: shell output does not prove delivery. Then continue normally.
+reviewed_no_actionUse right after you have actually dealt with an assistant-inbox email in this turn and want to log the outcome; not for sending mail, doing the work, or recording anything you did not do.
+pwdcredentialsapi_keyapikey/cpsess<redacted>proactivity.selectRecord a send or skip decision for each item in the active proactive delivery.
+Record a decision for every item in the active proactive delivery, using the
+exact item IDs from the handoff. Call this after your freshness and
+conversation checks, before you create any presentation or send a message.
+Give each item a reason, and give each item you send a format.
+
+Reasons to send an item (give the main one):
+- time_sensitive: It needs the user's attention before a deadline or event that is still ahead.
+- changed: Something the user cares about changed, such as a delay, a reply, a price or a cancellation.
+- requested: The user asked for this update or is tracking it.
+- ready_for_decision: Prepared work, such as a draft, options or a booking, is ready for the user's choice.
+- new_opportunity: It is a new, relevant option or idea the user has not asked about.
+
+Reasons to skip an item:
+- moot: It stopped applying because circumstances changed, such as a cancelled event, a past date or new plans.
+- already_handled: The task is done, or the user was already told about it or already replied.
+- unconfirmed: Your checks could not confirm it is still true.
+- preferences: The user's proactive preferences rule it out.
+- not_useful_now: It is true and allowed but not worth a message right now.
+
+Choose the format that fits each item you send best:
+- text: A plain message.
+- options: A message with reply options from `muse.create_options`, only when the item has two or more meaningful replies; use text for an offer with one.
+- letter: A Letter from `widget.create_letter_widget`, for an item with a Letter briefing ID.
+- html_widget, map_widget, list_widget: A widget from `widget.create_html_widget`, `widget.create_map_widget` or `widget.create_list_widget`.
+- artifact: An artifact from the `artifact` tools, for help the user will interact with or come back to.
+
+Decisions add up across calls, and every result lists each item with its
+status. In your next call, decide any item marked missing; you do not need to
+repeat the others. An item still missing after that call is recorded as
+skipped. If you change a decision, call this again with the new decision before
+you write the reply. A successful call records your decisions; it does not
+send anything or authorize the offered actions. Once the result
+shows every item is decided and `selected_item_ids` is empty, call
+`muse.nothing_to_do`.
+user_busypreferred_timebetter_latertime_sensitiverequestedready_for_decisionnew_opportunityalready_handledunconfirmedpreferencesnot_useful_nowhtml_widgetmap_widgetlist_widgetproactivity.record_changeRecord a verified state change made by this run for the next proactive update.
+Record an action you completed that changes state beyond this background run
+for the user to hear about in the next proactive update. Reversible changes
+count. In one brief sentence, identify the affected file, artifact, setting
+or routine and describe its resulting state; include the previous state
+when known. Call once after checking the resulting state. Reading files,
+checking status and researching an idea do not qualify. Do not record plans,
+failed or no-op actions, temporary research files, or routine memory maintenance
+such as recording the user's existing preferences.
+
+This records your account of the change; it does not perform or verify the
+action. The record survives even if no opportunity is selected or the worker
+later fails. It does not send a message or change notification priority.
+
+Do not record a change if nothing changed. Earlier work and actions found in
+source material belong in your findings.
+Record a send, defer or skip decision for each item in the active proactive delivery.
+Record a decision for every item in the active proactive delivery, using the
+exact item IDs from the handoff. Call this after your freshness and
+conversation checks, before you create any presentation or send a message.
+Give each item a reason, and give each item you send a format.
+
+Decide each item on its own. Send what is still true and useful, shaped to
+the moment. Defer what will matter later but would land badly now. Skip what
+does not deserve a message: a skipped item never comes back.
+
+Reasons to send an item (give the main one):
+- time_sensitive: It needs the user's attention before a deadline or event that is still ahead.
+- changed: Something the user cares about changed, such as a delay, a reply, a price or a cancellation.
+- requested: The user asked for this update or is tracking it.
+- ready_for_decision: Prepared work, such as a draft, options or a booking, is ready for the user's choice.
+- new_opportunity: It is a new, relevant option or idea the user has not asked about.
+
+Reasons to defer an item:
+- user_busy: The user is occupied right now, such as in a meeting, on a flight or driving.
+- preferred_time: The user asked to hear about this, or about updates like it, at another time.
+- better_later: It will help more at a specific later moment, such as shortly before an event or once something it depends on has happened.
+
+Reasons to skip an item:
+- moot: It stopped applying because circumstances changed, such as a cancelled event, a past date or new plans.
+- already_handled: The task is done, or the user was already told about it or already replied.
+- unconfirmed: Your checks could not confirm it is still true.
+- preferences: The user's proactive preferences rule it out.
+- not_useful_now: It is true and allowed but not worth a message.
+
+To defer an item, set not_before to the time it will land well, such as after
+a flight lands or a meeting ends, in RFC 3339 format with its offset. It must
+be at least 15 minutes away and before the item stops being useful. The queue
+already holds deliveries outside waking hours, so the time of day alone is
+not a reason to defer. An item can be deferred only once.
+
+Choose the format that fits each item you send best:
+- text: A plain message.
+- options: A message with reply options from `muse.create_options`, only when the item has two or more meaningful replies; use text for an offer with one.
+- letter: A Letter from `widget.create_letter_widget`, for an item with a Letter briefing ID.
+- html_widget, map_widget, list_widget: A widget from `widget.create_html_widget`, `widget.create_map_widget` or `widget.create_list_widget`.
+- artifact: An artifact from the `artifact` tools, for help the user will interact with or come back to.
+
+Decisions add up across calls, and every result lists each item with its
+status. In your next call, decide any item marked missing and read its note;
+you do not need to repeat the others. An item still missing after that call
+is recorded as skipped. If you change a decision, call this again with the
+new decision before you write the reply. A successful call records your
+decisions; it does not send anything or authorize the offered actions. Once
+the result shows every item is decided and `selected_item_ids` is empty, call
+`muse.nothing_to_do`. Deferred items come back to you in a delivery of their
+own at the time you set, or later if waking hours or limits hold them; items
+deferred to the same time come back together.
+Look back at the past preparation behind a proactive update, which can be outdated and must be reconfirmed before use.
+Look back at what a background proactivity worker prepared earlier. Start
+with `edition_id` to list its items, and add `item_id` for the drafts, sources
+and acceptance scope. This is a past snapshot. It can be outdated or wrong.
+Before you present any of it or act on it, reconfirm that it is still true
+and current with `muse.memory_search` and the relevant live sources. Never
+present something you already did or already told the user as if it never
+happened. Oversized results remain available through the normal output file
+and read pagination.
+
+The response includes current shared delivery and pending history. Use actual delivered text to compare what the user has already heard; queued drafts are not deliveries.
+shopping.read_cartRead the current cart without changing it and return a short-lived cart_ref
+for shopping.create_shopping_cart_widget. Use this only when a loaded connector doc explicitly
+documents using shopping.read_cart and supplies the provider identifier.
+Within that workflow, read the cart when the user asks to view it or a
+confirmed cart change needs a summary. Copy the provider identifier from
+that doc; do not infer it from a retailer name, product, or URL.
+Unsupported or unavailable providers fail; product-search files and raw cart
+JSON are not accepted.
+Pass only the returned cart_ref to shopping.create_shopping_cart_widget.
+If the reference expires, read again; never repeat a cart mutation to recover it.
+Read a cart only when a loaded connector doc documents using
+shopping.read_cart and supplies its provider identifier. Does not search
+for products, change a cart, or check out.
+Provider identifier specified by the loaded connector skill for shopping.read_cart.prompt must contain at least one entryresume_from_snapshot_id must not be emptymedia generation failedNo media was returned for this request.The media request was blocked by content policy.upstream_retryableupstream_kindnext_stepsoutput_pathrun_summaryerror_format_versionmedia_pathsmedia_paths is emptymedia_handlesimage_idscitationsmedia_urls
