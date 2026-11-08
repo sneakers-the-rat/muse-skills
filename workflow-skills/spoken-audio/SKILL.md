@@ -2,6 +2,8 @@
 
 ## Decide what to make
 
+- To turn an existing recording into text, use [Transcribe Recordings](/opt/muse/skills/transcribe-recordings/SKILL.md).
+
 - Muse can send the user a voice note or voice message, an audio file attached in chat. This skill makes those files, narration for an artifact or a scheduled task, and word-for-word readings of supplied text.
 
 - A live spoken back-and-forth is a voice conversation, which the user starts from the voice control in the app. This skill does not run voice conversations, so do not use it to answer during one.

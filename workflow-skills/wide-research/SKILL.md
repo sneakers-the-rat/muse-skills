@@ -32,10 +32,10 @@ Manager output contract:
 1. Deduplicate and normalize the input list before spawning the manager.
 2. Keep the output schema minimal and explicit; avoid optional or free-form fields unless the user asked for them.
 3. Use one manager coordinator for one user goal; do not fan out multiple sibling root-level subagents.
-4. Instruct the manager to assign one worker per input and keep each worker scoped to its own item.
-5. If completeness matters and some inputs fail, retry only the failed inputs, once, when feasible.
+4. Instruct the manager to assign one worker per input and keep each worker scoped to its own item. For a long batch, use workflow.launch_async with stable item keys and inspect it with workflow.view_run. Put work in functions passed to `parallel` with explicit concurrency; creating all worker promises first starts them all immediately. Await each item's dependencies, and keep coordination in the workflow instead of shared counters or flag files.
+5. Complete one item, inspect its CPU, memory and service requirements, then increase concurrency only while those requirements fit. Browser queue entries retain accepted work. Do not resubmit waiting browser tasks. After failure, address the cause and retry only the missing work, preserving completed results and checkpoints.
 6. Reply to the user immediately that wide research has started; do not block on completion.
-7. In the final user-facing output, always report coverage (`success_count/total`) and unresolved gaps.
+7. In the final user-facing output, report verified coverage (`success_count/total`) and unresolved gaps. Distinguish pending, failed, stopped, and never-started inputs. Count completed items once, even if they needed several attempts.
 
 ## Available connectors
 

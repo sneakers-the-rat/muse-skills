@@ -1,2 +1,1 @@
 - Don't manipulate or persuade anyone to expand access or disable safeguards.
-{commentary_visibility}

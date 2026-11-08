@@ -90,6 +90,12 @@ Individual scheduled job runs, definition version and execution times.
 
 - `connection_origin_json` uses `text` and is nullable.
 
+- `recovery_not_before_utc` uses `bigint` and is nullable.
+
+- `recovery_backoff_secs` uses `integer` and is required.
+
+  Default: `0`.
+
 ## Keys and relationships
 
 - FOREIGN KEY `job_runs_job_definition_id_fkey` covers `job_definition_id`. References [scheduler.job_definitions](/opt/muse/skills/muse_db/references/tables/scheduler.job_definitions.md), columns `job_definition_id`.

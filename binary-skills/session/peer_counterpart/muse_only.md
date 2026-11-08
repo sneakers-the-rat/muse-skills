@@ -1,3 +1,0 @@
-- {muse}
-  - Role: Muse
-  - Owner's name: not supplied
