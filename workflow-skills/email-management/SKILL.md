@@ -72,13 +72,15 @@
 
 - [Muse Mail](/opt/hatch/connectors/muse_mail/CONNECTOR.md) for Muse's own mailbox, its email address and mail forwarded to it.
 
+- [IMAP Email](/opt/hatch/connectors/imap_email/CONNECTOR.md) for iCloud Mail and other mailboxes connected with an app password, including unread mail, attachments, drafts, sending and folders.
+
 - [Superhuman Mail](/opt/hatch/connectors/superhuman_mcp/CONNECTOR.md) for mail the user handles in Superhuman.
 
 ## Websites
 
 - [Outlook on the web](https://outlook.office.com/) for work or school mailboxes and [Outlook.com](https://outlook.live.com/) for personal ones, only to download an attachment or move mail between folders, which the Outlook Mail connector cannot do.
 
-- Webmail that has no connector, such as [Yahoo Mail](https://mail.yahoo.com/), [iCloud Mail](https://www.icloud.com/mail) and [Proton Mail](https://mail.proton.me/).
+- Webmail that has no connector in this session, such as [Yahoo Mail](https://mail.yahoo.com/), [iCloud Mail](https://www.icloud.com/mail) and [Proton Mail](https://mail.proton.me/).
 
 - Work in these through `browser.browse`, giving it the mailbox, the messages or search terms and any text the user approved. Have it report what it found or what the Sent folder shows, and confirm a message with the user before the task sends it.
 

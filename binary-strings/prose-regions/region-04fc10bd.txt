@@ -1,0 +1,46 @@
+handoff_message_idsubmission_message_idsubmission_sourcecontentfollow-up reached a terminal settlementroot follow-up settlement requires handoff identity and sources
+SELECT event_seq, event_name, source, role::text AS role, visibility::text AS visibility,
+       message_id, agent_id, parent_agent_id, parent_message_id, reply_to_message_id,
+       transcript_surface::text AS transcript_surface, payload_json,
+       (extract(epoch from created_at))::bigint AS created_at
+FROM runtime.events WHERE idempotency_key = $1
+runtime.cancellation
+SELECT ci.item_json, ci.message_source,
+       (extract(epoch from ci.created_at))::bigint AS created_at,
+       projection.client_context_json
+FROM agent.context_items AS ci
+LEFT JOIN agent.context_item_resume_projection AS projection
+  ON projection.agent_id = ci.agent_id AND projection.seq = ci.seq
+WHERE ci.agent_id = $1 AND ci.seq = $2
+cancellation retry does not match its committed identity
+SELECT
+  GREATEST(
+    (SELECT COALESCE(MAX(seq), -1) FROM context_items WHERE agent_id = $1),
+    (SELECT COALESCE(MAX(seq), -1) FROM context_item_resume_projection WHERE agent_id = $1),
+    COALESCE((SELECT handoff_context_high_water_seq FROM agent.agents WHERE agent_id = $1), -1),
+    (SELECT COALESCE(MAX(root_seq), -1) FROM agent.companion_trace_imports WHERE root_agent_id = $1),
+    (SELECT COALESCE(MAX(producer_seq), -1) FROM agent.companion_trace_imports WHERE producer_agent_id = $1),
+    COALESCE((SELECT settled_seq FROM agent.companion_trace_sources WHERE producer_agent_id = $1), -1)
+  ) AS max_item_seq,
+  COALESCE((SELECT prompt_floor_seq FROM agents WHERE id = $1), -1)
+    AS prompt_floor_seq,
+  (SELECT COALESCE(MAX(checkpoint_seq), -1)
+     FROM agent_compactions
+     WHERE agent_id = $1
+       AND checkpoint_seq IS NOT NULL
+       AND has_replacement_history)
+    AS checkpoint_seq
+max_item_seqcheckpoint_seqcontext_seqlegacy completion has no verifiable batch ownerUPDATE agent.agents SET handoff_context_high_water_seq =
+                GREATEST(COALESCE(handoff_context_high_water_seq, -1), $2)
+             WHERE agent_id = $1SELECT state, submission_json, accepted_at, transcript_event_seq,
+                    stream_owner_message_id FROM agent.message_mailbox
+             WHERE agent_id = $1 AND submission_id = $2 FOR UPDATEstartup_submission_missingsubmission_jsonreply_to_targetlegacy startup cancellation changed its replyaccepted_atstateinvalid startup mailbox statestartup_submission_terminalstartup_execution_ownedstartup_already_cancelledtranscript_event_seqstream_owner_message_idstartup cancellation input already has execution custodystartup_submission_changedUPDATE agent.message_mailbox SET state = 'aborted', terminalized_at = now(),
+                    transcript_event_seq = $3
+             WHERE agent_id = $1 AND submission_id = $2 AND state = 'accepted'
+               AND stream_owner_message_id IS NULL AND transcript_event_seq IS NULLstartup cancellation custody changed before commitSELECT state, submission_json, accepted_at, transcript_event_seq,
+                    stream_owner_message_id, checkpoint_custody FROM agent.message_mailbox
+             WHERE agent_id = $1 AND submission_id = $2 FOR UPDATElegacy startup quota rejection changed its replycheckpoint_custodypending startup input already has a transcript eventstartup_quota_rejectionUPDATE agent.message_mailbox SET state = 'completed', terminalized_at = now(),
+                    transcript_event_seq = $3
+             WHERE agent_id = $1 AND submission_id = $2 AND state = 'accepted'
+               AND stream_owner_message_id IS NULL AND checkpoint_custody IS NULL
+               AND transcript_event_seq IS NULLstartup quota rejection custody changed before commitbrowser.answer_inputbrowser.pending_poppy_questionsselect pg_advisory_xact_lock(1213550668)widget_imageWidget image fetchwidget_image_fetchwidget image egress attribution registration failed; fetches stay on the ambient proxywidget image client construction failed; card keeps its web URLswidget image egress attribution registration failed for a chat worker; card keeps its web URLswidget image materialization left images un-inlined; they render blankproactivity CLI pacing is unavailablewrite CLI pacing requestread CLI pacing responseCLI pacing is unavailable.space-buildmanifest.jsonJARVIS_STEFI_PROXY_SOCKhttp://localhost/hatch/resolve_skill_iconicon_namescdnstefi resolve_skill_icon returned non-success statusfailed to resolve skill icon URLs via stefi proxygoal_id, source, attention_kind, attention_updated_at, slug, title, summary, description, momentum, momentum_status, emoji, image_relpath, icon_generation_status, status, created_at, updated_at, last_activity_at, pushable, parent_goal_id, sort_order, created_at_ts, updated_at_ts, last_activity_at_ts, category, goal_kind, value_alignment, user_words, assistant_distillation, woop, implementation_intentions, monitoring_signal, review_cadence, next_review_question, momentum_dimensions, adjustment_recommendation, provenance, completed_at, completed_at_ts, fixed_position, connection_id, connection_follow_up_at, connection_revision

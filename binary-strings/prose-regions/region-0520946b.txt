@@ -1,0 +1,21 @@
+SELECT EXISTS(SELECT 1 FROM agent.chat_worker_requests WHERE chat_id=$1 AND state IN ('pending','running','reported','completed'))SELECT count(*) FROM (SELECT 1 FROM agent.chat_worker_requests
+                 WHERE state IN ('pending','running') LIMIT $1) activeselect agent_id,generation,active from agent.chat_workers where group_id=$1 for updateactivegenerationinsert into agent.chat_worker_requests (request_id,chat_id,generation,worker_agent_id,owner_chat_id,owner_agent_id,origin_json,instruction,created_at_ms,state,result_json,result_submission_id) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) on conflict(request_id) do nothingchat worker owner changedselect * from agent.chat_worker_requests where request_id=$1SELECT EXISTS(SELECT 1 FROM agent.connections WHERE connection_id=$1 AND active)chat worker request identity collisionThe work's connection is no longer activeINSERT INTO agent.connection_work (connection_id,work_id,coordinator,request_id)
+                     SELECT $1,work_id,$3,$4 FROM unnest($2::uuid[]) AS work_id
+                     ON CONFLICT (connection_id,work_id) DO NOTHINGSELECT count(*) FROM agent.connection_work WHERE connection_id=$1 AND work_id=ANY($2) AND request_id=$3This connection work has already been assignedselect exists(select 1 from chat_private.external_party_conversations where chat_id=$1)update feed.run_steps
+     set status = $5,
+         output_json = case when $5 = 'succeeded' then $6 else output_json end,
+         error = $7,
+         finished_at_ms = $8,
+         updated_at_ms = $8
+     where run_id = $1 and step_id = $2 and attempt = $3
+       and agent_id is not distinct from $4
+       and status = 'running'SELECT turn_id,created_at,deadline_at,state,
+                   (context_json#>>'{connection_research,fence,connection_id}')::uuid AS connection_id,
+                   context_json#>>'{connection_research,local_date}' AS local_date,
+                   context_json#>>'{connection_research,slot}' AS slot,
+                   (context_json#>>'{connection_research,fence,checkins_revision}')::bigint AS checkins_revision,
+                   (context_json#>>'{connection_research,signal_at_ms}')::bigint AS signal_at_ms,
+                   jsonb_array_length(output_json->'items') AS item_count
+                 FROM background_workers.turns WHERE worker='connection_research' AND created_at>=$1
+                 ORDER BY created_at DESC,turn_id LIMIT 100turn_id,kind,worker,attempt,agent_id,message_id,request_id,state,
+    context_json,output_json,validated_json,input_read_bytes,failure_reason,deadline_at,created_at,updated_at
