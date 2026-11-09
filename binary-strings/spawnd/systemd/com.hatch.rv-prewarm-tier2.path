@@ -1,0 +1,26 @@
+[Unit]
+Description=com.hatch.rv-prewarm-tier2 trigger (execution-ready marker watch)
+ConditionPathExists=!${keep_services_down_early_marker}
+# Watches for the execution-ready marker the daemon drops in /hatch/data/resume
+# (through its /run/hatch/resume bridge view) once fresh admissions are open.
+# Path activation keeps the tier-2 resident-working-set rewarm strictly off
+# the startup critical path:
+# nothing in the boot transaction waits for it, and the triggered service
+# runs at idle I/O priority. The predecessor's finalize retires the marker,
+# so on the clean path it appears exactly once per boot, at execution-ready;
+# after a crash-stop the leftover marker fires the warm at mount instead —
+# an idle-priority replay of the last boot's resident set, harmless by
+# construction.
+#
+# DefaultDependencies=no per the bundle-setup/AGENTS.md boot-ordering
+# companion rule for hatch-rv.target members (hatch-seed.service precedent).
+DefaultDependencies=no
+RequiresMountsFor=/hatch
+After=hatch.mount
+PartOf=hatch-rv.target
+
+[Path]
+PathExists=/hatch/data/resume/execution-ready.marker
+
+[Install]
+WantedBy=hatch-rv.target

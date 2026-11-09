@@ -1,0 +1,25 @@
+[Unit]
+# RV-coupled socket must skip the implicit early sockets.target phase.
+DefaultDependencies=no
+Description=com.hatch.tailscale proxy socket
+ConditionPathExists=!${keep_services_down_early_marker}
+After=com.hatch.host-path-setup.service
+Requires=com.hatch.host-path-setup.service
+PartOf=com.hatch.tailscale-tunnel.service hatch-rv.target
+
+[Socket]
+ListenStream=/run/hatch/tailscale/proxy.sock
+DirectoryMode=0755
+SocketUser=root
+SocketGroup=root
+# 0666 matches the Hatch Link proxy socket. The real access control is the
+# SO_PEERCRED PeerAcl in the shared relay (root + the Sentinel cgroup only),
+# enforced before any bytes are read — not the socket file mode. Sentinel, the
+# sole intended dialer, runs as the non-root hatch-sentinel user.
+SocketMode=0666
+FileDescriptorName=tailscale-proxy
+Service=com.hatch.tailscale-tunnel.service
+RemoveOnStop=true
+
+[Install]
+WantedBy=hatch-rv.target

@@ -1,0 +1,76 @@
+[Unit]
+Description=com.hatch.preflight-opportunistic (opportunistic runtime-cell package reconcile)
+ConditionPathExists=!${keep_services_down_early_marker}
+# Start once the runtime cell is ready, in parallel with the daemon (which has
+# the same gating). After= orders us after the cell's start job (its
+# ExecStartPost=post-start.sh writes runtime-cell.ready last), so the cell's
+# Sentinel egress is up before our in-cell apt runs. PartOf= stops us with the
+# cell. We intentionally do NOT order before the daemon, and nothing Requires=
+# us — this is best-effort and must never gate startup.
+#
+# com.hatch.rv-graft.service is a REQUIRED After= edge, not belt-and-braces:
+# in the RV-attach transaction the cell edges are inert (the cell started
+# pre-RV and has no job to order against) and After=hatch-rv.target does not
+# barrier fellow target members, so without this edge we race the graft. If
+# we won, the replay pass would run against the empty pre-RV tmpfs BRIDGES:
+# the in-cell receipt read/write and the apt-archives cache land on
+# discardable tmpfs (the host-path ledger read itself is RV-backed either
+# way) — and exit 0, indistinguishable from a genuine first boot. rv-graft is oneshot +
+# RemainAfterExit, so After= means completed-or-failed, and its own Before=
+# names only the daemon and the cell — no cycle.
+#
+# com.hatch.execd.service is a second REQUIRED edge, for a different reason:
+# the taint tracker's BPF must be attached before we join the cell cgroup,
+# because that cgroup-attach event is what roots this reconcile as its own
+# CLEAN taint domain. Without it we stay domain-less and every file the apt
+# run writes is durably labeled -- which is how the cell rootfs came to carry
+# tens of thousands of taint xattrs, /etc/ld.so.cache among them, after which
+# no tool could ever read as clean. execd is Type=notify and sends READY=1
+# only after the tracker is installed AND its one-shot label repairs have
+# settled, so this orders against both -- not merely its process start. That
+# second half matters as much as the first: overlapping the rootfs sweep would
+# let apt read labels the sweep has not reached, taint this domain, and
+# relabel everything it writes, while the ledger has already spent a repair
+# that never repeats. The two edges do not conflict: rv-graft is Before= the
+# cell and execd is After= it, so the order is rv-graft -> cell -> execd -> us.
+After=network-online.target hatch-rv.target com.hatch.runtime-cell.service com.hatch.host-path-setup.service com.hatch.rv-graft.service com.hatch.execd.service
+Wants=network-online.target com.hatch.runtime-cell.service
+PartOf=com.hatch.runtime-cell.service
+PartOf=hatch-rv.target
+
+[Service]
+# Keep this unit's storage cost attributable. Without IO accounting the
+# kernel counters vanish with the cgroup when the unit stops, so a
+# short-lived unit's IO can only ever be measured while it is still
+# running -- which is exactly when nobody is looking.
+IOAccounting=true
+# Type=exec, NOT oneshot: the start job must complete at execve, not at
+# script exit. The control plane's whole VM health gate is
+# `systemctl is-system-running` == "running" (bundle-setup/AGENTS.md,
+# "systemd Boot Ordering"), and that reads "starting" until every start
+# job in the boot/RV-attach transaction finishes — a oneshot's job runs
+# until its ExecStart exits. The dependency comments above keep this unit
+# out of everyone's Requires=, but job-queue semantics still made a
+# oneshot here a boot-blocking step: once the os-intent replay started
+# doing real first-boot work (cutover conversion, in-cell apt), every
+# VM's STARTING dwell grew by the reconcile duration and warm-pool refill
+# slowed fleet-wide. With Type=exec the transaction drains at spawn and
+# the reconcile continues under the same supervision, ordering
+# (After=rv-graft), journal identity, and stop propagation. The script's
+# always-exit-0 contract is the other half of "never gate startup": a
+# reconcile failure must not flip the unit failed and the system
+# degraded. Keep both invariants together.
+Type=exec
+Slice=hatch-runtime.slice
+# The script moves itself into the runtime cell's cgroup before nsenter so
+# Sentinel's eBPF egress attribution (attached at the cell cgroup root) can
+# resolve its apt connections — an in-netns but out-of-cgroup peer is
+# unattributable and gets 407-challenged. Delegate=yes tells systemd to
+# expect the process leaving this unit's cgroup (same pattern as
+# com.hatch.daemon.service).
+Delegate=yes
+# Runs as host root (+): needs machinectl + nsenter into the cell.
+ExecStart=+${runtime_cell_dir}/hatch-preflight-opportunistic
+
+[Install]
+WantedBy=hatch-rv.target

@@ -1,0 +1,28 @@
+[Unit]
+# RV-coupled socket must skip the implicit early sockets.target phase.
+DefaultDependencies=no
+Description=Hatch browser lease helper socket
+Documentation=https://github.com/par-msl/jarvis/blob/main/docs/browser-architecture.md
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${host_bin_dir}/hatch-browser-lease-helper
+After=com.hatch.host-path-setup.service
+# Wants, not Requires, and no PartOf: the brokers call this helper while a VM
+# stop stops them, and systemd refuses every connection to a socket that has a
+# stop job queued, so the socket must stay out of the RV stop.
+Wants=com.hatch.host-path-setup.service
+
+[Socket]
+ListenStream=/run/hatch/browser-lease-helper/helper.sock
+Accept=yes
+Service=com.hatch.browser-lease-helper@.service
+DirectoryMode=0755
+SocketUser=root
+SocketGroup=hatch-browser-broker
+SocketMode=0660
+RemoveOnStop=true
+# Stale directory default ACLs can override SocketMode. chmod after bind
+# ensures only root + the broker group can reach the helper socket.
+ExecStartPost=+/bin/chmod 0660 /run/hatch/browser-lease-helper/helper.sock
+
+[Install]
+WantedBy=hatch-rv.target

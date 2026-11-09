@@ -1,0 +1,34 @@
+[Unit]
+Description=Hatch research browser broker socket
+ConditionPathExists=!${keep_services_down_early_marker}
+# Deep research leases a remote VMVM browser, which a confidential VM must
+# never reach. The service carries the same gate, so no other start path can
+# run this broker on a CVM.
+ConditionKernelCommandLine=!jarvis_cvm=true
+# The socket must stop with the RV graph. Otherwise a retiring daemon can dial
+# it after the broker stops, socket-activate a replacement broker on the old
+# host, and lease a research VM there.
+DefaultDependencies=no
+PartOf=hatch-rv.target
+
+[Socket]
+ExecStartPre=+/usr/bin/install -d -m 0755 -o root -g root /run/hatch
+# Root-owned runtime root: the broker must not be able to swap entries in its
+# own control dir. This instance has no path-setup unit and no viewer, so the
+# socket also creates the one broker-writable leaf, the lease tunnel staging
+# directory.
+ExecStartPre=+/usr/bin/install -d -m 0755 -o root -g root /run/hatch/research-browser-broker
+ExecStartPre=+/usr/bin/install -d -m 0700 -o hatch-browser-broker -g hatch-browser-broker /run/hatch/research-browser-broker/lease
+ListenStream=/run/hatch/research-browser-broker/research-browser-broker.sock
+DirectoryMode=0755
+SocketUser=hatch-browser-broker
+SocketGroup=hatch-browser-broker
+# The daemon's host connect supervisor is admitted by the same pidfd/cgroup
+# PeerAcl as chat. This path is never bind-mounted into the runtime cell.
+SocketMode=0666
+FileDescriptorName=research
+Service=com.hatch.research-browser-broker.service
+RemoveOnStop=true
+
+[Install]
+WantedBy=hatch-rv.target

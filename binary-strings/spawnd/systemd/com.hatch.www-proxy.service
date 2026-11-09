@@ -1,0 +1,57 @@
+[Unit]
+Description=com.hatch.www-proxy
+# Snapshot the same root-owned configuration as authd and Stefi on first boot.
+# The image-only writer may be absent on live installs; this is not RV coupling
+# or a WWW readiness check. Connections warm asynchronously after execution.
+After=hatch-init.service com.hatch.www-proxy.socket
+Wants=hatch-init.service
+Requires=com.hatch.www-proxy.socket
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${host_bin_dir}/hatch-www-proxy
+
+[Service]
+# Readiness and reconnects happen asynchronously after exec, never in boot jobs.
+Type=exec
+DynamicUser=yes
+User=hatch-www-proxy
+Group=hatch-www-proxy
+Slice=hatch-host.slice
+UMask=0077
+NoNewPrivileges=true
+PrivateDevices=true
+PrivateTmp=true
+# PeerAcl reads the caller's pidfd-fenced host cgroup identity.
+ProtectProc=default
+ProcSubset=all
+ProtectSystem=strict
+ProtectHome=true
+ProtectControlGroups=true
+ProtectHostname=true
+ProtectKernelLogs=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=true
+RestrictRealtime=true
+LockPersonality=true
+CapabilityBoundingSet=
+InaccessiblePaths=-/etc/hatch -/etc/tls -/var/lib/hatch -/hatch -/var/lib/hatch-runtime
+Environment=RUST_LOG=info
+# PID 1 imports non-secret configuration before the service's filesystem
+# sandbox hides /etc/hatch. No credential file is loaded by this service.
+EnvironmentFile=-${env_file}
+EnvironmentFile=-${env_override_file}
+UnsetEnvironment=HTTP_PROXY HTTPS_PROXY ALL_PROXY NO_PROXY http_proxy https_proxy all_proxy no_proxy STEFI_BEARER_TOKEN LOGGING_APP_TOKEN
+WorkingDirectory=/
+ExecStart=${host_bin_dir}/hatch-www-proxy --socket /run/hatch/www-proxy/www.sock
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hatch-www-proxy
+Restart=always
+RestartSec=1
+TimeoutStopSec=10
+LimitNOFILE=4096
+LimitCORE=0
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,88 @@
+[Unit]
+Description=com.hatch.igdd
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${image_bin_dir}/igd-cli
+After=network-online.target com.hatch.host-path-setup.service com.hatch.authd-rv-rebind.service var-lib-hatch.mount
+Wants=network-online.target com.hatch.authd-rv-rebind.service
+Requires=com.hatch.host-path-setup.service
+RequiresMountsFor=${var_lib_dir}
+PartOf=hatch-rv.target
+
+[Service]
+Type=simple
+User=${igd_user}
+Group=${igd_user}
+Slice=hatch-runtime.slice
+UMask=0077
+NoNewPrivileges=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+PrivateTmp=true
+PrivateDevices=true
+ProtectHome=true
+ProtectControlGroups=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+LockPersonality=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+SystemCallArchitectures=native
+RestrictNamespaces=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ProtectSystem=strict
+# The consumer-ingress PeerAcl reads the connecting process's /proc/<pid>/cgroup.
+ProtectProc=default
+ProcSubset=all
+# host-path-setup owns /run/hatch/igd (setgid 2710 hatch-igd:hatch-igd-clients)
+# so the IGD privsep worker's mount namespace has its source path even while
+# this daemon is stopped, and the daemon-created socket inherits the client
+# group. It also owns ${igd_ingress_dir}: igd-cli binds the ingress socket at
+# startup and exits if it can't, so the directory must exist and be writable.
+# igd-cli sets both socket modes itself.
+ReadWritePaths=/run/hatch/igd ${igd_ingress_dir}
+# hatch-igd is deliberately group-less (no hatch-shared), so it cannot traverse
+# the hatch-shared-gated RV root ${var_lib_dir} to reach its own state dir. Bind
+# the private RV state dir to a top-level path the service CAN reach: `/` is
+# world-traversable, and the bind target carries the dir's own 0700 hatch-igd
+# ownership, so chdir + state IO never path-resolve through ${var_lib_dir}.
+# systemd performs the bind as root during namespace setup (root traverses the
+# RV root fine); the service then only ever sees /igd-state. This keeps the
+# account fully isolated and leaves the RV-root boundary unchanged. BindPaths is
+# a read-write bind, so no separate ReadWritePaths entry is needed.
+BindPaths=${var_lib_dir}/igd:/igd-state
+InaccessiblePaths=-/etc/hatch/credentials
+Environment=HOME=/igd-state
+Environment=JARVIS_AUTHD_SOCK=/run/hatch/auth/authd.sock
+# The igd-cli daemon refuses to start without an egress path ("daemon startup
+# without JARVIS_STEFI_PROXY_SOCK requires --bearer or daemon --token"). Point it
+# at the shared Stefi proxy socket (0666, PeerAcl-gated per route), exactly as the
+# base env file does for com.hatch.messengerd. Hardcoded (not via EnvironmentFile)
+# so hatch-igd stays isolated from the rest of the env file and its credentials.
+Environment=JARVIS_STEFI_PROXY_SOCK=/run/hatch/proxy/stefi.sock
+# Opts igd-cli into its separately authenticated consumer ingress, which admits
+# only the Jarvis daemon's cgroup. Hardcoded for the same isolation reason.
+Environment=MESSENGER_INGRESS_SOCKET=${igd_ingress_sock}
+Environment=PATH=${host_bin_dir}:${image_bin_dir}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+WorkingDirectory=/igd-state
+ExecStartPre=/usr/bin/systemctl is-active --quiet com.hatch.authd-rv-rebind.service
+# `--surface igd` binds this process to the Instagram Direct mailbox: it restores
+# only plaintext DB223 subscriptions, selects the Instagram REST schema
+# (/hatch/ig) through the Stefi proxy so check/sync treat the mailbox as plaintext
+# (no unlock), and refuses the Facebook-only credential lifecycle and E2EE repair
+# operations. Without it the daemon would run as the legacy shared (Facebook)
+# daemon on this isolated account.
+ExecStart=${image_bin_dir}/igd-cli --state-dir /igd-state daemon --surface igd --socket /run/hatch/igd/messengerd.sock
+# As messengerd: a crash must not leave a socket inode the IGD worker or the
+# ingress consumer would mistake for a live daemon.
+ExecStopPost=/bin/rm -f /run/hatch/igd/messengerd.sock ${igd_ingress_sock}
+StandardOutput=null
+StandardError=null
+LimitCORE=0
+Restart=always
+RestartSec=1
+TimeoutStopSec=10
+LimitNOFILE=65535
+
+[Install]
+WantedBy=hatch-rv.target

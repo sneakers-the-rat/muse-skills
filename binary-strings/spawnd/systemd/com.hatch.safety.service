@@ -1,0 +1,94 @@
+[Unit]
+Description=com.hatch.safety
+ConditionPathExists=!${keep_services_down_early_marker}
+# Safety must become socket-ready before hatch-rv.target can finish through
+# rv-graft. Do not order it after the target or services that themselves wait
+# for the target; they may start in parallel and are available through their
+# activation sockets when Safety needs them.
+# Startup constructs local clients without calling authd. Keep the start pull
+# below, but overlap initialization with authd's RV rebind; rv-graft still
+# joins both readiness proofs before releasing the daemon.
+After=network-online.target com.hatch.host-path-setup.service com.hatch.stefi-proxy.service com.hatch.telemetry-proxy.service
+Wants=network-online.target com.hatch.sentinel.service com.hatch.authd.service com.hatch.inference-proxy.service com.hatch.stefi-proxy.service com.hatch.telemetry-proxy.service
+Requires=com.hatch.host-path-setup.service
+PartOf=hatch-rv.target
+
+[Service]
+# READY=1 means security.sock is bound and accepting daemon handshakes. This
+# lets rv-graft join Safety readiness with authd/database readiness before it
+# releases the parked daemon, without serializing Safety after hatch-rv.target.
+Type=notify
+User=${safety_user}
+Slice=hatch-runtime.slice
+NoNewPrivileges=true
+CapabilityBoundingSet=CAP_SYS_ADMIN CAP_DAC_READ_SEARCH
+AmbientCapabilities=CAP_SYS_ADMIN CAP_DAC_READ_SEARCH
+PrivateTmp=true
+PrivateDevices=true
+ProtectControlGroups=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+LockPersonality=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+SystemCallArchitectures=native
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+SupplementaryGroups=${proxy_clients_group} ${daemon_group}
+ProtectSystem=full
+ReadWritePaths=${var_lib_dir} /run/hatch
+InaccessiblePaths=-/etc/hatch/credentials
+Environment=JARVIS_BIN_DIR=${host_bin_dir}
+Environment=JARVIS_AUTHD_SOCK=/run/hatch/auth/authd.sock
+Environment=JARVIS_TELEMETRY_PROXY_SOCK=/run/hatch/telemetry/telemetry.sock
+Environment=JARVIS_STEFI_PROXY_SOCK=/run/hatch/proxy/stefi.sock
+Environment=PATH=${host_bin_dir}:${image_bin_dir}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+EnvironmentFile=${env_file}
+EnvironmentFile=-${env_override_file}
+WorkingDirectory=${jarvis_home}
+# The ws.sock/security.sock parent, /run/hatch/safety (0750
+# hatch-safety:hatch-daemon so only the safety user and hatch-daemon group
+# members can traverse it), is provisioned before this unit starts by the
+# image's systemd-tmpfiles row and by host-path-setup.sh, which this unit
+# Requires= and orders After=. No ExecStartPre re-asserts it: every root
+# fork here runs serially ahead of hatch-safety, and rv-graft waits for this
+# unit's READY=1, so each one sits on the wake path.
+#
+# No stale-socket sweep either: nothing unlinks a socket on shutdown, and
+# nothing needs to. A stale node is replaced at the next bind: every listener
+# binds through hatch_os::unix_socket::bind_unix_listener, which on
+# EADDRINUSE connect-probes the path, unlinks a dead node and rebinds, and
+# refuses only when a live listener answers.
+#
+# The verification-code scanner gets its OWN parent, gated on
+# hatch-proxy-clients rather than hatch-daemon, because its callers are privsep
+# connector workers: each runs as a minimal hatch-w-<tool> identity that is not
+# in hatch-daemon and must not be added to it, since that group opens every
+# hatch-daemon-gated path on the host. hatch-proxy-clients is the group every
+# privsep worker already carries, so this grants traversal to the reviewed
+# callers without touching ws.sock or security.sock, which stay behind the
+# hatch-daemon gate their own callers are in.
+#
+# Widening the DIRECTORY does not widen ADMISSION: the socket is still gated at
+# accept time by VERIFICATION_CODE_PEER_ACL, anchored on the four exact worker
+# cgroups, and that has always been the authoritative check. What this fixes is
+# the directory silently pre-empting it — while the two shared a parent, the
+# workers EACCESed at traversal, the connection never reached the accept loop,
+# and the mail lane's fail-open shipped verification codes unsurrogated with
+# nothing logged on either side.
+#
+# The ordered host-path gate creates this parent on every boot, including
+# older images without its tmpfiles row. Live install must establish the same
+# directory before systemd apply, even on an asset-current fast path. A binary
+# hot-swap verifies the actual directory's type, owner, group and mode before
+# publishing anything. None of these paths relies on a per-Safety pre-start
+# process; an unproven directory prevents the corresponding install/restart.
+ExecStart=${host_bin_dir}/hatch-safety
+SyslogIdentifier=hatch-safety
+Restart=always
+RestartSec=1
+TimeoutStopSec=60
+LimitNOFILE=65535
+
+[Install]
+WantedBy=hatch-rv.target

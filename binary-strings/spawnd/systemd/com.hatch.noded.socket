@@ -1,0 +1,24 @@
+[Unit]
+Description=com.hatch.noded daemon control socket
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${host_bin_dir}/hatch-noded
+
+[Socket]
+# The daemon reaches this pathname through the runtime cell's read-only noded
+# bind. PeerAcl authenticates the daemon after systemd supplies the listener to
+# noded; pathname mode only makes the cross-identity connect possible.
+ExecStartPre=+/usr/bin/install -d -m 0755 -o root -g root /run/hatch
+ExecStartPre=+/usr/bin/install -d -m 0755 -o root -g root /run/hatch/noded
+ListenStream=/run/hatch/noded/control.sock
+DirectoryMode=0755
+SocketUser=${noded_user}
+SocketGroup=${noded_group}
+SocketMode=0666
+FileDescriptorName=control
+Service=com.hatch.noded.service
+RemoveOnStop=true
+# Stale default ACLs on upgraded hosts can override SocketMode.
+ExecStartPost=+/bin/chmod 0666 /run/hatch/noded/control.sock
+
+[Install]
+WantedBy=sockets.target

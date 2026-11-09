@@ -1,0 +1,57 @@
+[Unit]
+Description=com.hatch.ssh-access
+After=hatch-rv.target com.hatch.host-path-setup.service
+Requires=com.hatch.host-path-setup.service
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${host_bin_dir}/hatch-ssh-access
+PartOf=hatch-rv.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+Slice=hatch-host.slice
+PermissionsStartOnly=true
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectProc=default
+ProcSubset=all
+ProtectSystem=strict
+ProtectHome=true
+ProtectControlGroups=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+LockPersonality=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+SystemCallArchitectures=native
+RestrictAddressFamilies=AF_UNIX
+# `-` on the RV path: ProtectSystem=strict refuses to start the unit when a
+# ReadWritePaths entry does not exist, and ${var_lib_dir} is a bind mount of
+# the reliable volume that is absent until it is attached. Restart=always
+# would turn that into a crash loop during boot. Absent means the operator
+# grant cannot be written and `enable` returns an error, which is the right
+# degradation; it must not take the boot with it.
+ReadWritePaths=/run -${var_lib_dir}
+InaccessiblePaths=-/etc/hatch/credentials
+Environment=PATH=${host_bin_dir}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+EnvironmentFile=${env_file}
+EnvironmentFile=-${env_override_file}
+WorkingDirectory=/
+# 0755 root:root, not setgid ${shared_group}: hatch-server dials this socket
+# as `hatch-daemon` with no supplementary groups, so a group-gated directory
+# denies it at traversal before the peer ACL runs. Admission is the ACL's job.
+ExecStartPre=+/usr/bin/install -d -m 0755 -o root -g root /run/hatch/ssh-access
+ExecStartPre=+/usr/bin/rm -f /run/hatch/ssh-access/ssh-access.sock
+ExecStart=${host_bin_dir}/hatch-ssh-access --socket /run/hatch/ssh-access/ssh-access.sock --operator-gate ${var_lib_dir}/ssh-access/operator_enabled
+SyslogIdentifier=hatch-ssh-access
+Restart=always
+RestartSec=1
+TimeoutStopSec=10
+LimitNOFILE=65535
+
+[Install]
+WantedBy=hatch-rv.target

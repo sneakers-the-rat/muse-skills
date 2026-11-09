@@ -1,0 +1,40 @@
+[Unit]
+Description=com.hatch.runtime-cell-trust-store
+ConditionPathExists=!${keep_services_down_early_marker}
+StartLimitIntervalSec=0
+After=com.hatch.runtime-cell.service com.hatch.sentinel.service
+PartOf=com.hatch.runtime-cell.service com.hatch.sentinel.service hatch-rv.target
+
+[Service]
+Type=oneshot
+# Host-side producer: publishes Sentinel's egress CA, and the NSS trust stores
+# built from it, into the /run/hatch/cell-* directories htch-runtime.nspawn
+# binds read-only into the cell. It never enters the cell —
+# this unit replaces com.hatch.runtime-cell-egress-ca-sync.service and
+# com.hatch.runtime-cell-ingress-ca-sync.service, which reached in over nsenter
+# and ran update-ca-certificates/certutil out of the cell-writable rootfs.
+ExecStart=${runtime_cell_dir}/build-cell-trust-store.sh
+# The Restart= ladder is for REAL build failures only (certutil/staging errors).
+# A missing input is NOT a failure: the script exits 0 after a partial publish
+# when Sentinel has not yet minted the per-boot egress CA, and the egress .path
+# watcher re-triggers the build the moment it lands (WantedBy= also re-pulls it
+# when sentinel starts at attach). This unit runs pre-RV in the INITIAL boot
+# transaction — pulled via runtime-cell, a multi-user.target member since the
+# pre-RV park design, while Sentinel is WantedBy=hatch-rv.target and has no job
+# yet, so the After= edge on it is inert and the CA cannot exist on the first
+# run. A nonzero exit there marks the unit failed, `systemctl is-system-running`
+# reads "degraded", and the control plane — which attaches the RV only once the
+# gate reads exactly "running" — stalls on the very attach that would deliver
+# the missing input; boots then proceed only when a health poll lands in an
+# auto-restart limbo window (measured ~13s of STARTING dwell per boot). The
+# cell's ExecStartPre already seeded the same directories best-effort, so
+# nothing is empty while trust converges and no runtime service orders itself
+# after this unit.
+Restart=on-failure
+RestartSec=5
+RestartSteps=8
+RestartMaxDelaySec=30
+
+[Install]
+WantedBy=com.hatch.runtime-cell.service
+WantedBy=com.hatch.sentinel.service

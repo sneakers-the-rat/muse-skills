@@ -1,0 +1,55 @@
+[Unit]
+Description=com.hatch.gk-proxy
+# The cache survives Stefi and telemetry restarts; readiness is local.
+After=com.hatch.gk-proxy.socket com.hatch.stefi-proxy.socket com.hatch.telemetry-proxy.socket
+Requires=com.hatch.gk-proxy.socket
+Wants=com.hatch.stefi-proxy.socket com.hatch.telemetry-proxy.socket
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${host_bin_dir}/hatch-gk-proxy
+
+[Service]
+# Readiness and reconnects happen asynchronously after exec, never in boot jobs.
+Type=exec
+DynamicUser=yes
+User=hatch-gk-proxy
+Group=hatch-gk-proxy
+Slice=hatch-host.slice
+UMask=0077
+NoNewPrivileges=true
+PrivateDevices=true
+PrivateTmp=true
+# PeerAcl reads the caller's pidfd-fenced host cgroup identity.
+ProtectProc=default
+ProcSubset=all
+ProtectSystem=strict
+ProtectHome=true
+ProtectControlGroups=true
+ProtectHostname=true
+ProtectKernelLogs=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+RestrictAddressFamilies=AF_UNIX
+RestrictNamespaces=true
+RestrictRealtime=true
+LockPersonality=true
+CapabilityBoundingSet=
+InaccessiblePaths=-/etc/hatch/credentials -/etc/tls -/var/lib/hatch -/hatch -/var/lib/hatch-runtime
+Environment=RUST_LOG=info
+# The CVM media worker may read owner gates, but still has no Stefi or authd grant.
+Environment=JARVIS_GK_PROXY_ALLOWED_CGROUP_PATHS=/hatch.slice/hatch-runtime.slice/com.hatch.daemon.service,/hatch.slice/hatch-runtime.slice/com.hatch.rescue.service,/hatch.slice/hatch-host.slice/com.hatch.telemetry-proxy.service,/hatch.slice/hatch-runtime.slice/com.hatch.safety.service,/hatch.slice/hatch-host.slice/com.hatch.authd.service,/hatch.slice/hatch-host.slice/com.hatch.inference-proxy.service,/hatch.slice/hatch-host.slice/com.hatch.media-generation-cvm@.service,/hatch.slice/hatch-runtime.slice/com.hatch.sentinel.service,/hatch.slice/hatch-host.slice/com.hatch.credit-watcher.service,/hatch.slice/hatch-host.slice/com.hatch.browser-lease-helper@.service${privsep_gk_cgroup_paths},/hatch.slice/hatch-core.slice/com.hatch.healthd.service,/hatch.slice/hatch-runtime.slice/com.hatch.messengerd.service,/hatch.slice/hatch-runtime.slice/com.hatch.whatsapp-companion.service
+UnsetEnvironment=HTTP_PROXY HTTPS_PROXY ALL_PROXY NO_PROXY http_proxy https_proxy all_proxy no_proxy
+WorkingDirectory=/
+# The owner client IP directory gk-proxy watches; same line in com.hatch.ingress-rev-proxy.service.
+ExecStartPre=+/usr/bin/install -d -m 2755 -o ${ingress_rev_proxy_user} -g ${stefi_proxy_user} /run/hatch/owner-client-ip
+ExecStart=${host_bin_dir}/hatch-gk-proxy --socket /run/hatch/gk-proxy/gk.sock
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hatch-gk-proxy
+Restart=always
+RestartSec=1
+TimeoutStopSec=60
+LimitNOFILE=4096
+LimitCORE=0
+
+[Install]
+WantedBy=multi-user.target

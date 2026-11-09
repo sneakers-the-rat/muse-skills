@@ -1,0 +1,20 @@
+[Unit]
+Description=com.hatch.privsep-worker-prep
+# This singleton is pulled only after execution-ready or by the first worker
+# service. It is deliberately not WantedBy=hatch-rv.target.
+DefaultDependencies=no
+RequiresMountsFor=${var_lib_dir}
+Requires=com.hatch.host-path-setup.service
+Wants=com.hatch.messenger-prune.timer
+After=var-lib-hatch.mount com.hatch.host-path-setup.service
+
+[Service]
+Type=oneshot
+# Coalesce every later worker activation behind this boot's successful prep.
+RemainAfterExit=yes
+TimeoutStartSec=90
+ExecStart=+${host_bin_dir}/spawnd prepare-privsep-workers
+# Live bundle apply refreshes an already-latched gate in place. Reload avoids
+# stopping active worker services that require this unit.
+ExecReload=+${host_bin_dir}/spawnd prepare-privsep-workers
+SyslogIdentifier=hatch-privsep-worker-prep

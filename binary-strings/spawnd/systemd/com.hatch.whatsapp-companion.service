@@ -1,0 +1,65 @@
+[Unit]
+Description=com.hatch.whatsapp-companion
+StartLimitIntervalSec=300
+StartLimitBurst=20
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${host_bin_dir}/hatch_whatsapp_companiond
+ConditionPathExists=${host_bin_dir}/wai
+# The adapter persists only lifecycle/idempotency metadata. WAI remains the
+# owner of the paired session and synchronized messages.
+RequiresMountsFor=${var_lib_dir}
+After=hatch-rv.target com.hatch.host-path-setup.service com.hatch.wai.service com.hatch.telemetry-proxy.socket var-lib-hatch.mount
+Wants=com.hatch.telemetry-proxy.socket
+Requires=com.hatch.host-path-setup.service com.hatch.wai.service
+PartOf=hatch-rv.target com.hatch.wai.service
+
+[Service]
+Type=simple
+User=${wai_user}
+Group=${wai_group}
+SupplementaryGroups=${shared_group} ${proxy_clients_group}
+Slice=hatch-runtime.slice
+UMask=0007
+NoNewPrivileges=true
+CapabilityBoundingSet=
+ProtectHome=tmpfs
+AmbientCapabilities=
+PrivateTmp=true
+PrivateDevices=true
+ProtectControlGroups=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+LockPersonality=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+SystemCallArchitectures=native
+RestrictNamespaces=true
+ProtectSystem=strict
+# The service verifies SO_PEERCRED callers through /proc/<pid>/cgroup.
+ProtectProc=default
+ProcSubset=all
+RestrictAddressFamilies=AF_UNIX
+ReadWritePaths=/run/hatch/whatsapp-companion ${var_lib_dir}/whatsapp-companion
+InaccessiblePaths=-/etc/hatch/credentials -/etc/tls -${var_lib_dir}/wai
+Environment=HOME=${var_lib_dir}/whatsapp-companion
+Environment=JARVIS_WHATSAPP_COMPANION_SOCK=${whatsapp_companion_sock}
+Environment=JARVIS_WHATSAPP_COMPANION_STATE_DIR=${var_lib_dir}/whatsapp-companion
+Environment=JARVIS_WAI_SOCK=${wai_sock}
+Environment=JARVIS_TELEMETRY_PROXY_SOCK=/run/hatch/telemetry/telemetry.sock
+Environment=WAI_BINARY=${host_bin_dir}/wai
+Environment=RUST_LOG=info
+Environment=PATH=${host_bin_dir}:${image_bin_dir}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+WorkingDirectory=/
+ExecStartPre=/usr/bin/rm -f ${whatsapp_companion_sock}
+ExecStart=${host_bin_dir}/hatch_whatsapp_companiond
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hatch-whatsapp-companiond
+Restart=always
+RestartSec=2
+TimeoutStopSec=20
+LimitNOFILE=65535
+
+[Install]
+WantedBy=hatch-rv.target

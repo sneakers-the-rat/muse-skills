@@ -1,0 +1,51 @@
+[Unit]
+Description=com.hatch.vault
+# `hatch-init` writes /etc/hatch/env, which this unit consumes via
+# EnvironmentFile= below. Order vault after hatch-init.service so the
+# first attempt sees a populated env on image-boot.
+#
+# Note: hatch-init.service only exists on image-boot. spawnd's live-install
+# path renders this template into a running system that has no hatch-init.
+# `After=` on a missing unit is silently ignored, `Wants=` is soft-fail —
+# so on live install vault still starts and reads the install.sh-baked env.
+# Vault needs tee-report to publish CVM serving eligibility. The helper is
+# enabled independently; After orders their starts when both are queued.
+# Do not pull it in with Wants: older images may lack its service account.
+# Vault retries publication alongside its recovery listeners if it is absent.
+After=network-online.target hatch-init.service com.hatch.telemetry-proxy.service com.hatch.tee-report.service
+Wants=network-online.target hatch-init.service com.hatch.telemetry-proxy.service
+ConditionPathExists=/opt/hatch/bin/hatch-vault
+StartLimitBurst=0
+
+[Service]
+Type=simple
+User=root
+Group=root
+Slice=hatch-core.slice
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectProc=default
+ProcSubset=all
+ProtectSystem=full
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadWritePaths=/run
+InaccessiblePaths=-/etc/hatch/credentials
+Environment=JARVIS_BIN_DIR=/opt/hatch/bin
+Environment=PATH=/opt/hatch/bin:/opt/hatch-image/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+EnvironmentFile=/etc/hatch/env
+EnvironmentFile=-/etc/hatch/env.override
+WorkingDirectory=/
+ExecStartPre=+/usr/bin/install -d -m 2750 -o root -g ${shared_group} /run/hatch/vault
+ExecStartPre=+/usr/bin/install -d -m 0711 -o root -g root /run/hatch/vault-encrypt
+ExecStartPre=+/usr/bin/install -d -m 0711 -o root -g root /run/hatch/vault-hmac
+ExecStartPre=+/usr/bin/install -d -m 0711 -o root -g root /run/hatch/vault-blob
+ExecStart=${host_bin_dir}/hatch-vault
+SyslogIdentifier=hatch-vault
+Restart=always
+RestartSec=1
+TimeoutStopSec=60
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

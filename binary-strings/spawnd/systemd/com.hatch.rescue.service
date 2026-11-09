@@ -1,0 +1,78 @@
+[Unit]
+Description=com.hatch.rescue
+ConditionPathExists=!${keep_services_down_early_marker}
+StartLimitIntervalSec=0
+After=hatch-rv.target com.hatch.host-path-setup.service com.hatch.rescue-systemctl.socket com.hatch.disk-usage.socket com.hatch.inference-proxy.service com.hatch.stefi-proxy.service com.hatch.telemetry-proxy.service com.hatch.authd.service
+Wants=com.hatch.rescue-systemctl.socket com.hatch.disk-usage.socket com.hatch.inference-proxy.service com.hatch.stefi-proxy.service com.hatch.telemetry-proxy.service com.hatch.authd.service
+Requires=com.hatch.host-path-setup.service
+PartOf=hatch-rv.target
+
+[Service]
+# Keep this unit's storage cost attributable. Without IO accounting the
+# kernel counters vanish with the cgroup when the unit stops, so a
+# short-lived unit's IO can only ever be measured while it is still
+# running -- which is exactly when nobody is looking.
+IOAccounting=true
+Type=simple
+User=${rescue_user}
+SupplementaryGroups=systemd-journal ${proxy_clients_group} ${shared_group} ${daemon_group}
+UMask=0027
+Slice=hatch-runtime.slice
+OOMScoreAdjust=-1000
+Nice=-20
+CPUWeight=10000
+IOWeight=1000
+CapabilityBoundingSet=
+AmbientCapabilities=
+PrivateTmp=true
+PrivateDevices=true
+ProtectControlGroups=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectHome=tmpfs
+LockPersonality=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+SystemCallArchitectures=native
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+ProtectSystem=strict
+ProtectProc=invisible
+ProcSubset=all
+ReadWritePaths=${var_lib_dir} /run/hatch/rescue
+BindReadOnlyPaths=${jarvis_home}
+Environment=JARVIS_RESCUE_SIGNAL_SOCK=/run/hatch/rescue/rescue-signal.sock
+Environment=JARVIS_RESCUE_SYSTEMCTL_SOCK=/run/hatch/rescue/systemctl.sock
+Environment=JARVIS_RESCUE_HOME_USAGE_SOCK=/run/hatch/disk-usage/disk-usage.sock
+ReadOnlyPaths=/etc/os-release /etc/resolv.conf
+InaccessiblePaths=-/etc/hatch/credentials -${jarvis_home}/.ssh -${jarvis_home}/workspace/.ssh -/etc/tls
+Environment=JARVIS_BIN_DIR=${host_bin_dir}
+Environment=PATH=${host_bin_dir}:${image_bin_dir}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+EnvironmentFile=${env_file}
+EnvironmentFile=-${env_override_file}
+Environment=GIT_TERMINAL_PROMPT=0
+Environment=GIT_ASKPASS=/bin/false
+Environment=GIT_CONFIG_GLOBAL=/dev/null
+Environment=GIT_SSH_COMMAND=/bin/false
+Environment=GIT_SSH=/bin/false
+Environment=SSH_AUTH_SOCK=
+WorkingDirectory=${jarvis_home}
+# Sweep stale rescue sockets from a prior boot before the daemon
+# binds. hatch-rescue binds at /run/hatch/rescue/ws.sock (WebSocket)
+# and /run/hatch/rescue/http-api.sock (operator HTTP API); a leftover
+# inode from a crashed previous instance would produce EADDRINUSE on
+# bind. Best-effort `rm -f`: the legitimate files are owned by
+# hatch-rescue-agent; if a stranger somehow placed a stranger-owned
+# file here this rm will fail and the daemon's own bind path will
+# surface the error.
+ExecStartPre=+/usr/bin/rm -f /run/hatch/rescue/ws.sock
+ExecStartPre=+/usr/bin/rm -f /run/hatch/rescue/http-api.sock
+ExecStart=${host_bin_dir}/hatch-rescue
+SyslogIdentifier=hatch-rescue
+Restart=always
+RestartSec=1
+TimeoutStopSec=60
+LimitNOFILE=65535
+
+[Install]
+WantedBy=hatch-rv.target

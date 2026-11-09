@@ -1,0 +1,55 @@
+[Unit]
+Description=com.hatch.blob-proxy
+ConditionKernelCommandLine=!jarvis_cvm=true
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${host_bin_dir}/hatch-blob-proxy
+After=com.hatch.blob-proxy.socket com.hatch.vault.service
+Requires=com.hatch.blob-proxy.socket
+Wants=com.hatch.vault.service
+PartOf=hatch-rv.target
+Before=com.hatch.daemon.service
+
+[Service]
+Type=exec
+DynamicUser=yes
+User=hatch-blob-proxy
+Group=hatch-blob-proxy
+Slice=hatch-host.slice
+UMask=0077
+NoNewPrivileges=true
+PrivateDevices=true
+PrivateTmp=true
+# PeerAcl needs the pinned host cgroup of each Unix-socket caller.
+ProtectProc=default
+ProcSubset=all
+ProtectSystem=strict
+ProtectHome=true
+ProtectControlGroups=true
+ProtectHostname=true
+ProtectKernelLogs=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+IPAddressDeny=any
+IPAddressAllow=169.254.0.24/32
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+CapabilityBoundingSet=
+InaccessiblePaths=-/etc/hatch/credentials -/etc/tls -/var/lib/hatch -/hatch -/var/lib/hatch-runtime -/var/lib/vol -/run/hatch/vault
+Environment=RUST_LOG=info
+UnsetEnvironment=HTTP_PROXY HTTPS_PROXY ALL_PROXY NO_PROXY http_proxy https_proxy all_proxy no_proxy DATABASE_URL
+WorkingDirectory=/
+ExecStart=${host_bin_dir}/hatch-blob-proxy --socket /run/hatch/blob-proxy/blob.sock
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hatch-blob-proxy
+Restart=on-failure
+RestartSec=1
+TimeoutStopSec=40
+MemoryMax=256M
+CPUQuota=200%
+TasksMax=128
+LimitNOFILE=4096
+LimitCORE=0

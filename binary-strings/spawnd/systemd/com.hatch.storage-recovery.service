@@ -1,0 +1,52 @@
+[Unit]
+Description=com.hatch.storage-recovery
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${host_bin_dir}/hatch-storage-recovery
+After=com.hatch.storage-recovery.socket com.hatch.storage-recovery-filesystem.socket com.hatch.healthd.service
+Wants=com.hatch.storage-recovery-filesystem.socket com.hatch.healthd.service
+Requires=com.hatch.storage-recovery.socket
+
+[Service]
+Type=simple
+User=${rescue_user}
+Group=${rescue_group}
+Slice=hatch-host.slice
+UMask=0077
+Sockets=com.hatch.storage-recovery.socket
+NoNewPrivileges=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+PrivateTmp=true
+PrivateDevices=true
+PrivateNetwork=true
+ProtectProc=invisible
+ProcSubset=pid
+ProtectSystem=strict
+ProtectHome=tmpfs
+InaccessiblePaths=-/etc/hatch -/hatch -${var_lib_dir} -${jarvis_home} -/etc/tls
+ProtectControlGroups=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectClock=true
+ProtectHostname=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+RestrictNamespaces=true
+RestrictAddressFamilies=AF_UNIX
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+# This isolated service cannot read /etc/hatch, so provide the baseline log
+# level directly while leaving higher verbosity available through a drop-in.
+Environment=RUST_LOG=info
+Environment=PATH=${host_bin_dir}:${image_bin_dir}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=${host_bin_dir}/hatch-storage-recovery
+SyslogIdentifier=hatch-storage-recovery
+Restart=on-failure
+RestartSec=2
+TimeoutStopSec=10
+LimitNOFILE=1024
+MemoryMax=128M

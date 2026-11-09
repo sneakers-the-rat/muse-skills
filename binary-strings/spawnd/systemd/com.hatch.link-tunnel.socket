@@ -1,0 +1,28 @@
+[Unit]
+# RV-coupled socket must skip the implicit early sockets.target phase.
+DefaultDependencies=no
+Description=com.hatch.link-tunnel socket
+ConditionPathExists=!${keep_services_down_early_marker}
+After=com.hatch.host-path-setup.service
+Requires=com.hatch.host-path-setup.service
+PartOf=com.hatch.link-tunnel.service hatch-rv.target
+
+[Socket]
+ListenStream=/run/hatch/tunnel/raw.sock
+DirectoryMode=0755
+SocketUser=root
+SocketGroup=root
+# 0666 matches the authd.sock / telemetry.sock pattern. The real access
+# control is the SO_PEERCRED PeerAcl in the Rust process (TUNNEL_PEER_ACL:
+# root + the ingress-rev-proxy cgroup only), enforced before any tunnel
+# bytes are read — not the socket file mode. ingress-rev-proxy is the sole
+# dialer (Noise /link-tunnel bridge); the socket mode stays permissive so a
+# service-user rename can't silently break admission.
+SocketMode=0666
+FileDescriptorName=link-tunnel
+Service=com.hatch.link-tunnel.service
+RemoveOnStop=true
+ExecStartPost=+/bin/chmod 0666 /run/hatch/tunnel/raw.sock
+
+[Install]
+WantedBy=hatch-rv.target

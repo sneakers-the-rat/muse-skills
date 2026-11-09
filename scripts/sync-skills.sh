@@ -30,7 +30,12 @@
 #                       binary, and the byte offset each file came from).
 #                       extract_binary_strings.py adds topical string
 #                       curations under binary-strings/ (registered in
-#                       binary-map.json with a "topic" name), and
+#                       binary-map.json with a "topic" name);
+#                       extract_spawnd_units.py extracts the systemd
+#                       unit texts embedded in a second binary, the
+#                       spawnd provisioner, into
+#                       binary-strings/spawnd/systemd/ (spawnd gets its
+#                       own bin entry in binary-map.json); and
 #                       build_topics.py gathers topics/<topic>/ symlink
 #                       views over the whole archive.
 #                       New files landing in binary-etc/ are UNSORTED:
@@ -218,6 +223,7 @@ mirror "$HOME/docs" "$REPO/docs"
 python3 "$REPO/scripts/extract_binary_files.py"
 python3 "$REPO/scripts/extract_binary_strings.py"
 python3 "$REPO/scripts/extract_binary_persona.py"
+python3 "$REPO/scripts/extract_spawnd_units.py"
 python3 "$REPO/scripts/build_topics.py"
 
 # binary-etc/ holds extracted files the user has not sorted yet. Updates

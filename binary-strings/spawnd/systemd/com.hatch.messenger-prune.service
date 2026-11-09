@@ -1,0 +1,41 @@
+[Unit]
+Description=com.hatch.messenger-prune
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${var_lib_dir}/messenger/state.db
+After=hatch-rv.target com.hatch.host-path-setup.service com.hatch.privsep-worker-prep.service
+Requires=com.hatch.host-path-setup.service com.hatch.privsep-worker-prep.service
+PartOf=hatch-rv.target
+
+[Service]
+Type=oneshot
+User=${messenger_user}
+Group=${messenger_group}
+Slice=hatch-runtime.slice
+UMask=0007
+NoNewPrivileges=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+PrivateTmp=true
+PrivateDevices=true
+ProtectControlGroups=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+LockPersonality=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+SystemCallArchitectures=native
+RestrictNamespaces=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ProtectSystem=strict
+ProtectProc=default
+ProcSubset=all
+ReadWritePaths=${var_lib_dir}/messenger
+InaccessiblePaths=-/etc/hatch/credentials
+Environment=JARVIS_BIN_DIR=${host_bin_dir}
+Environment=JARVIS_VAR_LIB_DIR=${var_lib_dir}
+Environment=PATH=${host_bin_dir}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+EnvironmentFile=${env_file}
+EnvironmentFile=-${env_override_file}
+WorkingDirectory=/
+ExecStart=${image_bin_dir}/messenger-cli --state-dir ${var_lib_dir}/messenger prune

@@ -1,0 +1,51 @@
+[Unit]
+Description=com.hatch.config-proxy
+# The cache survives Stefi and telemetry restarts; readiness is local.
+After=com.hatch.config-proxy.socket com.hatch.stefi-proxy.socket com.hatch.telemetry-proxy.socket
+Requires=com.hatch.config-proxy.socket
+Wants=com.hatch.stefi-proxy.socket com.hatch.telemetry-proxy.socket
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${host_bin_dir}/hatch-config-proxy
+
+[Service]
+# Readiness and reconnects happen asynchronously after exec, never in boot jobs.
+Type=exec
+DynamicUser=yes
+User=hatch-config-proxy
+Group=hatch-config-proxy
+Slice=hatch-host.slice
+UMask=0077
+NoNewPrivileges=true
+PrivateDevices=true
+PrivateTmp=true
+# PeerAcl reads the caller's pidfd-fenced host cgroup identity.
+ProtectProc=default
+ProcSubset=all
+ProtectSystem=strict
+ProtectHome=true
+ProtectControlGroups=true
+ProtectHostname=true
+ProtectKernelLogs=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+RestrictAddressFamilies=AF_UNIX
+RestrictNamespaces=true
+RestrictRealtime=true
+LockPersonality=true
+CapabilityBoundingSet=
+InaccessiblePaths=-/etc/hatch/credentials -/etc/tls -/var/lib/hatch -/hatch -/var/lib/hatch-runtime
+Environment=RUST_LOG=info
+UnsetEnvironment=HTTP_PROXY HTTPS_PROXY ALL_PROXY NO_PROXY http_proxy https_proxy all_proxy no_proxy
+WorkingDirectory=/
+ExecStart=${host_bin_dir}/hatch-config-proxy --socket /run/hatch/config-proxy/config.sock
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hatch-config-proxy
+Restart=always
+RestartSec=1
+TimeoutStopSec=60
+LimitNOFILE=4096
+LimitCORE=0
+
+[Install]
+WantedBy=multi-user.target

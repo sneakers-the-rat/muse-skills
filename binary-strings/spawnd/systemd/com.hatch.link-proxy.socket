@@ -1,0 +1,29 @@
+[Unit]
+# RV-coupled socket must skip the implicit early sockets.target phase.
+DefaultDependencies=no
+Description=com.hatch.link-proxy socket
+ConditionPathExists=!${keep_services_down_early_marker}
+After=com.hatch.host-path-setup.service
+Requires=com.hatch.host-path-setup.service
+PartOf=com.hatch.link-tunnel.service hatch-rv.target
+
+[Socket]
+ListenStream=/run/hatch/tunnel/link-proxy.sock
+DirectoryMode=0755
+SocketUser=root
+SocketGroup=root
+# 0666 matches raw.sock. The real access control is the SO_PEERCRED PeerAcl in
+# the Rust relay (LINK_PROXY_PEER_ACL: root + the Sentinel cgroup only),
+# enforced before any bytes are read — not the socket file mode. Sentinel, the
+# sole intended dialer, runs as the non-root hatch-sentinel user, so a
+# restrictive mode would reject it at the filesystem layer before the peer-ACL's
+# cgroup rule could admit it. Socket activation with this mode also removes the
+# runtime chmod/chgrp the relay used to do, which is why the service no longer
+# needs SupplementaryGroups.
+SocketMode=0666
+FileDescriptorName=link-proxy
+Service=com.hatch.link-tunnel.service
+RemoveOnStop=true
+
+[Install]
+WantedBy=hatch-rv.target

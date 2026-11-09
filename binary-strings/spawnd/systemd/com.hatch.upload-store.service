@@ -1,0 +1,61 @@
+[Unit]
+Description=com.hatch.upload-store
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${host_bin_dir}/hatch-upload-store
+ConditionPathExists=/usr/lib/hatch/upload-store-home.tmpfiles
+# Order after the concrete setup/mount dependencies, never the target that
+# wants this service (that reverse edge creates an ordering cycle).
+After=com.hatch.host-path-setup.service com.hatch.upload-store.socket
+Requires=com.hatch.host-path-setup.service com.hatch.upload-store.socket
+RequiresMountsFor=/hatch
+PartOf=hatch-rv.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+Slice=hatch-host.slice
+UMask=0077
+Sockets=com.hatch.upload-store.socket
+IOAccounting=true
+NoNewPrivileges=true
+CapabilityBoundingSet=CAP_DAC_READ_SEARCH CAP_DAC_OVERRIDE CAP_CHOWN CAP_FOWNER CAP_SETUID CAP_SETGID CAP_SYS_CHROOT
+# Keep the UID switch available through systemd's seccomp setup. Both the
+# store and one-shot publisher clear every capability after dropping root.
+AmbientCapabilities=CAP_SETUID
+PrivateTmp=true
+PrivateDevices=true
+PrivateNetwork=true
+ProtectSystem=strict
+ProtectHome=true
+# Both pinned descriptors must stay on the SAME mount. Separate writable
+# binds for the staging and home directories would turn rename into EXDEV.
+ReadWritePaths=/hatch /run/hatch/upload-store
+InaccessiblePaths=-/etc/hatch
+ProtectControlGroups=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectClock=true
+ProtectHostname=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+# RestrictSUIDSGID's openat2 filter returns ENOSYS on supported kernels.
+# Publication requires openat2 confinement and never falls back to openat.
+RestrictRealtime=true
+RestrictNamespaces=true
+RestrictAddressFamilies=AF_UNIX
+SystemCallArchitectures=native
+Environment=PATH=${host_bin_dir}:${image_bin_dir}:/usr/bin:/bin
+# Validate the image-created private directory after the RV mounts.
+ExecStart=${host_bin_dir}/hatch-upload-store
+SyslogIdentifier=hatch-upload-store
+Restart=on-failure
+RestartSec=2
+KillMode=control-group
+TimeoutStopSec=15
+LimitNOFILE=256
+MemoryMax=256M
+
+[Install]
+WantedBy=hatch-rv.target

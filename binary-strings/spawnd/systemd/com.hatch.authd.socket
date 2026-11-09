@@ -1,0 +1,25 @@
+[Unit]
+Description=com.hatch.authd socket
+ConditionPathExists=!${keep_services_down_early_marker}
+
+[Socket]
+ExecStartPre=+/usr/bin/install -d -m 0755 -o root -g root /run/hatch
+ExecStartPre=+/usr/bin/install -d -m 0755 -o root -g root /run/hatch/auth
+ListenStream=/run/hatch/auth/authd.sock
+DirectoryMode=0755
+SocketUser=${auth_proxy_user}
+SocketGroup=${shared_group}
+# FIXME(sandbox): world-connectable as a temporary measure for sandbox
+# container access. The container's user namespace mapping does not carry
+# host group memberships, so group-based socket permissions don't work
+# across the non-idmapped bind mount. Access control relies on the
+# application layer (SO_PEERCRED / unit allowlist). Revert to 0660 once
+# the sandbox UID mapping preserves group membership.
+SocketMode=0666
+RemoveOnStop=true
+# Stale default ACLs on upgraded hosts can override SocketMode. Reconcile the
+# bound socket mode explicitly after bind.
+ExecStartPost=+/bin/chmod 0666 /run/hatch/auth/authd.sock
+
+[Install]
+WantedBy=sockets.target

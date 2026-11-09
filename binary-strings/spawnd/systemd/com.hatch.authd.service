@@ -1,0 +1,93 @@
+[Unit]
+Description=com.hatch.authd
+# The stable listener preserves logging across sink restarts. Authentication
+# readiness must not wait for telemetry/Stefi to finish starting or stopping.
+# Retain the image's env/egress-policy initialization, previously inherited
+# through the telemetry service. Live installs may omit this image-only unit.
+After=network-online.target hatch-init.service com.hatch.telemetry-proxy.socket
+Wants=network-online.target hatch-init.service com.hatch.telemetry-proxy.service
+After=com.hatch.authd.socket
+Requires=com.hatch.authd.socket
+# Only local listener availability is ordered; WWW readiness belongs to requests.
+After=com.hatch.www-proxy.socket
+Requires=com.hatch.www-proxy.socket
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${host_bin_dir}/hatch-authd
+
+[Service]
+# Reload rebuilds RV stores and authorization caches without replacing the
+# process. READY follows initialization and inline honeypot setup.
+Type=notify-reload
+ReloadSignal=SIGHUP
+NotifyAccess=main
+TimeoutStartSec=90
+User=${auth_proxy_user}
+Group=${auth_proxy_user}
+SupplementaryGroups=${daemon_group} ${proxy_clients_group}
+Slice=hatch-host.slice
+PermissionsStartOnly=true
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+# Unit-identity ACLs require reading /proc/<pid>/cgroup for peer processes.
+ProtectProc=default
+ProcSubset=all
+ProtectSystem=strict
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadWritePaths=/run ${var_lib_dir}
+InaccessiblePaths=-/etc/hatch/credentials
+Environment=JARVIS_BIN_DIR=${host_bin_dir}
+Environment=PATH=${host_bin_dir}:${image_bin_dir}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=JARVIS_AUTHD_ALLOWED_USERS=root
+Environment=JARVIS_AUTHD_ALLOWED_GROUPS=${shared_group}
+Environment=JARVIS_AUTHD_ALLOWED_CGROUP_PATHS=/hatch.slice/hatch-runtime.slice/com.hatch.daemon.service,/hatch.slice/hatch-runtime.slice/com.hatch.runtime-cell.service,/hatch.slice/hatch-runtime.slice/com.hatch.safety.service,/hatch.slice/hatch-runtime.slice/com.hatch.rescue.service,/hatch.slice/hatch-host.slice/com.hatch.stefi-proxy.service,/hatch.slice/hatch-host.slice/com.hatch.cagi-proxy.service,/hatch.slice/hatch-host.slice/com.hatch.inference-proxy.service,/hatch.slice/hatch-runtime.slice/com.hatch.sentinel.service,/system.slice/com.hatch.db-preflight.service${privsep_authd_cgroup_paths},/hatch.slice/hatch-core.slice/com.hatch.healthd.service,/hatch.slice/hatch-runtime.slice/com.hatch.messengerd.service,/hatch.slice/hatch-runtime.slice/com.hatch.igdd.service
+Environment=JARVIS_AUTHD_INGRESS_ALLOWED_USERS=hatch-proxy-noise-ingress
+Environment=JARVIS_AUTHD_INGRESS_ALLOWED_CGROUP_PATHS=/hatch.slice/hatch-host.slice/com.hatch.ingress-rev-proxy.service
+Environment=JARVIS_AUTHD_SURROGATE_ALLOWED_CGROUP_PATHS=${privsep_authd_surrogate_cgroup_paths}
+Environment=JARVIS_AUTHD_STRIPE_LINK_OAUTH_ALLOWED_CGROUP_PATHS=${privsep_authd_stripe_link_oauth_cgroup_paths}
+Environment=JARVIS_AUTHD_SHOP_PAY_OAUTH_ALLOWED_CGROUP_PATHS=${privsep_authd_shop_pay_oauth_cgroup_paths}
+Environment=JARVIS_AUTHD_SHOP_PAY_WALLET_OAUTH_ALLOWED_CGROUP_PATHS=${privsep_authd_shop_pay_wallet_oauth_cgroup_paths}
+# Per-worker connector-document scope. Binds a single-purpose direct-OAuth
+# worker's cgroup to the exact authd auth-file documents it may read from the
+# credential-vending routes (/v1/auth-file/get and /v1/auth-file/list), so a
+# compromised worker cannot read a foreign connector's token. Generated from the
+# privsep registry's per-tool `authd_connectors` as a JSON object
+# ({"<cgroup-anchor>":["<name>",...]}); `{}` when no tool is scoped. Single-quoted
+# so systemd's Environment= quote-processing preserves the JSON double quotes.
+Environment=JARVIS_AUTHD_CONNECTOR_ACCESS='${privsep_authd_connector_access}'
+Environment=JARVIS_STEFI_PROXY_SOCK=/run/hatch/proxy/stefi.sock
+# CAGI brokers OAuth code exchange and refresh for the in-VM Google connectors,
+# so Meta's client_secret never reaches this VM. authd is the only non-privsep
+# CAGI caller; hatch-cagi-proxy admits this unit through HOST_SERVICE_ANCHORS
+# and scopes it to the ten Google token/refresh routes (AUTHD_CAGI_GRANTS).
+# The return leg is already allowed: cagi-proxy reads the user token back
+# through JARVIS_AUTHD_ALLOWED_CGROUP_PATHS above.
+Environment=JARVIS_CAGI_PROXY_SOCK=/run/hatch/cagi-proxy/cagi.sock
+# Pin JARVIS_VAR_LIB_DIR to the template-rendered ${var_lib_dir} so authd's
+# HatchPaths::from_env() resolves the same connector/credentials directories
+# that the ExecStartPre lines below create. Without this, authd would rely on
+# /etc/hatch/env round-tripping the value, which can drift if the env file is
+# hand-edited post-install (template stays baked while authd reads new value).
+Environment=JARVIS_VAR_LIB_DIR=${var_lib_dir}
+Environment=JARVIS_AUTHD_STATE_DIR=${var_lib_dir}/auth
+EnvironmentFile=${env_file}
+EnvironmentFile=-${env_override_file}
+UnsetEnvironment=HTTP_PROXY HTTPS_PROXY ALL_PROXY NO_PROXY http_proxy https_proxy all_proxy no_proxy
+StateDirectoryMode=0700
+WorkingDirectory=/
+# /var/lib/hatch/auth is authd's owner-only credential root. It retains the
+# ${auth_proxy_user}:${shared_group} identity for ownership accounting, but
+# consumers, including Sentinel's provider-registry mirror, use the authd UDS.
+# The helper opens the auth root without following links, temporarily makes the
+# opened directory root-only, and prepares its direct children through that
+# held descriptor before handing it back to authd.
+ExecStartPre=+${host_bin_dir}/spawnd prepare-authd-state --var-lib-dir ${var_lib_dir}
+ExecStart=${host_bin_dir}/hatch-authd --socket /run/hatch/auth/authd.sock
+SyslogIdentifier=hatch-authd
+Restart=always
+RestartSec=1
+TimeoutStopSec=60
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

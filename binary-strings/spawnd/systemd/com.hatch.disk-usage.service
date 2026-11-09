@@ -1,0 +1,61 @@
+[Unit]
+Description=com.hatch.disk-usage
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${host_bin_dir}/hatch-rescuectl
+After=hatch-rv.target com.hatch.host-path-setup.service com.hatch.disk-usage.socket
+Requires=com.hatch.host-path-setup.service com.hatch.disk-usage.socket
+RequiresMountsFor=${jarvis_home}
+PartOf=hatch-rv.target
+
+[Service]
+# Keep this unit's storage cost attributable. Without IO accounting the
+# kernel counters vanish with the cgroup when the unit stops, so a
+# short-lived unit's IO can only ever be measured while it is still
+# running -- which is exactly when nobody is looking.
+IOAccounting=true
+Type=simple
+User=root
+Group=root
+Slice=hatch-host.slice
+UMask=0077
+Sockets=com.hatch.disk-usage.socket
+NoNewPrivileges=true
+# The helper reads metadata below the fixed Hatch home even when a subtree is
+# not searchable by hatch-rescue-agent. It accepts no caller-supplied path and
+# keeps credentials explicitly hidden inside its private mount namespace.
+CapabilityBoundingSet=CAP_DAC_READ_SEARCH
+AmbientCapabilities=CAP_DAC_READ_SEARCH
+PrivateTmp=true
+PrivateDevices=true
+PrivateNetwork=true
+ProtectProc=default
+ProcSubset=all
+ProtectSystem=strict
+ProtectHome=tmpfs
+BindReadOnlyPaths=${jarvis_home}
+InaccessiblePaths=-/etc/hatch -/hatch -${var_lib_dir} -${jarvis_home}/.ssh -${jarvis_home}/workspace/.ssh
+ProtectControlGroups=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectClock=true
+ProtectHostname=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+RestrictNamespaces=true
+RestrictAddressFamilies=AF_UNIX
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+Nice=19
+IOSchedulingClass=idle
+Environment=PATH=${host_bin_dir}:${image_bin_dir}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=${host_bin_dir}/hatch-rescuectl home-usage-helper --home-dir ${jarvis_home} --socket /run/hatch/disk-usage/disk-usage.sock
+SyslogIdentifier=hatch-disk-usage
+Restart=on-failure
+RestartSec=2
+TimeoutStopSec=10
+LimitNOFILE=65535
+MemoryMax=512M

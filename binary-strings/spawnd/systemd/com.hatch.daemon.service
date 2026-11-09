@@ -1,0 +1,235 @@
+[Unit]
+Description=com.hatch.daemon
+StartLimitIntervalSec=300
+StartLimitBurst=20
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${host_bin_dir}/hatch
+# Pre-RV daemon: starts at multi-user.target inside the pre-booted runtime
+# cell, runs the identity-free startup phases (fd claim, executor resolve,
+# metrics/health accept loop; config + models load post-barrier — home.yaml
+# is RV-backed), then PARKS at the
+# AwaitRvIdentity barrier until com.hatch.rv-graft.service writes
+# the boot-id-stamped rv-identity-ready into the resume dir post-mount
+# (visible here through the /run/hatch/resume bridge). No PG contact, no
+# /home/hatch reads, and no root-ensure happen before that marker, so
+# starting early is safe and the pre-bound sockets' backlog drains as soon
+# as the RV mounts.
+After=network-online.target com.hatch.runtime-cell.service com.hatch.authd.socket com.hatch.cagi-proxy.socket com.hatch.stefi-proxy.socket com.hatch.telemetry-proxy.socket com.hatch.sentinel-egress-approvals-admin.socket com.hatch.sentinel-daemon-egress-approvals.socket com.hatch.sentinel-http-api.socket com.hatch.privsep-test-fully-isolated.socket com.hatch.wai-privsep.socket com.hatch.daemon.socket com.hatch.execd.socket
+# systemd reverses After= during stop. Keep the serving processes alive while
+# the daemon drains runtime checkpoints and forwarded ingest RPCs; ordering
+# only, so a proxy, noded, or Safety failure does not stop the daemon.
+#
+# com.hatch.safety.service is load-bearing on the START side too: the daemon's
+# Phase::SafetyIpcReady is FailClosed and dials /run/hatch/safety/security.sock.
+# That phase runs post-AwaitRvIdentity-barrier, and safety is itself RV-gated
+# (Requires=host-path-setup, WantedBy=hatch-rv.target), so the edge stays
+# ordering-only: hatch-rv.target starts safety at RV attach, before the parked
+# daemon's post-barrier phases dial it. A dead Safety still fails the daemon
+# closed on its own terms (FailClosed phase + Restart=always), never
+# unstartable.
+After=com.hatch.inference-proxy.service com.hatch.cagi-proxy.service com.hatch.stefi-proxy.service com.hatch.telemetry-proxy.service com.hatch.noded.service com.hatch.safety.service
+# Wants= carries only mount-independent units. The RV-gated sockets and
+# services (cagi-proxy, the sentinel trio, privsep-test, wai-privsep,
+# safety — all Requires=host-path-setup, WantedBy=hatch-rv.target) are
+# ordering-only in After= above: a Wants= on any of them would pull
+# host-path-setup and the RV mounts into the early boot transaction — the
+# cascade-failure mode documented in bundle-setup/AGENTS.md "systemd Boot
+# Ordering". They are started by their own hatch-rv.target enablement at RV
+# attach, before the parked daemon's post-barrier phases dial them.
+Wants=network-online.target com.hatch.runtime-cell.service com.hatch.authd.socket com.hatch.stefi-proxy.socket com.hatch.telemetry-proxy.socket com.hatch.execd.socket
+Requires=com.hatch.daemon.socket
+# A weak dependency keeps ordinary VMs startable when the CVM-only listener
+# condition-skips. On a CVM, acquire both socket units before claiming FDs.
+Wants=com.hatch.media-browser-callback.socket
+After=com.hatch.media-browser-callback.socket
+PartOf=com.hatch.runtime-cell.service
+# Stop-only coupling: PartOf= propagates stop/restart but never pulls this
+# unit into a start transaction, so `systemctl stop hatch.mount` still
+# SIGTERMs the daemon (running the bounded capture drain) while early boot
+# stays free of RV edges. PartOf= carries no ORDERING: the guarantee that
+# the drain finishes before PostgreSQL exits, the bridges tear down, and
+# the mounts unmount comes from the stop-only Before= edges on the RV-side
+# units (host-path-setup, rv-graft, the postgresql drop-in).
+PartOf=hatch-rv.target
+
+[Service]
+Sockets=com.hatch.daemon.socket com.hatch.media-browser-callback.socket com.hatch.voice-speak.socket com.hatch.meta-ai-search.socket
+# Keep this unit's storage cost attributable. Without IO accounting the
+# kernel counters vanish with the cgroup when the unit stops, so a
+# short-lived unit's IO can only ever be measured while it is still
+# running -- which is exactly when nobody is looking.
+IOAccounting=true
+# Type=notify with supervisor-relayed readiness: the unit's main pid is the
+# HOST-side namespace supervisor (the daemon child runs inside the cell and
+# joins the CELL's cgroup, so it can neither reach the host $NOTIFY_SOCKET nor
+# pass the NotifyAccess check). The in-cell daemon writes READY/STATUS/
+# WATCHDOG over a pre-fork pipe, and a dedicated RELAY PROCESS forked by the
+# supervisor forwards allowlisted messages (hatch-os sd_notify_relay). A
+# process rather than a supervisor thread by hard kernel constraints: the
+# supervisor cannot create threads after its deferred pid-ns entry, and a
+# multithreaded process cannot join the cell user namespace at all — both
+# manifested as ~90s start-timeout restart loops of a healthy daemon.
+# READY=1 is sent at the PARKED pre-RV-complete point — sockets claimed,
+# executor resolved, metrics accept loop live (config/models load
+# post-barrier; home.yaml is RV-backed) — NOT at execution-ready, so the
+# pre-RV boot transaction settles with the daemon parked and After= this
+# unit means "genuinely parked-ready" (the contract yolk's pre_rv_ready
+# check builds on).
+Type=notify
+# The relay is a distinct process (non-main pid), so `main` would reject its
+# datagrams. `all` admits only THIS unit's cgroup: the supervisor and the
+# relay. In-cell processes live in the runtime-cell unit's cgroup and cannot
+# reach the socket, and the relay's message allowlist (READY/STATUS/WATCHDOG
+# only) still bounds content.
+NotifyAccess=all
+# Hang detector, petted from an in-daemon interval task (period =
+# WatchdogSec/3) relayed the same way. Especially valuable while parked
+# pre-RV: a wedged tokio runtime stops petting and systemd restarts the unit.
+WatchdogSec=60
+Slice=hatch-runtime.slice
+# The daemon child joins the runtime cell cgroup for eBPF egress
+# interception. Delegate=yes tells systemd to expect processes
+# leaving this service's cgroup scope.
+Delegate=yes
+UMask=0007
+# Both supervisor and child enter the cell's user namespace
+# (same-uid ptrace_may_access). PR_SET_DUMPABLE on the child
+# satisfies pidfd_getfd; CAP_SYS_PTRACE is not needed.
+CapabilityBoundingSet=~CAP_SYS_PTRACE
+# HARD core limit of zero: this process tree must never produce a core file.
+# The daemon child is PR_SET_DUMPABLE(1) for the supervisor's pidfd_getfd, so a
+# core of it is a verbatim dump of conversations, tokens, and credentials, and
+# the kernel writes it into the daemon's cwd (inside the cell) owned by the same
+# uid cell root runs as. The rlimit hook in daemon_guard.bpf.c is what actually
+# stops a cell process from provoking one; this is the belt to that suspenders.
+# Zero as the HARD limit specifically: cell root can raise a soft limit up to
+# the hard one with no capability at all, but raising the hard limit needs
+# CAP_SYS_RESOURCE in the INITIAL user namespace, which the cell user namespace
+# does not confer. Caveat worth knowing before relying on this alone: if
+# kernel.core_pattern is ever a pipe, do_coredump() ignores RLIMIT_CORE
+# entirely (fs/coredump.c) and only the BPF hook holds.
+LimitCORE=0:0
+# The daemon controller enters the runtime-cell namespaces from the host, so it
+# does not inherit nspawn's seccomp filter. Apply the same io_uring denylist
+# here so hatch daemon, hatch-execd, and tool children cannot use io_uring.
+SystemCallFilter=~io_uring_setup io_uring_enter io_uring_register
+SystemCallErrorNumber=EPERM
+ReadWritePaths=${jarvis_home} /run/hatch
+ReadWritePaths=${runtime_cell_dir}
+InaccessiblePaths=-/etc/hatch/credentials
+# Bounded defense-in-depth storage-open schema wait. Normal boot keeps the
+# daemon at AwaitRvIdentity until rv-graft observes the current candidate
+# preflight proof. This budget protects abnormal/direct starts and incomplete
+# recovery instead of allowing them to exit-loop into StartLimitBurst. Missing
+# startup tables re-probe every 500ms and fail closed at the deadline.
+Environment=HATCH_STORAGE_OPEN_SCHEMA_WAIT_MS=90000
+Environment=JARVIS_SECURITY_SOCK=/run/hatch/safety/security.sock
+Environment=JARVIS_EGRESS_APPROVAL_EVENTS_SOCK=/run/hatch/daemon/egress-approvals-events.sock
+Environment=JARVIS_EGRESS_APPROVAL_ADMIN_SOCK=/run/hatch/sentinel/egress-approvals-admin.sock
+Environment=JARVIS_DAEMON_EGRESS_APPROVAL_SOCK=/run/hatch/sentinel/daemon-egress-approvals.sock
+Environment=JARVIS_MEMORY_SOCK=/run/hatch/memory/memory.sock
+Environment=JARVIS_RESCUE_SIGNAL_SOCK=/run/hatch/rescue/rescue-signal.sock
+Environment=HATCH_DB_PREFLIGHT_SYSTEMD_GATE=1
+# Sandbox API socket for in-cell tool subprocesses. The daemon's
+# JARVIS_* passthrough in exec_prep.rs forwards this to every spawned
+# tool, which the shared `hatch_networking::sandbox_api` helper picks
+# up to dial the narrow auth-free UDS. This is set unconditionally so
+# tools work whether the daemon HTTP listener is on TCP or UDS; on
+# Linux, daemon startup fails closed if this env is present but the
+# sandbox listener cannot bind (handled in daemon_service.rs). Note:
+# /etc/hatch/env.override (loaded below via EnvironmentFile=-) takes
+# precedence per systemd's last-wins EnvironmentFile semantics, so an
+# operator can repoint to a different sandbox socket for live
+# debugging without rebuilding the unit.
+Environment=JARVIS_SANDBOX_API_SOCK=/run/hatch/sandbox-api/api.sock
+EnvironmentFile=${env_file}
+EnvironmentFile=-${runtime_cell_dir}/guest.env
+EnvironmentFile=-${env_override_file}
+# Purge any stale WASA secret or user-LID entries from env.override so a
+# left-over line cannot re-light the in-cell LocalSealer after the daemon
+# seam has been flipped to the Remote keyd backend. The fleet env.override
+# self-healing scrub (REMOVED_RUNTIME_ENV_KEYS enrollment) is the primary
+# mechanism; this UnsetEnvironment is defense-in-depth on the daemon unit.
+# Isolation is NOT achieved while WASA_ROOT_SECRET remains in env.override —
+# this flip must not land before the fleet scrub enrollment is in the image.
+UnsetEnvironment=WASA_ROOT_SECRET WASA_USER_LID
+Environment=JARVIS_AUTHD_SOCK=/run/hatch/auth/authd.sock
+Environment=HATCH_DB_PREFLIGHT_SYSTEMD_GATE=1
+Environment=HATCH_DB_PREFLIGHT_RUNTIME_PROOF_PATH=/run/hatch/runtime-cell/postgres-startup-preflight-success.json
+# The daemon-side view of the resume-state dir: /run/hatch/resume is the cell
+# bind that rv-graft overlays with the host's /hatch/data/resume at mount time
+# (host units keep using /hatch/data/resume — same files through the bind; see
+# htch-runtime.nspawn).
+Environment=HATCH_RESUME_DIR=/run/hatch/resume
+# Host-side controller for the guest daemon inside the already-booted runtime cell.
+#
+# RT-3 lifecycle handoff: control-daemon.sh reads the boot/lifecycle keys as
+# ONE FILE PER KEY from root-owned /run/hatch/daemon-ctl/env/ and exports an
+# explicit allowlist (no shell evaluation). Deliberately NOT LoadCredential=:
+# systemd materializes credentials once, when the unit's first process
+# spawns, but every key here is produced DURING this very start by
+# `spawnd emit-daemon-lifecycle start-observed` inside ExecStart, and all are
+# optional per boot path — LoadCredential=id:path would read stale/absent
+# values or fail a healthy pre-RV boot closed. The security property
+# LoadCredential would have bought (no untrusted-writable path component, no
+# sourcing) is delivered by the root-owned daemon-ctl dir + the allowlisted
+# raw-value export loop; the retired /run/hatch/daemon/daemon-lifecycle-env.sh
+# (a root-sourced file in a uid-131072-owned dir) must never come back.
+ExecStart=${runtime_cell_dir}/control-daemon.sh
+# ExecStop= runs while ExecStart is still alive, before systemd delivers
+# KillSignal=SIGTERM. Publish the host-owned fence here so it is active before
+# the daemon enqueues service.notice and the client starts reconnecting. The
+# runtime-cell stop hook republishes it later as defense in depth.
+ExecStop=+${runtime_cell_dir}/stop.sh --publish-drain-fence-only
+# A daemon-only restart does not run runtime-cell pre-start. Reopen admission
+# only after this Type=notify unit has reached READY; replacement teardown does
+# not restart the PartOf= child, so its fence remains until the next cell start.
+ExecStartPost=+/bin/rm -f ${runtime_cell_drain_file}
+SyslogIdentifier=hatch-daemon
+Restart=always
+RestartSec=1
+KillMode=mixed
+# The stop path's waits at their defaults, in order: 2s settle window + 5s
+# degraded-capture batch + 15s persist deadline (it includes up to 3s for
+# in-flight commentary) + 2s stream wait + 2s live-call turn stop + 1s
+# idle-checkpoint cleanup connection checkout + 3s idle-checkpoint cleanup
+# hard cap + 10s handoff seal + 10s CHECKPOINT flush + 5s bounded syncfs +
+# 2s share-shadow cancellation settlement + 1s memory-preparation stop + 2s
+# shutdown-event flush + 10s telemetry producer drain + 5s telemetry-proxy
+# flush + 2s storage close = 77s. The share-shadow graceful window is a 5s
+# stop-signal deadline overlapped with the earlier checkpoint preparation, not
+# another serial wait before the handoff seal. Other waits have no deadline,
+# restart-recovery worker and the begin-drain request to execd before the
+# settle window, the write or clear of the live call's restart record, the
+# joins of two cancelled background workers after the cancel, and the tokio
+# runtime drop at exit, which joins every blocking thread, including a
+# syncfs call its 5s deadline abandoned. This limit is below the sum, so a
+# stop whose waits add up past 60s is force-killed: every listed wait at its
+# limit except a 3s telemetry drain already adds up to 70s. The waits
+# through syncfs add up to 55s plus whatever the waits without a deadline
+# before it take; a kill after that lands in the memory stop, the event
+# flush, the telemetry drain, the telemetry-proxy flush, the storage close,
+# or the runtime drop.
+# A force-kill mid-persistence or mid-seal is exactly the failure mode the
+# bounded stop path removes, so keep this above the waits through syncfs.
+TimeoutStopSec=60
+LimitNOFILE=65535
+MemoryAccounting=true
+OOMScoreAdjust=-700
+ManagedOOMPreference=avoid
+# "/" and not ${jarvis_home}: WorkingDirectory= gains an implicit
+# RequiresMountsFor= on its path, and an RV path here would silently pull
+# home-hatch.mount (and the whole RV set) back into this unit's early-boot
+# start transaction — the exact cascade the pre-RV topology removes. The
+# daemon chdirs to ${jarvis_home} itself after the AwaitRvIdentity barrier.
+WorkingDirectory=/
+
+[Install]
+# Load-bearing beyond ordinary enablement: multi-user.target keeps this unit
+# (and its parked-READY Type=notify handshake) inside the initial boot
+# transaction, which is what the control plane's is-system-running health
+# gate waits on — the ONLY serialization of pre-RV prep before the volume
+# attaches. Moving activation to a path/timer/condition-deferred trigger
+# would silently push the prep onto the post-mount critical path (see
+# bundle-setup/AGENTS.md "systemd Boot Ordering").
+WantedBy=multi-user.target

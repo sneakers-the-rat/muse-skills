@@ -1,0 +1,36 @@
+[Unit]
+Description=com.hatch.host-path-setup
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${host_bin_dir}/hatch
+# Ordering contract: this oneshot creates the shared host runtime/state/log
+# dirs that RV-scoped services need, so it must run once the RV-backed mounts
+# are live. Order after the concrete mounts and RequiresMountsFor them -- do
+# NOT add After=hatch-rv.target: this unit is PartOf/WantedBy that target, so
+# ordering after it too forms a dependency cycle (the "reverse edge"), which
+# systemd breaks non-deterministically and could then run this before the
+# mounts are ready.
+RequiresMountsFor=${jarvis_home} ${var_lib_dir}
+After=home-hatch.mount var-lib-hatch.mount
+Wants=home-hatch.mount var-lib-hatch.mount
+PartOf=hatch-rv.target
+# Stop-only ordering (same rationale as com.hatch.rv-graft.service): the
+# daemon and cell must finish their bounded stop before the RV-side units
+# and mounts go down; inert at fresh boot because no RV job is queued then.
+Before=com.hatch.daemon.service com.hatch.runtime-cell.service
+
+[Service]
+Type=oneshot
+# Sticky boot gate: stay satisfied after a successful run so units (and
+# hatch-rv.target) ordered after this one see a stable success.
+RemainAfterExit=yes
+# Bound both boot and post-cleanup recovery attempts. The rescue broker waits
+# for this result before requeueing the runtime chain.
+TimeoutStartSec=90
+TimeoutStopSec=30
+ExecStart=+${host_bin_dir}/host-path-setup.sh
+# host-path owns view teardown for the whole RV lifecycle, including views
+# created by a direct preparation command outside the systemd gate.
+ExecStopPost=+${host_bin_dir}/spawnd release-privsep-worker-views
+
+[Install]
+WantedBy=hatch-rv.target

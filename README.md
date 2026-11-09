@@ -19,9 +19,11 @@ real skill file content, browsable in place:
 ## Extracted from the binary
 
 The remaining trees are **not** mirrors of on-disk directories. They
-are extracted from the `hatch` binary itself (`/opt/hatch/bin/hatch`),
-which embeds hundreds of prompt, skill and tool files that exist
-nowhere on disk. The extraction runs as part of every snapshot:
+are extracted from binaries themselves — chiefly the `hatch` binary
+(`/opt/hatch/bin/hatch`), which embeds hundreds of prompt, skill and
+tool files that exist nowhere on disk, and, for one tree, the
+`spawnd` provisioner (see the last bullet). The extraction runs as
+part of every snapshot:
 
 - `scripts/extract_binary_files.py` — the generic, exhaustive extractor. It
   censuses the filename markers in the binary, slices each embedded
@@ -65,6 +67,30 @@ nowhere on disk. The extraction runs as part of every snapshot:
   what was matched to find it — instead of a `source` path, and a
   `topic` field naming the curation, which is what tells a topical
   curation apart from the generic extraction.
+- `binary-strings/spawnd/systemd/` — the systemd unit texts embedded
+  in a **second binary**, `spawnd` (`/opt/hatch/bin/spawnd`), the host
+  provisioner. spawnd carries the host services' unit definitions as
+  strings and writes them out on the host; in this cell the binary is
+  the only copy — the units themselves (their `ExecStart` lines,
+  `SocketMode`, environment declarations such as
+  `JARVIS_TELEMETRY_PROXY_ALLOWED_USERS`, and the comments explaining
+  each socket's peer gating) exist nowhere on disk here. One file per
+  unit, named by unit name (e.g. `com.hatch.telemetry-proxy.service`).
+  Extracted by `scripts/extract_spawnd_units.py`, which segments the
+  embedded texts (each starts at a line exactly `[Unit]`; a unit's
+  file name comes from its `Description=` base plus its body
+  section's suffix, or, for a socket with a prose description, from
+  the stem of its own `Service=` line) using the shared machinery in
+  the binary-inspect library (`binary_inspect.extract.spawnd_units`).
+  Texts that name nothing recoverable — prose-described slices,
+  helper services and guest units — are skipped rather than filed
+  under a made-up name, and the run summary counts them. In
+  `binary-map.json` spawnd has its own bin entry next to hatch's,
+  with a unit count and one contents entry per unit file, so each
+  file can be re-sliced from the binary at its recorded offset.
+  Like the other trees, it refreshes on every snapshot: new and
+  changed units are written, and units that vanish from the binary
+  are removed.
 - `topics/` — topical views over the whole archive, built by
   `scripts/build_topics.py`: one directory per subject (e.g.
   `topics/bot_challenge/`), gathering that subject's files — wherever

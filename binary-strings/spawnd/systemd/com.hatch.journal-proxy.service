@@ -1,0 +1,54 @@
+[Unit]
+Description=com.hatch.journal-proxy
+# Mount-independent. The proxy keeps only its current-boot journal checkpoint
+# under /run and resumes from it across service restarts.
+After=systemd-journald.service com.hatch.telemetry-proxy.service
+Wants=systemd-journald.service com.hatch.telemetry-proxy.service
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${host_bin_dir}/hatch-journal-proxy
+
+[Service]
+Type=simple
+DynamicUser=yes
+User=hatch-journal-proxy
+Group=hatch-journal-proxy
+SupplementaryGroups=systemd-journal
+Slice=hatch-host.slice
+UMask=0077
+NoNewPrivileges=true
+PrivateDevices=true
+PrivateNetwork=true
+PrivateTmp=true
+# telemetry-proxy validates this unit through /proc/<pid>/cgroup.
+ProtectProc=default
+ProcSubset=all
+ProtectSystem=strict
+ProtectHome=true
+ProtectControlGroups=true
+ProtectHostname=true
+ProtectKernelLogs=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+RestrictAddressFamilies=AF_UNIX
+RestrictNamespaces=true
+RestrictRealtime=true
+LockPersonality=true
+CapabilityBoundingSet=
+RuntimeDirectory=hatch-journal-proxy
+RuntimeDirectoryMode=0700
+RuntimeDirectoryPreserve=yes
+InaccessiblePaths=-/etc/hatch/credentials -${env_file} -${env_override_file} -/var/lib/hatch
+Environment=RUST_LOG=info
+UnsetEnvironment=HTTP_PROXY HTTPS_PROXY ALL_PROXY NO_PROXY http_proxy https_proxy all_proxy no_proxy
+WorkingDirectory=/
+ExecStart=${host_bin_dir}/hatch-journal-proxy --telemetry-socket /run/hatch/journal-projection/telemetry.sock --checkpoint /run/hatch-journal-proxy/telemetry.cursor
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hatch-journal-proxy
+Restart=always
+RestartSec=1
+TimeoutStopSec=60
+LimitNOFILE=4096
+
+[Install]
+WantedBy=multi-user.target

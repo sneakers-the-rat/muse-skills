@@ -1,0 +1,97 @@
+[Unit]
+Description=com.hatch.rv-graft (RV identity graft for the pre-booted runtime)
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${host_bin_dir}/spawnd
+# Post-mount oneshot: once the reliable-volume binds are live it
+# waits for the candidate PostgreSQL startup-preflight proof, superficially
+# validates the resume handoff marker, ensures the os-intent ledger dir,
+# publishes an allowlisted lifecycle projection (wake identity plus the current
+# boot's Hatch-mount timestamp) through the runtime cell's read-only bind, and
+# writes /hatch/data/resume/rv-identity-ready (boot-id-stamped; cell-visible
+# through the resume bridge) — the file the parked daemon's AwaitRvIdentity
+# barrier polls for. Deep marker validation stays the daemon's job; this unit
+# releases identity only after authd, Safety security IPC, and schema readiness
+# are proved. Safety starts alongside the database path after host-path setup,
+# so this is a max-join rather than additive startup latency.
+#
+# DefaultDependencies=no per the companion rule in bundle-setup/AGENTS.md
+# "systemd Boot Ordering": as a hatch-rv.target member ordered after RV mounts,
+# the implicit early-phase edges would close a boot ordering cycle; the
+# explicit edges below keep it entirely inside the RV graph
+# (hatch-seed.service precedent).
+DefaultDependencies=no
+RequiresMountsFor=/home/hatch /var/lib/hatch
+# host-path-setup owns the ordinary root:root 0750 directory contract when no
+# sanitized lifecycle projection is present. Publish the group access only
+# after that setup, immediately before the ready marker. Direct install-time
+# reruns preserve an existing projection explicitly.
+#
+# authd starts pre-RV against the image-local /var/lib/hatch, then the bounded
+# authd-rv-rebind gate restarts it after the overmount and waits for the
+# replacement process's Type=notify READY. The parked daemon reads the
+# PostgreSQL credential immediately after this unit writes rv-identity-ready;
+# releasing in parallel can strand that read across the restart until its 20s
+# UDS deadline. Both units are hatch-rv.target members, so this adds no early-RV
+# pull or cycle.
+After=home-hatch.mount var-lib-hatch.mount hatch-seed.service com.hatch.host-path-setup.service com.hatch.authd-rv-rebind.service com.hatch.safety.service
+Wants=com.hatch.authd-rv-rebind.service com.hatch.safety.service
+PartOf=hatch-rv.target
+# Stop-only ordering: Before= reverses at stop so the daemon and cell exit
+# BEFORE this unit's ExecStopPost tears the bridges down (and, transitively via
+# the After= mount edges above, before the unmounts themselves). PartOf
+# alone propagates stop with no order — the unmount would race the daemon's
+# bounded drain and the sealed handoff could land on the bare bridge dir.
+# Inert at fresh boot: no RV job is queued in the boot transaction, and on a
+# later attach the daemon/cell are already active, so this edge never delays
+# their start.
+Before=com.hatch.daemon.service com.hatch.runtime-cell.service
+# A transient rebind or graft failure retries quickly. Bound bursts of fast
+# failures; the 300s database-proof wait below can age attempts out of this
+# window and intentionally keep retrying until preflight eventually succeeds.
+StartLimitIntervalSec=30min
+StartLimitBurst=10
+
+[Service]
+Type=oneshot
+# Belt for the graft's open-discipline: every read/open of a cell-writable
+# path is O_NONBLOCK+fstat-guarded in code. The only intentional wait is for
+# db-preflight's candidate proof (bounded to 300s); leave 30s for the graft
+# itself and systemd scheduling before failing closed.
+TimeoutStartSec=330
+# The stop path consists only of lazy unmounts plus a one-second-bounded PID 1
+# state probe. Never let a wedged helper inherit systemd's much larger default
+# stop timeout and reintroduce deployment downtime.
+TimeoutStopSec=5s
+# db-preflight owns restartable migration batches and may outlast this unit's
+# proof wait. A timed-out graft must resume waiting rather than permanently
+# strand the already-parked daemon after preflight eventually succeeds.
+Restart=on-failure
+RestartSec=1s
+# Sticky within the boot: stays "active (exited)" so hatch-rv.target sees a
+# stable success; re-runs (idempotently) if the target restarts.
+RemainAfterExit=yes
+# Wants=/After= settle even when a dependency fails or condition-skips. The
+# first operation inside spawnd verifies the sticky rebind proof. Immediately
+# before identity publication it bounded-waits for Safety to be active again,
+# so a routine one-second Safety restart does not consume rv-graft's retry
+# budget. Either failure attempts a failed rv_graft_completed row before
+# returning nonzero, keeping release fail closed without Requires= stop coupling.
+ExecStart=+${host_bin_dir}/spawnd rv-graft --jarvis-home ${jarvis_home}
+# Release rv-graft-owned bridges on every stop. The runtime-cell post-stop owns
+# the whole-home anchor and retired home-path publications because a standalone
+# rv-graft restart must preserve its shared peer while the cell is live; this
+# teardown releases those mounts defensively only when the cell is already
+# stopped. ExecStopPost also runs after a failed ExecStart, so partial bridge
+# state is cleaned between retries. It drops rv-graft-owned mounts before a
+# one-second-bounded runtime-cell state probe; a probe timeout preserves the
+# cell-owned home anchor. This unit is a hatch-rv.target member ordered After=
+# the RV mounts, so reverse stop ordering runs this ExecStopPost BEFORE
+# home-hatch/var-lib-hatch/hatch.mount stop — dropping every bind's
+# reference on the RV filesystem so the unmount cannot be wedged. The
+# teardown umounts lazily and per-bridge best-effort; `-` keeps a teardown
+# hiccup from failing the stop cascade.
+ExecStopPost=-+${host_bin_dir}/spawnd rv-graft --teardown
+SyslogIdentifier=hatch-rv-graft
+
+[Install]
+WantedBy=hatch-rv.target

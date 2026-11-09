@@ -1,0 +1,54 @@
+[Unit]
+Description=com.hatch.rtc
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${image_bin_dir}/rtc-sidecar
+After=network-online.target hatch-rv.target com.hatch.host-path-setup.service
+Wants=network-online.target
+Requires=com.hatch.host-path-setup.service
+PartOf=hatch-rv.target
+
+[Service]
+Type=simple
+Slice=hatch-host.slice
+UMask=0000
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectProc=default
+ProcSubset=all
+ProtectSystem=strict
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadWritePaths=/run
+Environment=PATH=${host_bin_dir}:${image_bin_dir}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+EnvironmentFile=${env_file}
+EnvironmentFile=-${env_override_file}
+ExecStartPre=+/usr/bin/install -d -m 0755 -o root -g root /run/hatch
+ExecStartPre=+/usr/bin/install -d -m 0755 -o root -g root /run/hatch/rtc
+# rtc-sidecar is a vendored fbcode binary, patchelf'd to the host loader with an
+# $ORIGIN/rtc-sidecar-lib rpath for its bundled openssl 1.1. It is vendored and
+# installed by par-msl/hatch-image (vendor/rtc-sidecar/), not by this bundle.
+# --realtime_socket points the OAI orchestrator bridge at the daemon-hosted
+# Realtime listener (available at /run/hatch/daemon/realtime-protocol.sock by
+# default; see hatch-server flags.rs RealtimeListener). The
+# host-side sidecar dials as root and is admitted by the listener's PeerAcl as
+# the out-of-cell uid-65534 peer. /run/hatch/daemon is host<->cell bind-mounted,
+# so the host sees the cell-bound socket at the same path.
+#
+# --undefok=realtime_socket keeps this unit compatible with BOTH sidecar CLIs:
+# the rtc-sidecar binary is vendored by hatch-image, not this bundle, so during
+# a mixed-version live update a VM may still have an older sidecar that predates
+# --realtime_socket. gflags (--undefok) makes the older binary skip the unknown
+# flag (falling back to its default socket) instead of exiting on it, which would
+# otherwise fail the non-allowlisted unit restart and abort the whole update.
+ExecStart=${image_bin_dir}/rtc-sidecar --socket_path /run/hatch/rtc/realtime.sock --undefok=realtime_socket,stats_socket --realtime_socket=/run/hatch/daemon/realtime-protocol.sock --stats_socket=/run/hatch/daemon/rtc-stats.sock
+# Keep the runtime-cell bind connectable to hatch-daemon.
+ExecStartPost=+/bin/sh -c 'seen=0; for i in $(seq 1 50); do if [ -S /run/hatch/rtc/realtime.sock ]; then seen=1; /bin/chmod 0666 /run/hatch/rtc/realtime.sock; fi; sleep 0.1; done; if [ "$seen" -eq 1 ] && [ -S /run/hatch/rtc/realtime.sock ]; then exec /bin/chmod 0666 /run/hatch/rtc/realtime.sock; fi; echo "rtc-sidecar socket was not created in time" >&2; exit 1'
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=rtc-sidecar
+Restart=always
+RestartSec=2
+TimeoutStopSec=10
+LimitNOFILE=65535
+
+[Install]
+WantedBy=hatch-rv.target

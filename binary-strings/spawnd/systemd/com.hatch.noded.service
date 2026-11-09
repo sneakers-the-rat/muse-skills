@@ -1,0 +1,55 @@
+[Unit]
+Description=com.hatch.noded
+Before=com.hatch.ingress-rev-proxy.service
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${host_bin_dir}/hatch-noded
+
+[Service]
+Type=simple
+User=${noded_user}
+Group=${noded_group}
+Slice=hatch-host.slice
+UMask=0077
+NoNewPrivileges=true
+PrivateDevices=true
+PrivateNetwork=true
+PrivateTmp=true
+ProtectHome=true
+# The control-socket PeerAcl authenticates the daemon by exact systemd cgroup,
+# which requires reading /proc/<pid>/cgroup.
+ProtectProc=default
+ProcSubset=all
+ProtectSystem=strict
+ProtectControlGroups=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+RestrictAddressFamilies=AF_UNIX
+RestrictSUIDSGID=true
+# Sockets= adds automatic Wants= and After= dependencies without coupling the
+# listeners' lifecycle to the service. The root-owned socket units retain all
+# bound listeners across service restarts; noded receives them by name and needs
+# no writable runtime directory of its own. The runtime cell receives only a
+# read-only bind of the socket directory.
+Sockets=com.hatch.noded-http-api.socket com.hatch.noded-control.socket com.hatch.noded-ephemeral.socket
+# PeerAcl protects noded's listeners from callers. These independent masks
+# protect the rest of the host from noded if account membership ever drifts:
+# hatch-shared can read the ingress TLS key and traverse the daemon and live
+# browser-viewer UDS directories. Every path is optional so noded remains
+# mount-independent during pre-volume boot.
+InaccessiblePaths=-/etc/hatch/credentials -/etc/tls -${var_lib_dir} -/hatch -/run/hatch/daemon -/run/hatch/browser-broker/viewer
+# Noded reads no host env file, so inject the baseline log level directly via
+# systemd rather than sourcing one. Ops can raise it with a unit drop-in.
+Environment=RUST_LOG=info
+Environment=JARVIS_BIN_DIR=${host_bin_dir}
+Environment=PATH=${host_bin_dir}:${image_bin_dir}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+UnsetEnvironment=HTTP_PROXY HTTPS_PROXY ALL_PROXY NO_PROXY http_proxy https_proxy all_proxy no_proxy ANTHROPIC_API_KEY LOGGING_APP_TOKEN STEFI_BEARER_TOKEN WASA_ROOT_SECRET
+WorkingDirectory=/
+ExecStart=${host_bin_dir}/hatch-noded
+SyslogIdentifier=hatch-noded
+Restart=always
+RestartSec=1
+TimeoutStopSec=10
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

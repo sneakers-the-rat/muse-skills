@@ -1,0 +1,68 @@
+[Unit]
+Description=com.hatch.tee-report
+ConditionKernelCommandLine=jarvis_cvm=true
+# Keep attestation available to vault and ingress-rev-proxy during the
+# maintenance brake; both consumers deliberately remain running.
+ConditionPathExists=${host_bin_dir}/tee-report
+
+[Service]
+Type=simple
+User=${tee_report_user}
+Group=${shared_group}
+Slice=hatch-core.slice
+UMask=0077
+NoNewPrivileges=true
+# Sole privilege: writing the kernel TSM configfs `inblob` (root:root 0200) to
+# mint a TEE attestation report requires bypassing DAC. The TSM interface is
+# chip-agnostic (SEV-SNP today, TDX/CCA later). Confined to this tiny,
+# no-network, PeerAcl-gated helper so the internet-facing ingress proxy never
+# holds it. ProtectSystem=strict, plus the RuntimeDirectory and the single
+# configfs ReadWritePaths entry below, scope CAP_DAC_OVERRIDE's write reach to
+# the helper's own socket dir + the TSM configfs node only — NOT all of /run —
+# so a compromised helper cannot reach other services' /run/hatch
+# sockets/secrets.
+#
+# ProtectProc=default/ProcSubset=all (rather than the invisible/pid this unit
+# used while its PeerAcl was uid-only): the ACL now admits vault by exact
+# cgroup anchor, which resolves a peer by reading /proc/<peer_pid>/cgroup.
+# Under ProcSubset=pid that read fails and every vault request is denied with
+# matched_rule="none". Same requirement as the inference-proxy and stefi-proxy
+# units. This widens the helper's /proc view, not what it can write, which
+# ProtectSystem=strict + the two ReadWritePaths entries still bound.
+CapabilityBoundingSet=CAP_DAC_OVERRIDE
+AmbientCapabilities=CAP_DAC_OVERRIDE
+PrivateTmp=true
+PrivateDevices=true
+ProtectProc=default
+ProcSubset=all
+ProtectSystem=strict
+ProtectHome=true
+RestrictAddressFamilies=AF_UNIX
+# RuntimeDirectory creates /run/hatch/tee-report (owned by the service
+# User:Group = hatch-tee-report:hatch-shared, setgid so the socket inherits the
+# group) BEFORE the mount namespace is set up, and makes it the ONLY writable
+# /run path. This scopes CAP_DAC_OVERRIDE's write reach to the helper's own dir
+# plus the TSM configfs node (not all of /run, so it cannot reach other
+# /run/hatch sockets) AND avoids the ReadWritePaths bootstrapping trap: a /run
+# subdir the unit must create itself cannot be a ReadWritePaths target, because
+# the namespace is built (and fails on the missing path) before any ExecStartPre
+# can create it.
+RuntimeDirectory=hatch/tee-report
+RuntimeDirectoryMode=2750
+# A missing TSM interface is reported by the helper instead of failing
+# mount-namespace setup. CVM consumers fail closed when reports are unavailable.
+ReadWritePaths=-/sys/kernel/config/tsm
+InaccessiblePaths=-/etc/hatch/credentials
+Environment=JARVIS_HOME=${jarvis_home}
+Environment=PATH=${host_bin_dir}:${image_bin_dir}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+EnvironmentFile=${env_file}
+EnvironmentFile=-${env_override_file}
+ExecStart=${host_bin_dir}/tee-report --socket /run/hatch/tee-report/tee-report.sock
+SyslogIdentifier=tee-report
+Restart=always
+RestartSec=2
+TimeoutStopSec=10
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

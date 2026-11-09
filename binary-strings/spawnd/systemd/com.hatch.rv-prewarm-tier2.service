@@ -1,0 +1,72 @@
+[Unit]
+Description=com.hatch.rv-prewarm-tier2 (resident working-set idle rewarm)
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionFileIsExecutable=${host_bin_dir}/hatch-dbctl
+# Started by com.hatch.rv-prewarm-tier2.path when the daemon drops the
+# execution-ready marker: replays the tier-2 section of the predecessor's
+# hot-set manifest (the pg_buffercache resident set at shutdown — the
+# reader's real runtime working set) so the first post-resume interactions
+# hit warm pages instead of cold cross-region reads. Deliberately NOT "warm
+# all of PGDATA": bounded (512 MiB / 60 s inside rv-prewarm), idle-priority,
+# post-readiness only. Remote PostgreSQL boots run it too, and hatch-dbctl
+# skips the reads itself: the execution-ready trigger is also what pulls in
+# privsep-worker-prep through Wants=, and a condition-skipped start could
+# leave the PathExists= trigger re-firing for as long as the marker exists.
+# It orders after the mode writer so that skip sees this boot's flag even
+# when a marker left by an unclean stop fires the trigger at mount.
+DefaultDependencies=no
+RequiresMountsFor=/var/lib/hatch
+Wants=com.hatch.privsep-worker-prep.service
+After=var-lib-hatch.mount com.hatch.privsep-worker-prep.service com.hatch.postgres-mode.service
+PartOf=hatch-rv.target
+
+[Service]
+# Keep this unit's storage cost attributable. Without IO accounting the
+# kernel counters vanish with the cgroup when the unit stops, so a
+# short-lived unit's IO can only ever be measured while it is still
+# running -- which is exactly when nobody is looking.
+IOAccounting=true
+Type=oneshot
+# Sticky within the boot: PathExists= would otherwise re-trigger the service
+# in a loop while the marker file exists; staying "active (exited)" after
+# the one replay gives once-per-boot semantics.
+RemainAfterExit=yes
+# Strictly opportunistic: never compete with the serving path for CPU/IO.
+Nice=19
+IOSchedulingClass=idle
+# Confinement: this is a host-root oneshot whose whole input (the hot-set
+# manifest AND the .path trigger marker) is cell-writable, so it runs with
+# the narrowest view that still reads the PG tree. It only READS — strict
+# read-only filesystem, no home (the demonstrated traversal canary lived in
+# /root), no network, no devices, and CAP_DAC_READ_SEARCH as the single
+# retained capability (root reading postgres-owned 0600 relation files).
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateNetwork=yes
+IPAddressDeny=any
+RestrictAddressFamilies=AF_UNIX
+DevicePolicy=closed
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+RestrictNamespaces=yes
+RestrictRealtime=yes
+# RestrictSUIDSGID= is deliberately ABSENT: its seccomp filter cannot
+# inspect openat2's open_how argument and rejects the syscall wholesale with
+# ENOSYS (the same ruling as hatch-rescue's traversal.rs), which would
+# silently break every open_beneath_pg_root() resolution and warm nothing.
+# The rest of this block already denies SUID/SGID creation for a read-only
+# oneshot: NoNewPrivileges=, ProtectSystem=strict, and a capability set
+# reduced to CAP_DAC_READ_SEARCH.
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+CapabilityBoundingSet=CAP_DAC_READ_SEARCH
+ExecStart=-${host_bin_dir}/hatch-dbctl rv-prewarm --tier2
+SyslogIdentifier=hatch-rv-prewarm-tier2

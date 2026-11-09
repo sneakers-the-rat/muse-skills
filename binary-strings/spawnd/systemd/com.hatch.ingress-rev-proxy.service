@@ -1,0 +1,93 @@
+[Unit]
+Description=com.hatch.ingress-rev-proxy
+# Mount-independent (like authd/vault/nginx): starts before the RV volume mounts /
+# LUKS-unlocks, so it is NOT ordered after or PartOf hatch-rv.target; backends are
+# dialed per-request and 502 until up. Order after hatch-init (writes /etc/hatch/env)
+# and hatch-tls-selfsign (produces the /etc/tls/wildcard bootstrap cert staged below);
+# both are fast oneshots, so this adds no boot stall. A missing After= unit is ignored.
+After=network-online.target com.hatch.authd.service com.hatch.telemetry-proxy.service hatch-init.service hatch-tls-selfsign.service
+# Clients need ingress running to unlock the RV through the Noise handshake.
+Before=hatch-rv.target
+Wants=network-online.target com.hatch.telemetry-proxy.service hatch-init.service
+# Unbounded restart (like vault): the proxy always binds (never fail-fasts on a
+# missing cert), so this only recovers genuine crash loops.
+StartLimitBurst=0
+# No keep-services-down gate: that marker lives on the RV volume this
+# mount-independent unit never reads, so it would be a no-op.
+ConditionPathExists=${host_bin_dir}/ingress-rev-proxy
+
+[Service]
+Type=simple
+User=${ingress_rev_proxy_user}
+Group=${ingress_rev_proxy_group}
+SupplementaryGroups=${shared_group} ${daemon_group}
+Slice=hatch-host.slice
+PermissionsStartOnly=true
+UMask=0007
+NoNewPrivileges=true
+# Bind the privileged infra port (:443) as a non-root user.
+# CAP_NET_BIND_SERVICE is the only capability needed to bind <1024; it is granted
+# ambiently (and kept in the bounding set so it is not dropped). Compatible with
+# NoNewPrivileges=true — systemd installs ambient caps at exec, and this cap
+# cannot be used to gain further privileges. The user (:4431) port is
+# unprivileged and needs no capability.
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+PrivateTmp=true
+ProtectProc=default
+ProcSubset=all
+ProtectSystem=strict
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadWritePaths=/run
+InaccessiblePaths=-/etc/hatch/credentials/inference -/etc/hatch/credentials/stefi -/etc/hatch/credentials/db
+Environment=JARVIS_BIN_DIR=${host_bin_dir}
+Environment=JARVIS_RUNTIME_CELL_DRAIN_FILE=${runtime_cell_drain_file}
+Environment=PATH=${host_bin_dir}:${image_bin_dir}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+EnvironmentFile=${env_file}
+EnvironmentFile=-${env_override_file}
+UnsetEnvironment=HTTP_PROXY HTTPS_PROXY ALL_PROXY NO_PROXY http_proxy https_proxy all_proxy no_proxy
+WorkingDirectory=/
+# The proxy always binds: it selects its TLS cert in-process (prod PKI credentials
+# cert if yolk has provisioned it, else the bootstrap wildcard copy staged below,
+# else an in-memory self-signed placeholder) and hot-reloads the credentials cert
+# once yolk writes it (inotify, no restart). yolk writes the credentials key
+# 0640 root:${shared_group}, so the non-root proxy reads it via group membership.
+#
+# The wildcard source key is 0600 root:root, so a root ExecStartPre (`+`) stages a
+# private copy into the proxy's runtime dir (like nginx's root master reading its
+# own 0600 key) rather than widening the source. `[ -s ]`-guarded so absence
+# (live-install / pre-provisioning) falls back to the in-memory cert.
+ExecStartPre=+/usr/bin/install -d -m 0755 -o root -g root /run/hatch
+ExecStartPre=+/usr/bin/install -d -m 0700 -o ${ingress_rev_proxy_user} -g ${ingress_rev_proxy_group} /run/hatch/ingress-rev-proxy
+# setgid: the 0640 IP file ingress writes here (OWNER_CLIENT_IP_FILE) takes Stefi's group,
+# so Stefi can read it; gk-proxy only watches the directory. Same line in com.hatch.gk-proxy.service.
+ExecStartPre=+/usr/bin/install -d -m 2755 -o ${ingress_rev_proxy_user} -g ${stefi_proxy_user} /run/hatch/owner-client-ip
+ExecStartPre=+/bin/sh -c 'if [ -s ${tls_bootstrap_src_cert_path} ] && [ -s ${tls_bootstrap_src_key_path} ]; then /usr/bin/install -m 0644 -o ${ingress_rev_proxy_user} -g ${ingress_rev_proxy_group} ${tls_bootstrap_src_cert_path} ${tls_bootstrap_cert_path} && /usr/bin/install -m 0600 -o ${ingress_rev_proxy_user} -g ${ingress_rev_proxy_group} ${tls_bootstrap_src_key_path} ${tls_bootstrap_key_path}; fi'
+# Transitional: pass the deprecated `--listen [::]:4431` alias, NOT the split
+# `--listen-user`/`--listen-infra` flags, so a binary-only hot-swap is safe in
+# BOTH directions during the rollout. The new binary maps `--listen` onto the
+# user listener and defaults the infra listener to `[::]:443` (so it still binds
+# :4431 + :443); an OLDER binary rolled back
+# onto this unit (`jarvis-remote-deploy.py --hot-swap ingress-rev-proxy` from a
+# pre-split checkout) only knows `--listen` and keeps the :4431 client plane up
+# instead of clap-rejecting the unknown split flags and crash-looping the sole
+# client ingress. Move to `--listen-user`/`--listen-infra` only once the
+# supported rollback baseline no longer includes the pre-split CLI.
+#
+# Per-request access rows use the typed telemetry socket; journald contains only
+# service logs from this unit.
+ExecStart=${host_bin_dir}/ingress-rev-proxy \
+    --listen [::]:4431 \
+    --tls-cert ${tls_prodca_cert_path} \
+    --tls-key ${tls_prodca_key_path} \
+    --tls-bootstrap-cert ${tls_bootstrap_cert_path} \
+    --tls-bootstrap-key ${tls_bootstrap_key_path}
+SyslogIdentifier=ingress-rev-proxy
+LogRateLimitIntervalSec=0
+Restart=always
+RestartSec=1
+TimeoutStopSec=60
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

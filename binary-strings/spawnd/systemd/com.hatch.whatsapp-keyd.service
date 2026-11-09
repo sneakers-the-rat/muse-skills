@@ -1,0 +1,77 @@
+[Unit]
+Description=com.hatch.whatsapp-keyd
+# keyd is reactivated on demand by inbound socket traffic; bound the start rate
+# (matching daemon/execd) so a crash-looping keyd under a connection burst trips
+# anti-flap instead of being refused all further restarts.
+StartLimitIntervalSec=300
+StartLimitBurst=20
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${host_bin_dir}/hatch-whatsapp-keyd
+# keyd's pairing/root-secret store lives under ${var_lib_dir}/whatsapp-keyd on
+# the reliable volume, so the var-lib mount must be live before keyd starts.
+# RequiresMountsFor= is the hard mount gate; PartOf=hatch-rv.target only
+# propagates stop/restart and does not order against the mount. Without this,
+# keyd could start before the mount and read an empty state dir on the
+# underlying rootfs, silently treating a paired VM as fresh. var-lib only:
+# /home/hatch is the daemon's home, not keyd's store.
+RequiresMountsFor=${var_lib_dir}
+After=com.hatch.whatsapp-keyd.socket hatch-rv.target com.hatch.host-path-setup.service var-lib-hatch.mount
+Requires=com.hatch.whatsapp-keyd.socket com.hatch.host-path-setup.service
+PartOf=hatch-rv.target
+# Stop-only ordering: the daemon seals WhatsApp replies through keyd while it
+# drains, so keyd stops after the daemon exits. Inert at fresh boot (no RV job
+# is queued) and at a later RV attach (the daemon is already active).
+Before=com.hatch.daemon.service
+
+[Service]
+Type=simple
+User=${whatsapp_keyd_user}
+Group=${whatsapp_keyd_group}
+Slice=hatch-core.slice
+PermissionsStartOnly=true
+UMask=0077
+NoNewPrivileges=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+PrivateTmp=true
+ProtectSystem=strict
+# Unit-identity ACLs require reading /proc/<pid>/cgroup for peer processes.
+# Do NOT use ProtectProc=invisible or ProcSubset=pid here — keyd's PeerAcl
+# reads /proc/<pid>/cgroup of the connecting daemon to validate the caller's
+# cgroup path against the allowed unit set.
+ProtectProc=default
+ProcSubset=all
+# keyd is a UDS-only oracle; it has no legitimate reason to open TCP/UDP
+# sockets, so restrict to AF_UNIX only (tighter than the proxy services
+# which also allow AF_INET/AF_INET6).
+RestrictAddressFamilies=AF_UNIX
+ReadWritePaths=/run/hatch/whatsapp-keyd ${var_lib_dir}/whatsapp-keyd
+# Remove WASA secrets from the environment so keyd cannot inadvertently log or
+# forward them. keyd sources root_secret from its pairing record on the reliable
+# volume, so there is no LoadCredential= seed delivery; this scrub is a permanent
+# defense-in-depth control keeping the key names out of keyd's environment.
+UnsetEnvironment=WASA_ROOT_SECRET WASA_USER_LID
+# keyd has no legitimate reason to read the host env files that could carry
+# provisioned secrets. Block them at the mount namespace level so even a
+# compromised keyd process cannot reach them.
+InaccessiblePaths=-/etc/hatch/env.override -/etc/hatch/env
+# keyd InaccessiblePaths-blocks /etc/hatch/env(.override) above for isolation,
+# so unlike authd it cannot inherit RUST_LOG from the env file. Inject a baseline
+# log level DIRECTLY (systemd Environment=, no file read) so keyd is observable
+# (startup, errors, ACL rejects) on deploy without breaching that isolation. Ops
+# can raise it via a unit drop-in (e.g. RUST_LOG=info,wasa_temp=debug) for E2E.
+Environment=RUST_LOG=info
+WorkingDirectory=/
+ExecStartPre=+/usr/bin/install -d -m 2750 -o ${whatsapp_keyd_user} -g ${whatsapp_keyd_group} ${var_lib_dir}/whatsapp-keyd
+ExecStart=${host_bin_dir}/hatch-whatsapp-keyd
+SyslogIdentifier=hatch-whatsapp-keyd
+# on-failure rather than always: keyd is not expected to exit cleanly under
+# normal operation (it holds in-flight pairing sessions), so an unconditional
+# restart on a clean exit would mask an unexpected self-termination. on-failure
+# still recovers from genuine crashes. No RuntimeMaxSec= or idle-exit timeout
+# because an idle-exit between pair_init and pair_complete would silently drop
+# the in-flight session key.
+Restart=on-failure
+RestartSec=1
+TimeoutStopSec=10
+LimitNOFILE=65535

@@ -1,0 +1,85 @@
+[Unit]
+Description=com.hatch.stefi-proxy
+# Mount-independent (multi-user.target): starts pre-RV so telemetry and other
+# mount-independent Stefi traffic remain available. authd-post-mount restarts it
+# after the RV mounts so per-user authd creds resolve. See bundle-setup/AGENTS.md
+# "systemd Boot Ordering".
+#
+# Order after hatch-init.service, which writes the /etc/hatch/env consumed via
+# EnvironmentFile= below, so the FIRST start already sees JARVIS_CD_CHANNEL and
+# any egress-enforcement override. Without this edge both units are anchored at
+# multi-user.target with the same single After=, so they race — and this one wins,
+# because it execs immediately while hatch-init must first fetch user-data over
+# HTTP. Default enforcement could then take effect despite a hatch-init-provided
+# disable override until the authd-post-mount restart. ingress-rev-proxy, which
+# a client needs to reach this VM at all, is already ordered after the same
+# oneshot.
+#
+# Note: hatch-init.service only exists on image-boot. spawnd's live-install path
+# renders this template into a running system that has none. `After=` on a missing
+# unit is silently ignored and `Wants=` is soft-fail, so a live install still
+# starts and reads the install.sh-baked env.
+After=network-online.target hatch-init.service com.hatch.telemetry-proxy.socket
+Wants=network-online.target hatch-init.service com.hatch.telemetry-proxy.socket
+After=com.hatch.stefi-proxy.socket
+Before=com.hatch.telemetry-proxy.service
+PartOf=com.hatch.telemetry-proxy.service
+Requires=com.hatch.stefi-proxy.socket com.hatch.www-proxy.socket
+After=com.hatch.www-proxy.socket
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${host_bin_dir}/hatch-stefi-proxy
+
+[Service]
+Type=simple
+User=${stefi_proxy_user}
+Group=${stefi_proxy_user}
+SupplementaryGroups=${shared_group}
+Slice=hatch-host.slice
+PermissionsStartOnly=true
+UMask=0007
+NoNewPrivileges=true
+PrivateTmp=true
+# Unit-identity ACLs require reading /proc/<pid>/cgroup for peer processes.
+ProtectProc=default
+ProcSubset=all
+ProtectSystem=strict
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadWritePaths=/run
+InaccessiblePaths=-/etc/hatch/credentials
+Environment=JARVIS_BIN_DIR=${host_bin_dir}
+Environment=PATH=${host_bin_dir}:${image_bin_dir}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=JARVIS_STEFI_PROXY_ALLOWED_USERS=root
+Environment=JARVIS_STEFI_PROXY_ALLOWED_GROUPS=${proxy_clients_group}
+# The runtime cell is DELIBERATELY ABSENT from this allowlist, and the anchor
+# must not come back. /run/hatch/proxy is not bind-mounted into the cell
+# (htch-runtime.nspawn: "Do not add host socket bind mounts"), so no in-cell
+# process can name this socket; the anchor granted nothing while making a future
+# mount mistake an Account Center lifecycle-control breach, because it is matched
+# is-or-under and so admits the whole cell payload subtree. The in-cell daemon is NOT a cell
+# caller: its connect() is performed by the host-resident ptrace/seccomp
+# supervisor (hatch-server/src/supervisor.rs), which stefi sees under
+# com.hatch.daemon.service below. In-cell tools reach this boundary through
+# privsep workers, whose host-slice anchors are appended by
+# ${privsep_stefi_cgroup_paths}. A tool that ENOENTs on this socket needs a
+# privsep registry entry (needs_stefi_proxy), never this anchor.
+# com.hatch.igdd.service (the isolated IGD daemon, igd-cli) is admitted so its
+# Instagram Direct reads reach Stefi; the /hatch/ig read routes are declared
+# caller-restricted to that exact cgroup in route_policy.
+Environment=JARVIS_STEFI_PROXY_ALLOWED_CGROUP_PATHS=/hatch.slice/hatch-host.slice/com.hatch.gk-proxy.service,/hatch.slice/hatch-host.slice/com.hatch.config-proxy.service,/hatch.slice/hatch-runtime.slice/com.hatch.daemon.service,/hatch.slice/hatch-runtime.slice/com.hatch.rescue.service,/hatch.slice/hatch-host.slice/com.hatch.telemetry-proxy.service,/hatch.slice/hatch-runtime.slice/com.hatch.safety.service,/hatch.slice/hatch-host.slice/com.hatch.authd.service,/hatch.slice/hatch-host.slice/com.hatch.inference-proxy.service,/hatch.slice/hatch-runtime.slice/com.hatch.sentinel.service,/hatch.slice/hatch-host.slice/com.hatch.credit-watcher.service,/hatch.slice/hatch-host.slice/com.hatch.browser-lease-helper@.service${privsep_stefi_cgroup_paths},/hatch.slice/hatch-core.slice/com.hatch.healthd.service,/hatch.slice/hatch-runtime.slice/com.hatch.messengerd.service,/hatch.slice/hatch-runtime.slice/com.hatch.igdd.service
+Environment=JARVIS_STEFI_PROXY_DAEMON_ONLY_CGROUP_PATHS=/hatch.slice/hatch-runtime.slice/com.hatch.daemon.service
+Environment=JARVIS_STEFI_PROXY_VIEWER_COUNTRY_CGROUP_PATHS=${privsep_viewer_country_cgroup_paths}
+Environment=JARVIS_AUTHD_SOCK=/run/hatch/auth/authd.sock
+EnvironmentFile=${env_file}
+EnvironmentFile=-${env_override_file}
+UnsetEnvironment=HTTP_PROXY HTTPS_PROXY ALL_PROXY NO_PROXY http_proxy https_proxy all_proxy no_proxy STEFI_BEARER_TOKEN LOGGING_APP_TOKEN
+LoadCredential=logging-app-token:/etc/hatch/credentials/stefi/LOGGING_APP_TOKEN
+WorkingDirectory=/
+ExecStart=${host_bin_dir}/hatch-stefi-proxy --socket /run/hatch/proxy/stefi.sock --cvm-egress-policy /opt/hatch/etc/stefi-proxy/cvm-egress-policy.json
+SyslogIdentifier=hatch-stefi-proxy
+Restart=always
+RestartSec=1
+TimeoutStopSec=60
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

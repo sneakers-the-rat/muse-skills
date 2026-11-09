@@ -1,0 +1,22 @@
+[Unit]
+Description=com.hatch.stefi-proxy socket
+ConditionPathExists=!${keep_services_down_early_marker}
+# Mount-independent (sockets.target): pre-RV telemetry must reach the proxy. The
+# socket self-creates /run/hatch/proxy (DirectoryMode below), so no
+# host-path-setup / hatch-rv.target coupling — see bundle-setup/AGENTS.md
+# "systemd Boot Ordering".
+PartOf=com.hatch.stefi-proxy.service
+
+[Socket]
+ListenStream=/run/hatch/proxy/stefi.sock
+DirectoryMode=0755
+SocketUser=${stefi_proxy_user}
+SocketGroup=${stefi_proxy_user}
+SocketMode=0666
+RemoveOnStop=true
+# Stale default ACLs on upgraded hosts can override SocketMode. Reconcile the
+# bound socket mode explicitly after bind.
+ExecStartPost=+/bin/chmod 0666 /run/hatch/proxy/stefi.sock
+
+[Install]
+WantedBy=sockets.target

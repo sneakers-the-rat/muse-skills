@@ -1,0 +1,78 @@
+[Unit]
+Description=com.hatch.armor
+# Mount-independent, and deliberately early: this is a security sensor, so it
+# should be watching before the agent and the runtime cell start rather than
+# after. It reaches nothing on the reliable volume to come up -- the sample
+# database is image-owned at /var/lib/malscandb, and telemetry leaves over
+# /run -- so it stays off hatch-rv.target and starts in the boot transaction.
+#
+# Ordering-only on telemetry-proxy: a telemetry outage must not stop the
+# sensor. Detections keep reaching the journal, and the emitter degrades to
+# disabled rather than failing the scan.
+After=com.hatch.telemetry-proxy.service
+Wants=com.hatch.telemetry-proxy.service
+ConditionPathExists=!${keep_services_down_early_marker}
+# An older bundle without this binary condition-skips instead of failing.
+ConditionPathExists=${host_bin_dir}/hatch-armor
+
+[Service]
+Type=simple
+# root, not a dedicated account: the capability set below is already close to
+# root, and spawnd verifies accounts rather than creating them, so a
+# `hatch-armor` user is a coordinated hatch-image change. Worth doing as a
+# follow-up -- CAP_DAC_READ_SEARCH plus CAP_SYS_PTRACE under a non-root uid is
+# meaningfully narrower than uid 0 -- but it is not this change.
+User=root
+Slice=hatch-host.slice
+NoNewPrivileges=true
+# CAP_BPF: load the sensor's programs and create its maps.
+# CAP_PERFMON: required alongside CAP_BPF for the tracing program types
+#   (tp_btf/sched_process_exec and the task iterators).
+# CAP_SYS_ADMIN: bpf(BPF_MAP_CREATE) with BTF on kernels < 6.9, matching the
+#   reason hatch-sentinel carries it.
+# CAP_DAC_READ_SEARCH: the scanner hashes newly written files wherever they
+#   land, so it must read files it does not own.
+# CAP_SYS_PTRACE: the scanner opens each file through
+#   /proc/<init_pid>/root/<path>, and cross-UID /proc symlinks return EACCES
+#   without it.
+# Deliberately absent: CAP_KILL. Enforcement (--armed / --delete) SIGKILLs
+# processes holding a matched sample; the shipped configuration is
+# report-only, so granting it now would be authority the service cannot use.
+CapabilityBoundingSet=CAP_BPF CAP_PERFMON CAP_SYS_ADMIN CAP_DAC_READ_SEARCH CAP_SYS_PTRACE
+AmbientCapabilities=CAP_BPF CAP_PERFMON CAP_SYS_ADMIN CAP_DAC_READ_SEARCH CAP_SYS_PTRACE
+PrivateTmp=true
+# ProtectHome is NOT set: /home/hatch is where the agent writes, which is
+# exactly what this scans.
+ProtectSystem=full
+ProtectControlGroups=false
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+# The scanner resolves files through other processes' /proc entries.
+ProtectProc=default
+ProcSubset=all
+LockPersonality=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+SystemCallArchitectures=native
+RestrictAddressFamilies=AF_UNIX
+InaccessiblePaths=-/etc/hatch/credentials
+Environment=RUST_LOG=info
+Environment=JARVIS_TELEMETRY_PROXY_SOCK=/run/hatch/telemetry/telemetry.sock
+UnsetEnvironment=HTTP_PROXY HTTPS_PROXY ALL_PROXY NO_PROXY http_proxy https_proxy all_proxy no_proxy
+WorkingDirectory=/
+# Report-only: no --armed or --delete, so a matched sample is reported and
+# nothing is killed or unlinked. Nothing else is on the command line -- what to
+# watch, which sample database to use and how big a file to hash are compiled
+# into the binary, so there is no config path to keep in step with the bundle.
+ExecStart=${host_bin_dir}/hatch-armor
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hatch-armor
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+LimitNOFILE=8192
+
+[Install]
+WantedBy=multi-user.target

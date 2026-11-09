@@ -1,0 +1,31 @@
+[Unit]
+Description=com.hatch.telemetry-proxy socket
+ConditionPathExists=!${keep_services_down_early_marker}
+# Mount-independent (sockets.target): Vault must be able to emit status telemetry
+# while the confidential VM reliable volume is still locked. DirectoryMode below
+# self-creates the /run parent without host-path-setup or hatch-rv.target.
+# No PartOf=com.hatch.telemetry-proxy.service: keep the systemd-owned listener
+# and its bounded kernel queues alive across proxy restarts.
+
+[Socket]
+# Own dir /run/hatch/telemetry (created here via DirectoryMode), NOT the shared
+# /run/hatch/proxy: this dir is BindReadOnly into the runtime cell so in-cell
+# tool subprocesses can emit telemetry, without exposing the cell-never-bound
+# inference/stefi proxy sockets that also live under /run/hatch/proxy. The
+# runtime cell orders After= this socket unit so the dir exists before cell start.
+ListenStream=/run/hatch/telemetry/telemetry.sock
+DirectoryMode=0755
+SocketUser=${telemetry_proxy_user}
+SocketGroup=${telemetry_proxy_user}
+SocketMode=0666
+FileDescriptorName=telemetry
+Service=com.hatch.telemetry-proxy.service
+# Retain pending connections and buffered request data after the service exits.
+FlushPending=no
+RemoveOnStop=true
+# Stale default ACLs on upgraded hosts can override SocketMode. Reconcile the
+# bound socket mode explicitly after bind.
+ExecStartPost=+/bin/chmod 0666 /run/hatch/telemetry/telemetry.sock
+
+[Install]
+WantedBy=sockets.target

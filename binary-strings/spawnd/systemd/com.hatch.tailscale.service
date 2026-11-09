@@ -1,0 +1,85 @@
+[Unit]
+Description=com.hatch.tailscale
+After=network-online.target hatch-rv.target com.hatch.host-path-setup.service
+Wants=network-online.target
+After=com.hatch.tailscale-tunnel.socket
+Requires=com.hatch.host-path-setup.service com.hatch.tailscale-tunnel.socket
+RequiresMountsFor=/var/lib/hatch
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${host_bin_dir}/hatch-tailscale
+PartOf=hatch-rv.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+Slice=hatch-host.slice
+# Root network namespace for THIS process, unlike com.hatch.link-tunnel.service:
+# WireGuard's DERP transport and the Tailscale control plane are ordinary
+# host-service egress, deliberately NOT routed through Sentinel's forward proxy
+# (that proxy governs runtime-cell traffic; this is a host service).
+#
+# The containment lives one process down. hatch-tailscale re-execs itself as a
+# stub that unshares a network namespace and holds the tailnet's kernel TUN
+# there. That namespace has one interface and no listener, so a tailnet peer has
+# nothing to reach, and the runtime cell still reaches the tailnet only through
+# the relay this service serves on its proxy socket.
+#
+# Two capabilities, and only these: the stub needs CAP_SYS_ADMIN to unshare a
+# network namespace and CAP_NET_ADMIN to create and address the TUN inside it.
+# They are granted here because that is the only way the stub can inherit them,
+# and both processes hand back what they do not keep needing -- the parent drops
+# everything right after forking the stub, and the stub drops CAP_SYS_ADMIN as
+# soon as its unshare returns. Neither carries CAP_SYS_ADMIN into a long-lived
+# loop, so what is granted here is strictly wider than what is ever held.
+CapabilityBoundingSet=CAP_SYS_ADMIN CAP_NET_ADMIN
+AmbientCapabilities=CAP_SYS_ADMIN CAP_NET_ADMIN
+# Reaching the state directory needs group membership, not a capability. Its
+# parent /var/lib/hatch is `drwxrws--- hatch-daemon:hatch-shared`, and a root
+# process with an empty bounding set has no CAP_DAC_OVERRIDE to traverse a
+# directory it neither owns nor shares a group with. Granting the group keeps
+# the capability set empty, which is the property worth protecting.
+SupplementaryGroups=${shared_group}
+NoNewPrivileges=true
+# The stub needs exactly this namespace type; everything else is denied.
+RestrictNamespaces=net
+PrivateTmp=true
+ProtectProc=default
+ProcSubset=all
+ProtectSystem=strict
+# AF_NETLINK is for the stub's `ip` invocations inside its own netns.
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+# The node's private keys -- its control-plane identity and its WireGuard key,
+# which are the same key. StateDirectory creates the directory before the
+# namespace is set up, which a bare ReadWritePaths= entry cannot do: that is
+# evaluated ahead of ExecStart, so on a first boot it would fail the unit.
+# 0700, and on /var/lib/hatch, which is not mapped into the runtime cell -- the
+# agent sandbox must not be able to read this key and impersonate the node.
+StateDirectory=hatch/tailscale
+StateDirectoryMode=0700
+# /run for the relay and control sockets; the socket unit creates
+# /run/hatch/tailscale ahead of this service (Requires= + After=).
+ReadWritePaths=/run
+Environment=JARVIS_BIN_DIR=${host_bin_dir}
+Environment=PATH=${host_bin_dir}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+EnvironmentFile=${env_file}
+EnvironmentFile=-${env_override_file}
+Sockets=com.hatch.tailscale-tunnel.socket
+WorkingDirectory=/
+ExecStart=${host_bin_dir}/hatch-tailscale
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hatch-tailscale
+Restart=on-failure
+RestartSec=2
+# The netns stub runs as a child of hatch-tailscale and must never outlive it:
+# an orphan would hold a TUN and a namespace with no supervisor. KillMode=
+# control-group (systemd's default, explicit here because it is load-bearing)
+# kills every process in the cgroup on stop/restart, including a stub orphaned
+# by a parent crash. No PR_SET_PDEATHSIG needed.
+KillMode=control-group
+TimeoutStopSec=10
+LimitNOFILE=65535
+
+[Install]
+WantedBy=hatch-rv.target

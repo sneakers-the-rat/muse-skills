@@ -1,0 +1,25 @@
+[Unit]
+# RV-coupled socket must skip the implicit early sockets.target phase.
+DefaultDependencies=no
+Description=com.hatch.sentinel http api socket
+After=com.hatch.host-path-setup.service
+Requires=com.hatch.host-path-setup.service
+# The RV owns the listener lifetime; health probes can wake Sentinel after its
+# runtime-cell dependency recovers, without pulling RV services into early boot.
+PartOf=hatch-rv.target
+
+[Socket]
+FlushPending=yes
+TriggerLimitIntervalSec=0
+ListenStream=/run/hatch/sentinel/http-api.sock
+DirectoryMode=0755
+SocketUser=${sentinel_user}
+SocketGroup=${sentinel_group}
+SocketMode=0666
+FileDescriptorName=http-api
+Service=com.hatch.sentinel.service
+RemoveOnStop=true
+ExecStartPost=+/bin/chmod 0666 /run/hatch/sentinel/http-api.sock
+
+[Install]
+WantedBy=hatch-rv.target

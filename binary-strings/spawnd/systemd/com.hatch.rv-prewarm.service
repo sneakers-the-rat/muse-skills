@@ -1,0 +1,132 @@
+[Unit]
+Description=com.hatch.rv-prewarm (tier-1 startup block-set page-cache prewarm)
+ConditionPathExists=!${keep_services_down_early_marker}
+# The rv-prewarm subcommand ships with hatch-dbctl; on hosts/bundles without
+# the binary the unit Condition-skips cleanly.
+ConditionFileIsExecutable=${host_bin_dir}/hatch-dbctl
+# The daemon writes this snapshot at the first execution-ready of each
+# PostgreSQL generation (through its /run/hatch/resume bridge view of the
+# same directory): the exact pg_buffercache block set PostgreSQL start, the
+# preflight, and the daemon's startup statements read on that boot, plus
+# pg_control. A daemon-only restart keeps the file (the header records
+# pg_postmaster_start_time()). A fresh RV, or the first boot after this unit
+# shipped, has no snapshot and skips cleanly. The file is cell-writable, so
+# its existence proves nothing
+# and its content is trusted nowhere: rv-prewarm confines every path beneath
+# the PostgreSQL tree with a beneath-resolving no-symlinks open and bounds
+# every read (bytes, time, in-flight), exactly as for the tier-2 manifest.
+ConditionPathExists=/hatch/data/resume/hotset.tier1.manifest
+# A remote PostgreSQL boot has no local data files to warm. Ordering after the
+# mode writer makes this boot's flag exist before the condition is checked,
+# so a remote boot never starts the process at all; hatch-dbctl's own
+# remote-mode skip stays as defense in depth.
+ConditionPathExists=!/run/hatch/postgres-mode/remote
+# Ordering contract: this unit is pulled by var-lib-hatch.mount (Install
+# below) so the reads start as soon as the data mount activates and the mode
+# writer has finished (a grep on a VM that does not ask for remote), in
+# parallel with PostgreSQL's own eager start off the same mount. It has NO Before=
+# edge and nothing orders After= it -- the readiness chain (seed, authd
+# rebind, db-cluster, PostgreSQL, db-preflight, rv-graft) never waits on
+# this optimization; it only ever shares the device with it. The replay
+# policy is what makes that sharing safe: the RV serves ~200 MB/s behind a
+# ~32 MiB outstanding-IO ceiling, and the earlier 8 x 1 MiB replay filled
+# that window and head-of-line-blocked every dependent critical read (its
+# A/B was net negative; a 2 MiB window measurably delayed the early release
+# chain it overlaps — host-path-setup +90 ms, authd rebind +132 ms,
+# db-preflight +164 ms in the round-2 A/B). At 1 MiB in flight a colliding
+# critical read waits ~5 ms at most while the ~36-40 MiB execution-ready
+# set lands in ~2-3 s, still ahead of the daemon's first storage reads;
+# the byte/time budgets cap the manifest replay at 64 MiB inside the 6 s
+# deadline. After the manifest's pg_control critical and before the paced
+# block lanes, the binary also warms PostgreSQL's synthesized startup
+# read-set serially on its own additive 16 MiB budget and bounded time
+# slice; the block lanes' deadline restarts after that lane, so the
+# worst-case total is ~80 MiB in ~7.5 s, inside TimeoutStartSec=15.
+# DefaultDependencies=no per the bundle-setup/AGENTS.md boot-ordering
+# companion rule for hatch-rv.target members (hatch-seed.service precedent).
+# RequiresMountsFor= names both the snapshot's mount and the PostgreSQL
+# tree's mount so the condition above is evaluated only once both are up.
+DefaultDependencies=no
+RequiresMountsFor=/hatch/data/resume /var/lib/hatch/postgres
+After=var-lib-hatch.mount com.hatch.postgres-mode.service
+PartOf=hatch-rv.target
+
+[Service]
+# Keep this unit's storage cost attributable. Without IO accounting the
+# kernel counters vanish with the cgroup when the unit stops, so a
+# short-lived unit's IO can only ever be measured while it is still
+# running -- which is exactly when nobody is looking.
+IOAccounting=true
+# Plain oneshot, no RemainAfterExit: a re-attach in the same boot re-pulls
+# it from the mount and re-warms the freshly cold device; a hatch-rv.target
+# restart (PartOf) re-runs it against an already-warm cache and exits in
+# milliseconds. Nothing waits on it either way.
+Type=oneshot
+# Hard stop behind rv-prewarm's own 6 s budget. A oneshot defaults to an
+# infinite start timeout, and the in-process deadline is consulted only
+# between preads: a pread stalled on the device cannot be interrupted from
+# inside. Nothing waits on this unit, so SIGTERM here costs nothing but the
+# rest of the prefetch.
+TimeoutStartSec=15
+# Strictly opportunistic on the CPU side. Note the IO class does not reach
+# below the block layer into the RV driver; the in-flight cap in the command
+# line is what bounds the device-side contention.
+Nice=19
+IOSchedulingClass=idle
+# Confinement: mirrors com.hatch.rv-prewarm-tier2.service — a host-root
+# oneshot reading a cell-writable manifest runs read-only, homeless,
+# networkless, deviceless, with CAP_DAC_READ_SEARCH as the single retained
+# capability.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateNetwork=yes
+IPAddressDeny=any
+RestrictAddressFamilies=AF_UNIX
+DevicePolicy=closed
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+RestrictNamespaces=yes
+RestrictRealtime=yes
+# RestrictSUIDSGID= is deliberately ABSENT: its seccomp filter cannot
+# inspect openat2's open_how argument and rejects the syscall wholesale with
+# ENOSYS (the same ruling as hatch-rescue's traversal.rs), which would
+# silently break every open_beneath_pg_root() resolution and warm nothing.
+# The rest of this block already denies SUID/SGID creation for a read-only
+# oneshot: NoNewPrivileges=, ProtectSystem=strict, and a capability set
+# reduced to CAP_DAC_READ_SEARCH.
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+CapabilityBoundingSet=CAP_DAC_READ_SEARCH
+# `-` prefix: a stale or unreadable snapshot is an expected case — a nonzero
+# exit is a no-op, never a failed unit (rv-prewarm itself exits 0 on every
+# failure by contract). The budget flags are the boot-path policy spelled
+# out where an operator reads it: a 64 MiB manifest budget inside the 6 s
+# deadline, 1 MiB in flight as four 256 KiB preads; the same values are
+# the binary's tier-1 defaults. The synthesized PostgreSQL startup
+# read-set warms first on its own additive 16 MiB budget and bounded
+# time slice, with the block lanes' deadline restarting after it: the
+# worst-case total is ~80 MiB in ~7.5 s, inside TimeoutStartSec=15.
+ExecStart=-${host_bin_dir}/hatch-dbctl rv-prewarm --manifest /hatch/data/resume/hotset.tier1.manifest --max-bytes 67108864 --max-millis 6000 --inflight-bytes 1048576 --read-chunk-bytes 262144
+SyslogIdentifier=hatch-rv-prewarm
+
+[Install]
+# Mount-pulled, not hatch-rv.target-pulled: var-lib-hatch.mount activates
+# before the target is even reachable (the target orders After= it), and
+# every millisecond of head start is a critical read that finds a warm page.
+# Rendered into var-lib-hatch.mount.wants/ in the bundle systemd dir at
+# render time (com.hatch.db-cluster.service precedent) and seen through
+# SYSTEMD_UNIT_PATH after daemon-reload. Live apply enables sockets only and
+# passive mount detection does not process .wants/ retroactively, so the
+# pull takes effect at the NEXT var-lib-hatch.mount activation -- on an
+# RV-deployed VM that is a boot of an image carrying this unit, not the
+# deploy itself (the mount's wants set is fixed from the baked image when
+# its job is queued, before the RV /opt/hatch bind lands).
+WantedBy=var-lib-hatch.mount

@@ -1,0 +1,107 @@
+[Unit]
+Description=com.hatch.sentinel
+After=network-online.target hatch-rv.target com.hatch.bpffs-prep.service com.hatch.host-path-setup.service com.hatch.runtime-cell.service com.hatch.authd.socket com.hatch.inference-proxy.socket com.hatch.stefi-proxy.socket com.hatch.telemetry-proxy.service com.hatch.sentinel-egress-approvals.socket com.hatch.sentinel-egress-approvals-admin.socket com.hatch.sentinel-daemon-egress-approvals.socket com.hatch.sentinel-http-api.socket
+# Keep runtime-context registration available until the daemon has drained.
+# Ordering only: this must not pull the RV-gated service into early daemon boot.
+Before=com.hatch.daemon.service
+Wants=network-online.target com.hatch.bpffs-prep.service com.hatch.authd.socket com.hatch.inference-proxy.socket com.hatch.stefi-proxy.socket com.hatch.telemetry-proxy.service
+Requires=com.hatch.host-path-setup.service
+Requires=com.hatch.sentinel-egress-approvals.socket com.hatch.sentinel-egress-approvals-admin.socket com.hatch.sentinel-daemon-egress-approvals.socket com.hatch.sentinel-http-api.socket
+BindsTo=com.hatch.runtime-cell.service
+PartOf=com.hatch.runtime-cell.service
+PartOf=hatch-rv.target
+# A service start-limit failure also fails all activation sockets. Keep retries
+# available after cell recovery; process failures retain RestartSec=5 below.
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=${sentinel_user}
+Slice=hatch-runtime.slice
+NoNewPrivileges=true
+# CAP_SYS_PTRACE: read /proc/<pid>/exe cross-UID to validate daemon-supplied
+# binary_path claims during runtime context registration and proxy peer
+# attribution. Without it, cross-UID /proc symlinks return EACCES.
+# CAP_BPF + CAP_NET_ADMIN: load and attach eBPF cgroup programs for
+# transparent egress interception; read BPF maps for connection metadata.
+# CAP_SYS_ADMIN: required by bpf(BPF_MAP_CREATE) with BTF on kernels < 6.9.
+CapabilityBoundingSet=CAP_BPF CAP_NET_ADMIN CAP_SYS_ADMIN CAP_DAC_READ_SEARCH CAP_NET_BIND_SERVICE CAP_SYS_PTRACE
+AmbientCapabilities=CAP_BPF CAP_NET_ADMIN CAP_SYS_ADMIN CAP_DAC_READ_SEARCH CAP_NET_BIND_SERVICE CAP_SYS_PTRACE
+PrivateTmp=true
+PrivateDevices=true
+ProtectControlGroups=false
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+# Unit-identity ACLs require reading /proc/<pid>/cgroup for peer processes.
+ProtectProc=default
+ProcSubset=all
+LockPersonality=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+SystemCallArchitectures=native
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+SupplementaryGroups=${proxy_clients_group} ${shared_group} ${daemon_group}
+ProtectSystem=full
+# /sys/fs/bpf/hatch: the RT-4a pin namespace's carve. ProtectKernelTunables
+# remounts /sys read-only for the non-root service and ReadWritePaths is what
+# carves bpffs back; without it ensure_pin_dirs EROFSes and every restart
+# silently degrades to unpinned (fail-open) links. The carve must name a path
+# STRICTLY BELOW the bpffs mountpoint: an entry naming exactly /sys/fs/bpf
+# loses to ProtectKernelTunables' per-submount read-only pass (live-verified:
+# the mount stays `ro` in the unit's namespace and the main process EROFSes;
+# a subdirectory entry forces its own rw bind that survives, and a self
+# BindPaths just stacks the ro mount on top). The `+` ExecStartPre below
+# cannot stand in for the carve — `+` drops the Protect* options entirely, so
+# it writes fine while the main process stays read-only, which is exactly how
+# this shipped degraded once. /sys/fs/bpf/hatch is boot-ephemeral (bpffs
+# clears on reboot) and ReadWritePaths resolves at mount-namespace setup
+# BEFORE ExecStartPre, so com.hatch.bpffs-prep.service (pulled and ordered
+# by this unit's Wants=/After=) creates it each boot; the `-` prefix means a
+# prep failure degrades to the explicit process-held warn instead of an
+# EXIT_NAMESPACE restart loop.
+# Writability of the mount does not widen access: DAC still fences the
+# process — /sys/fs/bpf/hatch stays root-owned 0711 and execd's sibling pin
+# dirs stay 0700 root.
+ReadWritePaths=${var_lib_dir} /run/hatch/daemon /run/hatch/sentinel /run/hatch/egress-tls -/sys/fs/bpf/hatch
+InaccessiblePaths=-/etc/hatch/credentials
+# Provision the sentinel-owned pin subtree as ROOT before the non-root
+# service starts. The shared /sys/fs/bpf root + hatch/ parent belong to
+# com.hatch.bpffs-prep.service, which must run before this unit's mount
+# namespace is built so the ReadWritePaths carve above resolves; the belt
+# copy of its two commands here cannot rescue an already-built namespace
+# (the carve resolved before ExecStartPre ran) but converges the dir for the
+# NEXT restart when a live update restarts sentinel ahead of the newly
+# installed prep unit. Runs with '+' (full privileges, Protect* dropped), so
+# it sees writable bpffs regardless of the carve — do NOT read its success
+# as proof the main process can write.
+ExecStartPre=+/bin/sh -ec 'chmod 0711 /sys/fs/bpf; install -d -m 0711 -o root -g root /sys/fs/bpf/hatch; install -d -m 0700 -o ${sentinel_user} -g ${sentinel_user} /sys/fs/bpf/hatch/sentinel /sys/fs/bpf/hatch/sentinel/v1 /sys/fs/bpf/hatch/sentinel/v1/links /sys/fs/bpf/hatch/sentinel/v1/state'
+Environment=JARVIS_BIN_DIR=${host_bin_dir}
+Environment=JARVIS_AUTHD_SOCK=/run/hatch/auth/authd.sock
+Environment=JARVIS_INFERENCE_PROXY_SOCK=/run/hatch/proxy/inference.sock
+Environment=JARVIS_STEFI_PROXY_SOCK=/run/hatch/proxy/stefi.sock
+Environment=JARVIS_TELEMETRY_PROXY_SOCK=/run/hatch/telemetry/telemetry.sock
+Environment=JARVIS_SECURITY_SOCK=/run/hatch/safety/security.sock
+Environment=JARVIS_EGRESS_APPROVAL_SOCK=/run/hatch/sentinel/egress-approvals.sock
+Environment=JARVIS_EGRESS_APPROVAL_ADMIN_SOCK=/run/hatch/sentinel/egress-approvals-admin.sock
+Environment=JARVIS_DAEMON_EGRESS_APPROVAL_SOCK=/run/hatch/sentinel/daemon-egress-approvals.sock
+Environment=JARVIS_EGRESS_APPROVAL_EVENTS_SOCK=/run/hatch/daemon/egress-approvals-events.sock
+Environment=JARVIS_SENTINEL_ALLOWED_USERS=root
+Environment=JARVIS_SENTINEL_ALLOWED_GROUPS=${shared_group}
+Environment=JARVIS_SENTINEL_ALLOWED_CGROUP_PATHS=/hatch.slice/hatch-runtime.slice/com.hatch.daemon.service,/hatch.slice/hatch-runtime.slice/com.hatch.runtime-cell.service,/hatch.slice/hatch-runtime.slice/com.hatch.safety.service,/hatch.slice/hatch-runtime.slice/com.hatch.rescue.service,/hatch.slice/hatch-host.slice/com.hatch.stefi-proxy.service,/hatch.slice/hatch-host.slice/com.hatch.inference-proxy.service,/hatch.slice/hatch-runtime.slice/com.hatch.sentinel.service,/system.slice/com.hatch.db-preflight.service${privsep_authd_cgroup_paths},/hatch.slice/hatch-core.slice/com.hatch.healthd.service
+Environment=JARVIS_SENTINEL_INGRESS_ALLOWED_USERS=hatch-proxy-noise-ingress
+Environment=JARVIS_SENTINEL_INGRESS_ALLOWED_CGROUP_PATHS=/hatch.slice/hatch-host.slice/com.hatch.ingress-rev-proxy.service
+Environment=PATH=${host_bin_dir}:${image_bin_dir}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+EnvironmentFile=${env_file}
+EnvironmentFile=-${env_override_file}
+Sockets=com.hatch.sentinel-egress-approvals.socket com.hatch.sentinel-egress-approvals-admin.socket com.hatch.sentinel-daemon-egress-approvals.socket com.hatch.sentinel-http-api.socket
+WorkingDirectory=${jarvis_home}
+ExecStart=${host_bin_dir}/hatch-sentinel
+SyslogIdentifier=hatch-sentinel
+Restart=always
+RestartSec=5
+TimeoutStopSec=60
+LimitNOFILE=65535
+
+[Install]
+WantedBy=hatch-rv.target

@@ -1,0 +1,44 @@
+[Unit]
+Description=com.hatch.cagi-proxy
+After=network-online.target com.hatch.host-path-setup.service com.hatch.authd.socket com.hatch.cagi-proxy.socket
+Wants=network-online.target com.hatch.authd.socket
+Requires=com.hatch.host-path-setup.service com.hatch.cagi-proxy.socket
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${host_bin_dir}/hatch-cagi-proxy
+PartOf=hatch-rv.target
+
+[Service]
+Type=simple
+# Reuses the Stefi proxy identity because both services read the authd user token
+# and dial the same image-owned CAGI bridge. Exact unit cgroups remain
+# the authorization boundary in authd and hatch-cagi-proxy's PeerAcl.
+User=${stefi_proxy_user}
+Group=${stefi_proxy_user}
+SupplementaryGroups=${shared_group} ${proxy_clients_group}
+Slice=hatch-host.slice
+UMask=0007
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectProc=default
+ProcSubset=all
+ProtectSystem=strict
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadWritePaths=/run
+InaccessiblePaths=-/etc/hatch/credentials
+Environment=JARVIS_BIN_DIR=${host_bin_dir}
+Environment=PATH=${host_bin_dir}:${image_bin_dir}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=JARVIS_AUTHD_SOCK=/run/hatch/auth/authd.sock
+Environment=JARVIS_CAGI_PROXY_SCOPES='${privsep_cagi_proxy_scopes}'
+EnvironmentFile=${env_file}
+EnvironmentFile=-${env_override_file}
+UnsetEnvironment=HTTP_PROXY HTTPS_PROXY ALL_PROXY NO_PROXY http_proxy https_proxy all_proxy no_proxy STEFI_BEARER_TOKEN LOGGING_APP_TOKEN
+WorkingDirectory=/
+ExecStart=${host_bin_dir}/hatch-cagi-proxy --socket /run/hatch/cagi-proxy/cagi.sock --authd-socket /run/hatch/auth/authd.sock
+SyslogIdentifier=hatch-cagi-proxy
+Restart=always
+RestartSec=1
+TimeoutStopSec=10
+LimitNOFILE=65535
+
+[Install]
+WantedBy=hatch-rv.target

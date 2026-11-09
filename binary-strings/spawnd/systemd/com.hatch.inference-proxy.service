@@ -1,0 +1,75 @@
+[Unit]
+Description=com.hatch.inference-proxy
+# Join the concrete RV/authentication gates, not the whole RV target (which
+# also waits for optional telemetry/Stefi post-mount refreshes).
+After=network-online.target com.hatch.host-path-setup.service com.hatch.authd-rv-rebind.service
+Wants=network-online.target com.hatch.authd-rv-rebind.service com.hatch.telemetry-proxy.service
+After=com.hatch.inference-proxy.socket
+After=com.hatch.local-models.service
+Wants=com.hatch.local-models.socket
+Requires=com.hatch.host-path-setup.service com.hatch.inference-proxy.socket
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${host_bin_dir}/hatch-inference-proxy
+PartOf=hatch-rv.target
+
+[Service]
+Type=simple
+User=${inference_proxy_user}
+Group=${inference_proxy_user}
+SupplementaryGroups=${proxy_clients_group} ${shared_group}
+Slice=hatch-host.slice
+PermissionsStartOnly=true
+UMask=0007
+NoNewPrivileges=true
+PrivateTmp=true
+# Unit-identity ACLs require reading /proc/<pid>/cgroup for peer processes.
+ProtectProc=default
+ProcSubset=all
+ProtectSystem=strict
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadWritePaths=/run
+# Selection is private RV state owned only by this service.
+StateDirectory=hatch/inference-proxy
+StateDirectoryMode=0700
+# Preserve the admitted memory backend through independent proxy restarts.
+RuntimeDirectory=hatch/inference-proxy
+RuntimeDirectoryMode=0700
+RuntimeDirectoryPreserve=yes
+InaccessiblePaths=-/etc/hatch/credentials
+Environment=JARVIS_BIN_DIR=${host_bin_dir}
+Environment=PATH=${host_bin_dir}:${image_bin_dir}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=JARVIS_INFERENCE_PROXY_ALLOWED_USERS=root
+Environment=JARVIS_INFERENCE_PROXY_ALLOWED_GROUPS=${proxy_clients_group}
+# The runtime cell is DELIBERATELY ABSENT from this allowlist, and the anchor
+# must not come back — same reasoning as the stefi-proxy unit. /run/hatch/proxy
+# is not bind-mounted into the cell (htch-runtime.nspawn), so no in-cell process
+# can name this socket; the anchor is matched is-or-under and so admitted the
+# whole cell payload subtree to a proxy that splices the real API key into
+# outbound requests. The in-cell daemon reaches it as the host-resident
+# ptrace/seccomp supervisor under com.hatch.daemon.service below; in-cell tools
+# reach it through privsep workers, appended by
+# ${privsep_inference_proxy_cgroup_paths}. A tool that ENOENTs on this socket
+# needs a privsep registry entry (needs_inference_proxy), never this anchor.
+Environment=JARVIS_INFERENCE_PROXY_ALLOWED_CGROUP_PATHS=/hatch.slice/hatch-host.slice/com.hatch.authd.service,/hatch.slice/hatch-runtime.slice/com.hatch.daemon.service,/hatch.slice/hatch-runtime.slice/com.hatch.rescue.service,/hatch.slice/hatch-runtime.slice/com.hatch.safety.service,/hatch.slice/hatch-runtime.slice/com.hatch.sentinel.service,/hatch.slice/hatch-core.slice/com.hatch.healthd.service${privsep_inference_proxy_cgroup_paths}
+Environment=JARVIS_STEFI_PROXY_SOCK=/run/hatch/proxy/stefi.sock
+EnvironmentFile=${env_file}
+EnvironmentFile=-${env_override_file}
+# Dedicated proxy services bypass Sentinel on the host path and therefore must
+# clear inherited HTTP proxy env, which would otherwise recursively proxy the
+# proxy.
+UnsetEnvironment=HTTP_PROXY HTTPS_PROXY ALL_PROXY NO_PROXY http_proxy https_proxy all_proxy no_proxy
+LoadCredential=anthropic-api-key:/etc/hatch/credentials/inference/ANTHROPIC_API_KEY
+Environment=ANTHROPIC_API_KEY_FILE=%d/anthropic-api-key
+WorkingDirectory=/
+# Wants/After alone also accept a failed or condition-skipped rebind. Prove
+# RV-backed authentication without coupling later authd restarts to this unit.
+ExecStartPre=/usr/bin/systemctl is-active --quiet com.hatch.authd-rv-rebind.service
+ExecStart=${host_bin_dir}/hatch-inference-proxy --socket /run/hatch/proxy/inference.sock
+SyslogIdentifier=hatch-inference-proxy
+Restart=always
+RestartSec=1
+TimeoutStopSec=60
+LimitNOFILE=65535
+
+[Install]
+WantedBy=hatch-rv.target

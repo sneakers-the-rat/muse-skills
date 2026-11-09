@@ -1,0 +1,52 @@
+[Unit]
+Description=com.hatch.local-models
+# Image-owned models only: independent of the RV and runtime-cell lifecycle.
+After=com.hatch.local-models.socket
+Requires=com.hatch.local-models.socket
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${host_bin_dir}/hatch-local-models
+
+[Service]
+Type=simple
+DynamicUser=yes
+User=hatch-local-models
+Group=hatch-local-models
+Slice=hatch-models.slice
+UMask=0077
+NoNewPrivileges=true
+PrivateDevices=true
+PrivateNetwork=true
+PrivateTmp=true
+# PeerAcl needs the host peer's pidfd-fenced cgroup identity.
+ProtectProc=default
+ProcSubset=all
+ProtectSystem=strict
+ProtectHome=true
+ProtectControlGroups=true
+ProtectHostname=true
+ProtectKernelLogs=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+RestrictAddressFamilies=AF_UNIX
+RestrictNamespaces=true
+RestrictRealtime=true
+LockPersonality=true
+CapabilityBoundingSet=
+InaccessiblePaths=-/etc/hatch -/var/lib/hatch -/hatch -/var/lib/hatch-runtime
+Environment=RUST_LOG=info
+Environment=HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 HF_HUB_DISABLE_TELEMETRY=1 PYTHONDONTWRITEBYTECODE=1
+Environment=OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2
+UnsetEnvironment=HTTP_PROXY HTTPS_PROXY ALL_PROXY NO_PROXY http_proxy https_proxy all_proxy no_proxy
+WorkingDirectory=/
+ExecStart=${host_bin_dir}/hatch-local-models --socket /run/hatch/local-models/inference.sock
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hatch-local-models
+Restart=always
+RestartSec=1
+TimeoutStopSec=10
+LimitNOFILE=4096
+LimitCORE=0
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,58 @@
+[Unit]
+Description=com.hatch.link-tunnel
+After=network-online.target hatch-rv.target com.hatch.host-path-setup.service
+Wants=network-online.target
+After=com.hatch.link-tunnel.socket com.hatch.link-proxy.socket
+Requires=com.hatch.host-path-setup.service com.hatch.link-tunnel.socket com.hatch.link-proxy.socket
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${host_bin_dir}/hatch-link-tunnel
+PartOf=hatch-rv.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+Slice=hatch-host.slice
+# ============================ SECURITY-CRITICAL =============================
+# DO NOT REMOVE OR WEAKEN PrivateNetwork=true. This is the tunnel's isolation
+# boundary, not a nicety. hatch-link-tunnel writes packets supplied by a remote
+# paired device verbatim to tun-link; PrivateNetwork puts tun-link and all of
+# its routing in a private network namespace whose only other device is lo. That
+# is what stops a device-injected packet from reaching a host-local service, a
+# link-local metadata IP, a neighboring VM, or Meta's fabric — there is simply
+# no route out of the namespace. Remove this line and any such packet is free to
+# route on the host. The daemon also re-checks at startup that the namespace
+# holds only lo + tun-link and refuses to serve otherwise (tun::assert_isolated_netns).
+# raw.sock and link-proxy.sock are pathname AF_UNIX sockets created on the host
+# filesystem by their .socket units and passed in as fds, so
+# ingress-rev-proxy / Sentinel still reach them across this boundary.
+PrivateNetwork=true
+# ===========================================================================
+# TUN device + ip commands need NET_ADMIN (inside the private netns). No
+# SYS_ADMIN needed — systemd sets up the netns; the process never nsenters.
+AmbientCapabilities=CAP_NET_ADMIN
+CapabilityBoundingSet=CAP_NET_ADMIN
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectProc=default
+ProcSubset=all
+ProtectSystem=strict
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+ReadWritePaths=/run /dev/net/tun
+Environment=JARVIS_BIN_DIR=${host_bin_dir}
+Environment=PATH=${host_bin_dir}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+EnvironmentFile=${env_file}
+EnvironmentFile=-${env_override_file}
+Sockets=com.hatch.link-tunnel.socket com.hatch.link-proxy.socket
+WorkingDirectory=/
+ExecStart=${host_bin_dir}/hatch-link-tunnel --socket /run/hatch/tunnel/raw.sock
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hatch-link-tunnel
+Restart=always
+RestartSec=2
+TimeoutStopSec=10
+LimitNOFILE=65535
+
+[Install]
+WantedBy=hatch-rv.target

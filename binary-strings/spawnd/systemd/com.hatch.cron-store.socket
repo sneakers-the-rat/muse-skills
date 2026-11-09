@@ -1,0 +1,31 @@
+[Unit]
+# The listener and its state are reliable-volume coupled; skip the implicit
+# early sockets.target phase so this socket cannot pull RV mounts into boot.
+DefaultDependencies=no
+Description=com.hatch.cron-store socket
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${host_bin_dir}/hatch-cron-store
+# The offline chat cutover rewrites authoritative cron records. RV-target
+# activation must not reopen this writer's door before the schema seal.
+After=com.hatch.host-path-setup.service com.hatch.db-preflight.service
+Requires=com.hatch.host-path-setup.service
+Wants=com.hatch.db-preflight.service
+
+[Socket]
+# Ordering alone also accepts a failed or condition-skipped preflight. Prove
+# the successful sticky unit without adding stop propagation to this store.
+ExecStartPre=/usr/bin/systemctl is-active --quiet com.hatch.db-preflight.service
+ExecStartPre=+/usr/bin/install -d -m 0755 -o root -g root /run/hatch /run/hatch/cron-store
+ListenStream=${cron_store_socket}
+Accept=no
+RemoveOnStop=true
+SocketUser=root
+SocketGroup=root
+# The daemon's connect is completed by its host-side supervisor after entering
+# the cell user namespace, so no host group can be used as the admission gate.
+# The service validates the peer's exact daemon cgroup before serving a route.
+SocketMode=0666
+ExecStartPost=+/bin/chmod 0666 ${cron_store_socket}
+
+[Install]
+WantedBy=hatch-rv.target

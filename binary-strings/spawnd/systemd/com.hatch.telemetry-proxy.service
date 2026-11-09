@@ -1,0 +1,60 @@
+[Unit]
+Description=com.hatch.telemetry-proxy
+# Mount-independent (multi-user.target): starts pre-RV so Vault status telemetry
+# remains observable while a confidential VM is locked. Pre-RV writable state
+# stays under /run; RV buglog initialization is mount-gated in-process and this
+# service is restarted by authd-post-mount once durable storage is available.
+# The upstream stefi-proxy socket is mount-independent too.
+# hatch-init writes /etc/hatch/env, which this unit consumes via EnvironmentFile.
+# The soft dependency is ignored on live installs where hatch-init is absent.
+# See bundle-setup/AGENTS.md "systemd Boot Ordering".
+After=network-online.target hatch-init.service com.hatch.stefi-proxy.service com.hatch.stefi-proxy.socket com.hatch.telemetry-proxy.socket
+Wants=network-online.target hatch-init.service com.hatch.stefi-proxy.service com.hatch.stefi-proxy.socket
+Requires=com.hatch.telemetry-proxy.socket
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${host_bin_dir}/hatch-telemetry-proxy
+
+[Service]
+Type=simple
+User=${telemetry_proxy_user}
+Group=${telemetry_proxy_user}
+Slice=hatch-host.slice
+PermissionsStartOnly=true
+UMask=0007
+RuntimeDirectory=hatch/telemetry/scuba
+RuntimeDirectoryMode=0750
+NoNewPrivileges=true
+PrivateTmp=true
+# Unit-identity ACLs require reading /proc/<pid>/cgroup for peer processes.
+ProtectProc=default
+ProcSubset=all
+ProtectSystem=strict
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadWritePaths=/run -${var_lib_dir}/telemetry-buglog
+InaccessiblePaths=-/etc/hatch/credentials
+Environment=JARVIS_BIN_DIR=${host_bin_dir}
+Environment=PATH=${host_bin_dir}:${image_bin_dir}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=JARVIS_TELEMETRY_PROXY_ALLOWED_USERS=root
+Environment=JARVIS_TELEMETRY_PROXY_ALLOWED_GROUPS=${proxy_clients_group}
+Environment=JARVIS_TELEMETRY_PROXY_ALLOWED_CGROUP_PATHS=/hatch.slice/hatch-runtime.slice/com.hatch.daemon.service,/hatch.slice/hatch-runtime.slice/com.hatch.runtime-cell.service,/hatch.slice/hatch-runtime.slice/com.hatch.rescue.service,/hatch.slice/hatch-runtime.slice/com.hatch.safety.service,/hatch.slice/hatch-runtime.slice/com.hatch.whatsapp-companion.service,/hatch.slice/hatch-host.slice/com.hatch.authd.service,/hatch.slice/hatch-core.slice/com.hatch.vault.service,/hatch.slice/hatch-host.slice/com.hatch.stefi-proxy.service,/hatch.slice/hatch-host.slice/com.hatch.gk-proxy.service,/hatch.slice/hatch-host.slice/com.hatch.config-proxy.service,/hatch.slice/hatch-host.slice/com.hatch.inference-proxy.service,/hatch.slice/hatch-runtime.slice/com.hatch.sentinel.service,/hatch.slice/hatch-core.slice/com.hatch.healthd.service,/hatch.slice/hatch-host.slice/com.hatch.ingress-rev-proxy.service,/hatch.slice/hatch-host.slice/com.hatch.boot-profiler.service,/hatch.slice/hatch-host.slice/com.hatch.cagi-proxy.service${privsep_telemetry_proxy_cgroup_paths}
+Environment=JARVIS_TELEMETRY_PROXY_SCUBA_ENDPOINT=http://localhost/hatch/logging
+EnvironmentFile=${env_file}
+EnvironmentFile=-${env_override_file}
+UnsetEnvironment=HTTP_PROXY HTTPS_PROXY ALL_PROXY NO_PROXY http_proxy https_proxy all_proxy no_proxy
+Sockets=com.hatch.telemetry-proxy.socket com.hatch.telemetry-proxy-bugreport.socket
+WorkingDirectory=/
+# The socket is bound in-process so PeerAcl can gate accepted peers. Its own
+# host-only service-owned directory keeps the endpoint out of the telemetry
+# tree that is mounted into the untrusted runtime cell.
+ExecStartPre=+/usr/bin/install -d -m 0755 -o ${telemetry_proxy_user} -g ${telemetry_proxy_user} /run/hatch/journal-projection
+ExecStart=${host_bin_dir}/hatch-telemetry-proxy --socket /run/hatch/telemetry/telemetry.sock --bugreport-socket /run/hatch/telemetry/bugreport.sock
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hatch-telemetry-proxy
+Restart=always
+RestartSec=1
+TimeoutStopSec=60
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

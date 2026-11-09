@@ -1,0 +1,32 @@
+[Unit]
+Description=Hatch browser broker socket (browser-cell CDP allowlister)
+ConditionPathExists=!${keep_services_down_early_marker}
+# The socket must stop with the RV graph. Otherwise a retiring daemon can dial
+# it after the broker checkpoints, socket-activate a replacement broker on the
+# old host, and consume the handoff intended for the successor host.
+DefaultDependencies=no
+PartOf=hatch-rv.target
+
+[Socket]
+ExecStartPre=+/usr/bin/install -d -m 0755 -o root -g root /run/hatch
+# Root-owned (matches host-path-setup.sh / browser-path-setup.sh): the broker
+# must not be able to swap entries in its own runtime root. systemd (root) still
+# creates the control socket below via SocketUser/SocketMode; only the `lease/`
+# leaf (created broker-owned by browser-path-setup) is broker-writable.
+ExecStartPre=+/usr/bin/install -d -m 0755 -o root -g root /run/hatch/browser-broker
+ListenStream=/run/hatch/browser-broker/browser-broker.sock
+DirectoryMode=0755
+SocketUser=hatch-browser-broker
+SocketGroup=hatch-browser-broker
+# World-connectable: the runtime cell's non-idmapped bind mount does not carry host
+# group membership, so group-based socket perms do not cross the cell
+# boundary. SocketMode only governs who can reach accept(2); the authoritative
+# boundary is the SO_PEERCRED PeerAcl requiring the daemon PID and exact cgroup
+# anchor, followed by the secondary daemon-uid allowlist.
+SocketMode=0666
+FileDescriptorName=user
+Service=com.hatch.browser-broker.service
+RemoveOnStop=true
+
+[Install]
+WantedBy=hatch-rv.target

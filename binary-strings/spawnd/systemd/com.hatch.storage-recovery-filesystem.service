@@ -1,0 +1,57 @@
+[Unit]
+Description=com.hatch.storage-recovery-filesystem
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${host_bin_dir}/hatch-rescuectl
+After=com.hatch.storage-recovery-filesystem.socket
+Requires=com.hatch.storage-recovery-filesystem.socket
+RequiresMountsFor=/hatch ${jarvis_home} ${var_lib_dir}
+PartOf=hatch-rv.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+Slice=hatch-host.slice
+UMask=0077
+Sockets=com.hatch.storage-recovery-filesystem.socket
+NoNewPrivileges=true
+CapabilityBoundingSet=CAP_DAC_OVERRIDE CAP_FOWNER
+AmbientCapabilities=CAP_DAC_OVERRIDE CAP_FOWNER
+PrivateTmp=true
+PrivateDevices=true
+PrivateNetwork=true
+ProtectProc=default
+ProcSubset=all
+ProtectSystem=strict
+ProtectHome=tmpfs
+BindReadOnlyPaths=/hatch ${var_lib_dir}
+BindPaths=${jarvis_home}
+InaccessiblePaths=-/etc/hatch -${jarvis_home}/.ssh -${jarvis_home}/workspace/.ssh
+ProtectControlGroups=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectClock=true
+ProtectHostname=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+RestrictNamespaces=true
+RestrictAddressFamilies=AF_UNIX
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+Nice=10
+IOSchedulingClass=idle
+# This isolated service cannot read /etc/hatch, so provide the baseline log
+# level directly while leaving higher verbosity available through a drop-in.
+Environment=RUST_LOG=info
+Environment=PATH=${host_bin_dir}:${image_bin_dir}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=${host_bin_dir}/hatch-rescuectl storage-recovery-filesystem-helper --home-dir ${jarvis_home} --socket /run/hatch/storage-recovery/filesystem.sock
+SyslogIdentifier=hatch-storage-recovery-filesystem
+Restart=on-failure
+RestartSec=2
+TimeoutStopSec=10
+LimitNOFILE=4096
+MemoryMax=256M

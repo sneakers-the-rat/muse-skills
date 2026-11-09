@@ -1,0 +1,22 @@
+[Unit]
+# RV-coupled socket must skip the implicit early sockets.target phase.
+DefaultDependencies=no
+Description=com.hatch.inference-proxy socket
+ConditionPathExists=!${keep_services_down_early_marker}
+After=com.hatch.host-path-setup.service
+Requires=com.hatch.host-path-setup.service
+PartOf=com.hatch.inference-proxy.service hatch-rv.target
+
+[Socket]
+ListenStream=/run/hatch/proxy/inference.sock
+DirectoryMode=0755
+SocketUser=${inference_proxy_user}
+SocketGroup=${inference_proxy_user}
+SocketMode=0666
+RemoveOnStop=true
+# Stale default ACLs on upgraded hosts can override SocketMode. Reconcile the
+# bound socket mode explicitly after bind.
+ExecStartPost=+/bin/chmod 0666 /run/hatch/proxy/inference.sock
+
+[Install]
+WantedBy=hatch-rv.target

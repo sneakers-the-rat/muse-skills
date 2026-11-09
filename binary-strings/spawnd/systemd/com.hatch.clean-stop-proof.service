@@ -1,0 +1,40 @@
+[Unit]
+Description=com.hatch.clean-stop-proof (post-PostgreSQL clean-shutdown proof)
+ConditionPathExists=!${keep_services_down_early_marker}
+# Shutdown-cascade proof writer: this unit is an inert oneshot at boot; its
+# ExecStop runs on the RV stop cascade
+# AFTER postgresql@18-hatch has exited (Before= start ordering reverses on
+# stop) and appends a `pg-clean.proof` record — pg_controldata cluster state at
+# stop time — next to /hatch/data/resume/handoff-marker, then syncs /hatch/data/resume.
+# The control plane's detach-safe check can then verify the predecessor's PG
+# stopped clean before detaching the volume.
+# DefaultDependencies=no per the bundle-setup/AGENTS.md boot-ordering companion
+# rule for hatch-rv.target members; After=var-lib-hatch.mount both orders the
+# instant boot start and keeps the mounts alive until the proof is written on
+# the reverse path.
+DefaultDependencies=no
+After=var-lib-hatch.mount
+Before=postgresql@18-hatch.service
+# Stop-only ordering: the proof records the epoch the daemon's stop writes with
+# the handoff marker. A remote boot never runs postgresql@18-hatch, so that
+# edge alone would let the proof race the daemon's stop. Inert at boot, when
+# the RV attaches after the daemon is already active.
+Before=com.hatch.daemon.service
+PartOf=hatch-rv.target
+
+[Service]
+Type=oneshot
+# Stays "active (exited)" so the RV stop cascade has a unit to stop — that
+# stop is what triggers the proof script.
+RemainAfterExit=yes
+ExecStart=/bin/true
+# `-` prefix + the script's own never-fail contract: a missing marker dir,
+# missing pg_controldata, or unreadable PGDATA must never wedge the stop
+# cascade. Runs as root (+): pg_controldata reads the postgres-owned PGDATA
+# and the proof lands on the root-owned /hatch/data/resume.
+ExecStop=-+${host_bin_dir}/clean-stop-proof.sh
+TimeoutStopSec=20
+SyslogIdentifier=hatch-clean-stop-proof
+
+[Install]
+WantedBy=hatch-rv.target

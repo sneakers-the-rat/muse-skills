@@ -1,0 +1,74 @@
+[Unit]
+Description=com.hatch.cron-store
+StartLimitIntervalSec=300
+StartLimitBurst=20
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${host_bin_dir}/hatch-cron-store
+# The shadow store lives on the reliable volume. Never start against the
+# underlying rootfs or a missing mount could split cron definition history.
+RequiresMountsFor=${var_lib_dir}
+# The socket already proves database preflight. Optional post-mount proxy
+# refreshes in hatch-rv.target must not hold the authoritative store closed.
+After=com.hatch.cron-store.socket com.hatch.host-path-setup.service var-lib-hatch.mount
+Requires=com.hatch.cron-store.socket com.hatch.host-path-setup.service
+PartOf=hatch-rv.target
+# Stop-only ordering: the daemon reconciles crons through the store while it
+# drains, so the store stops after the daemon exits. Inert at fresh boot (no RV
+# job is queued) and at a later RV attach (the daemon is already active).
+Before=com.hatch.daemon.service
+
+[Service]
+Type=simple
+# Staging uses root because service accounts are image-owned and the current
+# image has no reserved cron-store uid/gid. DynamicUser is not suitable for
+# persistent RV state: StateDirectory would relocate storage below
+# /var/lib/private, outside the /var/lib/hatch mount. The main process has no
+# capabilities and a narrow writable surface; switching identities requires an
+# image change.
+User=root
+Group=root
+Slice=hatch-core.slice
+UMask=0077
+NoNewPrivileges=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+PrivateDevices=true
+PrivateNetwork=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+# PeerAcl reads /proc/<peer>/cgroup to authenticate the daemon's exact unit.
+ProtectProc=default
+ProcSubset=all
+ProtectClock=true
+ProtectControlGroups=true
+ProtectHostname=true
+ProtectKernelLogs=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+MemoryDenyWriteExecute=true
+RestrictAddressFamilies=AF_UNIX
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+# Hide the rest of the reliable-volume tree even from this root process, then
+# bind only its store back into the private mount namespace. The bind source is
+# created by host-path-setup before systemd constructs this namespace.
+TemporaryFileSystem=${var_lib_dir}:ro
+BindPaths=${cron_store_state_root}
+InaccessiblePaths=-/etc/hatch -/etc/tls -/hatch -/run/hatch
+ReadWritePaths=${cron_store_state_root}
+Environment=RUST_LOG=info
+WorkingDirectory=/
+ExecStartPre=+/usr/bin/install -d -m 0700 -o root -g root ${cron_store_state_root}
+ExecStart=${host_bin_dir}/hatch-cron-store --socket ${cron_store_socket} --state-root ${cron_store_state_root}
+SyslogIdentifier=hatch-cron-store
+Restart=on-failure
+RestartSec=1
+TimeoutStopSec=10
+MemoryMax=128M
+LimitNOFILE=1024

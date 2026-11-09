@@ -1,0 +1,78 @@
+[Unit]
+Description=com.hatch.wai
+StartLimitIntervalSec=300
+StartLimitBurst=20
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${host_bin_dir}/wai
+ConditionPathExists=/opt/hatch/etc/wai/config.toml
+# WAI owns the paired WhatsApp session and message cache on the reliable volume.
+# RequiresMountsFor is the hard mount gate; PartOf only propagates lifecycle.
+RequiresMountsFor=${var_lib_dir}
+After=network-online.target hatch-rv.target com.hatch.host-path-setup.service var-lib-hatch.mount
+Wants=network-online.target
+Requires=com.hatch.host-path-setup.service
+PartOf=hatch-rv.target
+
+[Service]
+Type=simple
+User=${wai_user}
+Group=${wai_group}
+SupplementaryGroups=${shared_group}
+Slice=hatch-runtime.slice
+PermissionsStartOnly=true
+UMask=0007
+NoNewPrivileges=true
+CapabilityBoundingSet=
+ProtectHome=tmpfs
+AmbientCapabilities=
+PrivateTmp=true
+PrivateDevices=true
+ProtectControlGroups=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+LockPersonality=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+SystemCallArchitectures=native
+RestrictNamespaces=true
+ProtectSystem=strict
+ProtectProc=default
+ProcSubset=all
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadWritePaths=/run/hatch/wai ${var_lib_dir}/wai
+InaccessiblePaths=-/etc/hatch/credentials -/etc/tls
+Environment=HOME=${var_lib_dir}/wai
+Environment=JARVIS_WAI_SOCK=${wai_sock}
+Environment=PATH=${host_bin_dir}:${image_bin_dir}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+EnvironmentFile=${env_file}
+EnvironmentFile=-${env_override_file}
+WorkingDirectory=${var_lib_dir}/wai
+ExecStartPre=+/usr/bin/install -d -m 0750 -o ${wai_user} -g ${wai_group} /run/hatch/wai
+ExecStartPre=+/usr/bin/rm -f ${wai_sock}
+ExecStart=${host_bin_dir}/wai --socket ${wai_sock} --daemon --store ${var_lib_dir}/wai --config-path /opt/hatch/etc/wai/config.toml
+# WAI's output can include full command arguments, message bodies, and provider
+# identifiers, so stdout is discarded and stderr reaches journald only through
+# the allowlist below. Each pattern is anchored and admits one fixed lifecycle
+# line whose only variable part is a data-free enum name: the WAIL logout
+# reason or the registration error reason string. journald drops every other
+# stderr line. This is the only record of why WhatsApp unlinked the companion;
+# journal-proxy forwards it to hatch_vm_logs. Bracket classes stand in for
+# backslash escapes. Any new pattern needs privacy review.
+StandardOutput=null
+StandardError=journal
+LogFilterPatterns=^[[]wai[]] Logged out: [A-Za-z]+$
+LogFilterPatterns=^[[]wai[]] Registration/connection error [(]reason=[a-z_]+[)]$
+LogFilterPatterns=^[[]wai-daemon[]] Device is registered, connecting[.][.][.]$
+LogFilterPatterns=^[[]wai-daemon[]] Device is not registered[.] Waiting for auth command[.]$
+LogFilterPatterns=^[[]wai-daemon[]] Handle invalidated after logout, shutting down[.][.][.]$
+LogFilterPatterns=^[[]wai-daemon[]] Shutting down[.][.][.]$
+LogFilterPatterns=^[[]wai-daemon[]] Shutdown complete[.]$
+SyslogIdentifier=wai
+Restart=always
+RestartSec=2
+TimeoutStopSec=20
+LimitNOFILE=65535
+
+[Install]
+WantedBy=hatch-rv.target

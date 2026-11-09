@@ -1,0 +1,46 @@
+[Unit]
+Description=com.hatch.credit-watcher
+After=hatch-rv.target com.hatch.host-path-setup.service com.hatch.stefi-proxy.service com.hatch.credit-watcher.socket
+Wants=com.hatch.stefi-proxy.service
+Requires=com.hatch.host-path-setup.service
+Requires=com.hatch.credit-watcher.socket
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${host_bin_dir}/hatch-credit-watcher
+PartOf=hatch-rv.target
+
+[Service]
+Type=simple
+User=${credit_watcher_user}
+Group=${shared_group}
+Slice=hatch-host.slice
+PermissionsStartOnly=true
+UMask=0007
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectProc=default
+ProcSubset=all
+ProtectSystem=strict
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadWritePaths=/run
+StateDirectory=hatch-credit-watcher
+StateDirectoryMode=0700
+InaccessiblePaths=-/etc/hatch/credentials
+Environment=JARVIS_BIN_DIR=${host_bin_dir}
+Environment=PATH=${host_bin_dir}:${image_bin_dir}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=JARVIS_STEFI_PROXY_SOCK=/run/hatch/proxy/stefi.sock
+Environment=JARVIS_CREDIT_WATCHER_SOCK=/run/hatch/credit-watcher/credit-watcher.sock
+# Peer allowlist (daemon + rescue) is now a compile-time PeerAcl in
+# hatch-credit-watcher (CREDIT_WATCHER_PEER_ACL); no env override.
+Environment=JARVIS_CREDIT_WATCHER_POLL_SECS=300
+EnvironmentFile=${env_file}
+EnvironmentFile=-${env_override_file}
+WorkingDirectory=/
+ExecStart=${host_bin_dir}/hatch-credit-watcher --socket /run/hatch/credit-watcher/credit-watcher.sock
+SyslogIdentifier=hatch-credit-watcher
+Restart=always
+RestartSec=5
+TimeoutStopSec=10
+LimitNOFILE=65535
+
+[Install]
+WantedBy=hatch-rv.target

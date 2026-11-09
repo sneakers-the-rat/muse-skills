@@ -1,0 +1,33 @@
+[Unit]
+Description=com.hatch.runtime-cell-trust-store-egress.path
+# DefaultDependencies=no is required. A .path unit otherwise gains an implicit
+# Before=paths.target; paired with the After= a late RV-gated service below,
+# that closes a boot ordering cycle:
+#   paths.target -> basic.target -> ... -> runtime-cell.service -> this .path
+# systemd "resolves" the cycle by deleting jobs, which deleted ingress-rev-proxy's
+# start job and cascaded the whole RV stack down (mount-independent host services
+# included). Dropping default deps keeps this watcher ordered only by its
+# explicit After=/PartOf= edges, entirely within the RV graph. Mirrors
+# hatch-seed.service / opt-hatch-rv-remote-deploy-mount.service.
+DefaultDependencies=no
+ConditionPathExists=!${keep_services_down_early_marker}
+After=com.hatch.runtime-cell.service
+PartOf=com.hatch.runtime-cell.service hatch-rv.target
+
+[Path]
+# Rebuild the cell trust store when Sentinel publishes or rotates the egress CA.
+# Sentinel regenerates its MITM CA per boot, and the cell's read-only NSS DBs are
+# built FROM that CA, so without this watcher a CA that lands after the paired
+# .service already ran would leave the cell trusting nothing for Sentinel-MITM
+# HTTPS until the next cell restart.
+#
+# Watch the DIRECTORY, not hatch-egress-ca.pem itself: whichever write style
+# Sentinel uses — in-place rewrite, or the atomic tmp+rename that would swap the
+# inode out from under a file-level watch — triggers here. The producer
+# short-circuits on an unchanged input digest, so watching the whole directory
+# (the combined ca-bundle.pem write included) only ever costs a no-op re-check.
+PathModified=/run/hatch/egress-tls
+Unit=com.hatch.runtime-cell-trust-store.service
+
+[Install]
+WantedBy=com.hatch.runtime-cell.service

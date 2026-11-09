@@ -1,0 +1,51 @@
+[Unit]
+# RV-coupled socket must skip the implicit early sockets.target phase.
+DefaultDependencies=no
+Description=com.hatch.whatsapp-keyd socket
+ConditionPathExists=!${keep_services_down_early_marker}
+# Do not advertise the socket on a bundle/profile without keyd: a bound socket
+# whose backing service can never start would have the in-cell daemon dial a
+# live-but-dead socket rather than cleanly observe that keyd is absent.
+ConditionPathExists=${host_bin_dir}/hatch-whatsapp-keyd
+After=com.hatch.host-path-setup.service
+Requires=com.hatch.host-path-setup.service
+# Stop-only ordering, as on the keyd service: RemoveOnStop= deletes the path,
+# so the socket also outlives the daemon's drain, even when keyd never started.
+Before=com.hatch.daemon.service
+
+[Socket]
+ExecStartPre=+/usr/bin/install -d -m 0755 -o root -g root /run/hatch
+ListenStream=/run/hatch/whatsapp-keyd/keyd.sock
+Accept=no
+RemoveOnStop=true
+# Own the bound socket as the keyd service account so its on-disk owner matches
+# the declared endpoint owner (the cgroup PeerAcl, not ownership, is the access
+# gate; this keeps owner-mismatch verification from spuriously firing).
+SocketUser=${whatsapp_keyd_user}
+SocketGroup=${whatsapp_keyd_group}
+# The daemon's AF_UNIX connect is completed by its host-side supervisor after
+# that process enters the cell user namespace, so the caller carries a
+# cell-mapped uid and no host group membership: a group-gated 0660 would be
+# unconnectable and every sealed send and inbound open would fail. 0666 is
+# intentional and gives away nothing, because filesystem ownership cannot
+# identify that caller and is not being asked to — the keyd-side PeerAcl
+# validates the peer's cgroup path, which no in-cell process can enter. This
+# socket is also absent from every cell mount namespace, so the set of
+# processes that can reach the path at all is host-side to begin with.
+SocketMode=0666
+# Stale default ACLs on upgraded hosts can override SocketMode. Reconcile the
+# bound socket mode explicitly after bind.
+ExecStartPost=+/bin/chmod 0666 /run/hatch/whatsapp-keyd/keyd.sock
+
+[Install]
+# hatch-rv.target, NOT sockets.target. The socket's listen dir is created by the
+# RV-gated host-path-setup, and the only consumer (the in-cell daemon) is itself
+# hatch-rv.target-gated, so there is no value in listening before the RV. Pulling
+# this socket into the early sockets.target transaction drags host-path-setup ->
+# the RV bind-mounts -> hatch.mount in before the reliable-volume disk is
+# attached, so hatch.mount Condition-skips and the whole RV fleet cascade-fails
+# until the disk arrives. Gating on hatch-rv.target (unlike the registry-
+# generated privsep sockets, whose listen dir does not come from
+# host-path-setup) defers the bind to post-RV; lazy socket activation is
+# preserved (the [Install]-less service still starts on first connection).
+WantedBy=hatch-rv.target

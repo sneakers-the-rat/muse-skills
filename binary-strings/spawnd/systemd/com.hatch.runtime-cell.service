@@ -1,0 +1,107 @@
+[Unit]
+Description=com.hatch.runtime-cell
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${host_bin_dir}/hatch
+# Pre-RV cell: boots at multi-user.target from the IMAGE-LOCAL, digest-keyed
+# base tree (/var/lib/hatch-runtime/rootfs, a btrfs snapshot of
+# /var/lib/hatch-runtime/rootfs-base), with no reliable-volume dependency at
+# all. Per-VM state does not gate the boot: /home/hatch and
+# /var/lib/hatch/os-intent bind sources are ensured by pre-start.sh, and when
+# the RV attaches the host bind mounts overmount those paths and PROPAGATE
+# INTO the running cell — no cell restart at mount time. Database/schema
+# readiness is the daemon's AwaitRvIdentity barrier + db-preflight, not a
+# cell edge.
+After=network-online.target com.hatch.runtime-cell-modules.service com.hatch.telemetry-proxy.socket
+# Soft dep on the telemetry socket: it owns/creates /run/hatch/telemetry, which
+# the cell BindReadOnly's (optionally) for in-cell tool telemetry. Wants (not
+# Requires) + the optional '-' bind keep telemetry best-effort — a telemetry
+# socket failure must never block the runtime cell from starting.
+# No Wants=com.hatch.sentinel.service: sentinel is RV-gated
+# (Requires=host-path-setup) and a multi-user.target unit pulling it would
+# drag the RV graph into the early boot transaction (bundle-setup/AGENTS.md
+# "systemd Boot Ordering"). Sentinel starts via hatch-rv.target at attach; the
+# cell's Sentinel-routed egress is only exercised post-mount (tools,
+# preflight-opportunistic). Sentinel's RV-owned activation sockets survive a
+# cell crash, so health probes and clients can wake it after the cell recovers.
+Wants=network-online.target com.hatch.runtime-cell-modules.service com.hatch.telemetry-proxy.socket
+# Stop-only coupling (see the daemon unit): PartOf= propagates the mount
+# stop to this unit without ever pulling it into a start transaction. The
+# ORDER — cell teardown before bridge release and the unmounts — comes from
+# the stop-only Before= edges on the RV-side units (rv-graft,
+# host-path-setup), not from this line: PartOf= carries no ordering.
+PartOf=hatch-rv.target
+
+[Service]
+# Keep this unit's storage cost attributable. Without IO accounting the
+# kernel counters vanish with the cgroup when the unit stops, so a
+# short-lived unit's IO can only ever be measured while it is still
+# running -- which is exactly when nobody is looking.
+IOAccounting=true
+Type=simple
+Slice=hatch-runtime.slice
+Delegate=yes
+# Bound the complete in-cell workload, including the daemon and execd children
+# that join this delegated cgroup plus their Spaces build/audit descendants.
+# No MemoryHigh on purpose: with MemorySwapMax=0 the soft limit can only reclaim
+# clean pages, so on anonymous growth it degenerates into a permanent-reclaim
+# grind. MemoryMax is the sole boundary -- run free, then take the clean kill --
+# and still the last line of defense against a host-wide OOM.
+# OOMPolicy=continue (the Delegate=yes default) keeps memory.oom.group=0, so the
+# kernel selects individual victims using the oom_score_adj ladder (daemon
+# -700, cell supervisors 0, workers at least +700). Worker launchers must reset
+# the inherited daemon protection before exec. If the daemon dies it recovers
+# on its own unit's
+# Restart=always + WatchdogSec. With no throttle window there is no PSI ramp
+# ahead of a kill, so memory.events oom_kill IS the signal -- promoted to
+# runtime_cell_cgroup_memory_oom_kill in hatch_health.
+CPUQuota=150%
+MemoryMax=6G
+MemorySwapMax=0
+OOMPolicy=continue
+# ${runtime_cell_rootfs_parent} resolves to the image-local tree
+# (/var/lib/hatch-runtime) on every host.
+# LOAD-BEARING beyond its literal meaning: a non-empty ReadWritePaths= makes
+# systemd give this unit a private mount namespace per Exec* invocation, even
+# though ExecStart is `+` (which only drops the sandboxing/Protect* options).
+# That namespace is what confines the scoped-skill overlay launch-daemon.sh
+# mounts on the base skills source, plus the bin-scoped placeholder overlay and
+# its per-file reveal binds: none of it reaches the host, so it cannot
+# collide with a host-side `spawnd install` swapping those trees. Verified on a
+# live VM -- overlay active in the cell, zero host /proc/1/mounts entries for
+# runtime-cell-exposed/skills. Removing this line (it looks vestigial, since
+# there is no ProtectSystem= for it to modify) would make those overlays
+# host-global. Don't, without re-reasoning about the reveal.
+ReadWritePaths=${runtime_cell_dir} ${runtime_cell_rootfs_parent} /run/hatch
+EnvironmentFile=${env_file}
+EnvironmentFile=-${env_override_file}
+# Auto-heal host dirs that privsep workers share read-only with the runtime
+# cell (see WorkerStateDir::CellReadOnly in
+# bundle-setup/crates/spawnd/src/services/privsep_registry.rs). nspawn BindReadOnly=
+# fails at container start if the source path is missing; spawnd install
+# creates these, but we heal here too so the runtime cell can recover from
+# external cleanup (disk reset, manual rm). Private state dirs are not
+# bound into the cell and are excluded. Lines are registry-generated.
+${cell_readable_state_dir_ensure_lines}
+ExecStartPre=+${runtime_cell_dir}/pre-start.sh
+ExecStart=+${runtime_cell_dir}/launch-daemon.sh
+ExecStartPost=+${runtime_cell_dir}/post-start.sh
+ExecStop=+${runtime_cell_dir}/stop.sh
+ExecStopPost=+${runtime_cell_dir}/post-stop.sh
+Restart=always
+RestartPreventExitStatus=78
+RestartSec=1
+KillMode=mixed
+TimeoutStartSec=60min
+# stop.sh spends at most 5s on graceful poweroff, then 1s on terminate and
+# 0.5s on kill. machinectl runs beside each phase poll, leaving headroom here
+# for setup and stale-state cleanup instead of consuming the whole deadline.
+TimeoutStopSec=20
+LimitNOFILE=65535
+# "/" for the same reason as the daemon unit: an RV WorkingDirectory would
+# re-couple this unit to home-hatch.mount through the implicit
+# RequiresMountsFor=. nspawn sets the container's own cwd; nothing here
+# depends on the host cwd.
+WorkingDirectory=/
+
+[Install]
+WantedBy=multi-user.target

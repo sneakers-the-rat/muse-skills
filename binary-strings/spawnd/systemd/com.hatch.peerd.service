@@ -1,0 +1,115 @@
+[Unit]
+Description=com.hatch.peerd
+# Muse peer-plane transport broker: the Noise_IK responder behind ingress's
+# bridged /v1/noise?peer=v1 upgrades and the outbound dialer toward other
+# Hatch VMs. Holds
+# per-boot channel keys only (authd custodies identity at rest); no durable
+# state, no grants, no content.
+# No start-limit park: peerd terminates internet traffic, so a crash an
+# attacker can trigger repeatedly must degrade to paced restarts, never a
+# unit parked failed until manual reset (an attacker-owned off switch).
+StartLimitIntervalSec=0
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${host_bin_dir}/hatch-peerd
+After=com.hatch.host-path-setup.service
+Requires=com.hatch.host-path-setup.service
+# Ordering only: peerd retries certify-boot until authd answers, but starting
+# after authd saves the retry noise on ordinary boots.
+After=com.hatch.authd.service
+PartOf=hatch-rv.target
+
+[Service]
+Type=simple
+User=${peerd_user}
+Group=${peerd_group}
+# hatch-shared permits the tee-report attestation socket dial (0660 in its
+# setgid directory) and reading Vault's serving deadline (0640). Never add
+# the daemon's credential groups. The group also gates the edge TLS key and
+# daemon/browser socket directories, which are masked below.
+SupplementaryGroups=${shared_group}
+InaccessiblePaths=-/etc/hatch/credentials -/etc/tls -${var_lib_dir} -/hatch -/run/hatch/daemon -/run/hatch/browser-broker/viewer -/run/hatch/cron-browser-broker/viewer
+Slice=hatch-core.slice
+UMask=0077
+NoNewPrivileges=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+# Unit-identity ACLs require reading /proc/<pid>/cgroup for peer processes.
+# Do NOT use ProtectProc=invisible or ProcSubset=pid here — peerd's api-socket
+# PeerAcl reads /proc/<pid>/cgroup of the connecting daemon to validate the
+# caller's cgroup path. Hardening either directive hides the peer's cgroup and
+# silently denies every daemon call, with nothing on the socket to explain why.
+ProtectProc=default
+ProcSubset=all
+ProtectClock=true
+ProtectControlGroups=true
+ProtectHostname=true
+ProtectKernelLogs=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+MemoryDenyWriteExecute=true
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@mount @privileged @resources setns unshare
+SystemCallErrorNumber=EPERM
+# peerd dials other VMs' ingresses over TLS:
+# it needs the internet families for exactly that one client role. Its only
+# listeners remain UDS.
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+# peerd DIALS the public LB; it never binds an INET socket or talks to
+# link-local/metadata or loopback services. The one loopback exception is
+# systemd-resolved's stub at 127.0.0.53 — without it every FQDN dial fails
+# name resolution and the whole peer plane is deaf.
+SocketBindDeny=any
+IPAddressAllow=127.0.0.53/32
+IPAddressDeny=localhost link-local multicast
+PrivateIPC=true
+# The two 32-byte per-boot secrets are mlocked; a small allowance is enough
+# and keeps a leak from pinning real memory.
+LimitMEMLOCK=512K
+# /run/hatch/peerd holds the two sockets peerd binds itself (no socket unit:
+# serve_uds_admitted owns bind + unlink). 0755 so the ingress proxy and the
+# daemon's host-side supervisor can traverse; the socket-file PeerAcls are the
+# access gates.
+RuntimeDirectory=hatch/peerd
+RuntimeDirectoryMode=0755
+ExecStartPre=+/usr/bin/install -d -m 0755 -o root -g root /run/hatch
+# Peer identity resolution (JARVIS_FQDN) and the authd socket come from the
+# shared host env file; env.override is the ops-only emergency layer every
+# host service honors (docs/deploy-and-systemd.md).
+EnvironmentFile=-${env_file}
+EnvironmentFile=-${env_override_file}
+Environment=RUST_LOG=info
+WorkingDirectory=/
+# Account guard that works from EVERY unit load path: the manager's
+# SYSTEMD_UNIT_PATH puts the read-only /opt/hatch overlay AHEAD of /etc, so
+# an /etc mask cannot shadow a baked copy on an image that predates the
+# hatch-peerd account. A failed ExecCondition is SERVICE_SKIP_CONDITION —
+# cleanly skipped, exempt from Restart=always — so an account-less image
+# stays quiet instead of restart-looping on 217/USER, and an image that
+# later gains the account starts peerd with no state to clean up.
+ExecCondition=+/usr/bin/getent passwd ${peerd_user}
+ExecStart=${host_bin_dir}/hatch-peerd
+SyslogIdentifier=hatch-peerd
+MemoryMax=256M
+MemoryHigh=192M
+CPUQuota=50%
+TasksMax=64
+LimitNOFILE=4096
+Restart=always
+RestartSec=5
+# Backstop behind the ExecCondition guard: if user resolution ever fails
+# anyway (217/USER), park the unit failed instead of looping every 5s
+# forever. Ordinary crashes exit with other codes/signals and keep the paced
+# always-restart posture above.
+RestartPreventExitStatus=217
+
+[Install]
+WantedBy=hatch-rv.target

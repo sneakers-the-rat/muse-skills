@@ -1,0 +1,119 @@
+[Unit]
+Description=com.hatch.execd
+# No start-rate limit: execd must never reach a state where systemd stops trying.
+# It owns the taint tracker, so a permanently-down execd means every domain reports
+# tainted (fail-safe, but the feature is silently dead fleet-wide) AND, worse, the
+# xattr-tamper denies stay unloaded, so durable labels can be stripped for as long as
+# it is down. Both are recoverable only by a restart, and cell-root can force crashes
+# cheaply -- a burst limit hands it a way to turn ~20 induced crashes into a permanent
+# outage. Restart forever instead, with the backoff below bounding the cost.
+StartLimitBurst=0
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${host_bin_dir}/hatch-execd
+# After=hatch-rv.target is load-bearing for teardown, not boot ordering: as a
+# WantedBy=hatch-rv.target member with DefaultDependencies=yes, execd would
+# otherwise get systemd's implicit member ordering Before=hatch-rv.target. That
+# implicit edge closed an unfixable stop cycle:
+#   hatch-rv.target -> com.hatch.runtime-cell.service (cell After=hatch-rv.target)
+#     -> com.hatch.execd.service (execd After=runtime-cell)
+#       -> hatch-rv.target (implicit member Before=target)
+# systemd can drop a start job to break it at boot but has nothing to drop at
+# stop, so `systemctl stop hatch.mount` (the only old-VM step a Replace deploy
+# runs) fails with "Transaction order is cyclic" and the daemon is hard-killed
+# without draining. Declaring After=hatch-rv.target explicitly suppresses the
+# implicit member Before=target (systemd does not add the implicit ordering when
+# the unit already orders against the target), removing the closing edge.
+# Boot ordering is unaffected: execd still starts after the runtime-cell
+# and after the RV mounts (After=runtime-cell, plus home-hatch.mount
+# Before=execd from hatch-image), and execd.socket pre-creates the socket
+# independently at sockets.target so the daemon can
+# connect from the first second of boot.
+After=com.hatch.runtime-cell.service com.hatch.host-path-setup.service com.hatch.execd.socket hatch-rv.target
+# Before=daemon on shutdown: daemon drains execd (begin_drain RPC) during
+# its graceful stop window; execd must remain alive until the daemon exits.
+# PartOf=daemon still triggers the stop, but Before= sequences it after.
+Before=com.hatch.daemon.service
+Wants=com.hatch.runtime-cell.service
+Requires=com.hatch.host-path-setup.service
+Requires=com.hatch.execd.socket
+# Second activated socket, served by the host-side anchor for Sentinel taint
+# queries. Both fds are delivered to execd on activation and resolved by name.
+#
+# Wants=, NOT Requires=: losing the taint socket is already fail-closed on its own
+# (Sentinel's query returns Unavailable, which is not-clean, so auto-allows are
+# withheld and the request prompts). Requires= would escalate that degraded-but-safe
+# state into a hard failure of execd -- and execd is PartOf the runtime cell, so the
+# whole cell goes with it. After= still orders activation before execd starts.
+Wants=com.hatch.execd-taint.socket
+After=com.hatch.execd-taint.socket
+PartOf=com.hatch.runtime-cell.service
+PartOf=com.hatch.daemon.service
+PartOf=hatch-rv.target
+
+[Service]
+# Keep this unit's storage cost attributable. Without IO accounting the
+# kernel counters vanish with the cgroup when the unit stops, so a
+# short-lived unit's IO can only ever be measured while it is still
+# running -- which is exactly when nobody is looking.
+IOAccounting=true
+# Type=notify so ordering against this unit means "the taint tracker is attached AND
+# its one-shot durable repairs have settled", not just "the process was exec'd".
+# com.hatch.preflight-opportunistic is After= us and joins the cell cgroup; that join
+# is what roots it as a clean taint domain, and it must not overlap the rootfs label
+# sweep either -- a reconcile running mid-sweep reads labels the sweep has not reached
+# yet, taints, and relabels its writes, while the ledger has already spent a one-shot
+# repair. Readiness is therefore the repair-complete barrier, which is why no separate
+# marker exists. The anchor sends READY=1 on every path that goes on to serve,
+# including a failed install (it serves tools untracked): withholding it there under
+# Restart=always with no start limit would be an infinite restart loop that tears down
+# the tool server every cycle.
+Type=notify
+NotifyAccess=main
+# Sized for the FIRST boot on a machine carrying the pre-fix contamination, where
+# readiness waits on the rootfs label sweep: 237k files measured ~29s on one VM, and
+# the cost scales with the file count, which the manifest decides. The default 90s
+# would be a cliff rather than a budget -- exceeding it kills execd, and because the
+# ledger version is recorded only on success the next start repeats the same sweep,
+# so a slow machine would restart-loop forever instead of finishing once. Later boots
+# short-circuit on the version check and take no measurable time, and an unaffected
+# machine never walks at all (backfill 1's gate is a single getxattr). 5min is
+# generous against the measured ~29s without letting a genuinely wedged install sit
+# unreaped: it is ~10x headroom on observed cost, so a machine that blows it is
+# pathological rather than merely large.
+TimeoutStartSec=5min
+Slice=hatch-runtime.slice
+Delegate=yes
+# Deliver BOTH activated sockets' fds on EVERY start. systemd auto-passes only
+# the same-name com.hatch.execd.socket; the differently-named execd-taint.socket
+# must be listed explicitly or its fd is absent from LISTEN_FDNAMES whenever execd
+# is started by anything other than an incoming taint query (hatch-rv.target, the
+# RPC socket, or Restart=). Without it the anchor's listen_fd_by_name("execd-taint")
+# finds no fd, the Sentinel taint-query server never starts, and the clean-subtree
+# egress auto-allow silently never works. Listing both also guarantees the RPC fd
+# is delivered when the taint socket is the activator.
+Sockets=com.hatch.execd.socket com.hatch.execd-taint.socket
+UMask=0007
+CapabilityBoundingSet=~CAP_SYS_PTRACE
+SystemCallFilter=~io_uring_setup io_uring_enter io_uring_register
+SystemCallErrorNumber=EPERM
+ReadWritePaths=${jarvis_home} /run/hatch
+ReadWritePaths=${runtime_cell_dir}
+InaccessiblePaths=-/etc/hatch/credentials
+EnvironmentFile=${env_file}
+EnvironmentFile=-${env_override_file}
+ExecStart=${runtime_cell_dir}/control-execd.sh
+SyslogIdentifier=hatch-execd
+Restart=always
+# Back off rather than hot-loop: 1s, doubling to a 30s ceiling, so a persistent
+# failure costs ~2 restarts/minute instead of 60 while still recovering promptly from
+# a transient one.
+RestartSec=1
+RestartSteps=5
+RestartMaxDelaySec=30
+KillMode=mixed
+TimeoutStopSec=30
+LimitNOFILE=65535
+WorkingDirectory=${jarvis_home}
+
+[Install]
+WantedBy=hatch-rv.target

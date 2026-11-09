@@ -1,0 +1,54 @@
+[Unit]
+Description=com.hatch.messengerd
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${image_bin_dir}/messenger-cli
+After=network-online.target hatch-rv.target com.hatch.host-path-setup.service com.hatch.authd.socket var-lib-hatch.mount
+Wants=network-online.target com.hatch.authd.socket
+Requires=com.hatch.host-path-setup.service
+PartOf=hatch-rv.target
+
+[Service]
+Type=simple
+User=${messenger_user}
+Group=${messenger_group}
+SupplementaryGroups=${shared_group} ${messenger_client_group}
+Slice=hatch-runtime.slice
+PermissionsStartOnly=true
+UMask=0007
+NoNewPrivileges=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+PrivateTmp=true
+PrivateDevices=true
+ProtectHome=true
+ProtectControlGroups=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+LockPersonality=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+SystemCallArchitectures=native
+RestrictNamespaces=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ProtectSystem=strict
+ProtectProc=default
+ProcSubset=all
+ReadWritePaths=/run/hatch/messenger ${var_lib_dir}/messenger
+InaccessiblePaths=-/etc/hatch/credentials
+EnvironmentFile=${env_file}
+EnvironmentFile=-${env_override_file}
+Environment=HOME=${var_lib_dir}/messenger
+Environment=JARVIS_AUTHD_SOCK=/run/hatch/auth/authd.sock
+Environment=PATH=${host_bin_dir}:${image_bin_dir}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+WorkingDirectory=${var_lib_dir}/messenger
+ExecStart=${image_bin_dir}/messenger-cli --state-dir ${var_lib_dir}/messenger daemon --socket ${messenger_sock}
+ExecStopPost=/bin/rm -f ${messenger_sock}
+SyslogIdentifier=messengerd
+Restart=always
+RestartSec=1
+TimeoutStopSec=10
+LimitNOFILE=65535
+
+[Install]
+WantedBy=hatch-rv.target
