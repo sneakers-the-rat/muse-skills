@@ -1,1 +1,0 @@
-artifacts/system/web/builder/workflow/build_goal_exit_driven.md

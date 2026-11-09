@@ -1,0 +1,166 @@
+Publish one portable Idea so anyone with its Muse link can open and save it, and create its native Idea card for the current chat. Use only after the user explicitly asks to share an Idea or turn the just-completed activity into a shareable Idea. New Ideas require distinct summary and how_it_works copy plus complete reusable instructions. This makes the Idea content readable to other authenticated Muse users. On success, include the returned widget.embed_token exactly once on its own line. If the result has widget_warning instead, use the exact returned share_url as the target of an inline `[Open the Idea](...)` link in the same response without claiming a card appeared. Do not call idea.create_idea_widget for the same Idea.
+^idea_[0-9a-f]{32}$Existing local Idea ID. When present, omit every draft field.New Idea title when packaging the just-completed activity.Short explanation of the reusable outcome.Concrete public description of what the assistant does and delivers. Must add detail beyond the summary.Self-contained steps another user can execute with their own data and permissions.personal_productivityavatar_improvementClosest supported domain for a newly packaged Idea.Use for an explicit request to share an existing Idea or package the immediately preceding completed activity as an Idea. Read a saved Idea first and pass only idea_id when its title, summary, distinct public How it works copy, and instructions are already safe to publish; otherwise provide a generalized title, short outcome summary, a distinct how_it_works explanation of what the assistant does and delivers, concrete reusable instructions, and domain. Do not repeat the summary as how_it_works. Do not include credentials, private identifiers, local file paths, or details the user did not ask to publish. Supplying draft fields does not edit an existing saved Idea. If the tool says the draft matched an existing Idea with different public content, do not claim the edited wording was published or immediately share the stale copy: explain that idea_id would publish the previously saved copy unchanged. A successful call creates the native Idea card too: put widget.embed_token exactly once on its own line. If the result has widget_warning instead, use the exact returned share_url as the target of an inline `[Open the Idea](...)` link in the same response without claiming a card appeared. Do not call idea.create_idea_widget again.
+The Idea could not be sharedlocal_provenance_recordedThe Idea is public, but its local publication receipt could not be confirmed.shared Idea chat card persistence was rejectedThe Idea is public, but its chat card was not created. Use the exact share_url as the target of an inline [Open the Idea](...) link in the same response.widget_warningInclude widget.embed_token exactly once on its own line. The card already opens and shares the Idea, so do not write share_url or any link to it in this response unless the user explicitly asked for the URL itself.assistant_instructionshared Idea chat card could not be persistedRecord a send or skip decision for each item in the active proactive delivery.
+Record a decision for every item in the active proactive delivery, using the
+exact item IDs from the handoff. Call this after your freshness and
+conversation checks, before you create any presentation or send a message.
+Give each item a reason, and give each item you send a format.
+
+Reasons to send an item (give the main one):
+- time_sensitive: It needs the user's attention before a deadline or event that is still ahead.
+- changed: Something the user cares about changed, such as a delay, a reply, a price or a cancellation.
+- requested: The user asked for this update or is tracking it.
+- ready_for_decision: Prepared work, such as a draft, options or a booking, is ready for the user's choice.
+- new_opportunity: It is a new, relevant option or idea the user has not asked about.
+
+Reasons to skip an item:
+- moot: It stopped applying because circumstances changed, such as a cancelled event, a past date or new plans.
+- already_handled: The task is done, or the user was already told about it or already replied.
+- unconfirmed: Your checks could not confirm it is still true.
+- preferences: The user's proactive preferences rule it out.
+- not_useful_now: It is true and allowed but not worth a message right now.
+
+Choose the format that fits each item you send best:
+- text: A plain message.
+- options: A message with reply options from `muse.create_options`, only when the item has two or more meaningful replies; use text for an offer with one.
+- letter: A Letter from `widget.create_letter_widget`, for an item with a Letter briefing ID.
+- html_widget, map_widget, list_widget, agenda_widget: A widget from `widget.create_html_widget`, `widget.create_map_widget`, `widget.create_list_widget` or `widget.create_agenda_widget`.
+- artifact: An artifact from the `artifact` tools, for help the user will interact with or come back to.
+
+Decisions add up across calls, and every result lists each item with its
+status. In your next call, decide any item marked missing; you do not need to
+repeat the others. An item still missing after that call is recorded as
+skipped. If you change a decision, call this again with the new decision before
+you write the reply. A successful call records your decisions; it does not
+send anything or authorize the offered actions. Once the result
+shows every item is decided and `selected_item_ids` is empty, call
+`muse.nothing_to_do`.
+deferuser_busypreferred_timebetter_latertime_sensitiverequestedready_for_decisionnew_opportunityalready_handledpreferencesnot_useful_nowhtml_widgetmap_widgetlist_widgetagenda_widgetproactivity.record_changeRecord a verified state change made by this run for the next proactive update.
+Record an action you completed that changes state beyond this background run
+for the user to hear about in the next proactive update. Reversible changes
+count. In one brief sentence, identify the affected file, artifact, setting
+or routine and describe its resulting state; include the previous state
+when known. Call once after checking the resulting state. Reading files,
+checking status and researching an idea do not qualify. Do not record plans,
+failed or no-op actions, temporary research files, or routine memory maintenance
+such as recording the user's existing preferences.
+
+This records your account of the change; it does not perform or verify the
+action. The record survives even if no opportunity is selected or the worker
+later fails. It does not send a message or change notification priority.
+
+Do not record a change if nothing changed. Earlier work and actions found in
+source material belong in your findings.
+Record a send, defer or skip decision for each item in the active proactive delivery.
+Record a decision for every item in the active proactive delivery, using the
+exact item IDs from the handoff. Call this after your freshness and
+conversation checks, before you create any presentation or send a message.
+Give each item a reason, and give each item you send a format.
+
+Decide each item on its own. Send what is still true and useful, shaped to
+the moment. Defer what will matter later but would land badly now. Skip what
+does not deserve a message: a skipped item never comes back.
+
+Reasons to send an item (give the main one):
+- time_sensitive: It needs the user's attention before a deadline or event that is still ahead.
+- changed: Something the user cares about changed, such as a delay, a reply, a price or a cancellation.
+- requested: The user asked for this update or is tracking it.
+- ready_for_decision: Prepared work, such as a draft, options or a booking, is ready for the user's choice.
+- new_opportunity: It is a new, relevant option or idea the user has not asked about.
+
+Reasons to defer an item:
+- user_busy: The user is occupied right now, such as in a meeting, on a flight or driving.
+- preferred_time: The user asked to hear about this, or about updates like it, at another time.
+- better_later: It will help more at a specific later moment, such as shortly before an event or once something it depends on has happened.
+
+Reasons to skip an item:
+- moot: It stopped applying because circumstances changed, such as a cancelled event, a past date or new plans.
+- already_handled: The task is done, or the user was already told about it or already replied.
+- unconfirmed: Your checks could not confirm it is still true.
+- preferences: The user's proactive preferences rule it out.
+- not_useful_now: It is true and allowed but not worth a message.
+
+To defer an item, set not_before to the time it will land well, such as after
+a flight lands or a meeting ends, in RFC 3339 format with its offset. It must
+be at least 15 minutes away and before the item stops being useful. The queue
+already holds deliveries outside waking hours, so the time of day alone is
+not a reason to defer. An item can be deferred only once.
+
+Choose the format that fits each item you send best:
+- text: A plain message.
+- options: A message with reply options from `muse.create_options`, only when the item has two or more meaningful replies; use text for an offer with one.
+- letter: A Letter from `widget.create_letter_widget`, for an item with a Letter briefing ID.
+- html_widget, map_widget, list_widget, agenda_widget: A widget from `widget.create_html_widget`, `widget.create_map_widget`, `widget.create_list_widget` or `widget.create_agenda_widget`.
+- artifact: An artifact from the `artifact` tools, for help the user will interact with or come back to.
+
+Decisions add up across calls, and every result lists each item with its
+status. In your next call, decide any item marked missing and read its note;
+you do not need to repeat the others. An item still missing after that call
+is recorded as skipped. If you change a decision, call this again with the
+new decision before you write the reply. A successful call records your
+decisions; it does not send anything or authorize the offered actions. Once
+the result shows every item is decided and `selected_item_ids` is empty, call
+`muse.nothing_to_do`. Deferred items come back to you in a delivery of their
+own at the time you set, or later if waking hours or limits hold them; items
+deferred to the same time come back together.
+Look back at the past preparation behind a proactive update, which can be outdated and must be reconfirmed before use.
+Look back at what a background proactivity worker prepared earlier. Start
+with `edition_id` to list its items, and add `item_id` for the drafts, sources
+and acceptance scope. This is a past snapshot. It can be outdated or wrong.
+Before you present any of it or act on it, reconfirm that it is still true
+and current with `muse.memory_search` and the relevant live sources. Never
+present something you already did or already told the user as if it never
+happened. Oversized results remain available through the normal output file
+and read pagination.
+
+The response includes current shared delivery and pending history. Use actual delivered text to compare what the user has already heard; queued drafts are not deliveries.
+For every entity in `ads_citations`, copy its exact `marker` value everywhere that entity name belongs. The marker is already complete; do not construct it from `citation_id` or repeat the entity name next to it. Jarvis deterministically renders the entity name you supplied for each output surface. Do not name another resolvable ad account, campaign, ad set, or ad as plain text; only an entity that genuinely lacked a required ID may remain uncited.ads.resolve_entitiesRequired finalization tool for Ads responses that name an ad account, campaign, ad set, or ad from Ads tool results. After selecting every entity the response will name, call this tool once before composing the final response. Include every resolvable named entity, passing its name and ID exactly as returned; campaigns, ad sets, and ads also require their owning ad account ID. Copy every returned marker exactly where that entity name belongs. Do not leave one resolvable entity as plain text while citing another. If a named entity genuinely lacks a required ID, it may remain plain text; never invent names or IDs. Use numeric IDs with at most one act_ prefix. The runtime creates fallback links, so do not supply links.
+Ads object level. Must match the level of entity_id.Raw stable L4-L1 id of the entity, bare numerics exactly as returned by the Ads data source (a single act_ prefix is accepted and stripped).Entity name exactly as returned by the Ads data source, shown on the chip.Owning L4 ad account id, bare numerics (a single act_ prefix is accepted and stripped). Required for campaign, ad_set, and ad; omit for ad_account.Ads entities to chip in the response. Include only entities you read from actual tool output.Before every final response based on Ads tool results, check whether the response will name an ad account, campaign, ad set, or ad. If it will, you MUST call this tool with the complete set of resolvable named entities before answering. This applies to one entity or many, in prose, lists, and tables, even when the user did not ask for links. Do not finish with a resolvable Ads entity written only as plain text.
+The user's avatar request in their own words, verbatim. Never a summary or restatement. A refinement of an earlier request carries both messages verbatim, earlier first, separated by a blank line.How many distinct avatar options to offer. Omit for normal requests; the default returns several options. Only set this when the user explicitly asks for a specific NUMBER OF OPTIONS (e.g. 'just give me one', 'show me two'). A single-subject request or one attached reference image is NOT a request for one option; omit num_options.Optional file path (absolute or `~/…`) of an image to base the candidates on: an image the user attached (e.g. an uploaded photo) or an image_path returned by avatar.get.Create candidate options for Muse's own avatar (its self-image, never the user's profile picture) from the user's request passed verbatim; the user picks one to activate with avatar.set. To restyle the current avatar use avatar.edit.
+True to return Muse's default avatar instead of the active avatar.Report the current state of Muse's avatar, Muse's own self-image. Read-only: it returns whether the active avatar is default or custom (active_avatar), whether an avatar image is active (image_available) with its local workspace path (image_path, reusable as a source or reference for further generation), whether animated variants exist (video_available), the variant names (variants), and per-variant local asset paths (image_variant_assets, video_variants). With default: true it returns Muse's default avatar, Jolly, instead; read image_path (~/assets/avatar/reference/hatch.jpg) to see it. When no avatar state can be read it reports that no avatar exists rather than failing. To create a new avatar use avatar.create; to restyle the current one use avatar.edit; to activate a candidate use avatar.set.
+Report the current state of Muse's own avatar: whether an image is active, its local path, and which static and animated variants exist; default: true reports Muse's default avatar instead. Read-only; to change the avatar use avatar.create or avatar.edit.
+Opaque candidate id returned by a previous avatar.create or avatar.edit call. Pass the id of the option the user chose, to set it as the active avatar. Must be non-empty; a malformed or stale id fails without changing the avatar.Activate an avatar candidate as Muse's live avatar. candidate_id must be an id returned by a previous avatar.create or avatar.edit call; never invent or alter one. When image-selection context contains an image_id matching one of those returned candidate ids, pass that image_id unchanged as candidate_id. The avatar image updates immediately, so briefly and naturally respond in first person ("I've updated my avatar", "My avatar is now ..."), never "your avatar" or "you're ..."; do not reference candidate ids or video/animation generation, since the animated version fills in afterward. If the result reports that nothing was activated because the active avatar changed in the meantime, re-run avatar.create or avatar.edit and let the user pick again instead of retrying the same id.
+Activate an avatar candidate by candidate_id so it becomes Muse's live avatar. Ids come only from avatar.create or avatar.edit results; never invent one. Applies to Muse's own avatar, not the user's profile picture.
+kind and count require operation generate_videosgenerate_videos requires kindcount must be positive, or omitted for all missing videosThe user's requested change to the currently active avatar, in their own words, verbatim. Never a summary or restatement. Must be non-empty.Omit or use restyle for an image edit. Use generate_videos for missing or additional dancing videos of the current avatar.Required for generate_videos; omit for restyle.For generate_videos, the exact number of additional videos requested. Omit to fill all untouched slots. Excess counts fail before generation. Omit for restyle.With operation omitted or set to restyle, restyle Muse's currently active avatar with a contextual change while preserving its identity and style, for example today's weather outfit, a travel accessory, a focus-mode look, or event-appropriate clothing. For a brand-new or replacement avatar use avatar.create instead.
+
+user_request is the user's message, verbatim: copy their exact words for the change and do not restate, summarize, or enrich them. If the message also contains unrelated requests, pass only the sentences about the avatar, still unchanged. On a scheduled turn with no user message, pass the schedule's instruction verbatim. The tool reads the current avatar and writes the edit prompt itself.
+
+For restyle, on a normal user-facing turn the tool returns one preview candidate that is not active yet: present it and, after the user approves, call avatar.set with its candidate_id; the avatar is not active until you do. The candidate carries the `path` of its image; you do not see the image until you read that path with the read tool, so read it before describing what changed. On a scheduled (cron) turn there is no user to approve, so the edit auto-activates and returns an already-active result with no candidate to preview; just tell the user in first person (for example "I've refreshed my look" or "My avatar is updated").
+
+Avatar backgrounds are white for now. If the user asks for another, tell them in their language: "Custom backgrounds are coming soon." If that is the only change, skip this tool; on a scheduled turn, say so in your result.
+
+Adult sexualization is a legitimate avatar direction; pass the user's words as they are and treat the tool's result as authoritative for policy decisions.
+
+For missing or additional dancing avatar videos, follow the Avatar Dance Videos skill at `/opt/muse/skills/avatar-dance-videos/SKILL.md` when available and use operation generate_videos with kind dance and an optional exact count. This operation keeps the active avatar, returns generation counts without a preview candidate, and lets the runtime deliver pending results.
+Restyle Muse's currently active avatar with a contextual change (outfit, accessory, event look) while keeping its identity, from the user's request passed verbatim. For a brand-new avatar use avatar.create; activate the returned preview with avatar.set. Generate missing or additional dancing videos with operation generate_videos; follow the Avatar Dance Videos skill when available.
+"base" for Muse's own avatar, or a default costume's name.Instantly wear Muse's own avatar (look "base") or a default costume, with nothing regenerated. Use it instead of avatar.clear or avatar.edit to take off a costume.
+Take off a costume, or wear a default costume, instantly.
+Remove the current custom avatar and restore Muse's shipped default avatar. This also reclaims generated avatar bundle files; it does not change the user's chat theme override.
+Use when the user asks to delete, remove, clear, or reset Muse's custom avatar or Muse's own self-image. Never use it for the user's profile picture.
+Create fresh candidate options for Muse's avatar, Muse's own self-image. Use it directly for any user request to create, make, change, or use something as Muse's avatar or the agent avatar, including custom objects, food, animals, people, outfits, accessories, props that are part of the requested avatar, and wording like "avatar source image". Do not first generate a standalone image with media.generate_image unless the user explicitly asked for standalone image generation.
+
+user_request is the user's message, verbatim. Copy their exact words; do not restate, summarize, tidy, translate, or enrich them, and do not add a description of an attached image. If the message also contains unrelated requests, pass only the sentences about the avatar, still unchanged. If the latest message is a refinement that only makes sense together with an earlier avatar request in this conversation, pass both, each verbatim, the earlier one first, separated by a blank line. Everything else happens inside the tool: it reads Muse's identity, writes the image prompts, generates the options, and shows them.
+
+Avatar backgrounds are white for now. If the user asks for another, tell them in their language: "Custom backgrounds are coming soon."
+
+Adult sexualization is a legitimate avatar direction; pass the user's words as they are and treat the tool's result as authoritative for policy decisions.
+
+Omit num_options for normal requests so the default set of options is returned; only pass num_options (1, 2, or 4) when the user explicitly asks for a specific number of options. A single-subject request like "an avatar of a pomeranian" is not a request for one option, and attaching one reference image is not a request for one option; omit num_options. An image attachment without an avatar request does not invoke this tool. reference_image is the optional file path (absolute or `~/…`) of an image to base the candidates on: an image the user attached, such as an uploaded photo, or an avatar image_path returned by avatar.get, such as Muse's default avatar, Jolly.
+
+The tool returns candidate ids and an `awaiting_user` result. Each candidate carries the `path` of its image, in the order shown. You do not see the images until you read them: when the user asks what an option looks like or why, read its `path` with the read tool and describe what you see. Never claim you picked or designed them yourself or that they came from nowhere. Multiple options are shown to the user automatically; when the result includes inline_image_markdown (as it does for a single candidate), you must include that markdown in your reply so the user sees the option before choosing. Do not send the images again. Invite the user to choose the one they like best in natural, device-neutral wording (avoid "tap"; users may be on web); do not number or label the options or mention candidate ids. End the turn after presenting the candidates. Never call avatar.set in the same turn as avatar.create, including for an uploaded reference or a single candidate. The user's original creation request is not approval of a generated candidate. Nothing is active until a later user message explicitly picks or confirms one and you call avatar.set with that candidate's candidate_id.
+For a seasonal look the user asks for without naming one, such as a Halloween costume, try the matching preset; a specific named costume ("make it a vampire") is an avatar.edit, unless it is one of the default costumes avatar.get lists.
+halloween_costumeA seasonal option set built from the current avatar, offered only in its season; the tool says when it is not available. Omit num_options and reference_image with a preset.browser_findFind exact matches of `pattern` in a page already opened with `browser.open`.
+
+Link to or summarize copyrighted material instead of reproducing it. Quote no more than 50 words of any one copyrighted work in total, counting every turn, file, tool and background task together, and do not retell it in detail. Finding a work through another source does not make copying it permissible. Public-domain and openly licensed works are fine to quote.
+Text to search for (case-insensitive exact match).Integer page ID from a previous browser.open result to search within.0-indexed line number to start searching from. Useful for finding later occurrences after a previous browser.find call.Search a page already opened with `browser.open` for exact text matches. Use it to jump to where a phrase appears instead of scrolling through the page.
+pattern must not be empty--location-context--user-provided-urlsbrowser_openFetch page text to read, summarize, or answer questions that the text can establish. This doesn't open the page in the user's browser. Do not use it for requests to go to, open, or visit a website. It cannot click, sign in, fill forms, or make purchases. For facts that require current site or account state, use a relevant skill or connector that provides the required live information, or the live browser; a text fetch is not a prerequisite.
+
+Prefer page references: pass a returned integer search-session or page ID as `url_id`, with `outlink_idx` to select a search result or a real link from a referenced page. A literal URL must be copied verbatim from a prior tool result or a link the user supplied in this conversation. Never guess a URL or construct one from a domain. Use `line_start` with a returned page ID to continue reading its text; this doesn't scroll the user's browser. When search output warns that a live check found some URL destinations unavailable, do not open a result index whose mapping is absent from its `Full URLs for search results` section. If the tool cannot read a page, follow any recovery guidance provided by the runtime. Avoid repeating the same failed fetch unchanged.
+
+A failed or incomplete text fetch does not establish a login barrier, failure in the live browser, or absence of the requested option. Follow supported recovery guidance, preserve explicit restrictions and stop conditions, and report only limitations actually established. If the text cannot establish a required fact, use a permitted live-browser check. If you cannot use the live browser, state what still needs to be verified.
+
+When a page carries images, its content ends with an `Images:` footnote mapping the `[Image N]` markers in the text to direct image-file URLs: the page's real images, usable wherever a direct image link is needed.
+
+Link to or summarize copyrighted material instead of reproducing it. Quote no more than 50 words of any one copyrighted work in total, counting every turn, file, tool and background task together, and do not retell it in detail. Finding a work through another source does not make copying it permissible. Public-domain and openly licensed works are fine to quote.
+Prefer an integer search-session ID from browser.search or a page ID from a prior read. A literal URL must be copied verbatim from a prior tool result or a link the user supplied in this conversation. Never guess a URL or construct one from a domain.Index of a search result or a real link in a referenced page (shown as 【idx†...】 in page content). Use page references rather than reconstructing URLs. When url_id is a search session ID, this selects which result to fetch (0 = first result, 1 = second, etc.).0-indexed line number to start displaying from in the returned page text. This does not scroll the user's browser.Fetch page text using a returned page reference or an exact URL supplied by the user in this conversation or returned by a tool. Use it when the text can establish the answer. This doesn't open the page in the user's browser and is not for requests to visit a website or act on one. Never guess or reconstruct URLs. For facts that require current site or account state, use a relevant skill or connector that provides the required live information, or the permitted live-browser route; a text fetch is not a prerequisite. A failed fetch does not establish a login barrier, failure in the live browser, or absence of the requested option. Preserve explicit restrictions and follow supported recovery guidance.
+��
