@@ -1,0 +1,242 @@
+select p.* from agent.connection_participants p
+                join agent.connections c using(connection_id)
+                where p.connection_id=$1 and c.active and p.audience=c.audience
+                order by p.kind,p.display_name,p.participant_idselect audience from agent.connections where connection_id=$1 and active for updateselect exists(select 1 from unnest($1::uuid[]) as directory_id
+                 where not exists(select 1 from agent.connections c where c.connection_id=directory_id))The conversation audience changeddelete from agent.connection_participants where connection_id=$1 and not (participant_id=any($2))A participant directory entry no longer existsupdate agent.connections set person_paths=$2,group_path=$3,updated_at_ms=$4
+                         where connection_id=$1 and (person_paths,group_path) is distinct from ($2,$3)insert into agent.connection_participants
+                  (connection_id,participant_id,audience,display_name,kind,owner_participant_id,directory_id,person_path,muse_id)  on conflict (connection_id,participant_id) do update set
+                  audience=excluded.audience,display_name=excluded.display_name,kind=excluded.kind,
+                  owner_participant_id=excluded.owner_participant_id,directory_id=excluded.directory_id,
+                  person_path=excluded.person_path,muse_id=excluded.muse_id
+                  where (connection_participants.audience,connection_participants.display_name,
+                         connection_participants.kind,connection_participants.owner_participant_id,
+                         connection_participants.directory_id,connection_participants.person_path,
+                         connection_participants.muse_id)
+                    is distinct from (excluded.audience,excluded.display_name,excluded.kind,
+                                      excluded.owner_participant_id,excluded.directory_id,
+                                      excluded.person_path,excluded.muse_id)insert into agent.connections
+                    (connection_id,provider,address,display_name,muse_id,audience,active,rules_revision,
+                     person_paths,search_document,created_at_ms,updated_at_ms)  on conflict (connection_id) do update set
+                    display_name=excluded.display_name,muse_id=excluded.muse_id,
+                    person_paths=excluded.person_paths,search_document=excluded.search_document,
+                    updated_at_ms=excluded.updated_at_ms
+                    where connections.provider='directory'
+                      and connections.address=excluded.address and connections.audience=excluded.audience
+                      and (connections.display_name,connections.muse_id,connections.person_paths)
+                          is distinct from (excluded.display_name,excluded.muse_id,excluded.person_paths)select exists (
+                    select 1 from unnest($1::uuid[],$2::text[]) as expected(id,identity)
+                    join agent.connections c on c.connection_id=expected.id
+                    where c.provider<>'directory' or c.address<>expected.identity or c.audience<>expected.identity)Participant directory identity changedselect exists(select 1 from chat_private.external_party_conversations where chat_id=$1)SELECT EXISTS(SELECT 1 FROM runtime.maintenance_markers WHERE marker_key = 'event_hook_admissions_v1')select distinct idea_id,
+                            metadata_json -> 'publication_hold' ->> 'fingerprint',
+                            metadata_json -> 'publication_hold' ->> 'reason'
+                       from ideas.idea_sources
+                      where idea_id = any($1::text[])
+                        and (source_namespace, source_kind) in (
+                          ('idea_share', 'pending_share'),
+                          ('user', 'http_create'),
+                          ('shared_www', 'shared_idea')
+                        )
+                        and metadata_json -> 'publication_hold' ->> 'fingerprint' is not null
+                        and metadata_json -> 'publication_hold' ->> 'reason' is not nullinvocation_id, task_id, planner_agent_id, parent_invocation_id, caller_agent_id, caller_submission_id, call_id, agent_id, submission_id, runtime_work_id, input_digest, kind, state, input_json, context_json, result_json, wait_call_id, ordinal, tab_id, (extract(epoch from created_at) * 1000)::bigint as created_at_ms, (extract(epoch from stop_requested_at) * 1000)::bigint as stop_requested_at_ms, terminal_reason, handoff_state, (extract(epoch from finished_at) * 1000)::bigint as finished_at_mspeer_id, muse_id, x25519_pub, key_epoch, binding, binding_expires_at_ms, fqdn, vm_id, endpoint_hints, display_name, agent_name, account_claim, relationship_generation_id, relationship_direction, relationship_started_at_ms, request_expires_at_ms, request_terminal_cause, relationship_revision, remote_confirmed_ceremony_id, remote_confirmed_at_ms, status, trust_preset, sas_confirmed_local, active_sas_ceremony_id, attested, person_slug, provenance, paired_at_ms, last_activity_ms, created_at_ms, updated_at_msinsert into goals.engagement_events
+                     (event_id, goal_id, event_type, surface, value, request_id, metadata,
+                      created_at)
+                     values ($1, $2, $3, $4, $5, $6, $7, coalesce($8::timestamptz, now()))
+                     returning event_id, goal_id, event_type, surface, value, request_id, metadata,
+                               created_at::text as created_atSELECT count(*) FROM goals.goals
+                 WHERE goal_id=ANY($1) AND source='assistant_tracking'
+                   AND connection_id=$2 AND connection_request_id=$3handoff event sequence
+SELECT e.event_seq, e.event_name, coalesce(e.message_id, '') AS message_id,
+       e.payload_json
+FROM events e
+WHERE e.idempotency_key = $1
+  AND e.payload_json IS NOT NULL
+context event identity already belongs to another writerSELECT event_seq FROM events WHERE idempotency_key = $1runtime_events_main_public_root_message_uidxSELECT request_id, root_request_id, parent_request_id,
+                                        event_name, visibility::text, role::text, source,
+                                        transcript_surface::text, message_id, reply_to_message_id,
+                                        agent_id, parent_agent_id, parent_message_id
+                                 FROM events WHERE event_seq = $1delta.presentationruntime.messages.body
+INSERT INTO messages (message_id, event_seq, role, body, created_at)
+VALUES ($1, $2, $3::runtime.message_role, $4, to_timestamp($5::double precision / 1000.0))
+ON CONFLICT (message_id) DO NOTHING
+
+SELECT event_seq AS seq, event_name, role::text AS role
+FROM events
+WHERE message_id = $1
+  AND transcript_surface = 'main_chat'
+  AND visibility = 'public'
+  AND event_name IN ('message.user', 'message.assistant')
+  AND (parent_message_id IS NULL OR TRIM(parent_message_id) = '')
+LIMIT 1
+seqrequest_idroot_request_idparent_request_idsourcetranscript_surfacereply_to_message_idparent_agent_idparent_message_idDELETE FROM chat.event_transports WHERE event_seq = $1INSERT INTO chat.event_transports (event_seq, provider) VALUES  ON CONFLICT (provider, event_seq) DO NOTHING, ()INSERT INTO agents (agent_id, id, session_id, kind, parent_id, parent_agent_id, root_session_id, depth, created_at, updated_at, model, status, last_assistant_message, ephemeral, agent_type, presentation_root_session_id, spawn_metadata_json, originating_location_context_json)
+             VALUES ($1, $1, $2, $3, $4, $4, $5, $6, $7, $8, $9, $10, NULL, $11, $12, $13, $14, $15)
+INSERT INTO agent_ancestors (descendant_id, ancestor_id, distance)
+VALUES ($1, $1, 0)
+ON CONFLICT (descendant_id, ancestor_id) DO NOTHING
+
+INSERT INTO agent_ancestors (descendant_id, ancestor_id, distance)
+SELECT $1, ancestor_id, distance + 1
+FROM agent_ancestors
+WHERE descendant_id = $2
+ON CONFLICT (descendant_id, ancestor_id) DO NOTHING
+
+INSERT INTO agent_ancestors (descendant_id, ancestor_id, distance)
+VALUES ($1, $2, 1)
+ON CONFLICT (descendant_id, ancestor_id) DO NOTHING
+freshupdate runtime.browser_invocations set handoff_state = 'delivered',
+                     handoff_settled_at = now() where invocation_id = $1 and handoff_state = 'owed'update runtime.browser_invocations set handoff_state = 'suppressed',
+                     handoff_settled_at = now() where invocation_id = $1 and handoff_state = 'owed'/mirror/status/connections/countINSERT INTO runtime.maintenance_markers (marker_key, detail_json) VALUES ('event_hook_admissions_v1', '{}') ON CONFLICT (marker_key) DO NOTHINGINSERT INTO runtime.event_hook_admissions (hook_id, revision, definition_sha256, script_sha256, enabled)  ON CONFLICT (hook_id) DO NOTHINGselect 1 from runtime.browser_tasks where task_id = $1 for updatewith recursive branch as (
+                    select invocation_id from runtime.browser_invocations where invocation_id = $1
+                    union all select child.invocation_id from runtime.browser_invocations child
+                    join branch parent on child.parent_invocation_id = parent.invocation_id)
+                    update runtime.browser_invocations set state = $3, suspended_state = null, result_json = $2,
+                    terminal_reason = $4, finished_at = now(), updated_at = now(),
+                    handoff_state = case when parent_invocation_id is null then $5::text end,
+                    handoff_submission_id = case when parent_invocation_id is null then $6::text end
+                    where invocation_id in (select invocation_id from branch)
+                    and result_json is null returning invocation_idupdate runtime.browser_tasks set last_progress_at = now()
+                    where task_id = $1 and status = 'running'widget_idskipping attachment signing after metadata build failedspacefailed to resolve owning root session from chat event recordspace_build_completedexecute-resolve run disappearedexecute-resolve owner disappearedSELECT activity_thread_id, action_index FROM activity_monitor_thread_actions WHERE action_id = $1 LIMIT 1
+SELECT status, finish_status
+FROM activity_monitor_threads
+WHERE activity_thread_id = $1
+LIMIT 1
+FOR UPDATE
+
+SELECT a.activity_thread_id
+FROM activity_monitor_agent_threads a
+JOIN activity_monitor_threads g ON g.activity_thread_id = a.activity_thread_id
+WHERE a.agent_id = $1
+  AND g.status = $2
+LIMIT 1
+FOR UPDATE OF g
+
+UPDATE activity_monitor_threads
+SET status = $2,
+    finished_at = NULL,
+    finish_message = NULL,
+    finish_status = NULL,
+    finish_status_reason = NULL
+WHERE activity_thread_id = $1
+
+SELECT COALESCE(MAX(action_index), 0) + 1
+FROM activity_monitor_thread_actions
+WHERE activity_thread_id = $1
+activity_thread_id is required when no current activity_thread is set
+INSERT INTO activity_monitor_thread_actions (
+    action_id, activity_thread_id, action_index, agent_id, agent_depth, icon, title, subtitle, report, status, created_at
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+ON CONFLICT(action_id) DO UPDATE SET
+    activity_thread_id = excluded.activity_thread_id,
+    action_index = excluded.action_index,
+    agent_id = excluded.agent_id,
+    agent_depth = COALESCE(excluded.agent_depth, activity_monitor_thread_actions.agent_depth),
+    icon = excluded.icon,
+    title = excluded.title,
+    subtitle = excluded.subtitle,
+    report = excluded.report,
+    status = excluded.status,
+    created_at = LEAST(activity_monitor_thread_actions.created_at, excluded.created_at)
+RETURNING action_index, action_seq, action_id, activity_thread_id, agent_id, agent_depth, icon, title, subtitle, report, status, created_at, nextval(pg_get_serial_sequence('activity.activity_monitor_thread_actions', 'action_seq'))::bigint AS write_ordinal
+action_seqwrite_ordinal
+SELECT action_index, action_seq, action_id, activity_thread_id, agent_id, agent_depth, icon, title, subtitle, report, status, created_at
+FROM activity_monitor_thread_actions
+WHERE activity_thread_id = $1
+ORDER BY action_index ASC, action_seq ASC
+
+SELECT action_index, action_id, activity_thread_id, agent_id, agent_depth, icon, title, subtitle, report, status, created_at
+FROM activity_monitor_thread_actions
+WHERE action_id = $1
+LIMIT 1
+
+SELECT action_index, action_id, activity_thread_id, agent_id, agent_depth, icon, title, subtitle, report, status, created_at
+FROM (
+    SELECT
+        action_index,
+        action_id,
+        activity_thread_id,
+        agent_id,
+        agent_depth,
+        icon,
+        title,
+        subtitle,
+        report,
+        status,
+        created_at,
+        action_seq AS insertion_order
+    FROM activity_monitor_thread_actions
+    WHERE activity_thread_id = $1
+    ORDER BY action_index DESC, insertion_order DESC
+    LIMIT $2
+)
+ORDER BY action_index ASC, insertion_order ASC
+
+SELECT user_message_id
+FROM activity_monitor_carrier_user_messages
+WHERE carrier_message_id = $1
+  AND ($2::text IS NULL OR root_agent_id IS NULL OR root_agent_id = $2)
+ORDER BY link_seq ASC
+
+SELECT b.activity_thread_id
+FROM activity_monitor_message_threads b
+WHERE b.message_id = $1
+
+SELECT b.activity_thread_id
+FROM activity_monitor_message_threads b
+JOIN activity_monitor_threads g ON g.activity_thread_id = b.activity_thread_id
+WHERE b.message_id = $1
+  AND g.status = $2
+
+SELECT activity_thread_id, name, subtitle, icon, emoji, status, created_at, finished_at, finish_message,
+       finish_status, finish_status_reason, activity_thread_kind, space_slug, status_title,
+       expected_finish_description
+FROM activity_monitor_threads
+WHERE activity_thread_id = $1
+
+SELECT status, finish_status
+FROM activity_monitor_threads
+WHERE activity_thread_id = $1
+LIMIT 1
+path not foundresolve pathpath escapes mount rootforbiddenpath already existsalready_existscreate parent directorytimed out while writing egress approval mirror requesttimed out while reading egress approval mirror responseexplicit chat event seqpeerd mirror status response is too largeconnection snapshot exceeds byte limitfailed to serialize localized activity.updated payload; falling back to canonical framecompleted startup quota rejection has no eventnegative startup quota rejection event sequencecompleted startup quota rejection event is absentmodel lock state read timed outinference-proxy returned an invalid model selection routeconnector_consent_requiredverify activity feed tableavatar-state: authoritative DB row missingnegative cancellation event sequencecontext item sequence space is exhaustedcommitted cancellation has no context sequencestartup quota rejection payload is not an objectstartup quota rejection metadata is not an objectpublication has no chat ownerinvalid publication tracepublication owner does not match its transcript/metadata/message_kindcommentarypublication has no execution ownerinvalid publication authorityshopping_results_v2node_card.notification_opt_inverification run disappearedverification result disappeared{}the avatar state registry is unavailableprofile-image redirect refused by the host guardprofile-image redirect chain exceeded the hop caplibrarygroup response preparation timed outdiscretion policy or chat audience changed during reviewpolicy changed before the verdict could be committedgroup discretion final authority check timed outforeign-chat discretion policy is missinghost cron definition store integration is unavailableauthoritative Space cron cleanup commit failedauthoritative Space cron cleanup preflight failedinternal error: entered unreachable code: positive cron authority resolution attempt count always returnscron authority bootstrap unavailable before ingress; retryingread cron authority statuscron authority status unavailable before ingress; retryingcron store returned inactive status after authority activationcommit cron host authority markercommit empty cron bootstrap baselinesummaryEmojiTaglineonepasswordbrowser task not foundexecute-resolve worker received unexpected settlement payloadtimed out waiting for execute-resolve turn completionexecute-resolve worker turn abortedmissingpersist_widget shopping_results payload requires productsbroker_timeoutbrowser sensitive-site settings request rejectedbroker_incompatiblebroker_rejectedshopping presentation requires meaningful fallback textconnect to host cron storelist host cron definitionsread artifact before content reviewhash current artifact content for reviewhitread artifact after waiting for content reviewreview artifact contentskipped_transientskipped_provenancepersist guarded artifact content reviewpersist artifact content reviewcurrent build changed before content review was saveddiscarded stale content review warm-up verdictwrittenGatekeeper response omitted requested gate; using defaultview ideaview canonical idearesolve canonical on not-foundlist ideas by idsruntime.resources.metadata_jsonCould not read hooksHook admission failedlist authoritative cron definitionsread authoritative cron definitionretire authoritative cron definitionlist space-owned definitionsstefi update share_type request failedinvalid Cloudflare blob upload sessionclear Cloudflare initial blobsctalabeljpgpngvideoedge admission failedviewer token response was unreadableviewer token mint failed/hatch/share/v2/preview/shared artifact not founddeniedmain_chatmodel_unavailablediscretion policy is missinginternal error: entered unreachable code: the two-step browser launch returns after window creationexecute-resolve owner reported an active execute-phase message without an idexecute-resolve worker resuming active descendant handoff before settlementexecute-resolve owner has unexpected active message in execute phaseexecute phase abortedload adopted execute-resolve historyexecute_resolve_worker_executeresubmit deterministic execute-resolve execute turnexecute-resolve execute retry was attached to an unexpected active turnexecute-resolve owner changed during early exitdescendant_settlement_timeoutexecute-resolve owner lost phase CAS after executeexecute_resolve_worker_resolvesubmit execute-resolve resolution turnresolve phase aborted before terminal decisiontimed out interrupting execute-resolve descendant handoffexecute-resolve owner deadline expired while interrupting descendant handoffletterspace.shareskills.updatedwallet_provider_timeoutStripe Link took too long to list payment optionsShop Pay took too long to display the walletowner-mail sender identity changedload goal by idlist goal suggestionslist goal briefingslist goal updateslist goalsload goal session mapping by root goal idresolve root goal parentmark goal briefing openedtool_call_idtool_namerequesttool_idsession_idattached mailbox input has no stream ownerstagedqueuedexecutinginput chat is absentinvalid input binding epochConversationTransportStatelink_idneeds_reconciliationpending_cancellationinput provider is absentaction_id is requiredtitle is requiredreport is requiredroot carrier_message_id is requiredroot carrier root_agent_id is requiredagent_id is requiredfailed to read activity thread action from storefailed to read activity monitor carrier/user mappingfailed to read activity thread binding for messagefailed to read activity thread snapshot with actionsfailed to read activity thread actionsactivity_thread_id is requiredmessage_id is requiredheartbeatinvalid Cloudflare staged asset targetread_errorimage/jpegimage/pngapplication/pdfapplication/vnd.ms-excelapplication/vnd.ms-powerpointapplication/vnd.openxmlformats-officedocument.presentationml.presentationapplication/vnd.openxmlformats-officedocument.spreadsheetml.sheetapplication/vnd.openxmlformats-officedocument.wordprocessingml.documentapplication/mswordapplication/xmlapplication/zipaudio/mp4audio/mpegaudio/oggaudio/wavaudio/webmtext/htmlmdtext/markdowntext/plainvideo/mp4video/quicktimevideo/webmapplication/octet-streamindex judgment_completion_failedinferenceresponse_decodefinancial_insightstop_brand_by_transaction_count_per_category_t180dmodel_timeoutThe tracked responsibility has resumed.bootstrapimage_egress_contextprofile image redirect refusedimage_clientimage_proxyprofile_clientprofile_image_urlimage_transportimage_connectimage_timeoutimage_workerprofile_transportprofile_timeoutprompt_injection_checkerclearflaggedunavailableowner-mail input prompt-injection review completedclassifier_unavailableload goal for Space linkstartup input size exceeds i64startup queue size exceeds i64startup media size overflow`DateTime + TimeDelta` overflowedcreated_atitem_jsonmessage_sourceclient_context_jsoncron store mutation worker stopped before acknowledging a mutationlist authoritative goal cron definitions before delete faileddelete authoritative goal cron definitions before goal delete failedload_chat_bindingpath is not accessibleparent path is not a directorystat pathavailable_plansruntime config state retains the completion sender/authority/statusthe store reported an absence for authority status/migration/statusthe store reported an absence for migration statusauthority_activate/authority/activatethe store reported an absence for authority activationmigration_complete/migration/completethe store reported an absence for migration completiongetputthe store reported an absence for a put/definitions/deletethe cron definition does not exist/definitions/listthe store reported an absence for a listingblob_list_currentconnections.by_idsconnections.provider_direct_snapshotsroot_turn_savedconnections.resources
+sp.parent_message_id AS parent_message_id,
+       sp.parent_request_id AS parent_request_id,
+       sp.root_request_id AS root_request_id,
+       (
+         SELECT root_request.request_origin
+         FROM runtime.requests AS root_request
+         WHERE root_request.request_id = sp.root_request_id
+       ) AS root_request_origin,
+       sp.root_message_execution_id AS root_message_execution_id,
+       sp.parent_agent_id AS parent_agent_id,
+       sp.child_agent_id AS agent_id,
+       sp.child_depth::bigint AS depth,
+       sp.created_at AS created_at,
+       sp.completed_at AS completed_at,
+       sp.seen_at AS seen_at,
+       sp.status AS status,
+       sp.deferred_terminal_status AS deferred_terminal_status,
+       sp.requester_source AS requester_source,
+       sp.final_response AS final_response,
+       sp.prompt AS prompt,
+       sp.requester_chat_context_json AS requester_chat_context_json,
+       sp.agent_type AS agent_type,
+       sp.metadata_json AS metadata_json,
+       (
+         SELECT child.originating_location_context_json
+         FROM agents AS child
+         WHERE child.id = sp.child_agent_id
+       ) AS originating_location_context_json
+subagent_status_rows_for_parent_agent_scopesubagent_status_exists_for_parent_agent_scope
+sp.parent_message_id AS parent_message_id,
+       sp.parent_request_id AS parent_request_id,
+       sp.root_request_id AS root_request_id,
+       sp.root_message_execution_id AS root_message_execution_id,
+       sp.parent_agent_id AS parent_agent_id,
+       sp.child_agent_id AS agent_id,
+       sp.child_depth::bigint AS depth,
+       sp.created_at AS created_at,
+       sp.completed_at AS completed_at,
+       sp.seen_at AS seen_at,
+       sp.status AS status,
+       sp.deferred_terminal_status AS deferred_terminal_status,
+       sp.requester_source AS requester_source,
+       sp.agent_type AS agent_type
+subagent_status_lean_rows_for_parent_agent_scopeconnections.participantsConflicting participant directory entriesInvalid participant directory entryconnections.ensure_directory_peopleexternal_party.retiredruntime event writer semaphore closedmemoryentriesevent_hook_admissions.bootstrap_completeuser_state.touch_recentideas.list_idea_publication_holdsruntimebrowser_tasksbrowser.invocationbrowser.invocation_for_agentacquired connection, but time to acquire exceeded slow thresholdacquired connectionpeer.directory.contactswrite egress approval mirror requestread egress approval mirror responseapproval mirror omitted runtime waiter generationapproval mirror returned a different approval idfailed to verify older pending approval before approval push suppression/send

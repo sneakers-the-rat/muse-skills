@@ -1,0 +1,64 @@
+SELECT is_promoted FROM shell.user_state WHERE source='peer_space' AND item_key=$1 FOR UPDATEshared Space is no longer availablepeer_spaceINSERT INTO shell.user_state (source,item_key,is_promoted) VALUES ('peer_space',$1,$2)
+                 ON CONFLICT (source,item_key) DO UPDATE SET is_promoted=excluded.is_promoted,updated_at_ms=$3UPDATE shell.tab_order SET tabs=$1 WHERE singletonselect distinct idea_id,
+                            metadata_json -> 'publication_hold' ->> 'fingerprint',
+                            metadata_json -> 'publication_hold' ->> 'reason'
+                       from ideas.idea_sources
+                      where idea_id = any($1::text[])
+                        and (source_namespace, source_kind) in (
+                          ('idea_share', 'pending_share'),
+                          ('user', 'http_create'),
+                          ('shared_www', 'shared_idea')
+                        )
+                        and metadata_json -> 'publication_hold' ->> 'fingerprint' is not null
+                        and metadata_json -> 'publication_hold' ->> 'reason' is not nullwith previous as (
+                        select status
+                        from ideas.idea_build_status
+                        where source_namespace = $1
+                          and source_kind = $2
+                          and source_id = $3
+                        for update
+                     ),
+                     upserted as (
+                        insert into ideas.idea_build_status
+                        (source_namespace, source_kind, source_id, status, selected_item_ids, updated_at)
+                        values ($1, $2, $3, $4, $5::text[], now())
+                        on conflict (source_namespace, source_kind, source_id) do update set
+                           status = excluded.status,
+                           selected_item_ids = case
+                               when excluded.selected_item_ids is not null
+                                   then excluded.selected_item_ids
+                               when excluded.status = 'not_started'
+                                   then null
+                               else ideas.idea_build_status.selected_item_ids
+                           end,
+                           updated_at = now()
+                        returning source_namespace, source_kind, source_id, status,
+                                  selected_item_ids, updated_at::text as updated_at
+                     )
+                     select upserted.source_namespace,
+                            upserted.source_kind,
+                            upserted.source_id,
+                            upserted.status,
+                            upserted.selected_item_ids,
+                            upserted.updated_at,
+                            previous.status as previous_status
+                     from upserted
+                     left join previous on trueprevious_statusinvocation_id, task_id, planner_agent_id, parent_invocation_id, caller_agent_id, caller_submission_id, call_id, agent_id, submission_id, runtime_work_id, input_digest, kind, state, input_json, context_json, result_json, wait_call_id, ordinal, tab_id, (extract(epoch from created_at) * 1000)::bigint as created_at_ms, (extract(epoch from stop_requested_at) * 1000)::bigint as stop_requested_at_ms, terminal_reason, handoff_state, (extract(epoch from finished_at) * 1000)::bigint as finished_at_msselect exists(select 1 from peer.shared_items where sender_muse=$1 and kind='goal' and item_id=$2)select g.grantee_muse as muse_id,
+                g.relationship_generation_id as generation, p.conversation_id
+                from peer.goal_grants g join peer.contacts c
+                on c.muse_id=g.grantee_muse and c.relationship_generation_id=g.relationship_generation_id
+                join chat_private.peer_conversations p on p.peer_muse=g.grantee_muse
+                and p.kind='dm' and p.archived_at_ms is null
+                where g.goal_id=$1 and g.revoked_at_ms is null and c.status='verified'
+                  and g.grantee_muse > $2 order by g.grantee_muse limit $3select request_json from agent.connection_messages where message_id=$1shared_itemselect space_id from spaces.spaces where space_slug=$1 and space_id=$2 for shareselect goal_id from goals.goals where goal_id=$1 for shareThe grant must match the saved shared item.The shared Space was removed or replaced.select p.muse_id,p.relationship_generation_id
+                 from chat_private.peer_conversations c join peer.contacts p on p.muse_id=c.peer_muse
+                 where c.chat_id=$1 and c.archived_at_ms is null and p.status='verified'
+                 and p.relationship_generation_id is not null for share of pThe shared Goal was removed.select exists(select 1 from agent.chat_workers w join agent.connections c
+                     on c.connection_id::text=w.group_id where c.connection_id=$1 and c.active and w.active)The conversation is no longer active.select g.slug, g.grantee_muse, g.space_id, g.relationship_generation_id,
+                 g.granted_at_ms, g.revoked_at_ms, g.permission from peer.space_grants g
+                 join peer.contacts c on c.muse_id=g.grantee_muse
+                   and c.relationship_generation_id=g.relationship_generation_id
+                 where g.slug=$1 and g.space_id=$2 and g.revoked_at_ms is null
+                   and c.status='verified' and g.grantee_muse > $3
+                 order by g.grantee_muse limit $4select distinct r.host_muse,r.resource_id from agent.connection_resources r
+                 where r.kind='space' and r.host_muse<>'self' and r.host_muse=r.connection_id in (select chat_id::uuid from chat_private.peer_conversations where circle_id=) and r.host_muse= and r.reference= and (r.host_muse,r.resource_id)>( order by r.host_muse,r.resource_id limit DISTINCT ON (r.host_muse,r.resource_id) AND r.host_muse= AND r.resource_id= ORDER BY r.host_muse,r.resource_id,r.shared_at_ms DESC,r.binding_id€

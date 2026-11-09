@@ -1,0 +1,37 @@
+SELECT EXISTS(SELECT 1 FROM agent.chat_worker_requests WHERE chat_id=$1 AND state IN ('pending','running','reported','completed'))SELECT count(*) FROM (SELECT 1 FROM agent.chat_worker_requests
+                 WHERE state IN ('pending','running') LIMIT $1) activeselect agent_id,generation,active from agent.chat_workers where group_id=$1 for updateactivegenerationinsert into agent.chat_worker_requests (request_id,chat_id,generation,worker_agent_id,owner_chat_id,owner_agent_id,origin_json,instruction,created_at_ms,state,result_json,result_submission_id) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) on conflict(request_id) do nothingchat worker owner changedselect * from agent.chat_worker_requests where request_id=$1SELECT EXISTS(SELECT 1 FROM agent.connections WHERE connection_id=$1 AND active)chat worker request identity collisionThe work's connection is no longer activeINSERT INTO agent.connection_work (connection_id,work_id,coordinator,request_id)
+                     SELECT $1,work_id,$3,$4 FROM unnest($2::uuid[]) AS work_id
+                     ON CONFLICT (connection_id,work_id) DO NOTHINGSELECT count(*) FROM agent.connection_work WHERE connection_id=$1 AND work_id=ANY($2) AND request_id=$3This connection work has already been assignedselect exists(select 1 from chat_private.external_party_conversations where chat_id=$1)SELECT EXISTS(SELECT 1 FROM runtime.maintenance_markers WHERE marker_key = 'event_hook_admissions_v1')i.idea_id, i.kind, i.title, i.summary, i.build_summary, i.rationale, i.category_label, i.date_label, i.audience, i.lane, i.prerequisite_notes, i.install_markdown, i.domain, i.dedup_key, i.expires_at::text as expires_at, i.generator, i.created_at::text as created_at, i.updated_at::text as updated_atDELETE FROM goals.connection_closures q
+                 WHERE q.goal_id=$1 AND q.connection_id=$2 AND q.requested_at_ms=$3
+                   AND EXISTS (SELECT 1 FROM goals.goals g
+                     WHERE g.goal_id=q.goal_id AND g.connection_id=q.connection_id
+                       AND g.source='assistant_tracking' AND g.status='completed')DELETE FROM goals.connection_closures q
+                 WHERE q.goal_id=$1 AND q.connection_id=$2 AND q.requested_at_ms=$3
+                   AND NOT EXISTS (
+                     SELECT 1 FROM goals.goals g WHERE g.goal_id=q.goal_id
+                       AND g.connection_id=q.connection_id AND g.source='assistant_tracking'
+                       AND g.status IN ('active','paused','completed'))SELECT goal_id, connection_id, title, summary, description,
+                        connection_follow_up_at, connection_revision, connection_owner_initiated
+                 FROM goals.goals
+                 WHERE source='assistant_tracking' AND status='active'
+                   AND connection_id IS NOT NULL AND connection_follow_up_at <= now()
+                   AND ($2::timestamptz IS NULL OR (connection_follow_up_at, goal_id) > ($2, $3))
+                   AND EXISTS (SELECT 1 FROM agent.connections c WHERE c.connection_id=goals.goals.connection_id AND c.active)
+                 ORDER BY connection_follow_up_at, goal_id LIMIT $1connection_revision, connection_id::text as connection_id, connection_follow_up_at as follow_up_at, goal_id, source, attention_kind, attention_updated_at::text as attention_updated_at, next_due_at::text as next_due_at, escalation, slug, title, summary, description, momentum, momentum_status, emoji, image_relpath, icon_generation_status, status, created_at, updated_at, last_activity_at, pushable, parent_goal_id, sort_order, fixed_position, category, goal_kind, value_alignment, review_cadence, completed_atupdate feed.run_steps
+     set status = $5,
+         output_json = case when $5 = 'succeeded' then $6 else output_json end,
+         error = $7,
+         finished_at_ms = $8,
+         updated_at_ms = $8
+     where run_id = $1 and step_id = $2 and attempt = $3
+       and agent_id is not distinct from $4
+       and status = 'running'SELECT turn_id,created_at,deadline_at,state,
+                   (context_json#>>'{connection_research,fence,connection_id}')::uuid AS connection_id,
+                   context_json#>>'{connection_research,local_date}' AS local_date,
+                   context_json#>>'{connection_research,slot}' AS slot,
+                   (context_json#>>'{connection_research,fence,checkins_revision}')::bigint AS checkins_revision,
+                   (context_json#>>'{connection_research,signal_at_ms}')::bigint AS signal_at_ms,
+                   jsonb_array_length(output_json->'items') AS item_count
+                 FROM background_workers.turns WHERE worker='connection_research' AND created_at>=$1
+                 ORDER BY created_at DESC,turn_id LIMIT 100turn_id,kind,worker,attempt,agent_id,message_id,request_id,state,
+    context_json,output_json,validated_json,input_read_bytes,failure_reason,deadline_at,created_at,updated_at
