@@ -1,0 +1,241 @@
+faithful_variationdiversebot-challenge-guides
+[TRUNCATED] Goals exceeded prompt budget.None recorded in this list.
+【product-Local time out of range for `NaiveDateTime`TimeDelta::days out of bounds`NaiveDate + TimeDelta` overflowed%A %Y-%m-%d
+INSERT INTO requests (
+  request_id, root_request_id, parent_request_id, request_origin,
+  transcript_surface, root_work_class
+)
+VALUES ($1, $2, $3, $4, $5::runtime.transcript_surface, $6)
+ON CONFLICT (request_id) DO UPDATE SET
+  root_request_id = COALESCE(requests.root_request_id, excluded.root_request_id),
+  parent_request_id = COALESCE(requests.parent_request_id, excluded.parent_request_id),
+  request_origin = CASE
+    WHEN requests.request_origin = 'internal.runtime_replay' THEN excluded.request_origin
+    ELSE requests.request_origin
+  END,
+  transcript_surface = excluded.transcript_surface,
+  root_work_class = CASE
+    WHEN requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing'
+      THEN excluded.root_work_class
+    ELSE requests.root_work_class
+  END
+WHERE (requests.root_request_id IS NULL AND excluded.root_request_id IS NOT NULL)
+   OR (requests.parent_request_id IS NULL AND excluded.parent_request_id IS NOT NULL)
+   OR (requests.request_origin = 'internal.runtime_replay'
+       AND excluded.request_origin <> 'internal.runtime_replay')
+   OR requests.transcript_surface IS DISTINCT FROM excluded.transcript_surface
+   OR (requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing')
+output
+INSERT INTO tool_outputs (event_seq, call_id, status, output_text, error_text, created_at)
+VALUES ($1, $2, $3, $4, $5, to_timestamp($6::double precision / 1000.0))
+ON CONFLICT (event_seq) DO UPDATE SET
+  call_id = excluded.call_id,
+  status = excluded.status,
+  output_text = excluded.output_text,
+  error_text = excluded.error_text
+arguments
+INSERT INTO tool_calls (event_seq, call_id, tool_name, status, arguments_json, created_at)
+VALUES ($1, $2, $3, 'started', $4, to_timestamp($5::double precision / 1000.0))
+ON CONFLICT (call_id) DO UPDATE SET
+  event_seq = excluded.event_seq,
+  tool_name = excluded.tool_name,
+  status = excluded.status,
+  arguments_json = excluded.arguments_json
+
+INSERT INTO chat_event_derived_write_backlog (event_seq, resources_json)
+VALUES ($1, $2)
+ON CONFLICT (event_seq) DO UPDATE SET
+  resources_json = excluded.resources_json,
+  updated_at = now()
+UPDATE chat_private.peer_conversations SET requester_chat_id = NULL
+         WHERE conversation_id = $1 AND requester_revision = $2
+           AND requester_chat_id = $3 AND NOT requester_unavailable
+           AND chat_id = $5
+           AND EXISTS (SELECT 1 FROM agent.agents
+                       WHERE id = $4 AND session_id = $3)peer handoff disagrees with its asking-chat claimpeer handoff requester changed before admission
+SELECT json_build_object(
+         'accepted_ordinal', accepted_ordinal,
+         'state', state,
+         'checkpoint_custody', checkpoint_custody,
+         'submission_json', submission_json
+       )::text
+FROM agent.message_mailbox
+WHERE agent_id = $1
+  AND state IN ('accepted', 'attached')
+ORDER BY accepted_ordinal, submission_id
+FOR UPDATE
+SELECT payload_json FROM runtime_restart_checkpoints WHERE agent_id = $1
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = 'executing',
+    stream_owner_message_id = $3,
+    attached_at = now()
+WHERE submission_id = $1
+  AND agent_id = $2
+  AND state = 'accepted'
+  AND stream_owner_message_id IS NULL
+
+SELECT agent_id, state, stream_owner_message_id, submission_json,
+       accepted_ordinal
+FROM agent.message_mailbox
+WHERE submission_id = $1
+FOR UPDATE
+tracked mailbox successor unexpectedly lost custodymessage mailbox successor promotion cannot overtake an older priority peer
+UPDATE agent.message_mailbox
+SET state = CASE WHEN $4 THEN 'completed' ELSE 'aborted' END,
+    checkpoint_custody = coalesce(checkpoint_custody, 'executing'),
+    terminalized_at = now()
+WHERE agent_id = $1
+  AND stream_owner_message_id = $2
+  AND submission_id = ANY($3)
+  AND state = 'attached'
+
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = 'executing',
+    stream_owner_message_id = $2,
+    attached_at = coalesce(attached_at, now())
+WHERE agent_id = $1
+  AND submission_id = ANY($3)
+  AND (
+    (state = 'accepted' AND stream_owner_message_id IS NULL)
+    OR (state = 'attached' AND stream_owner_message_id = $2)
+  )
+
+UPDATE agent.message_mailbox
+SET checkpoint_custody = 'queued'
+WHERE agent_id = $1
+  AND stream_owner_message_id = $2
+  AND submission_id = ANY($3)
+  AND state = 'attached'
+SELECT session_id, COALESCE(prompt_floor_seq, -1) AS prompt_floor_seq,
+                kind = 'root' AND parent_agent_id IS NULL
+                AND ephemeral IS DISTINCT FROM TRUE
+                AND status NOT IN ('shutdown', 'not_found') AS eligible
+         FROM agent.agents WHERE agent_id = $1 FOR UPDATEstartup_root_changedSELECT EXISTS(SELECT 1 FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND accepted_ordinal < $2)startup mailbox promotion cannot overtake an earlier accepted input
+SELECT accepted_ordinal, submission_json FROM agent.message_mailbox
+WHERE agent_id = $1 AND state = 'accepted'
+  AND accepted_ordinal < $2 AND accepted_ordinal > $3
+ORDER BY accepted_ordinal LIMIT 128
+
+SELECT payload_json
+FROM agent.runtime_restart_checkpoints
+WHERE agent_id = $1
+FOR UPDATE
+message mailbox attachment cannot overtake an older priority peer
+INSERT INTO agent.runtime_restart_checkpoints (
+  agent_id, mode, recovery_class, recovery_owner_id, execution_config_json,
+  payload_json, created_at, updated_at
+) SELECT $1, $2, $3, $4, $5, $6, $7, $7
+WHERE EXISTS (
+  SELECT 1
+  FROM agent.agents
+  WHERE agent_id = $1
+    AND status NOT IN ('shutdown', 'not_found')
+)
+ON CONFLICT (agent_id) DO NOTHING
+SELECT EXISTS (SELECT 1 FROM agent.agents WHERE agent_id = $1 AND status NOT IN ('shutdown', 'not_found'))conversation epoch
+INSERT INTO agent.message_mailbox (
+  submission_id, agent_id, conversation_epoch, submission_kind,
+  routing_scope, state, checkpoint_custody, stream_owner_message_id,
+  submission_json, transcript_event_seq, attached_at
+) VALUES (
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+  CASE WHEN $6 = 'attached' THEN now() ELSE NULL END
+)
+ON CONFLICT (submission_id) DO NOTHING
+RETURNING accepted_ordinal, accepted_at
+startup mailbox promotion requires its previously accepted input
+SELECT agent_id, conversation_epoch, submission_kind, routing_scope,
+       state, stream_owner_message_id, submission_json,
+       transcript_event_seq, accepted_ordinal, accepted_at
+FROM agent.message_mailbox
+WHERE submission_id = $1
+FOR UPDATE
+update chat.message_bindings set admitted_at = coalesce(admitted_at, now())
+                    where jarvis_message_id = $1 and chat_id = $2 and binding_epoch = $3 and transport = $4binding epochconversation_epochsubmission_kindrouting_scope
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = $5,
+    stream_owner_message_id = $2,
+    submission_json = $3,
+    transcript_event_seq = coalesce($4, transcript_event_seq),
+    attached_at = now()
+WHERE submission_id = $1
+  AND state = 'accepted'
+  AND stream_owner_message_id IS NULL
+mailbox stream ownerselect a.account_id from chat_private.accounts a
+             join chat_private.binding_authorizations b on b.provider = a.provider and b.account_id = a.account_id
+             where b.provider = $1 and b.binding_id = $2
+               and a.connection_id = $3 and not a.revoked for share of adirect input has no captured binding epochaccount_retiredselect connection_id, generation, transport_json, delivery_target
+             from chat_private.binding_authorizations
+             where provider = $1 and binding_id = $2 and chat_id = $3
+               and account_id = $4 and external_kind = 'direct' and participation = 'active'
+             for shareaccount_authorization_retiredtransport_jsontransport_authorization_absentconnection_idgenerationdelivery_targetselect epoch from chat_private.bindings
+         where chat_id = $1 and provider = $2 and not revoked for sharetransport_authorization_changedbinding_retired
+INSERT INTO agent.volatile_context_pins
+  (agent_id, variant_hash, variant_json, prompt_floor_seq, checkpoint_seq, body)
+SELECT $1, $2, $3, $4, $5, NULL
+WHERE EXISTS (SELECT 1 FROM agent.agents WHERE id = $1)
+ON CONFLICT (agent_id, variant_hash) DO UPDATE SET
+  variant_json = excluded.variant_json,
+  prompt_floor_seq = excluded.prompt_floor_seq,
+  checkpoint_seq = excluded.checkpoint_seq,
+  created_at = now()
+
+SELECT COALESCE(a.prompt_floor_seq, -1) AS prompt_floor_seq,
+       COALESCE(c.checkpoint_seq, -1) AS checkpoint_seq
+FROM agent.agents AS a
+LEFT JOIN LATERAL (
+    SELECT checkpoint_seq
+    FROM agent.agent_compactions
+    WHERE agent_id = $1
+      AND has_replacement_history
+    ORDER BY id DESC
+    LIMIT 1
+) AS c ON c.checkpoint_seq > COALESCE(a.prompt_floor_seq, -1)
+WHERE a.id = $1
+database write admission gate closedadmission_timeoutassert_table_existstable_presence.query-f1-lthumbnail: pdftoppm rendering failed.screenshotthumbnail: failed to rename pdftoppm outputpngthumbnail: pdftoppm did not produce expected PNGthumbnail: pdftoppm not availablethumbnail: pdftoppm timed out (30s)thumbnail: libreoffice PDF conversion failedlibreoffice--headless--convert-tothumbnail: libreoffice conversion failedthumbnail: libreoffice did not produce expected outputthumbnail: libreoffice not availablethumbnail: libreoffice HTML conversion failedthumbnail: ffmpeg sandbox unavailablethumbnail: ffmpeg frame extraction failedthumbnail: ffmpeg completed but output file missingthumbnail: ffmpeg not availablethumbnail: ffmpeg timed outthumbnail: image decode task panickedthumbnail: image decode timed outthumbnail: image chrome unavailable; expected /opt/meta-chromium/chromethumbnail: failed to read native Chromium policy; refusing browser launchthumbnail: Xvfb not available, skipping CDP screenshotthumbnail: native browser admission failedhatch-thumb-browser---remote-debugging-port=0--no-sandbox--disable-gpu--force-color-profile=srgb--disable-dev-shm-usage--disable-background-networking--disable-default-apps--disable-extensions--disable-sync--disable-translate--no-first-run--hide-scrollbars--host-resolver-rules=MAP * ^NOTFOUND--disable-remote-fonts--disable-file-access-from-file-urlsDBUS_SESSION_BUS_ADDRESSdisabled:DISPLAY:99thumbnail: browser profile creation failedthumbnail: CDP local admission failedthumbnail: owned browser render failed.pdf?verify_profilePROFILE.mdthe shopping profile already reflects the current shopping contextshopping context runs must submit a complete candidate so the email evidence is verifiedshopping profile context was truncated; skipped rewrite from a partial profileShopping profile unchanged: profile is above the safe rewrite cap.shopping_profile_context_truncatedshopping context run cannot settle against a truncated live profileshopping apply received an empty verified artifact outside context ingestionstaged shopping profile has no body below its frontmatter.PROFILE.promote.mdentriesentries_by_sectionentries_without_claimcreatedupdatedshopping_profile_entriesshopping_profile_uncitedyiesnot_context_ingestiongroupsevidence_truncatedshopping profile context exceeded safe rewrite captruncatedconnected_sourcesconnectedshopping_profile_permissionunavailableConnection status only in this inventory. Context-triggered Instagram evidence, when present, arrives under shopping_context.context_ingestion.`shopping_context.index_markdown` contains the complete current profile body when `truncated` is false. If `truncated` is true, it contains only a prefix; do not stage a replacement from it. Preserve valid current entries unless the Ground Rules permit deletion.next_step_handoffselect id from context.subscriptions where id = $1 for updateupdate context.group_cursors g set acknowledged_position = g.batch_position,
+        window_position = case when g.batch_position >= g.window_position then null else g.window_position end,
+        batch_position = null, lease_token = null, lease_expires_at = null, evidence_expires_at = null, retry_at = null, last_error = null,
+        acknowledged_at = clock_timestamp() from context.subscription_sources ss
+        where g.subscription_id = $1 and g.lease_token = any($2) and g.lease_expires_at > clock_timestamp()
+        and ss.subscription_id = g.subscription_id and ss.source_id = g.source_id and ss.activecandidatecontext.mdTracking and commitmentsGoalsMemory changespolicyguard routing table names a policy that is not compiled in; falling back to the external policypolicyguard policy rendered empty; falling back to the external policypolicyguard routing table names no policy for this family; falling back to the external policyhealthrelationshipsmoneycareerinterestsproductivitysomething_elsedialingringingin_progresshandoff_pendingoknot_placedresultsauthorerror_codephone_numberhttp://srcsethref=.hrefmedia.generate_imageproduct_idthumbnail_urllikesmedia_typeurl must be an absolute HTTP or HTTPS URL without credentialsBrowser controls are unavailable.
+### Content
+
+yesnoflaggeddestinationlibrary_indexvoice_name\bPurchaseOutcomenot_submittedsubmitted_unknownplacedthe browser specialist has no resultThe specialist ended without a report.replacement was not confirmed; session and page state may be lostthe environment was replaced; session and page state were lost## Specialist {id} finished
+
+The Poppy agent Muse started for {domain} at {started_at} finished at {finished_at}. It worked with the company through its own API and held no tab.
+
+### Status
+{status}
+
+### Report
+{report}
+
+{diagnostics}
+
+### Next
+{guidance}
+## Specialist {id} finished
+
+The {kind} specialist you started on tab {tab} at {started_at} finished at {finished_at}. Its tabs are no longer held by this specialist.
+
+### Status
+{status}
+
+### Report
+{report}
+
+{diagnostics}
+
+### Next
+{guidance}
+Always read the current page with `browser.observe` before you act on it, because the page may have changed. If the tab was replaced, find its current tab with `browser.tabs` first.
+{kind}{tab}{started_at}{finished_at}{diagnostics}{guidance}an unrecorded timeruntime.chat_worker_mailbox_noticeruntime.worker_requestvoice turn close panicked; aborting its ownerfetchstorypostsfriendscollectionsfunctions.voice Companion is missing its initial history boundarySELECT payload_json FROM runtime_restart_checkpoints WHERE agent_id = $1 FOR UPDATESELECT submission_json, octet_length(submission_json)::bigint AS serialized_bytes
+         FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND submission_id <> $2startup_queue_fullcounterpartycontact_numberhandoff_condition/user_handoff/conditionbodies_clippedSome message bodies are shortened; an ellipsis marks the cut.These aged out of the device's window and cannot be retrieved.holding_nonesession_torn_down valueclassifier_arm_idcleanflagged_highflagged_lowwindows_failed_openthe outcome of the browser action it sentthe order it submittedhow the user answered its payment approvalthe outcome of a sign-in or payment entrythe browser environment it is replacingmessages[': {count}Main chat{read_messages_tool}{chat_id}%b %-d, %-I:%M %p{last_active}{name}{messages}<browser_status as_of=tasks="0"session/browser_status_none.md<browser_status as_of="{as_of}" tasks="0">No active browser tasks.</browser_status>
+{as_of}The user does not see your commentary, so do not emit commentary.The user does not see your private reasoning or commentary.The user does not see your private reasoning or commentary. Do not emit commentary.Do not emit commentary.
+# Result unavailable
+Partial resultHEIF FileRef could not be stored as JPEG; preserving original referenceHEIF FileRef check failed; preserving original referencetask_failedfailed to generate local video thumbnail; continuing without thumbnailvideo FileRef MIME type cannot be canonicalized; preserving original referencevideo FileRef could not be materialized; preserving original referencevideo FileRef store task failed; preserving original referencehatch-engine/crates/hatch-agent/src/session/impl_session/message_execution/message_abort.rs:238inspectmuse.read/transcription/statussubscription-statusplanshidden submission arrived after its stream was terminally cancelled

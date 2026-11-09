@@ -1,0 +1,171 @@
+feed_idea_unitidea slot: budget store unavailable; skippingidea slot: budget read failed; skippingidea slot: prompt read failed; centroid uses the unfiltered windowidea slot: too few units since the prompt changed; centroid uses the unfiltered windowidea slot: centroid built from units published since the prompt changedidea slot: fresh centroid read failed; falling back to the unfiltered windowidea slot: centroid read failedfeed_unitidea slot: anchor no-repeat read failedidea slot: candidate lookup failedidea slot: dogfood visibility read failedidea slot: onboarding-only read failedidea slot: dropped candidates too far behind the newest Ideas contextidea slot: near-duplicate memory read failedidea slot: dropped candidates restating a recent suggestionidea slot: dropped candidates with no claim on this paperidea slot: prompt declares no subject; ranking on memory affinityidea slot: memory affinity read failed; ranking without itidea slot: shortlisted candidates for the seatidea slot: newest unit read failed; skippingself_improvement.ideasgenerated_cardidea slot: card freshness read failedidea slot: Ideas context database failedidea slot: latest Ideas context read failedidea slot: prompt embed failedidea slot: prompt embed task failedWITH requested AS (
+           SELECT * FROM unnest($1::text[], $2::bigint[]) AS r(goal_id, revision)
+         ), locked AS MATERIALIZED (
+           SELECT g.goal_id, g.connection_request_id, g.connection_revision,
+                  g.connection_follow_up_at, r.revision
+           FROM goals.goals g JOIN requested r USING (goal_id)
+           WHERE g.connection_id=$3 AND g.source='assistant_tracking'
+           ORDER BY g.goal_id FOR UPDATE OF g
+         ), claimed AS (
+           UPDATE goals.goals g
+           SET connection_follow_up_at=NULL, connection_request_id=$4,
+               connection_revision=g.connection_revision+1
+           FROM locked l WHERE g.goal_id=l.goal_id
+             AND g.status='active' AND l.connection_revision=l.revision
+             AND l.connection_follow_up_at <= now()
+             AND l.connection_request_id IS DISTINCT FROM $4
+           RETURNING g.goal_id
+         ) SELECT (SELECT count(*) FROM claimed) +
+                  (SELECT count(*) FROM locked WHERE connection_request_id=$4)A follow-up must name work from its conversationTracked work changed before the follow-up was queued~/USER.md~/IDENTITY.mdconnection source requiredhttp://localhost/hatch/cvm_appeal/statusfailed to load idea quality rows for HTTP feed selectionfailed to read active feed for rotation; selecting without itfailed to load persisted idea bandit state for HTTP feed selectionfailed to read idea memory affinity; ranking without the affinity termfailed to fetch ideas explore policy for HTTP feed selectiondefcon_level_3_daily_capshopping_daily_capdaily cadence read failed; admitting signal-triggered objective cyclethrottledscheduler_grace_secondsprevious_cycle_idprevious_admitted_atsignal_admitted_runssignal_admission_limithatch_inference_defcon_level_3_enableddefcon_cadencedaily cadence throttled objective cycleadmissiondaily cadence read failed; admitting automatic objective cycleobjectivestartfailed to stamp boot generation on inline-triggered runproactivity_context_profileretired historical backfill state before objective runfailed to retire historical backfill state; continuing objective runrestart_checkpoint_parkeddurable_owner_retainedrestart_checkpoint_parked_agent_idrestart_checkpoint_parked_atprior_diagnosticsterminal_step_error_codeobjective execution gate wait cancelledbackfill_completehistorical backfill retired; pending march marked completefinalization_fencedreconciliation_storage_failedfinalization_failedclaim reconciliation finalizationfinalization_ignored_staleinvalid_stream_uploadfinalization_fence_failedfence invalid reconciliation uploadinvalid_source_snapshotsettle invalid device reconciliation for retrydevice_sync_stateHealth reconciliation applied but device-sync worker wake failedfinalize device reconciliationclient rendering snapshot read failed; keeping lifts inline this turndevice node_idfull_sync_idreconciliation.finalizeselect data_source, next_full_sync_at, current_full_sync_id,
+            current_full_sync_requester_root_session_id,
+            current_full_sync_requester_presentation_locale,
+            current_full_sync_expires_at, current_full_sync_range_start,
+            current_full_sync_range_end, changed_during_full_sync,
+            last_full_sync_at, last_full_sync_range_start, last_full_sync_range_end
+     from device.data_sync_stateselect pairing_status, data_sources_json
+         from device.nodes where node_id = $1 for updatepairing_statusdata_sources_jsonupdate device.data_sync_state
+         set next_full_sync_at = $4, search_trigger_pending = false,
+             current_full_sync_id = null,
+             current_full_sync_requester_root_session_id = null,
+             current_full_sync_requester_presentation_locale = null,
+             current_full_sync_expires_at = null,
+             current_full_sync_range_start = null,
+             current_full_sync_range_end = null,
+             changed_during_full_sync = false
+         where node_id = $1 and data_source = $2 and current_full_sync_id = $3update device.data_sync_state
+         set next_full_sync_at = null, last_full_sync_at = $4,
+             last_full_sync_range_start = current_full_sync_range_start,
+             last_full_sync_range_end = current_full_sync_range_end,
+             current_full_sync_id = null,
+             current_full_sync_requester_root_session_id = null,
+             current_full_sync_requester_presentation_locale = null,
+             current_full_sync_expires_at = null,
+             current_full_sync_range_start = null,
+             current_full_sync_range_end = null,
+             changed_during_full_sync = false
+         where node_id = $1 and data_source = $2 and current_full_sync_id = $3update device.data_sync_state
+         set next_full_sync_at = null, current_full_sync_id = null,
+             current_full_sync_requester_root_session_id = null,
+             current_full_sync_requester_presentation_locale = null,
+             current_full_sync_expires_at = null,
+             current_full_sync_range_start = null,
+             current_full_sync_range_end = null,
+             changed_during_full_sync = false
+         where node_id = $1 and data_source = $2 and current_full_sync_id = $3select count(*)::bigint as received_chunks,
+                max(c.chunk_index) as max_chunk_index,
+                coalesce(sum(octet_length(c.payload)), 0)::bigint as total_bytes
+         from device.upload_chunks c
+         where c.upload_session_id = $1max_chunk_indexreceived_chunkstotal_bytesselect node_id, route_kind, request_id, datatype, sync_mode,
+                chunk_count, status, updated_at_text, expires_at
+         from device.upload_sessions
+         where upload_session_id = $1
+         for updatedelete from device.upload_sessions
+         where upload_session_id = $1
+           and route_kind = 'data_source_reconciliation'conflicting reconciliation upload session identityreconciliation upload phase conflicts with finalizationreconciliation upload is missing during finalizationreconciliation upload no longer has its exact sealed chunk setdelete from device.calendar_events
+         where node_id = $1 and start_at < $3 and end_at > $2
+           and not (external_event_id = any($4::text[]))delete from device.calendar_events
+             where node_id = $1 and start_at < $2 and end_at <= $2insert into device.calendar_events as stored (
+           node_id, source_platform, external_event_id, title, start_at, end_at, is_all_day,
+           external_calendar_id, calendar_name, availability, location, notes,
+           time_zone, start_local_date, end_local_date, is_recurring, url,
+           event_status, calendar_color
+         )
+         select $1, $2, rows.* from unnest(
+           $3::text[], $4::text[], $5::timestamptz[], $6::timestamptz[],
+           $7::boolean[], $8::text[], $9::text[], $10::text[], $11::text[],
+           $12::text[], $13::text[], $14::date[], $15::date[], $16::boolean[],
+           $17::text[], $18::text[], $19::text[]
+         ) as rows
+         on conflict (node_id, external_event_id) do update set
+           source_platform = excluded.source_platform,
+           title = excluded.title, start_at = excluded.start_at,
+           end_at = excluded.end_at, is_all_day = excluded.is_all_day,
+           external_calendar_id = excluded.external_calendar_id,
+           calendar_name = excluded.calendar_name,
+           availability = excluded.availability, location = excluded.location,
+           notes = excluded.notes, time_zone = excluded.time_zone,
+           start_local_date = excluded.start_local_date,
+           end_local_date = excluded.end_local_date,
+           is_recurring = excluded.is_recurring, url = excluded.url,
+           event_status = excluded.event_status,
+           calendar_color = excluded.calendar_color
+         where row(
+           stored.source_platform,
+           stored.title,
+           stored.start_at,
+           stored.end_at,
+           stored.is_all_day,
+           stored.external_calendar_id,
+           stored.calendar_name,
+           stored.availability,
+           stored.location,
+           stored.notes,
+           stored.time_zone,
+           stored.start_local_date,
+           stored.end_local_date,
+           stored.is_recurring,
+           stored.url,
+           stored.event_status,
+           stored.calendar_color
+         ) is distinct from row(
+           excluded.source_platform,
+           excluded.title,
+           excluded.start_at,
+           excluded.end_at,
+           excluded.is_all_day,
+           excluded.external_calendar_id,
+           excluded.calendar_name,
+           excluded.availability,
+           excluded.location,
+           excluded.notes,
+           excluded.time_zone,
+           excluded.start_local_date,
+           excluded.end_local_date,
+           excluded.is_recurring,
+           excluded.url,
+           excluded.event_status,
+           excluded.calendar_color
+         )
+         returning (xmax = 0) as insertedinsert into device.contact_emails (contact_id, label, email)
+             select * from unnest($1::bigint[], $2::text[], $3::text[])insert into device.contact_phones (contact_id, label, phone_raw, phone_e164)
+             select * from unnest($1::bigint[], $2::text[], $3::text[], $4::text[])insert into device.contact_addresses (
+               contact_id, label, street, city, state, postal_code, country
+             )
+             select * from unnest(
+               $1::bigint[], $2::text[], $3::text[], $4::text[],
+               $5::text[], $6::text[], $7::text[]
+             )update device.contacts
+         set deleted_at = now(), updated_at = now()
+         where node_id = $1 and deleted_at is null
+           and not (external_contact_id = any($2::text[]))insert into device.contacts (
+           node_id, platform, external_contact_id, display_name, organization,
+           job_title, birthday_text, note, thumbnail,
+           synced_at_text, deleted_at, updated_at
+         )
+         select $1, $2, rows.*, $9, null, now()
+         from unnest(
+           $3::text[], $4::text[], $5::text[], $6::text[], $7::text[],
+           $8::text[], $10::text[]
+         ) as rows
+         on conflict (node_id, external_contact_id) do update set
+           platform = excluded.platform,
+           display_name = excluded.display_name,
+           organization = excluded.organization,
+           job_title = excluded.job_title,
+           birthday_text = excluded.birthday_text,
+           note = excluded.note,
+           thumbnail = excluded.thumbnail,
+           synced_at_text = excluded.synced_at_text,
+           deleted_at = null,
+           updated_at = excluded.updated_at
+         returning contact_id, external_contact_id, (xmax = 0) as inserteddelete from device.contact_phones where contact_id = any($1)external_contact_idcontact_iddelete from device.contact_emails where contact_id = any($1)delete from device.contact_addresses where contact_id = any($1)
+        update device.nodes
+        set platform = $1,
+            contacts_last_synced_at = $2,
+            contacts_last_received_at = $3,
+            contacts_last_sync_status = 'success',
+            contacts_last_sync_error = null,
+            contacts_contact_count = $4,
+            contacts_content_sha256 = $5
+        where node_id = $6
+        device contact countdevice node disappeared while recording contacts snapshot metadataresearch request identity collisionresearch worker disappearedconversation_busyOnly Internal announcements accept fallback copyInternal announcement requires public fallback copyinternal_fallback_messageInternal fallback exceeds message limitWWW messages require agent-written deliveryInternal announcement requires delivery instructionsInternalWorker priority is reserved for worker owner noticesInternal priority is reserved for code-owned main-chat deliveriesfollow-up metadata must be a JSON objectfollow-up must expire after it becomes deliverablefollow-up message must not be emptyfollow-up key must not be emptyfollow-up producer must not be emptyhardcoded product campaign producer is retiredpresentation_localeenqueue follow-upfollow_up_queue_deliveryfollow-up enqueued but the delivery worker could not be kickedfailed to read user time file for proactive delivery timezonestripe-linkinspectStripe Link connection inspection failedStripe Link connection status failedconnector_call_reasonrun cancelledfeed step failure CAS lost to a concurrent settler; that settler owns the terminal eventfeed step failure CAS erroredfeed step adopted-submission settle erroredhttp://localhost/hatch/feed-engagement-populationdatabase write admission gate closedadmission_timeoutassert_table_existstable_presence.queryGoalsRevised memoryMemory changesChanged since preparationideas_null_state_relevanceideas null-state relevancehatch-engine/crates/hatch-server/prompts/self_improvement/ideas_null_state_relevance.mdself_improvement/ideas_null_state_relevance.md{{CANDIDATE_CARDS_JSON}}ideas null-state relevance payload failed; treating all relevance as 0ideas null-state relevance attempt failed; retrying with a fresh turnideas null-state relevance declined; treating all relevance as 0failed to read idea build statuses for Ideas tab cardsexplore_defaultfailed to read idea card item selectionsidea_cards.recent_rowsfailed to hydrate idea card tag iconsbundled_new_user.null_stateidea cards feed assembling category rowspreserving pinned eval-fixture Ideas feed; skipping rematerializeskipping Ideas feed rematerialize while limited feed is activefailed to hydrate idea card item badgesfailed to hydrate idea card source metadataapi.idea_cards_materialized_fallback_tailskipping maintenance Ideas feed rematerialize while limited feed is activeIdeas feed already composed for this run; skipping rematerializeidea_cards.snapshot_publishidea cards snapshot publish skipped cards without feed-eligible backing rowsidea cards snapshot publish skipped incomplete row sectionsideas feed composer payload failed; rendering deterministic feedideas feed composer plan acceptedideas feed composer plan decode failed; rendering deterministic feedvector_count_mismatchfailed to load idea grounding facts for diversityclusteredclustered_partialexact_onlyexact_only_partialskipped_unavailableunknownideas semantic fact clusteringdue-occurrence coalesce check failed; seeding immediate occurrence anywayuser_cronsystem_cronclassificationnull-state adoption read failedDiscovery Pool null-state import found no cardsfull_catalog_importbundled catalog ownership read failed; skipping content upserts and membership prunediscovery_pool_source_iddiscovery_pool_source_kindDiscovery Pool null-state import failed to persist cardDiscovery Pool null-state import persisted cardsbundled_new_user_rotationnull-state rotation index read failednull-state rotation index write failednull-state exposure decay impression signalnull-state local impression read failedidea_cards.null_state_rowsonboarding_starterpruned legacy external new-user source membershipsfailed to prune legacy external new-user source membershipsdiscovery_poolbundled onboarding ownership read failed; skipping content upserts and membership pruneDiscovery Pool onboarding starter import failed to persist cardDiscovery Pool onboarding starter import failed to prune stale membershipDiscovery Pool onboarding starter import refreshed membershipDiscovery Pool null-state import pruned demoted/de-tagged cardsDiscovery Pool null-state import failed to prune stale membershipskipping bundled new-user import while limited Ideas feed is activenew-user catalog is unavailablebundled new-user catalog is unavailableskipping broad bundled new-user import while limited Ideas feed is activefailed to normalize Discovery Pool null-state idea card rowcould not read avatar status for dance idealatchednative_idea_cards_readyreadiness_versionnative_idea_countuser_message_countsignal_family_countmin_light_native_idea_countmin_ready_native_idea_countmin_light_signal_familiesmin_ready_signal_familiesmin_user_message_countuser_message_count_limitlatched_atapi.idea_cards.readinessfailed to count goal signal familyfailed to open memory signal family storefailed to count memory signal familyfailed to count space signal familyfailed to load materialized idea card selection contextsidea_cards.materialized_feedmaterialized_idea_cards_selectionskipping materialized idea card selection for missing idea rowfailed to record materialized idea card selection batchideas feed composer attempt failed; retrying with a fresh turnideas feed composer declined; rendering deterministic feedideas_feed_composerideas feed composermaintenance_occurrencemaintenance_attemptrequest_generationrequest_traceschedule_policyschedule_reasoncadence_secsgeneric_maintenancejitter_offset_secsjitter_window_secssuspend_policymaintenance occurrence collided with terminalized work iteminbox missing timezoneinbox missing changesinvalid_or_unsupported_messageinternal proactive batch contains invalid or unsupported messages/hatch/internal-messagesafterinternal proactive response exceeds size limitinternal message changes are not orderedinvalid internal message cursor or page sizeinvite_upsell_disabledproactivity_disabledreferral_invitationafter_two_daysminimum_account_age_not_metalready_queuedno_referral_invites_remaining
