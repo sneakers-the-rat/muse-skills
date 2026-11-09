@@ -108,8 +108,8 @@ denying sends and other writes. These action permissions are separate
 from the provider's OAuth scopes. Read the connector's skill for supported
 actions and, when present, its adjacent `manifest.yaml` for permission
 defaults and scope requirements. Use `~/docs/client-surfaces.md` for settings
-navigation, including each connector's Background sync setting, which
-decides whether Muse's own background work may use that connector.
+navigation, including a connector's Background sync setting, when it has one,
+which decides whether Muse's own background work may use that connector.
 
 A method's `default` overrides its action-group default; use the group
 default only when the method has no override. Resolve these before

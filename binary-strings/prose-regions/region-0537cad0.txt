@@ -1,0 +1,53 @@
+select p.* from agent.connection_participants p
+                join agent.connections c using(connection_id)
+                where p.connection_id=$1 and c.active and p.audience=c.audience
+                order by p.kind,p.display_name,p.participant_idi.idea_id, i.kind, i.title, i.summary, i.build_summary, i.rationale, i.category_label, i.date_label, i.audience, i.lane, i.prerequisite_notes, i.install_markdown, i.domain, i.dedup_key, i.expires_at::text as expires_at, i.generator, i.created_at::text as created_at, i.updated_at::text as updated_atconnection_revision, connection_id::text as connection_id, connection_follow_up_at as follow_up_at, goal_id, source, attention_kind, attention_updated_at::text as attention_updated_at, next_due_at::text as next_due_at, escalation, slug, title, summary, description, momentum, momentum_status, emoji, image_relpath, icon_generation_status, status, created_at, updated_at, last_activity_at, pushable, parent_goal_id, sort_order, fixed_position, category, goal_kind, value_alignment, review_cadence, completed_atupdate feed.run_steps
+     set status = $5,
+         output_json = case when $5 = 'succeeded' then $6 else output_json end,
+         error = $7,
+         finished_at_ms = $8,
+         updated_at_ms = $8
+     where run_id = $1 and step_id = $2 and attempt = $3
+       and agent_id is not distinct from $4
+       and status = 'running'update self_improvement.connector_sync_accounts set cursor = $1,
+                revision = revision + 1, updated_at = $2 where connector = $3 and account_id = $4
+                and generation = $5 and revision = $6insert into self_improvement.connector_sync_observations as existing
+                        (event_id, connector, account_id, generation, source_id, source_at, evidence, state, observed_at, expires_at)
+                        values ($1,$2,$3,$4,$5,$6,$7,'pending',$8,$9)
+                        on conflict (event_id) do update
+                        set expires_at = greatest(existing.expires_at, excluded.expires_at)
+                        where existing.state in ('pending', 'deferred', 'deferred_flight')update self_improvement.connector_sync_observations set state = 'deleted', evidence = '{}'
+                        where connector = $1 and account_id = $2 and generation = $3 and source_id = $4 returning event_idupdate self_improvement.follow_up_queue set state = 'cancelled',
+                            disposition_reason = 'connector_source_deleted', terminal_at = now(), updated_at = now()
+                            where follow_up_id = $1 and state = 'pending'SELECT bool_and(coalesce(i.indisvalid, false)) FROM unnest($1::text[]) AS n(name)
+                 LEFT JOIN pg_index i ON i.indexrelid=to_regclass(n.name)SELECT pg_try_advisory_lock(hashtext('hatch.connection_grounding_index'))SET lock_timeout='5s'SET statement_timeout='10min'SELECT indisvalid FROM pg_index WHERE indexrelid=to_regclass($1)transaction.acquire_and_beginregistry_lockselect id, domains from context.subscriptions where subscription_key = $1 for updatesubscription.lookup_for_updatedomainssources.enroll_previousinsert into context.subscriptions (id, subscription_key, domains) values ($1,$2,$3)subscription.insertupdate context.group_cursors g set lease_token=null, lease_expires_at=null, evidence_expires_at=null,
+                        window_position=null, batch_position=null, retry_at=null,
+                        available_position=coalesce((select max(e.append_position) from context.events e
+                          where e.source_id=g.source_id and e.group_id=g.group_id
+                          and e.append_position>g.acknowledged_position and e.append_position<=g.available_position
+                          and (e.expires_at is null or e.expires_at>statement_timestamp())
+                          and ($2 or e.content_hints && $3::text[])),g.acknowledged_position)
+                        where subscription_id=$1hints.reconcile_leasestransaction.commitsources.enroll_desiredupdate context.subscription_sources ss set active = ($2 or s.source_domain = any($3))
+                from context.sources s where ss.subscription_id = $1 and s.id = ss.source_idupdate context.group_cursors g set lease_token = null, lease_expires_at = null, evidence_expires_at = null
+                from context.subscription_sources ss where g.subscription_id = $1
+                and ss.subscription_id = g.subscription_id and ss.source_id = g.source_id and not ss.activeleases.invalidate_removedupdate context.subscriptions set domains = $2, updated_at = now() where id = $1 and domains <> $2coverage.update
+JOIN LATERAL (
+  SELECT MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/kind') AS kind,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/action') AS action,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/handoff_message_id') AS handoff_message_id,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/handoff_source') AS handoff_source,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/submission_message_id') AS submission_message_id,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/submission_source') AS submission_source
+  FROM runtime.event_payload_fields AS f
+  WHERE f.event_seq = e.event_seq AND f.field_path IN (
+    '/metadata/kind', '/metadata/action', '/metadata/handoff_message_id',
+    '/metadata/handoff_source', '/metadata/submission_message_id', '/metadata/submission_source'
+  )
+) AS metadata ON true
+completedfailedinterruptedfollow_up_settlementnothing_to_doabortedactivity_id, kind, muse_id, at_ms, dismissed, payload, dedupe_keybackground_sync_disabledmissing conditional maintenance schedule stateprivacy_identifier_eventrelationships.chat_lookupfailureget/opt/hatch/bin/outlook-mailmessage_exceeds_capture_boundcontent_limitdispositionreconsider_atcandidateheld_at`DateTime + TimeDelta` overflowedcandidate_id

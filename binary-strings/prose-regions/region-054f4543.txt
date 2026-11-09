@@ -1,0 +1,16 @@
+
+)
+SELECT c.conversation_id, c.title, c.created_at, c.last_activity_at, h.ordinal, h.role
+FROM chats ch
+JOIN meta_ai.conversations c ON c.conversation_id = ch.conversation_id
+JOIN hits h ON h.conversation_id = ch.conversation_id
+ORDER BY ch.chat_score DESC, ch.conversation_id, h.score DESC, h.ordinalWITH words AS MATERIALIZED (
+SELECT w.query::tsquery AS q, w.weight, w.admits
+FROM unnest(::text[], ::float8[], ::boolean[]) AS w(query, weight, admits)
+), candidates AS MATERIALIZED (
+SELECT DISTINCT m.conversation_id, m.message_id
+FROM words w
+CROSS JOIN LATERAL (
+SELECT m.conversation_id, m.message_id
+FROM meta_ai.messages m
+WHERE w.admits AND m.search_vector @@ w.q AND m.generation = NOT EXISTS (SELECT 1 FROM meta_ai.deletion_checks d WHERE d.conversation_id = m.conversation_id)€–

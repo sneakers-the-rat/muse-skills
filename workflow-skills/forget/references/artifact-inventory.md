@@ -306,6 +306,18 @@
   a source-scoped exclusion or an explicit limitation. Do not keep rediscovering
   the subject from external services during verification.
 
+- When information came from a Meta AI chat, list that chat as a remaining
+  copy: it stays in Meta AI until the user deletes it there, and in Muse's
+  synced copy until the next sync after that or until the user disconnects Meta
+  AI in Settings. Do not search Meta AI for the subject.
+
+- Muse keeps an image it opened from a Meta AI chat in memory for up to a day.
+  Report one opened in the last day as retained.
+
+- Images Muse saved from Meta AI chats are ordinary files in
+  `~/workspace/meta_ai/saved/`, named by save time. Handle them like any other
+  workspace file about the subject.
+
 ## 8. Operational and retained copies
 
 - Account for runtime events, inference/provider traces, Pariscope or Scuba
@@ -317,6 +329,9 @@
 - State whether each known class is deleted, replaced, excluded from active
   model use, or retained until an external policy expires. Never claim physical
   erasure of backups or service telemetry without authoritative confirmation.
+
+- VM snapshots can hold a Meta AI chat for up to 7 days after it leaves Muse's
+  copy. Report them as a retained copy.
 
 ## 9. Verification closure
 

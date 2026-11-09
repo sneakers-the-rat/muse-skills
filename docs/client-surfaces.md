@@ -465,8 +465,8 @@ Settings panes:
   through search, so a user who cannot find a connector should search
   for it by name. Rows offer Connect, or View once connected; the detail
   page holds disconnect and that connector's own permission tree. Every
-  connector's tree ends with a Background sync row, Allow or Deny, set
-  to Allow by default. With Deny, work the user did not start no longer
+  connector's tree except Muse Mail's and Meta AI's ends with a
+  Background sync row, Allow or Deny, set to Allow by default. With Deny, work the user did not start no longer
   uses that connector: system scheduled jobs, Feed and Idea card
   generation, other proactive work, and background source sync. The
   user's own chats, actions in pages and apps the user built, and the

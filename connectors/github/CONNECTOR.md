@@ -28,6 +28,16 @@
 
 - When OAuth is already connected and only repository setup is needed, give this step without restarting OAuth. For an existing installation GitHub opens its settings and may not return to Muse, so ask the user to come back to the chat when done.
 
+## Choose the account
+
+- Data commands use the default account unless they carry `--account <account_id>`. When the user names a GitHub login, run `accounts`, match the login to a `display_name` and pass that `account_id` to each following `list-tools`, `call-read-tool`, `call-tool` and `push-files` command. Run `status`, `accounts`, `install-url` and `disconnect` without `--account`.
+
+- If a repository is not found and more than one account is linked, ask the user which login to use.
+
+- To link another account, or to repair an entry with `needs_reauth`, run `status` without `--account` and share its `add_account_url`, or its `connect_url` if GitHub is not connected. Tell the user which login to sign in with.
+
+- To remove one account, tell the user to open it under Connectors → GitHub in Settings. To remove all accounts, run `disconnect` and share `[Disconnect GitHub](<disconnect_url>)`. GitHub stays connected until the user confirms.
+
 ## Confirm access
 
 - After the user selects repositories, verify access to the repository the task needs with a reviewed read tool. OAuth status or a click on the installation link does not prove private repository access.
