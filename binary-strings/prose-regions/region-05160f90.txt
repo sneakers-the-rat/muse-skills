@@ -1,0 +1,218 @@
+shop-wallet-cliThis checkout supports cards from its selected wallet provider onlyShop Pay is not available for this checkouthttp://localhost/hatch/check_gatekeepersGatekeeper response was invalid; using defaultGatekeeper check failed; using defaultexact_source_tripleembedding_near_dupmintedsource_kindsource_idsuperseded idea row disappeared before its rewrite could land/v1/model/getmodel.get returned an empty selection/v1/auth-file/getx-hatch-gk-assignment-confirmed
+DELETE FROM search_documents
+WHERE owner_table = 'runtime.events'
+  AND owner_key = $1
+DELETE FROM resources WHERE event_seq = $1INSERT INTO resources (event_seq, ordinal, resource_kind, resource_key, label, mime_type, size_bytes, metadata_json) VALUES /__hatch/chat_context_jsonstring/__hatch/display_text_updated_at_msnumberSELECT field_path, scalar_type, scalar_value, text_value FROM event_payload_fields WHERE event_seq = $1 FOR UPDATEDELETE FROM event_payload_fields WHERE event_seq = $1 AND field_path = ANY($2::text[])field_pathscalar_typescalar_valuetext_valueINSERT INTO event_payload_fields (event_seq, field_path, scalar_type, scalar_value, text_value) VALUES  ON CONFLICT (event_seq, field_path) DO UPDATE SET scalar_type = excluded.scalar_type, scalar_value = excluded.scalar_value, text_value = excluded.text_valueruntime.search_documents.search_text
+INSERT INTO search_documents (owner_table, owner_key, search_text, language, search_vector)
+VALUES ('runtime.events', $1, $2, 'simple', to_tsvector('simple', $3))
+ON CONFLICT (owner_table, owner_key) DO UPDATE SET
+  search_text = excluded.search_text,
+  language = excluded.language,
+  search_vector = excluded.search_vector,
+  updated_at = now()
+WHERE search_documents.search_text IS DISTINCT FROM excluded.search_text
+   OR search_documents.language IS DISTINCT FROM excluded.language
+
+SELECT coalesce(f.text_value, f.scalar_value)
+FROM event_payload_fields f
+WHERE f.event_seq = $1
+  AND f.field_path = '/__hatch/chat_context_json'
+LIMIT 1
+
+UPDATE widgets
+SET state_bundle_json = $2,
+    state_version = $3,
+    state_updated_at_ms = $4,
+    updated_at_ms = $4
+WHERE widget_id = $1
+  AND state_version = $5
+RETURNING state_version
+
+SELECT state_bundle_json, state_version
+FROM widgets
+WHERE widget_id = $1
+state_bundle_jsonwidget state bundle must be a JSON objectstate_version
+INSERT INTO context_items (
+  agent_id, seq, item_kind, text_content, role, call_id, tool_name, success,
+  message_source, created_at, item_json,
+  data_fbids, data_message_ids, data_thread_ids, data_expires_at
+) VALUES  RETURNING context_item_id, seq::agent.context_item_kind, ::runtime.message_role, , to_timestamp(::double precision), ::bigint[], ::text[], ::timestamptz)context_item_id
+SELECT pg_advisory_xact_lock(hashtextextended(agent_id, $2))
+FROM unnest($1::text[]) AS locked(agent_id)
+ORDER BY agent_id
+
+WITH inserted AS (
+INSERT INTO chat.chats (
+  chat_id,
+  origin,
+  lifecycle,
+  status,
+  thread_title,
+  source_session_id,
+  source_prompt_seq_upper_bound,
+  source_message_id_boundary,
+  created_at,
+  updated_at
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $12, $12)
+RETURNING chat_id
+)
+INSERT INTO chat_private.bindings(chat_id, provider, conversation_key, delivery_target)
+SELECT chat_id, $9, $10, $11 FROM inserted WHERE $9::text IS NOT NULL
+persistent
+WITH producer AS MATERIALIZED (
+  SELECT target.id AS agent_id,
+    CASE WHEN a.id IS NULL THEN NULL ELSE COALESCE(
+-- Highest seq of an agent's rows that no public voice import reads, or NULL
+-- when the import never reads any of them. Reads aliases `a` (the agent) and
+-- `root` (its presentation root). exempt_non_producer_rows.sql repeats it.
+CASE WHEN a.kind = 'root' AND a.depth = 0
+          AND a.agent_type = 'realtime_voice' THEN CASE
+    WHEN NOT pg_input_is_valid(a.spawn_metadata_json, 'jsonb') THEN -1
+    WHEN root.id IS NULL
+         OR a.spawn_metadata_json::jsonb #> '{realtime_voice,prompt_floor_seq}'
+            IS DISTINCT FROM to_jsonb(COALESCE(root.prompt_floor_seq, -1))
+        THEN NULL
+    WHEN pg_input_is_valid(
+        a.spawn_metadata_json::jsonb #>> '{realtime_voice,root_seed_context_seq}',
+        'bigint'
+    ) THEN GREATEST(
+        (a.spawn_metadata_json::jsonb #>> '{realtime_voice,root_seed_context_seq}')::bigint,
+        -1
+    )
+    ELSE -1
+END END
+    , 9223372036854775807) END AS exempt_through_seq
+  FROM (SELECT ::text AS id) target
+  LEFT JOIN agents a ON a.id = target.id
+  LEFT JOIN agents root ON root.id = a.presentation_root_session_id AND root.id <> a.id
+)
+INSERT INTO context_item_resume_projection (
+  agent_id, seq, context_item_id, created_at, message_source,
+  client_context_json, client_context_projected, public_import_exempt
+)
+SELECT producer.agent_id, v.seq, v.context_item_id, v.created_at, v.message_source,
+       v.client_context_json, v.client_context_projected,
+       CASE WHEN v.seq <= producer.exempt_through_seq THEN TRUE END
+FROM (VALUES ) AS v(seq, context_item_id, created_at, message_source, client_context_json,
+          client_context_projected)
+CROSS JOIN producer
+ON CONFLICT (agent_id, seq) DO UPDATE SET
+  context_item_id = excluded.context_item_id,
+  created_at = excluded.created_at,
+  message_source = COALESCE(excluded.message_source, context_item_resume_projection.message_source),
+  client_context_json = COALESCE(
+    excluded.client_context_json,
+    context_item_resume_projection.client_context_json
+  ),
+  client_context_projected = COALESCE(
+    context_item_resume_projection.client_context_projected,
+    FALSE
+  ) OR excluded.client_context_projected,
+  public_import_exempt = COALESCE(
+    context_item_resume_projection.public_import_exempt,
+    excluded.public_import_exempt
+  ),
+  updated_at = now()
+INSERT INTO context_item_resume_projection (
+  agent_id, seq, context_item_id, created_at, message_source,
+  client_context_json, reply_prefix, provenance_json,
+  client_context_projected, reply_prefix_projected, provenance_projected,
+  public_import_exempt
+)
+SELECT producer.agent_id, v.seq, v.context_item_id, v.created_at, v.message_source,
+       v.client_context_json, v.reply_prefix, v.provenance_json,
+       v.client_context_projected, v.reply_prefix_projected, v.provenance_projected,
+       CASE WHEN v.seq <= producer.exempt_through_seq THEN TRUE END
+FROM (VALUES ) AS v(seq, context_item_id, created_at, message_source, client_context_json,
+          reply_prefix, provenance_json, client_context_projected, reply_prefix_projected,
+          provenance_projected)
+CROSS JOIN producer
+ON CONFLICT (agent_id, seq) DO UPDATE SET
+  context_item_id = excluded.context_item_id,
+  created_at = excluded.created_at,
+  message_source = COALESCE(excluded.message_source, context_item_resume_projection.message_source),
+  client_context_json = excluded.client_context_json,
+  reply_prefix = excluded.reply_prefix,
+  provenance_json = excluded.provenance_json,
+  client_context_projected = excluded.client_context_projected,
+  reply_prefix_projected = excluded.reply_prefix_projected,
+  provenance_projected = excluded.provenance_projected,
+  public_import_exempt = COALESCE(
+    context_item_resume_projection.public_import_exempt,
+    excluded.public_import_exempt
+  ),
+  updated_at = now()
+
+INSERT INTO context_item_resume_projection (
+  agent_id, seq, message_source, client_context_json, reply_prefix, provenance_json,
+  client_context_projected, reply_prefix_projected, provenance_projected
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+ON CONFLICT (agent_id, seq) DO UPDATE SET
+  message_source = COALESCE(context_item_resume_projection.message_source, excluded.message_source),
+  client_context_json = excluded.client_context_json,
+  reply_prefix = excluded.reply_prefix,
+  provenance_json = excluded.provenance_json,
+  client_context_projected = excluded.client_context_projected,
+  reply_prefix_projected = excluded.reply_prefix_projected,
+  provenance_projected = excluded.provenance_projected,
+  updated_at = now()
+SELECT pg_advisory_xact_lock_shared(hashtextextended($1, 0))agent.volatile_context_pins.lifecycleSELECT pg_advisory_xact_lock(hashtextextended($1, 0))
+WITH owners AS MATERIALIZED (
+    SELECT DISTINCT agent_id COLLATE "C" AS agent_id
+    FROM unnest($1::text[]) AS input(agent_id)
+)
+SELECT pg_advisory_xact_lock(hashtextextended($2 || agent_id, 0))
+FROM owners ORDER BY agent_id COLLATE "C"
+agent.volatile_context_pins:SELECT agent_id FROM agent.agents WHERE agent_id = $1SELECT handoff_state_json -> $2::text AS state,
+                (extract(epoch FROM clock_timestamp()) * 1000)::bigint AS now_ms
+         FROM agent.subagent_spawns WHERE child_agent_id = $1 FOR UPDATEnow_msagent.subagent_spawns.handoff_state_jsonUPDATE agent.subagent_spawns
+         SET handoff_state_json = jsonb_set(COALESCE(handoff_state_json, '{}'::jsonb),
+                                           ARRAY[$2]::text[], $3::jsonb)
+         WHERE child_agent_id = $1insert into chat_private.binding_authorizations
+        (provider, binding_id, account_id, connection_id, external_kind, external_id,
+         delivery_target, participation, generation, transport_json)
+        values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+        on conflict(provider, binding_id) do update set
+          participation = excluded.participation, generation = excluded.generation,
+          transport_json = excluded.transport_jsonselect * from chat_private.binding_authorizations
+        where provider = $1 and account_id = $2 and external_kind = $3 and external_id = $4
+        for updateinsert into chat_private.publication_turns (execution_id, chat_id, disposition, phase)
+        select $1, $2, $3, $4 where pg_try_advisory_xact_lock_shared(hashtextextended($5, 0))
+        on conflict(execution_id) do nothing returning trueselect chat_id, phase, disposition from chat_private.publication_turns
+        where execution_id = $1 for updatedispositionphasepublication execution belongs to another chatunreadable legacy hook was not admittedinvalid legacy hook path was not admittedinvalid legacy hook was not admitteddeleted sessions.updated events require an owner-visible deletion proofsession row unavailable for sessions.updated payloadfailed to hydrate sessions.updated payloadfailed to resolve public session id for streamed framefailed to broadcast streamed frame for root sessiondropped companion progress frame after its voice call changed
+    select
+        node_id,
+        coalesce(display_name, node_id) as display_name,
+        platform,
+        enabled_permissions_json,
+        commands_json,
+        data_sources_json,
+        version,
+        device_family,
+        model_id,
+        metadata_json,
+        is_wakeup_supported,
+        delivery_app,
+        invoke_protocol,
+        -- Sentinel rejects a pairing identity with a space; created_at::text has one.
+        coalesce(
+            paired_at_text,
+            to_char(created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')
+        ) as paired_at,
+        coalesce(last_seen_at_text, last_seen_at::text, created_at::text) as last_seen_at,
+        status,
+        pairing_status
+    from device.nodes
+pairing_status <> 'revoked'select pg_advisory_xact_lock(hashtext('background_content_jobs.locale'), hashtext($1))failed to resolve public session id for agent.statusagent.statusassistant_message_iddelivery_message_countread approval update response bodyConnection work is temporarily unavailablechat.sendMuse connections are temporarily unavailablebackground job has an unsupported content localechat_historygoalsspacesconnector inventory read failedfeed prompt text is empty; the cold-start gate abstainsfeed cold-start verdict cache read failed; reclassifyingfeed cold-start verdict cache write failed; the next fire reclassifiespropertiesneeds_interpretationadditionalPropertiesfeed:cold_startfeed_generatethe prompt's scope depends on the reader's own signalsfeed prompt scope classification answered off-schema; the fire generatesfeed prompt scope classification failed; the fire generatesfeed prompt scope classification timed out; the fire generatesfeed prompt read failed for the tier-1 visit arm; the arm abstainsfeed editions are remotely disabled; this anchor hour prints the pulse insteaddisable_hatch_feed_edition_gkfeed non-edition lanes are remotely disabled; this fire generates nothingdisable_hatch_feed_non_edition_gkfeed step died to execution infrastructure; retrying after backoffattempt lost its executorattempt deadline elapsed across restartexecutor lost across restart without a durable submissionremoved a prior attempt's leftover selection file before a fresh editor attemptleftover selection file removal failed; the fresh editor attempt may reject writesfeed visit-run preemption could not terminalize; the preempting work collapses onto the visit run insteadadhoc reading day clamped forward to the active dayactive-day anchor read failed; adhoc keeps its basin dayscheduled slot already failed a run; admission skipped as spentscheduled feed fire preempted an open visit runpreempted by a scheduled feed runfeed edition admission unexpectedly hit the fill backstopfeed generation is remotely disabled (hatch_feed_generation_disabled); declining admissionfeed generation is paused by DEFCON 3; declining admissionfeed dormancy read failed; the adaptive cadence keeps this reader's bandfeed activity tier 1 from a recent feed visit (QE visit arm)gatekeeperfeed activity tier overwritten to tier 1chat_turns_72hfeed_activity_72hview_sessions_48hengagement_48hvisit_windowchat_turns_5dengagement_5dfeed activity tier downgraded from tier 1 to tier 2 (non-US capacity lever)token_optimization:v2token_optimization:v1in_long_term_holdout:truefeed connector inventory read failednull-state seed could not read the reader timezone; deferring rather than guessingreadernull-state post icon key write failed; the card falls back to the keyword matchnull-state post names an icon outside the palette; the card falls back to the keyword matchnull-state seed could not read its own rows back; the census misses this VMnull-state seed guard read failed; deferringadopted an null-state seed from an earlier build; wrote the marker onlynull-state seed marker adoption failed; retrying next passnull-state seed emptiness read failed; deferringnull-state seed write failed; the next hook retriespublishseeded the null-state postscold_start_holdlong_term_holdoutengagement_7dfeed_unitslatest_runPopular topics with readers## Using the popular topics
+"Popular topics with readers" lists the reader's own signal topics first, then the topics many readers respond to.
+- Write from the reader's prompt and own signals first. A story they call for beats a popular topic whatever the figures say.
+- On web and social, when no story on their own signals fits this hour, use the popular topics to find another story that already belongs in their paper. If the prompt names a subject, stay inside it. Among stories that fit about equally, prefer the higher figure.
+- On tracking, health, and schedule, the figures only help choose among items on the assigned beat. They never replace its quiet close.
+- A figure never licenses a subject the reader ruled out. An example subtopic is a starting point, not an assignment: skip one this beat cannot serve, such as bills or orders the reader has not connected.
+For example:
+- The reader has shared only that they cook on weekends: write a Food & Nutrition story built on that signal.
+- Nothing on their cooking is fresh this hour and Entertainment is the top popular topic: write about a new cooking show, not the weekend box office.
+- The prompt names no subject and the reader has shared only their city: take the best popular-topic story that happens in or affects that city.
+engagement breakdown read failed; composing without itfeed pulse fire admitted nothing; no prompt row existsskippedno feed prompt exists; no pulse admittedactivity_unresolved: 1 (the activity signals could not be read; no pulse admitted, slot unconsumed)scheduler host admitting feed pulse run directlyfeed pulse fire skipped: the prompt needs interpreting and this VM is below the two-family user-signal barcold_start_below_signal_bar: 1 (the prompt's scope needs the reader's own signals and this VM holds fewer than two signal families; slot unconsumed)feed pulse fire skipped: this quiet-tier reader has recorded no feed view, reaction, or discussion in seven days, and today is one of their held daysfeed non-edition lanes are remotely disabled; nothing is admitted and the slot stays unconsumednon_edition_disabled: 1 (the pulse/wire kill switch is on; no run admitted, slot unconsumed)provider overloaded at an edition anchor hour; printing this hour's pulse instead of the editionfeed pulse fire skipped: this owner is on the long-term feed holdoutlong_term_holdout: 1 (this owner is on the long-term feed holdout; no run admitted, slot unconsumed)feed pulse fire released off-phase: this reader's feed is empty and they now clear the two-family user-signal barfeed.updatedbroadcast feed.updated websocket eventfeed pulse pick-history read failed; picker sees no historyidea lane not offered this hourfeed_model:avocrono-fast-testipnext/avocrono-fast-testfeed pulse picker unit read failed; picker sees no recent unitsin_holdout_2026h2:truethe only lane this reader's paper can workfeed pulse: adhoc run on an empty feed; the first paper prints news, not an ideaRequired when beat is "ideas": the id of the                                 chosen idea.prompt_fitreader_signalsstory_valuelane_figuresmedia_varietypolicy_defaultWhat most separated your lane from the runner-up: the reader's prompt, what the reader has shared, the stronger story, the lane figures, media variety, or nothing, so the hour went where your policy sends an hour nothing separates.€Š

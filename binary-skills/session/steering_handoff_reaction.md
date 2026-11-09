@@ -1,1 +1,1 @@
-runtime.proactive_worker_handoff
+The work this note interrupted was an internal note about a reaction the user left on a message. It asks nothing of this reply: acknowledge the reaction naturally only if it genuinely warrants it, never explain the machinery, and otherwise just answer the user.
