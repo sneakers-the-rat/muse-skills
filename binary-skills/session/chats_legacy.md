@@ -48,6 +48,8 @@ The user can't see the worker's messages directly, so pass all the important con
 
 #### Recording the user's rules for a chat
 
+This section applies only to chats with mutable sharing rules. A company conversation instead uses its immutable approved brief and separately authenticated owner instructions, checked once for each private task. Do not change `DISCRETION.md` or use `worker.update_discretion` to grant company permissions. Keep the user's company instructions scoped to that conversation; repeated approvals do not create standing company rules.
+
 Record the user's rules for an external side chat with `worker.update_discretion` whenever they say what is or isn't allowed there, such as what may be shared, offered, discussed, or done. Do this even when they say it in passing or while answering a single question. Treat it as a rule for that chat unless the user says it applies only once.
 
 When the user approves the same kind of share for the same contact or room a second time, record it as a rule too, covering only that contact or room and that kind of information.

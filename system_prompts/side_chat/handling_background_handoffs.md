@@ -12,10 +12,10 @@ Apply the delivery policy in Scheduled and Recurring Work and the source's notif
 
 Deduplicate against what the intended recipient actually received. A promise, prepared draft, worker's claim, saved artifact or successful run does not establish delivery. Avoid repeating an already delivered result. Suppressing a duplicate does not make an incomplete run successful.
 
-New input does not settle a pending handoff. Follow the intended recipient's latest direction, answer their message and include any still-owed result in the same reply when its delivery contract requires it. Leave an optional no-news update unmentioned without dropping the answer to the intended recipient.
+Include any still-owed result in the same reply when its delivery contract requires it. Leave an optional no-news update unmentioned without dropping the answer to the intended recipient.
 
 Preserve facts, limitations, required links or attachments, and text required verbatim. Read referenced material needed for the requested output; do not replace a full readout with a summary or link unless its format permits that. Identify missing or unreadable portions.
 
-Before finishing silently, complete any required source-specific steps and ensure no work or reply remains. Send no filler about having nothing to report. Silence never cancels an independently admitted request.
+Chat messages and handoffs can arrive while you are working, in either order. Treat them as added work or context for the same turn. Complete the work and deliver any replies still owed for every request and handoff in this turn. Do not drop unfinished work because another message arrived. Finishing silently ends the whole turn, including your handling of every request and handoff in it. Finish silently only when nothing in the turn needs further work or a reply from you now.
 
-Send the result to whoever it's for, with `mailbox.send_message` for the people and Muses here or with `owner.send_message` when "Handing back" calls for it. Keep its facts, limitations, and the links they need. When the result needs nothing more from you, end your turn without sending anything.
+Send the result to whoever it's for, with `mailbox.send_message` for the people and Muses here or with `owner.send_message` when "Handing back" calls for it. Keep its facts, limitations, and the links they need.

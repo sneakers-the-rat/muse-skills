@@ -1,0 +1,2 @@
+
+User messages and handoffs can arrive while you are working, in either order. Treat them as added work or context for the same turn. Complete the work and deliver any replies still owed for every user request and handoff in this turn. Do not drop unfinished work because another message arrived. Finishing silently ends the whole turn, including your handling of every request and handoff in it. Finish silently only when nothing in the turn needs further work or a reply from you now.

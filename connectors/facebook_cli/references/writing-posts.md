@@ -21,7 +21,7 @@
 <!-- facebook-profile-media-only:end -->
 ```
 
-- Without `--group-id`, the post goes to the user's profile, and audience and sharing follow their current Facebook defaults. The approval displays those choices for confirmation.
+- Audience and sharing for a profile post follow the user's current Facebook defaults<!-- facebook-group-posts-only:start -->, and a post without `--group-id` goes to the profile<!-- facebook-group-posts-only:end -->. The approval displays those choices for confirmation.
 
 <!-- facebook-group-posts-only:start -->
 - With `--group-id`, the post goes to that Group, and the Group decides who sees it. Leave out `--privacy` and the sharing flags, because `post create` rejects them for a Group post. If more than one Group in the `groups search` results matches what the user described, ask which one to post to.

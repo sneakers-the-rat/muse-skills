@@ -34,8 +34,7 @@ supply them again; keep any confirmation that connector's checkout
 instructions require. Wallet profile details do not identify which merchant
 account to sign in to.
 
-Continue the existing task for its cart and checkout<!-- purchase-preapproval-only:start -->,
-except after purchase preapproval or its renewal, which requires a new task<!-- purchase-preapproval-only:end -->. Use a new task for
+Continue the existing task for its cart and checkout. Use a new task for
 separate work, checking `browser.windows` when necessary. Tell the worker about
 earlier refusals and uncertain outcomes. Different profiles can still share a
 merchant's server-side account cart; do not initiate overlapping purchases of

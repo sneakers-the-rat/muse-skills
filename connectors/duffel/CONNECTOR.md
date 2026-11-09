@@ -24,7 +24,7 @@
 
 - The full result goes to the file, which the flight list and booking read. The ranked options print on stderr as lettered lines with their row pointers, plus any coverage note or failure, so they show in the command's output as long as stderr is not redirected. Those lines are usually all you need to choose and present.
 
-- A search takes a few seconds to a minute. Run it through `muse.exec` with `yield_ms` set to 90000 so it finishes in the foreground. If it still moves to the background, wait for its result; a running search has not failed, and starting it again searches twice.
+- A search takes a few seconds to a minute. If it moves to the background, wait for its result; a running search has not failed, and starting it again searches twice.
 
 - The CLI accepts any three letters, so a guessed code for an obscure or ambiguous place can quietly search the wrong airport; exact IATA codes keep the search on the user's route. A city code such as `NYC` or `LON` searches every airport in that city in one search; an airport code searches only that airport. Add `--return-date` for a round trip, or repeat `--leg ORIGIN:DESTINATION:YYYY-MM-DD` for a multi-city trip.
 
@@ -86,31 +86,11 @@
 
 - Reuse a complete response while its offers are still valid. Corrected arguments, another relevant itinerary, expired offers or lost output justify another search. Repeating an identical search in a shell loop or launching duplicates in the background does not; list airports, cabins and dates in one command instead.
 
-- `error.kind: connector_country_not_allowed` means Duffel is unavailable for this account's country. Stop all Duffel commands for the task, including retries of other reads; changing the itinerary or reconnecting will not resolve it. Use Flight Booking's browser fallback for flight shopping. Scheduled fare checks skip Duffel for this run under the [fare check](references/fare-check.md) rules.
-
-- `ok: false` with `code: duffel_account_country_unavailable` without `account_country: unresolved_us_default` means `book` or traveler-profile creation stopped because the account-country lookup failed. Stop those operations for the rest of the turn; changing the booking arguments will not help. Continue booking directly with the airline using `browser.browse`. Searches and existing-booking management remain subject to their own availability, ownership and retry rules.
-
-- `account_country: unresolved_us_default` means a booking could not be read while the account country was unavailable; it does not mean the user lacks the booking, so manage it with the airline using `browser.browse` instead of retrying. A partial list retains readable bookings and identifies affected IDs under `enumeration.country_fallback_unreadable_order_ids`; this applies only to those IDs.
+- A refused or failed command explains itself in its `error`, `message`, `next_step` or `next_action`: what stopped, whether another try can help, and what still works, such as booking with the airline through `browser.browse`. Those fields describe this result, so they are the guide to the next step.
 
 - `enumeration.incomplete: true` means the booking list may omit bookings. Present readable bookings and state that the list is incomplete; an empty incomplete list does not mean there are no bookings. When `enumeration.failed_team_records` is nonzero, manage affected bookings with the airline using `browser.browse`.
 
-- A checkout or traveler-profile team mismatch stops that checkout. Continue with the airline using `browser.browse`. Existing bookings can still be managed through their original team.
-
-- `status: airline_site_booking_required` from `validate-booking` or `book` means this airline charges the card in its own currency, which Duffel checkout can't pay. Nothing was approved or charged. Keep the chosen itinerary and follow Flight Booking's airline-booking guidance using `browser.browse`; other airlines' Duffel fares stay bookable here.
-
-- If `resource_team_persist_failed: true` appears after creation, preserve the result, returned IDs and airline booking reference; do not repeat creation. This connector cannot repair the saved team binding, so Duffel management may remain unavailable. Continue with the airline using `browser.browse`; agency-issued refunds may require the issuing agency.
-
-- `code: duffel_quote_receipt_missing`, `duffel_quote_expired` or `duffel_quote_team_mismatch` stops use of that offer or quote. Before any approval or submission for this purchase, run a fresh search before continuing offer reads, seat lookup or checkout; do not retry that ID. After approval or submission, follow [Uncertain results](references/recovery.md) using the original checkout evidence. These codes do not resolve booking or funding uncertainty or permit a retry or replacement purchase. Fresh successful searches can rebuild a malformed disposable quote cache; rebuilding it does not resolve an earlier purchase.
-
-- `code: duffel_quote_storage_unavailable` means the quote cache could not be accessed or saved. This connector cannot repair that storage failure. Stop `search`, `seat-options`, `bag-options`, `validate-booking` and `book` for the rest of the turn. Before any approval or submission for this purchase, use Flight Booking's browser fallback for shopping; after flight selection, keep the chosen itinerary and follow Flight Booking's airline-booking guidance using `browser.browse`. After approval or submission, follow [Uncertain results](references/recovery.md) using the original checkout evidence; this refusal does not resolve booking or funding uncertainty or permit retry or replacement.
-
-- `code: duffel_quote_capacity_exceeded` requires a narrower search before selecting an offer.
-
-- `ok: false` with `code: duffel_unavailable` means the Duffel rollout gate is off, even if connector search returned Duffel. Stop `search`, `places`, `seat-options`, `bag-options`, `validate-booking` and `book` for the rest of the turn; changing the query will not help. The rollout gate leaves existing-booking management available. Use Flight Booking's browser fallback for flight shopping. Scheduled fare searches wait for the next run.
-
 - For other errors, an unchanged failed search fails the same way again, even when its response says `retriable: true`, so a changed query or another source is the next step.
-
-- Other failed reads, such as `booking-status`, `seat-options`, `bag-options` and `validate-booking`, may be retried unless an availability or rate-limit rule stops that command.
 
 - A 429 rate-limit response ends Duffel calls for the current task. When it carries `rate_limit_resets_at`, say when Duffel can be searched again. Report the limit without changing the query to get around it.
 

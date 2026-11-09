@@ -1,0 +1,336 @@
+delete from health.samples
+                 where provider = $1
+                   and node_id is not distinct from $2
+                   and start_at <= $4
+                   and coalesce(end_at, start_at) >= $3internal error: entered unreachable code: bundle-specific clear always includes a sample typedelete from health.samples
+                 where provider = $1
+                   and node_id is not distinct from $2
+                   and sample_type = $3
+                   and bundle_id is null
+                   and start_at <= $5
+                   and coalesce(end_at, start_at) >= $4delete from health.samples
+                 where provider = $1
+                   and node_id is not distinct from $2
+                   and sample_type = $3
+                   and bundle_id is not distinct from $4
+                   and start_at <= $6
+                   and coalesce(end_at, start_at) >= $5delete from health.sample_values where sample_id = any($1)insert into health.events (
+                   provider, node_id, bundle_id, timezone, event_type, event_at, event_end_at
+                 )
+                 values ($1, $2, $3, $4, $5, $6, $7)
+                 returning health_event_idinsert into health.events (
+                   provider, node_id, external_event_id, bundle_id, timezone, event_type,
+                   event_at, event_end_at
+                 )
+                 values ($1, $2, $3, $4, $5, $6, $7, $8)
+                 returning health_event_idstart_epoch_secend_epoch_secbundle_idevent_typehealth.eventsinsert into health.sample_values (
+               sample_id, value_name, unit, numeric_value, text_value
+             )  on conflict (sample_id, value_name)
+              do update set
+                unit = excluded.unit,
+                numeric_value = excluded.numeric_value,
+                text_value = excluded.text_valuesleep_awake_duration_secsleep_core_duration_secsleep_deep_duration_secsleep_rem_duration_secsleep_asleep_unspecified_duration_secinsert into health.sleep_sessions (
+               provider, node_id, external_sleep_id, bundle_id, timezone, start_at, end_at,
+               quality_score, awake_seconds, core_seconds, deep_seconds, rem_seconds,
+               asleep_unspecified_seconds, asleep_seconds, in_bed_seconds
+             )
+             values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+             returning sleep_session_idquality_scoresleep_in_bed_duration_sechealth.sleep_sessionsaggregatesinsert into health.samples (
+               provider, node_id, external_sample_id, bundle_id, timezone, sample_type,
+               start_at, end_at, unit, numeric_value, text_value
+             )  returning sample_iddelete from health.record_values where record_table = $1 and record_id = $2insert into health.record_values (
+               record_table, record_id, value_name, unit, numeric_value, text_value
+             )  on conflict (record_table, record_id, value_name)
+              do update set
+                unit = excluded.unit,
+                numeric_value = excluded.numeric_value,
+                text_value = excluded.text_valueinsert into health.workouts (
+               provider, node_id, external_workout_id, bundle_id, timezone, workout_type,
+               start_at, end_at, active_seconds, energy_kcal, distance_meters,
+               hr_max_bpm, hr_average_bpm
+             )
+             values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+             returning workout_idactive_duration_secsenergy_burned_kcaldistance_metershr_max_bpmhr_average_bpmworkout_typehealth.workoutsinsert into health.aggregates (
+               provider, node_id, timezone, aggregate_type, period_start, period_end,
+               numeric_value, unit
+             ) with ns as (
+             select tstzrange($4::timestamptz, $5::timestamptz) as s
+         ),
+         matched as (
+             delete from health.synced_ranges
+             where provider = $1
+               and node_id is not distinct from $2::text
+               and category = $3
+               and (span && (select s from ns) or span -|- (select s from ns))
+             returning lower(span) as lo, upper(span) as hi
+         ),
+         bounds as (
+             select min(lo) as lo, max(hi) as hi from matched
+         )
+         insert into health.synced_ranges (provider, node_id, category, span)
+         select $1, $2::text, $3, tstzrange(
+             least(lower(ns.s), coalesce((select lo from bounds), lower(ns.s))),
+             greatest(upper(ns.s), coalesce((select hi from bounds), upper(ns.s)))
+         )
+         from nsselect pg_advisory_xact_lock_shared(hashtext($1))health.records.writedelete from health.samples
+         where node_id = $1
+           and start_at <= $3
+           and coalesce(end_at, start_at) >= $2select distinct provider from health.synced_ranges where node_id = $1delete from health.samples
+         where provider = $1
+           and node_id is not distinct from $2
+           and sample_type = $3
+           and start_at <= $5
+           and coalesce(end_at, start_at) >= $4active reconciliation changed while its staging was lockedfenced invalid device reconciliation attempt
+    update device.nodes
+    set health_last_received_at = $1,
+        health_last_sync_status = 'success',
+        health_last_sync_error = null
+    where node_id = $2
+    runtime.skillsskill command runtime context registration failedJARVIS_HOMEJARVIS_VAR_LIB_DIRCREDENTIALS_DIRECTORYJARVIS_TRACE_CONTEXTJARVIS_RUNTIME_CONTEXT_TOKENresponse_oversizeMeta AI answers keep their own expirymeta_ai_syncMeta AI sync pass not seeded; the next scheduled pass does the work~/USER.md~/IDENTITY.mdconnection source required
+WITH inserted AS (
+INSERT INTO chat.chats (
+  chat_id,
+  origin,
+  lifecycle,
+  status,
+  thread_title,
+  source_session_id,
+  source_prompt_seq_upper_bound,
+  source_message_id_boundary,
+  created_at,
+  updated_at
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $12, $12)
+RETURNING chat_id
+)
+INSERT INTO chat_private.bindings(chat_id, provider, conversation_key, delivery_target)
+SELECT chat_id, $9, $10, $11 FROM inserted WHERE $9::text IS NOT NULL
+persistentactiveDELETE FROM meta_ai.media WHERE conversation_id = ANY($1)DELETE FROM meta_ai.messages WHERE conversation_id = ANY($1)DELETE FROM meta_ai.conversations WHERE conversation_id = ANY($1)SELECT generation, applied_purged_before_ms FROM meta_ai.sync_state WHERE singleton FOR UPDATEUPDATE meta_ai.sync_state SET applied_deletion_seq = greatest(applied_deletion_seq, $1), updated_at = now() WHERE singletonSELECT message_id, media_index, media_key, cache_state FROM meta_ai.media WHERE conversation_id = $1
+INSERT INTO meta_ai.media AS x (
+  conversation_id, message_id, media_index, generation, media_key, kind, origin, mime_type,
+  byte_size, file_name, caption, cache_state
+)
+SELECT $1, r.message_id, r.media_index, $2, r.media_key, r.kind, r.origin, r.mime_type,
+       r.byte_size, r.file_name, r.caption, 'none'
+FROM unnest($3::text[], $4::integer[], $5::text[], $6::text[], $7::text[], $8::text[],
+            $9::bigint[], $10::text[], $11::text[])
+  AS r(message_id, media_index, media_key, kind, origin, mime_type, byte_size, file_name,
+       caption)
+ON CONFLICT (conversation_id, message_id, media_index) DO UPDATE SET
+  generation = excluded.generation,
+  media_key = excluded.media_key,
+  kind = excluded.kind,
+  origin = excluded.origin,
+  mime_type = excluded.mime_type,
+  byte_size = excluded.byte_size,
+  file_name = excluded.file_name,
+  caption = excluded.caption,
+  cache_state = CASE WHEN x.media_key = excluded.media_key OR x.cache_state = 'blocked'
+                     THEN x.cache_state ELSE 'none' END,
+  fetch_failures = CASE WHEN x.media_key = excluded.media_key THEN x.fetch_failures ELSE 0 END,
+  last_fetch_error = CASE WHEN x.media_key = excluded.media_key THEN x.last_fetch_error END,
+  retry_not_before = CASE WHEN x.media_key = excluded.media_key THEN x.retry_not_before END
+WHERE (x.generation, x.media_key, x.kind, x.origin, x.mime_type, x.byte_size, x.file_name,
+       x.caption)
+  IS DISTINCT FROM
+      (excluded.generation, excluded.media_key, excluded.kind, excluded.origin,
+       excluded.mime_type, excluded.byte_size, excluded.file_name, excluded.caption)
+
+INSERT INTO meta_ai.messages AS m (
+  conversation_id, message_id, generation, ordinal, role, sent_at, body, text_truncated,
+  search_vector, media_omitted
+)
+SELECT $1, r.message_id, $2, r.ordinal, r.role, r.sent_at, r.body, r.text_truncated,
+       to_tsvector('simple', r.vector_text), r.media_omitted
+FROM unnest($3::text[], $4::integer[], $5::text[], $6::timestamptz[], $7::text[],
+            $8::boolean[], $9::text[], $10::integer[])
+  AS r(message_id, ordinal, role, sent_at, body, text_truncated, vector_text, media_omitted)
+ON CONFLICT (conversation_id, message_id) DO UPDATE SET
+  generation = excluded.generation,
+  ordinal = excluded.ordinal,
+  role = excluded.role,
+  sent_at = excluded.sent_at,
+  body = excluded.body,
+  text_truncated = excluded.text_truncated,
+  search_vector = excluded.search_vector,
+  media_omitted = excluded.media_omitted
+WHERE (m.generation, m.ordinal, m.role, m.sent_at, m.body, m.text_truncated, m.media_omitted)
+  IS DISTINCT FROM
+      (excluded.generation, excluded.ordinal, excluded.role, excluded.sent_at, excluded.body,
+       excluded.text_truncated, excluded.media_omitted)
+SELECT EXISTS (SELECT 1 FROM meta_ai.tombstones WHERE conversation_id = $1)DELETE FROM meta_ai.media x USING unnest($2::text[], $3::integer[]) AS d(message_id, media_index) WHERE x.conversation_id = $1 AND x.message_id = d.message_id AND x.media_index = d.media_index
+INSERT INTO meta_ai.conversations AS c (
+  conversation_id, generation, title, created_at, last_activity_at, change_token_ms,
+  message_count, text_bytes, messages_truncated, needs_refetch_until
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+ON CONFLICT (conversation_id) DO UPDATE SET
+  generation = excluded.generation,
+  title = excluded.title,
+  created_at = excluded.created_at,
+  last_activity_at = excluded.last_activity_at,
+  change_token_ms = excluded.change_token_ms,
+  message_count = excluded.message_count,
+  text_bytes = excluded.text_bytes,
+  messages_truncated = excluded.messages_truncated,
+  needs_refetch_until = greatest(c.needs_refetch_until, excluded.needs_refetch_until),
+  updated_at = now()
+WHERE (c.generation, c.title, c.created_at, c.last_activity_at, c.change_token_ms,
+       c.message_count, c.text_bytes, c.messages_truncated)
+  IS DISTINCT FROM
+      (excluded.generation, excluded.title, excluded.created_at, excluded.last_activity_at,
+       excluded.change_token_ms, excluded.message_count, excluded.text_bytes,
+       excluded.messages_truncated)
+UPDATE meta_ai.conversations SET needs_refetch_until = $2 WHERE conversation_id = $1 AND $2 > coalesce(needs_refetch_until, '-infinity'::timestamptz)failed to load idea quality rows for HTTP feed selectionfailed to read active feed for rotation; selecting without itfailed to load persisted idea bandit state for HTTP feed selectionfailed to read idea memory affinity; ranking without the affinity termfailed to fetch ideas explore policy for HTTP feed selectionsweep of open step attempts after terminal transition failedobjective state read failed; recurring window uses its first-run lookbackcoalesced_into_existing_incomplete_runtriggerworkflow-skills-v1content_schemawindow_lower_boundenqueuecoalescedleaseactive_runwait_cancelledqueuedobjective_not_registeredcoalesced_into_existing_occurrencedeleted sessions.updated events require an owner-visible deletion proofsession row unavailable for sessions.updated payloadfailed to hydrate sessions.updated payloadrun cancelledfeed step failure CAS lost to a concurrent settler; that settler owns the terminal eventfeed step failure CAS erroredfeed step adopted-submission settle erroredhttp://localhost/hatch/feed-engagement-populationstandalonefinalization_fencedreconciliation_storage_failedfinalization_failedclaim reconciliation finalizationfinalization_ignored_staleinvalid_stream_uploadfinalization_fence_failedfence invalid reconciliation uploadinvalid_source_snapshotsettle invalid device reconciliation for retrydevice_sync_stateHealth reconciliation applied but device-sync worker wake failedfinalize device reconciliationclient rendering snapshot read failed; keeping lifts inline this turndevice node_idfull_sync_idreconciliation.finalizeselect data_source, next_full_sync_at, current_full_sync_id,
+            current_full_sync_requester_root_session_id,
+            current_full_sync_requester_presentation_locale,
+            current_full_sync_expires_at, current_full_sync_range_start,
+            current_full_sync_range_end, changed_during_full_sync,
+            last_full_sync_at, last_full_sync_range_start, last_full_sync_range_end
+     from device.data_sync_stateselect pairing_status, data_sources_json
+         from device.nodes where node_id = $1 for updatepairing_statusdata_sources_jsonupdate device.data_sync_state
+         set next_full_sync_at = $4, search_trigger_pending = false,
+             current_full_sync_id = null,
+             current_full_sync_requester_root_session_id = null,
+             current_full_sync_requester_presentation_locale = null,
+             current_full_sync_expires_at = null,
+             current_full_sync_range_start = null,
+             current_full_sync_range_end = null,
+             changed_during_full_sync = false
+         where node_id = $1 and data_source = $2 and current_full_sync_id = $3update device.data_sync_state
+         set next_full_sync_at = null, last_full_sync_at = $4,
+             last_full_sync_range_start = current_full_sync_range_start,
+             last_full_sync_range_end = current_full_sync_range_end,
+             current_full_sync_id = null,
+             current_full_sync_requester_root_session_id = null,
+             current_full_sync_requester_presentation_locale = null,
+             current_full_sync_expires_at = null,
+             current_full_sync_range_start = null,
+             current_full_sync_range_end = null,
+             changed_during_full_sync = false
+         where node_id = $1 and data_source = $2 and current_full_sync_id = $3update device.data_sync_state
+         set next_full_sync_at = null, current_full_sync_id = null,
+             current_full_sync_requester_root_session_id = null,
+             current_full_sync_requester_presentation_locale = null,
+             current_full_sync_expires_at = null,
+             current_full_sync_range_start = null,
+             current_full_sync_range_end = null,
+             changed_during_full_sync = false
+         where node_id = $1 and data_source = $2 and current_full_sync_id = $3select count(*)::bigint as received_chunks,
+                max(c.chunk_index) as max_chunk_index,
+                coalesce(sum(octet_length(c.payload)), 0)::bigint as total_bytes
+         from device.upload_chunks c
+         where c.upload_session_id = $1max_chunk_indexreceived_chunkstotal_bytesselect node_id, route_kind, request_id, datatype, sync_mode,
+                chunk_count, status, updated_at_text, expires_at
+         from device.upload_sessions
+         where upload_session_id = $1
+         for updatedelete from device.upload_sessions
+         where upload_session_id = $1
+           and route_kind = 'data_source_reconciliation'conflicting reconciliation upload session identityreconciliation upload phase conflicts with finalizationreconciliation upload is missing during finalizationreconciliation upload no longer has its exact sealed chunk setdelete from device.calendar_events
+         where node_id = $1 and start_at < $3 and end_at > $2
+           and not (external_event_id = any($4::text[]))delete from device.calendar_events
+             where node_id = $1 and start_at < $2 and end_at <= $2insert into device.calendar_events as stored (
+           node_id, source_platform, external_event_id, title, start_at, end_at, is_all_day,
+           external_calendar_id, calendar_name, availability, location, notes,
+           time_zone, start_local_date, end_local_date, is_recurring, url,
+           event_status, calendar_color
+         )
+         select $1, $2, rows.* from unnest(
+           $3::text[], $4::text[], $5::timestamptz[], $6::timestamptz[],
+           $7::boolean[], $8::text[], $9::text[], $10::text[], $11::text[],
+           $12::text[], $13::text[], $14::date[], $15::date[], $16::boolean[],
+           $17::text[], $18::text[], $19::text[]
+         ) as rows
+         on conflict (node_id, external_event_id) do update set
+           source_platform = excluded.source_platform,
+           title = excluded.title, start_at = excluded.start_at,
+           end_at = excluded.end_at, is_all_day = excluded.is_all_day,
+           external_calendar_id = excluded.external_calendar_id,
+           calendar_name = excluded.calendar_name,
+           availability = excluded.availability, location = excluded.location,
+           notes = excluded.notes, time_zone = excluded.time_zone,
+           start_local_date = excluded.start_local_date,
+           end_local_date = excluded.end_local_date,
+           is_recurring = excluded.is_recurring, url = excluded.url,
+           event_status = excluded.event_status,
+           calendar_color = excluded.calendar_color
+         where row(
+           stored.source_platform,
+           stored.title,
+           stored.start_at,
+           stored.end_at,
+           stored.is_all_day,
+           stored.external_calendar_id,
+           stored.calendar_name,
+           stored.availability,
+           stored.location,
+           stored.notes,
+           stored.time_zone,
+           stored.start_local_date,
+           stored.end_local_date,
+           stored.is_recurring,
+           stored.url,
+           stored.event_status,
+           stored.calendar_color
+         ) is distinct from row(
+           excluded.source_platform,
+           excluded.title,
+           excluded.start_at,
+           excluded.end_at,
+           excluded.is_all_day,
+           excluded.external_calendar_id,
+           excluded.calendar_name,
+           excluded.availability,
+           excluded.location,
+           excluded.notes,
+           excluded.time_zone,
+           excluded.start_local_date,
+           excluded.end_local_date,
+           excluded.is_recurring,
+           excluded.url,
+           excluded.event_status,
+           excluded.calendar_color
+         )
+         returning (xmax = 0) as insertedinsert into device.contact_emails (contact_id, label, email)
+             select * from unnest($1::bigint[], $2::text[], $3::text[])insert into device.contact_phones (contact_id, label, phone_raw, phone_e164)
+             select * from unnest($1::bigint[], $2::text[], $3::text[], $4::text[])insert into device.contact_addresses (
+               contact_id, label, street, city, state, postal_code, country
+             )
+             select * from unnest(
+               $1::bigint[], $2::text[], $3::text[], $4::text[],
+               $5::text[], $6::text[], $7::text[]
+             )update device.contacts
+         set deleted_at = now(), updated_at = now()
+         where node_id = $1 and deleted_at is null
+           and not (external_contact_id = any($2::text[]))insert into device.contacts (
+           node_id, platform, external_contact_id, display_name, organization,
+           job_title, birthday_text, note, thumbnail,
+           synced_at_text, deleted_at, updated_at
+         )
+         select $1, $2, rows.*, $9, null, now()
+         from unnest(
+           $3::text[], $4::text[], $5::text[], $6::text[], $7::text[],
+           $8::text[], $10::text[]
+         ) as rows
+         on conflict (node_id, external_contact_id) do update set
+           platform = excluded.platform,
+           display_name = excluded.display_name,
+           organization = excluded.organization,
+           job_title = excluded.job_title,
+           birthday_text = excluded.birthday_text,
+           note = excluded.note,
+           thumbnail = excluded.thumbnail,
+           synced_at_text = excluded.synced_at_text,
+           deleted_at = null,
+           updated_at = excluded.updated_at
+         returning contact_id, external_contact_id, (xmax = 0) as inserteddelete from device.contact_phones where contact_id = any($1)external_contact_idcontact_iddelete from device.contact_emails where contact_id = any($1)delete from device.contact_addresses where contact_id = any($1)
+        update device.nodes
+        set platform = $1,
+            contacts_last_synced_at = $2,
+            contacts_last_received_at = $3,
+            contacts_last_sync_status = 'success',
+            contacts_last_sync_error = null,
+            contacts_contact_count = $4,
+            contacts_content_sha256 = $5
+        where node_id = $6
+        device contact countdevice node disappeared while recording contacts snapshot metadataOnly Internal announcements accept fallback copyInternal announcement requires public fallback copyinternal_fallback_messageInternal fallback exceeds message limitWWW messages require agent-written deliveryInternal announcement requires delivery instructionsInternalWorker priority is reserved for worker owner noticesInternal priority is reserved for code-owned main-chat deliveriesfollow-up metadata must be a JSON objectfollow-up must expire after it becomes deliverablefollow-up message must not be emptyfollow-up key must not be emptyfollow-up producer must not be emptyhardcoded product campaign producer is retiredpresentation_localeenqueue follow-upfollow_up_queue_deliveryfollow-up enqueued but the delivery worker could not be kickedfailed to read user time file for proactive delivery timezonestripe-linkinspectStripe Link connection inspection failedStripe Link connection status failedconnector_call_reasonmeta_ai_reconcileMeta AI sync attempt not recordedMeta AI enrollment refresh failed; syncing on the confirmed enrollmentmeta_ai_consentMeta AI sync skipped

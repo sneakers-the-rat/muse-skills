@@ -34,8 +34,8 @@ quantities, delivery destination, seller restrictions, material constraints, and
 delegated choices in `intent`. Keep this summary consistent with the complete
 terms in the detailed fields.
 Approval covers the full spec version.
-The cap includes tax, shipping, and fees. `expires_at` is RFC 3339 and defaults
-to 30 days.
+The cap includes tax, shipping, and fees. `expires_at` is RFC 3339, defaults
+to 30 days, and must be within the next 365 days.
 
 ## Request approval
 
@@ -48,8 +48,9 @@ to 30 days.
    provider or a merchant-saved card, ask whether to use Link preapproval or
    keep that choice with approval at checkout.
 
-3. For a known product URL, use `browser.open` to verify the product, variant,
-   and current price. Propose a total cap from the requested quantity's price
+3. Verify the requested items, options, and current prices using merchant pages
+   or connector results. Use `browser.open` for a known product URL.
+   Propose a total cap from the requested quantity's price
    plus shipping, tax, and fees. For a price-triggered purchase, use the trigger
    price. Use published charges or conservative estimates for unknown charges.
    Label estimates in `intent`. Do not exceed the user's total budget.
@@ -90,12 +91,12 @@ exact sources to check:
 - Check the buying condition against the same item, variant, quantity, and
   seller terms. A failed check is missing data, not a qualifying offer.
 
-- Check `browser.windows` for earlier work on this order. Continue an existing
-  purchase task under the same approval; do not start overlapping purchases.
+- Check `browser.windows` for earlier work on this order. Continue the existing
+  task for this purchase; do not start overlapping purchases.
 
 - Before expiry, buy only when that condition is met. Start `browser.browse`
-  with `task_id: "new"` when no purchase task is running. Start it from this
-  cron run so it inherits this job's approval. Pass the approved terms and ask
+  with `task_id: "new"` only when no task exists for this purchase. Start it from
+  this cron run so it inherits this job's approval. Pass the approved terms and ask
   it to complete and verify the order.
 
 - Answer browser questions using the saved approval and attempt state they
@@ -120,10 +121,11 @@ is optional; complete it only when its whole request is finished.
 
 ## Checkout, renewal, and cancellation
 
-Start a new browser task after first approval or renewal. An existing browser
-task keeps its admitted approval version. Continue that task for corrections
-or retries within the same approval. Include any earlier payment failure or
-uncertain order in the assignment; do not start overlapping purchases.
+After approval, continue the existing browser task for this purchase when one
+exists. A task can adopt the approval before payment setup starts. Once payment
+setup starts, the task keeps its payment's approval. Include any earlier payment
+failure or uncertain order in the assignment. Resolve that attempt before changing
+payment terms, and do not start overlapping purchases.
 
 Browser questions include the saved approved terms and attempt state. Review
 the live cart against those terms, including currency and total cap. Approval

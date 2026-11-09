@@ -1,0 +1,75 @@
+update runtime.browser_tasks
+                    set deadline_at = greatest(deadline_at, now() + interval '15 minutes'),
+                        updated_at = now()
+                    where task_id = $1 and admission_seq is not null
+                      and owner_agent_id is not distinct from $2
+                      and stream_owner_message_id = $3 and state_revision = $4
+                      and status = 'user_controlled' and deadline_at > now()
+                      and completed_at is null
+SELECT b.activity_thread_id
+FROM activity_monitor_message_threads b
+WHERE b.message_id = $1
+
+SELECT b.activity_thread_id
+FROM activity_monitor_message_threads b
+JOIN activity_monitor_threads g ON g.activity_thread_id = b.activity_thread_id
+WHERE b.message_id = $1
+  AND g.status = $2
+
+SELECT activity_thread_id, name, subtitle, icon, emoji, status, created_at, finished_at, finish_message,
+       finish_status, finish_status_reason, activity_thread_kind, space_slug, status_title,
+       expected_finish_description
+FROM activity_monitor_threads
+WHERE activity_thread_id = $1
+explicit chat event seqcompleted startup quota rejection has no eventnegative startup quota rejection event sequencecompleted startup quota rejection event is absentnegative cancellation event sequencecontext item sequence space is exhaustedcommitted cancellation has no context sequencestartup quota rejection payload is not an objectstartup quota rejection metadata is not an objectinternal_errorbrowser task not foundshopping_results_v2node_card.notification_opt_inpublication has no chat ownerinvalid publication tracepublication owner does not match its transcript/metadata/message_kindpublication has no execution ownerinvalid publication authorityruntime.resources.metadata_jsonruntimemain_chatNeeds userCompletedFailed/data/preview_available/data/statusSupersededpersisted browser task tombstone payload is invalidpersisted browser task tombstone payload is missingdurable browser task tombstone could not update its compatibility carddurable browser task tombstone compatibility update failedtool_call_ididtool_namerequestresulttool_idsession_idattached mailbox input has no stream ownerstagedqueuedexecutinginput chat is absentinvalid input binding epochConversationTransportStatelink_idneeds_reconciliationpending_cancellationinput provider is absentfailed to read activity thread binding for messagefailed to read activity thread snapshotbrowser user control could not be renewedbrowser task store is unavailablestartup input size exceeds i64startup queue size exceeds i64startup media size overflowcreated_atitem_jsonmessage_sourceclient_context_jsonmissing auth tokenload_chat_bindingacquired connection, but time to acquire exceeded slow thresholdacquired connectionbrowser_tasksruntime.events.payload_jsoninsert_chat_eventchat_event insert requires non-empty event_name, source, message_id, and idempotency_keycancellation context cannot accompany another transitionfailed to refresh latest public runtime user timezone cache after user message insertupdate_chat_event_payload_by_idempotency_key_preserving_terminal_payload_statusSELECT event_seq, event_name, source, role::text AS role,
+                    visibility::text AS visibility, message_id, agent_id,
+                    parent_agent_id, parent_message_id, reply_to_message_id,
+                    transcript_surface::text AS transcript_surface, payload_json,
+                    request_id, root_request_id, parent_request_id, created_at,
+                    chat_context_json
+             FROM runtime.events WHERE event_seq = $1 AND idempotency_key = $2chat_context_jsonSELECT ci.item_json, ci.message_source, ci.created_at, projection.client_context_json
+             FROM agent.context_items ci
+             LEFT JOIN agent.context_item_resume_projection projection
+               ON projection.agent_id = ci.agent_id AND projection.seq = ci.seq
+             WHERE ci.agent_id = $1 AND ci.seq = $2startup quota rejection retry changed its committed identitystartup quota rejection context was replacedbrowser_tasks.managed_activebrowser.renew_user_control
+SELECT event_seq, event_name, source, role::text AS role, visibility::text AS visibility,
+       message_id, agent_id, parent_agent_id, parent_message_id, reply_to_message_id,
+       transcript_surface::text AS transcript_surface, payload_json,
+       (extract(epoch from created_at))::bigint AS created_at
+FROM runtime.events WHERE idempotency_key = $1
+runtime.cancellation
+SELECT ci.item_json, ci.message_source,
+       (extract(epoch from ci.created_at))::bigint AS created_at,
+       projection.client_context_json
+FROM agent.context_items AS ci
+LEFT JOIN agent.context_item_resume_projection AS projection
+  ON projection.agent_id = ci.agent_id AND projection.seq = ci.seq
+WHERE ci.agent_id = $1 AND ci.seq = $2
+cancellation retry does not match its committed identity
+SELECT
+  GREATEST(
+    (SELECT COALESCE(MAX(seq), -1) FROM context_items WHERE agent_id = $1),
+    (SELECT COALESCE(MAX(seq), -1) FROM context_item_resume_projection WHERE agent_id = $1),
+    COALESCE((SELECT handoff_context_high_water_seq FROM agent.agents WHERE agent_id = $1), -1),
+    (SELECT COALESCE(MAX(root_seq), -1) FROM agent.companion_trace_imports WHERE root_agent_id = $1),
+    (SELECT COALESCE(MAX(producer_seq), -1) FROM agent.companion_trace_imports WHERE producer_agent_id = $1),
+    COALESCE((SELECT settled_seq FROM agent.companion_trace_sources WHERE producer_agent_id = $1), -1)
+  ) AS max_item_seq,
+  COALESCE((SELECT prompt_floor_seq FROM agents WHERE id = $1), -1)
+    AS prompt_floor_seq,
+  (SELECT COALESCE(MAX(checkpoint_seq), -1)
+     FROM agent_compactions
+     WHERE agent_id = $1
+       AND checkpoint_seq IS NOT NULL
+       AND has_replacement_history)
+    AS checkpoint_seq
+max_item_seqcheckpoint_seqcontext_seqlegacy completion has no verifiable batch ownerUPDATE agent.agents SET handoff_context_high_water_seq =
+                GREATEST(COALESCE(handoff_context_high_water_seq, -1), $2)
+             WHERE agent_id = $1SELECT state, submission_json, accepted_at, transcript_event_seq,
+                    stream_owner_message_id FROM agent.message_mailbox
+             WHERE agent_id = $1 AND submission_id = $2 FOR UPDATEstartup_submission_missingsubmission_jsonreply_to_targetlegacy startup cancellation changed its replyaccepted_atstatecompletedinvalid startup mailbox statestartup_submission_terminalstartup_execution_ownedstartup_already_cancelledtranscript_event_seqstream_owner_message_idstartup cancellation input already has execution custodystartup_submission_changedUPDATE agent.message_mailbox SET state = 'aborted', terminalized_at = now(),
+                    transcript_event_seq = $3
+             WHERE agent_id = $1 AND submission_id = $2 AND state = 'accepted'
+               AND stream_owner_message_id IS NULL AND transcript_event_seq IS NULLstartup cancellation custody changed before commitSELECT state, submission_json, accepted_at, transcript_event_seq,
+                    stream_owner_message_id, checkpoint_custody FROM agent.message_mailbox
+             WHERE agent_id = $1 AND submission_id = $2 FOR UPDATElegacy startup quota rejection changed its replycheckpoint_custodypending startup input already has a transcript event

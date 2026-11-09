@@ -1,0 +1,32 @@
+with settled as (
+                select m.message_id,
+                    case when m.publication_id is null then d.state
+                         when o.delivered or cardinality(p.recipient_muses)=0 then 'delivered'
+                         when o.uncertain or o.partly_delivered then 'uncertain'
+                         else 'failed' end as state
+                from agent.connection_messages m
+                left join agent.group_replies r on m.publication_id is null
+                    and r.group_id=m.connection_id::text and r.submission_id=m.message_id::text
+                left join chat_private.deliveries d on d.delivery_key=r.delivery_key
+                left join chat_private.peer_publications p on p.operation_id=m.publication_id
+                left join lateral (
+                    select count(*) as recipients,
+                        bool_and(state in ('delivered','failed','superseded','uncertain')) as settled,
+                        bool_and(state='delivered') as delivered,
+                        bool_or(state='delivered') as partly_delivered,
+                        bool_or(state='uncertain') as uncertain
+                    from peer.outbox where m.publication_id is not null
+                        and (envelope_id=m.publication_id or hosted_publication_id=m.publication_id)
+                ) o on true
+                where m.state='queued' and (
+                    (m.publication_id is null and d.state in ('delivered','failed','uncertain')) or
+                    (m.publication_id is not null and
+                        ((o.recipients>0 and o.settled) or cardinality(p.recipient_muses)=0)))
+                and (not $2 or exists(select 1 from chat_private.company_conversations c
+                    where c.chat_id=m.connection_id::text))
+                order by m.created_at_ms, m.message_id limit 100 for update of m skip locked
+            ) update agent.connection_messages m set
+                state=case when s.state='delivered' then 'delivered' when s.state='uncertain' then 'uncertain' else 'cancelled' end,
+                feedback=case when s.state='delivered' then null when s.state='uncertain' then 'Delivery could not be confirmed. Do not send this message again.' else 'The message could not be delivered.' end,
+                outcome_notified=case when s.state='delivered' then m.outcome_notified else false end,
+                updated_at_ms=$1 from settled s where m.message_id=s.message_id returning m.*

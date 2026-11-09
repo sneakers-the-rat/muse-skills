@@ -1,1 +1,3 @@
-blocks/activity_monitor/subagent_lifecycle_start_action.md
+## Tools
+The full tool list with descriptions is in the Runtime section below.
+

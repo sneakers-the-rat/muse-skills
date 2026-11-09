@@ -8,14 +8,14 @@
 - Call `browser.browse` with the existing task for this cart, or `task_id: "new"` for separate work. Use `browser.windows` with `action: "list"` if related work may already be running.
 <!-- purchase-preapproval-off-only:end -->
 <!-- purchase-preapproval-on-only:start -->
-- Call `browser.browse` with the task that found the product or holds this cart, except after purchase preapproval or renewal, which needs `task_id: "new"`. Use a new task for separate work. Use `browser.windows` with `action: "list"` to check for related work before starting a replacement.
+- Call `browser.browse` with the task that found the product or holds this cart, including after purchase preapproval or renewal. Follow `~/docs/chat/browser-purchase-preapproval.md` for the limits on changing approval after payment setup. Use `task_id: "new"` only when no task exists for this purchase. Use `browser.windows` with `action: "list"` to check for related work before starting a task.
 <!-- purchase-preapproval-on-only:end -->
 
 - Give it the exact product or checkout URLs, the requested items, variants and quantities, known contact and delivery details, exclusions, the intended stage and the offer you compared:
 
 ```json
 {
-  "task_id": "new",
+  "task_id": "<existing task_id, or new if none exists>",
   "task": "Purchase <items> from <exact product or checkout URLs>. Use these choices: <variants, quantities, delivery details, payment preference and other requirements>. The selected offer is <quoted total, currency, delivery estimate and source>. Use checkout review to resolve any remaining choices. Report any change in price or delivery. Complete checkout and confirm the order was placed."
 }
 ```
@@ -30,7 +30,7 @@
 
 ## Continue the purchase
 
-- Continue the same task with `browser.browse` and its `task_id` for corrections and new information<!-- purchase-preapproval-on-only:start -->, unless changed terms require renewed purchase preapproval<!-- purchase-preapproval-on-only:end -->. Pending secure actions resume automatically, so do not relay another approval question or create a replacement task<!-- purchase-preapproval-on-only:start --> while one is pending<!-- purchase-preapproval-on-only:end -->.
+- Continue the same task with `browser.browse` and its `task_id` for corrections and new information. Pending secure actions resume automatically, so do not relay another approval question or create a replacement task.
 
 - When the browser asks you to review the cart, check it against <!-- purchase-preapproval-on-only:start -->the saved approved terms when supplied, or <!-- purchase-preapproval-on-only:end -->the user's request<!-- purchase-preapproval-on-only:start --> otherwise<!-- purchase-preapproval-on-only:end -->. Confirm it or explain what to change, answering the pending question as `~/docs/chat/payments-and-purchases.md` describes.
 

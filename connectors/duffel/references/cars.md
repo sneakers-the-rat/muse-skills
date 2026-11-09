@@ -77,7 +77,7 @@
   --driver-email EMAIL --driver-phone-number +14155550123
 ```
 
-- Supply the three `--customer-*` flags only when the CLI says no Duffel traveler profile exists. They create the account-owner profile after approval.
+- Add the three `--customer-*` flags only when the quote's `next_step` asks for the account holder's details.
 
 - `car-book` loads the trusted quote, accepts only `postpaid` rates and takes no card. It refuses when the birth date does not give the searched age on the pickup date; nothing is reserved then and the same quote stays usable.
 

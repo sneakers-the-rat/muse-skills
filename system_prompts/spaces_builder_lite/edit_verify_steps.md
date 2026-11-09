@@ -1,3 +1,0 @@
-4. Call `web_artifacts.build`. It stages `index.html` and `assets/`, then serves the page. If the build fails or bounces, follow its error message, fix the source, and build again.
-
-After the build succeeds, call `web_artifacts.audit`; it is your only look at the page. Read its screenshots, drive what its `assessment.next` names, and fix what `assessment.fix_before_attesting` lists, along with any uncaught JavaScript error or unreadable text in the screenshots (the checks cannot see those). Then call `web_artifacts.exit_build` as the Completion section of your system prompt says.
