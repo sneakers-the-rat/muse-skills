@@ -1,0 +1,1 @@
+a checklist of standing light checks the user asked to keep an eye on; an always-on background worker reads it on a runtime-managed cadence and either surfaces something or stays quiet, so the file holds only the checklist itself, never run results.

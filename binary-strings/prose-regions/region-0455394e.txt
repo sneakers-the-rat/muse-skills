@@ -1,0 +1,416 @@
+faithful_variationdiverseResultFactserror_codecauseeffectswindowrununavailableview_unchangedreceiptcountsspecialistholderservice_statusguide_lookupcredential_providercredential_sitecredential_field_plancredential_fill_failure_reasoncredential_input_warningcredential_provider_codepaymentrefresh_refusalbroker_errorreopenreopen_causebot-challenge-guides
+[TRUNCATED] Goals exceeded prompt budget.None recorded in this list.
+runtime.merge_noticeruntime.tracking_completionconnector_tracking_ingestruntime.tracking_reactivationruntime.injected_context_change%Y-%m-%d %H:%Mchat.read_history【product-Local time out of range for `NaiveDateTime`TimeDelta::days out of bounds`NaiveDate + TimeDelta` overflowed%A %Y-%m-%d
+DELETE FROM search_documents
+WHERE owner_table = 'runtime.events'
+  AND owner_key = $1
+DELETE FROM resources WHERE event_seq = $1INSERT INTO resources (event_seq, ordinal, resource_kind, resource_key, label, mime_type, size_bytes, metadata_json) VALUES /__hatch/chat_context_jsonstring/__hatch/display_text_updated_at_msnumberSELECT field_path, scalar_type, scalar_value, text_value FROM event_payload_fields WHERE event_seq = $1 FOR UPDATEDELETE FROM event_payload_fields WHERE event_seq = $1 AND field_path = ANY($2::text[])field_pathscalar_typescalar_valuetext_valueINSERT INTO event_payload_fields (event_seq, field_path, scalar_type, scalar_value, text_value) VALUES  ON CONFLICT (event_seq, field_path) DO UPDATE SET scalar_type = excluded.scalar_type, scalar_value = excluded.scalar_value, text_value = excluded.text_valueruntime.search_documents.search_text
+INSERT INTO search_documents (owner_table, owner_key, search_text, language, search_vector)
+VALUES ('runtime.events', $1, $2, 'simple', to_tsvector('simple', $3))
+ON CONFLICT (owner_table, owner_key) DO UPDATE SET
+  search_text = excluded.search_text,
+  language = excluded.language,
+  search_vector = excluded.search_vector,
+  updated_at = now()
+WHERE search_documents.search_text IS DISTINCT FROM excluded.search_text
+   OR search_documents.language IS DISTINCT FROM excluded.language
+
+SELECT coalesce(f.text_value, f.scalar_value)
+FROM event_payload_fields f
+WHERE f.event_seq = $1
+  AND f.field_path = '/__hatch/chat_context_json'
+LIMIT 1
+
+UPDATE widgets
+SET state_bundle_json = $2,
+    state_version = $3,
+    state_updated_at_ms = $4,
+    updated_at_ms = $4
+WHERE widget_id = $1
+  AND state_version = $5
+RETURNING state_version
+
+SELECT state_bundle_json, state_version
+FROM widgets
+WHERE widget_id = $1
+state_bundle_jsonwidget state bundle must be a JSON objectstate_version
+INSERT INTO context_items (
+  agent_id, seq, item_kind, text_content, role, call_id, tool_name, success,
+  message_source, created_at, item_json,
+  data_fbids, data_message_ids, data_thread_ids, data_expires_at
+) VALUES  RETURNING context_item_id, seq::agent.context_item_kind, ::runtime.message_role, , to_timestamp(::double precision), ::bigint[], ::text[], ::timestamptz)context_item_id
+SELECT pg_advisory_xact_lock(hashtextextended(agent_id, $2))
+FROM unnest($1::text[]) AS locked(agent_id)
+ORDER BY agent_id
+
+WITH producer AS MATERIALIZED (
+  SELECT target.id AS agent_id,
+    CASE WHEN a.id IS NULL THEN NULL ELSE COALESCE(
+-- Highest seq of an agent's rows that no public voice import reads, or NULL
+-- when the import never reads any of them. Reads aliases `a` (the agent) and
+-- `root` (its presentation root). exempt_non_producer_rows.sql repeats it.
+CASE WHEN a.kind = 'root' AND a.depth = 0
+          AND a.agent_type = 'realtime_voice' THEN CASE
+    WHEN NOT pg_input_is_valid(a.spawn_metadata_json, 'jsonb') THEN -1
+    WHEN root.id IS NULL
+         OR a.spawn_metadata_json::jsonb #> '{realtime_voice,prompt_floor_seq}'
+            IS DISTINCT FROM to_jsonb(COALESCE(root.prompt_floor_seq, -1))
+        THEN NULL
+    WHEN pg_input_is_valid(
+        a.spawn_metadata_json::jsonb #>> '{realtime_voice,root_seed_context_seq}',
+        'bigint'
+    ) THEN GREATEST(
+        (a.spawn_metadata_json::jsonb #>> '{realtime_voice,root_seed_context_seq}')::bigint,
+        -1
+    )
+    ELSE -1
+END END
+    , 9223372036854775807) END AS exempt_through_seq
+  FROM (SELECT ::text AS id) target
+  LEFT JOIN agents a ON a.id = target.id
+  LEFT JOIN agents root ON root.id = a.presentation_root_session_id AND root.id <> a.id
+)
+INSERT INTO context_item_resume_projection (
+  agent_id, seq, context_item_id, created_at, message_source,
+  client_context_json, client_context_projected, public_import_exempt
+)
+SELECT producer.agent_id, v.seq, v.context_item_id, v.created_at, v.message_source,
+       v.client_context_json, v.client_context_projected,
+       CASE WHEN v.seq <= producer.exempt_through_seq THEN TRUE END
+FROM (VALUES ) AS v(seq, context_item_id, created_at, message_source, client_context_json,
+          client_context_projected)
+CROSS JOIN producer
+ON CONFLICT (agent_id, seq) DO UPDATE SET
+  context_item_id = excluded.context_item_id,
+  created_at = excluded.created_at,
+  message_source = COALESCE(excluded.message_source, context_item_resume_projection.message_source),
+  client_context_json = COALESCE(
+    excluded.client_context_json,
+    context_item_resume_projection.client_context_json
+  ),
+  client_context_projected = COALESCE(
+    context_item_resume_projection.client_context_projected,
+    FALSE
+  ) OR excluded.client_context_projected,
+  public_import_exempt = COALESCE(
+    context_item_resume_projection.public_import_exempt,
+    excluded.public_import_exempt
+  ),
+  updated_at = now()
+INSERT INTO context_item_resume_projection (
+  agent_id, seq, context_item_id, created_at, message_source,
+  client_context_json, reply_prefix, provenance_json,
+  client_context_projected, reply_prefix_projected, provenance_projected,
+  public_import_exempt
+)
+SELECT producer.agent_id, v.seq, v.context_item_id, v.created_at, v.message_source,
+       v.client_context_json, v.reply_prefix, v.provenance_json,
+       v.client_context_projected, v.reply_prefix_projected, v.provenance_projected,
+       CASE WHEN v.seq <= producer.exempt_through_seq THEN TRUE END
+FROM (VALUES ) AS v(seq, context_item_id, created_at, message_source, client_context_json,
+          reply_prefix, provenance_json, client_context_projected, reply_prefix_projected,
+          provenance_projected)
+CROSS JOIN producer
+ON CONFLICT (agent_id, seq) DO UPDATE SET
+  context_item_id = excluded.context_item_id,
+  created_at = excluded.created_at,
+  message_source = COALESCE(excluded.message_source, context_item_resume_projection.message_source),
+  client_context_json = excluded.client_context_json,
+  reply_prefix = excluded.reply_prefix,
+  provenance_json = excluded.provenance_json,
+  client_context_projected = excluded.client_context_projected,
+  reply_prefix_projected = excluded.reply_prefix_projected,
+  provenance_projected = excluded.provenance_projected,
+  public_import_exempt = COALESCE(
+    context_item_resume_projection.public_import_exempt,
+    excluded.public_import_exempt
+  ),
+  updated_at = now()
+
+INSERT INTO context_item_resume_projection (
+  agent_id, seq, message_source, client_context_json, reply_prefix, provenance_json,
+  client_context_projected, reply_prefix_projected, provenance_projected
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+ON CONFLICT (agent_id, seq) DO UPDATE SET
+  message_source = COALESCE(context_item_resume_projection.message_source, excluded.message_source),
+  client_context_json = excluded.client_context_json,
+  reply_prefix = excluded.reply_prefix,
+  provenance_json = excluded.provenance_json,
+  client_context_projected = excluded.client_context_projected,
+  reply_prefix_projected = excluded.reply_prefix_projected,
+  provenance_projected = excluded.provenance_projected,
+  updated_at = now()
+SELECT pg_advisory_xact_lock_shared(hashtextextended($1, 0))agent.volatile_context_pins.lifecycleSELECT pg_advisory_xact_lock(hashtextextended($1, 0))
+WITH owners AS MATERIALIZED (
+    SELECT DISTINCT agent_id COLLATE "C" AS agent_id
+    FROM unnest($1::text[]) AS input(agent_id)
+)
+SELECT pg_advisory_xact_lock(hashtextextended($2 || agent_id, 0))
+FROM owners ORDER BY agent_id COLLATE "C"
+agent.volatile_context_pins:SELECT agent_id FROM agent.agents WHERE agent_id = $1SELECT handoff_state_json -> $2::text AS state,
+                (extract(epoch FROM clock_timestamp()) * 1000)::bigint AS now_ms
+         FROM agent.subagent_spawns WHERE child_agent_id = $1 FOR UPDATEnow_msagent.subagent_spawns.handoff_state_jsonUPDATE agent.subagent_spawns
+         SET handoff_state_json = jsonb_set(COALESCE(handoff_state_json, '{}'::jsonb),
+                                           ARRAY[$2]::text[], $3::jsonb)
+         WHERE child_agent_id = $1insert into chat_private.publication_turns (execution_id, chat_id, disposition, phase)
+        select $1, $2, $3, $4 where pg_try_advisory_xact_lock_shared(hashtextextended($5, 0))
+        on conflict(execution_id) do nothing returning trueselect chat_id, phase, disposition from chat_private.publication_turns
+        where execution_id = $1 for updatedispositionpublication execution belongs to another chatscreenshot.pnggenerator failed to produce screenshottitle.tmpfailed to persist title sidecartxtpdfgmconvert-resize-stripthumbnail: graphicsmagick conversion failedthumbnail: graphicsmagick not availablethumbnail: graphicsmagick timed outthumbnail: graphicsmagick produced empty outputthumbnail: still over budget after all quality steps; dropping thumbnailselect e.id, e.group_key, e.occurred_at, e.ingested_at, e.ttl_seconds, e.content_hints,
+        case when $2 then e.payload else '{}'::jsonb end as payload,
+        e.expires_at as context_expires_at, s.source_domain,
+        s.id as context_source_id, s.source_key, e.dedupe_key, e.payload_kind,
+        coalesce(e.occurred_at,e.ingested_at) as source_at,
+        r.suggestion_id, r.generation, r.subject_id as connector_subject,
+        (r.current and a.generation = r.generation) as connector_current,
+        m.facts as mailbox_facts, m.recorded_at as mailbox_recorded_at,
+        m.responded_seen_at as mailbox_responded_seen_at,
+        d.ingest_id, d.producer_id as device_id, d.source as device_source,
+        d.received_at_text, d.received_at_unix_ms
+        from context.events e join context.sources s on s.id = e.source_id
+        left join self_improvement.connector_context_records r on r.event_id = e.id
+        left join self_improvement.connector_sync_accounts a
+          on a.connector = r.connector and a.account_id = r.account_id
+        left join self_improvement.connector_mailbox_state m
+          on $2 and m.connector = r.connector and m.account_id = r.account_id
+          and m.generation = r.generation and m.source_id = r.subject_id
+        left join ingest.device_context_records dc on dc.event_id = e.id
+        left join ingest.data_source_events d on d.ingest_id = dc.ingest_id
+          and s.source_domain = 'device_sync'
+        where e.id = any($1) and (e.expires_at is null or e.expires_at > statement_timestamp())
+        order by array_position($1, e.id)source_domainsource_atttl_secondsdedupe_keygroup_keypayload_kindoccurred_atingested_atcontent_hintscontext_source_idconnector_currentingest_iddevice_sourcesource_keysmsreceived_at_unix_mscontext_expires_atcontext_ingestionskipped_no_windowdaemon storage is unavailable on this workercandidatecontext.mdpolicyguard routing table names a policy that is not compiled in; falling back to the external policypolicyguard policy rendered empty; falling back to the external policypolicyguard routing table names no policy for this family; falling back to the external policyhealthrelationshipsmoneycareerinterestsproductivitysomething_elsedialingringingin_progresshandoff_pendingoksrcsethref=.hrefmedia.generate_imagethumbnail_urllikesmedia_type
+### Content
+
+noURL blocklist unavailable; URL-bearing tool calls will dispatch unscreenedlibrary_indexvoice_name\bthe browser specialist has no resultThe specialist ended without a report.replacement was not confirmed; session and page state may be lostthe environment was replaced; session and page state were lost## Specialist {id} finished
+
+The Poppy agent Muse started for {domain} at {started_at} finished at {finished_at}. It worked with the company through its own API and held no tab.
+
+### Status
+{status}
+
+### Report
+{report}
+
+{diagnostics}
+
+### Next
+{guidance}
+## Specialist {id} finished
+
+The {kind} specialist you started on tab {tab} at {started_at} finished at {finished_at}. Its tabs are no longer held by this specialist.
+
+### Status
+{status}
+
+### Report
+{report}
+
+{diagnostics}
+
+### Next
+{guidance}
+Always read the current page with `browser.observe` before you act on it, because the page may have changed. If the tab was replaced, find its current tab with `browser.tabs` first.
+{kind}{tab}{started_at}{finished_at}{diagnostics}{guidance}runtime.chat_worker_mailbox_noticeruntime.worker_requestvoice turn close panicked; aborting its ownerfetchstorygroupspostsfriendscollectionsfunctions.voice Companion is missing its initial history boundarymedia
+INSERT INTO requests (
+  request_id, root_request_id, parent_request_id, request_origin,
+  transcript_surface, root_work_class
+)
+VALUES ($1, $2, $3, $4, $5::runtime.transcript_surface, $6)
+ON CONFLICT (request_id) DO UPDATE SET
+  root_request_id = COALESCE(requests.root_request_id, excluded.root_request_id),
+  parent_request_id = COALESCE(requests.parent_request_id, excluded.parent_request_id),
+  request_origin = CASE
+    WHEN requests.request_origin = 'internal.runtime_replay' THEN excluded.request_origin
+    ELSE requests.request_origin
+  END,
+  transcript_surface = excluded.transcript_surface,
+  root_work_class = CASE
+    WHEN requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing'
+      THEN excluded.root_work_class
+    ELSE requests.root_work_class
+  END
+WHERE (requests.root_request_id IS NULL AND excluded.root_request_id IS NOT NULL)
+   OR (requests.parent_request_id IS NULL AND excluded.parent_request_id IS NOT NULL)
+   OR (requests.request_origin = 'internal.runtime_replay'
+       AND excluded.request_origin <> 'internal.runtime_replay')
+   OR requests.transcript_surface IS DISTINCT FROM excluded.transcript_surface
+   OR (requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing')
+output
+INSERT INTO tool_outputs (event_seq, call_id, status, output_text, error_text, created_at)
+VALUES ($1, $2, $3, $4, $5, to_timestamp($6::double precision / 1000.0))
+ON CONFLICT (event_seq) DO UPDATE SET
+  call_id = excluded.call_id,
+  status = excluded.status,
+  output_text = excluded.output_text,
+  error_text = excluded.error_text
+arguments
+INSERT INTO tool_calls (event_seq, call_id, tool_name, status, arguments_json, created_at)
+VALUES ($1, $2, $3, 'started', $4, to_timestamp($5::double precision / 1000.0))
+ON CONFLICT (call_id) DO UPDATE SET
+  event_seq = excluded.event_seq,
+  tool_name = excluded.tool_name,
+  status = excluded.status,
+  arguments_json = excluded.arguments_json
+
+INSERT INTO chat_event_derived_write_backlog (event_seq, resources_json)
+VALUES ($1, $2)
+ON CONFLICT (event_seq) DO UPDATE SET
+  resources_json = excluded.resources_json,
+  updated_at = now()
+UPDATE chat_private.peer_conversations SET requester_chat_id = NULL
+         WHERE conversation_id = $1 AND requester_revision = $2
+           AND requester_chat_id = $3 AND NOT requester_unavailable
+           AND chat_id = $5
+           AND EXISTS (SELECT 1 FROM agent.agents
+                       WHERE id = $4 AND session_id = $3)peer handoff disagrees with its asking-chat claimpeer handoff requester changed before admission
+SELECT json_build_object(
+         'accepted_ordinal', accepted_ordinal,
+         'state', state,
+         'checkpoint_custody', checkpoint_custody,
+         'submission_json', submission_json
+       )::text
+FROM agent.message_mailbox
+WHERE agent_id = $1
+  AND state IN ('accepted', 'attached')
+ORDER BY accepted_ordinal, submission_id
+FOR UPDATE
+SELECT payload_json FROM runtime_restart_checkpoints WHERE agent_id = $1
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = 'executing',
+    stream_owner_message_id = $3,
+    attached_at = now()
+WHERE submission_id = $1
+  AND agent_id = $2
+  AND state = 'accepted'
+  AND stream_owner_message_id IS NULL
+
+SELECT agent_id, state, stream_owner_message_id, submission_json,
+       accepted_ordinal
+FROM agent.message_mailbox
+WHERE submission_id = $1
+FOR UPDATE
+tracked mailbox successor unexpectedly lost custodymessage mailbox successor promotion cannot overtake an older priority peer
+UPDATE agent.message_mailbox
+SET state = CASE WHEN $4 THEN 'completed' ELSE 'aborted' END,
+    checkpoint_custody = coalesce(checkpoint_custody, 'executing'),
+    terminalized_at = now()
+WHERE agent_id = $1
+  AND stream_owner_message_id = $2
+  AND submission_id = ANY($3)
+  AND state = 'attached'
+
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = 'executing',
+    stream_owner_message_id = $2,
+    attached_at = coalesce(attached_at, now())
+WHERE agent_id = $1
+  AND submission_id = ANY($3)
+  AND (
+    (state = 'accepted' AND stream_owner_message_id IS NULL)
+    OR (state = 'attached' AND stream_owner_message_id = $2)
+  )
+
+UPDATE agent.message_mailbox
+SET checkpoint_custody = 'queued'
+WHERE agent_id = $1
+  AND stream_owner_message_id = $2
+  AND submission_id = ANY($3)
+  AND state = 'attached'
+SELECT session_id, COALESCE(prompt_floor_seq, -1) AS prompt_floor_seq,
+                kind = 'root' AND parent_agent_id IS NULL
+                AND ephemeral IS DISTINCT FROM TRUE
+                AND status NOT IN ('shutdown', 'not_found') AS eligible
+         FROM agent.agents WHERE agent_id = $1 FOR UPDATEstartup_root_changedSELECT EXISTS(SELECT 1 FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND accepted_ordinal < $2)startup mailbox promotion cannot overtake an earlier accepted input
+SELECT accepted_ordinal, submission_json FROM agent.message_mailbox
+WHERE agent_id = $1 AND state = 'accepted'
+  AND accepted_ordinal < $2 AND accepted_ordinal > $3
+ORDER BY accepted_ordinal LIMIT 128
+
+SELECT payload_json
+FROM agent.runtime_restart_checkpoints
+WHERE agent_id = $1
+FOR UPDATE
+message mailbox attachment cannot overtake an older priority peer
+INSERT INTO agent.runtime_restart_checkpoints (
+  agent_id, mode, recovery_class, recovery_owner_id, execution_config_json,
+  payload_json, created_at, updated_at
+) SELECT $1, $2, $3, $4, $5, $6, $7, $7
+WHERE EXISTS (
+  SELECT 1
+  FROM agent.agents
+  WHERE agent_id = $1
+    AND status NOT IN ('shutdown', 'not_found')
+)
+ON CONFLICT (agent_id) DO NOTHING
+SELECT EXISTS (SELECT 1 FROM agent.agents WHERE agent_id = $1 AND status NOT IN ('shutdown', 'not_found'))conversation epoch
+INSERT INTO agent.message_mailbox (
+  submission_id, agent_id, conversation_epoch, submission_kind,
+  routing_scope, state, checkpoint_custody, stream_owner_message_id,
+  submission_json, transcript_event_seq, attached_at
+) VALUES (
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+  CASE WHEN $6 = 'attached' THEN now() ELSE NULL END
+)
+ON CONFLICT (submission_id) DO NOTHING
+RETURNING accepted_ordinal, accepted_at
+startup mailbox promotion requires its previously accepted input
+SELECT agent_id, conversation_epoch, submission_kind, routing_scope,
+       state, stream_owner_message_id, submission_json,
+       transcript_event_seq, accepted_ordinal, accepted_at
+FROM agent.message_mailbox
+WHERE submission_id = $1
+FOR UPDATE
+update chat.message_bindings set admitted_at = coalesce(admitted_at, now())
+                    where jarvis_message_id = $1 and chat_id = $2 and binding_epoch = $3 and transport = $4binding epochconversation_epochsubmission_kindrouting_scope
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = $5,
+    stream_owner_message_id = $2,
+    submission_json = $3,
+    transcript_event_seq = coalesce($4, transcript_event_seq),
+    attached_at = now()
+WHERE submission_id = $1
+  AND state = 'accepted'
+  AND stream_owner_message_id IS NULL
+mailbox stream ownerselect a.account_id from chat_private.accounts a
+             join chat_private.binding_authorizations b on b.provider = a.provider and b.account_id = a.account_id
+             where b.provider = $1 and b.binding_id = $2
+               and a.connection_id = $3 and not a.revoked for share of adirect input has no captured binding epochaccount_retiredselect connection_id, generation, transport_json, delivery_target
+             from chat_private.binding_authorizations
+             where provider = $1 and binding_id = $2 and chat_id = $3
+               and account_id = $4 and external_kind = 'direct' and participation = 'active'
+             for shareaccount_authorization_retiredtransport_jsontransport_authorization_absentconnection_idgenerationdelivery_targetselect epoch from chat_private.bindings
+         where chat_id = $1 and provider = $2 and not revoked for sharetransport_authorization_changedbinding_retired
+INSERT INTO agent.volatile_context_pins
+  (agent_id, variant_hash, variant_json, prompt_floor_seq, checkpoint_seq, body)
+SELECT $1, $2, $3, $4, $5, NULL
+WHERE EXISTS (SELECT 1 FROM agent.agents WHERE id = $1)
+ON CONFLICT (agent_id, variant_hash) DO UPDATE SET
+  variant_json = excluded.variant_json,
+  prompt_floor_seq = excluded.prompt_floor_seq,
+  checkpoint_seq = excluded.checkpoint_seq,
+  created_at = now()
+
+SELECT COALESCE(a.prompt_floor_seq, -1) AS prompt_floor_seq,
+       COALESCE(c.checkpoint_seq, -1) AS checkpoint_seq
+FROM agent.agents AS a
+LEFT JOIN LATERAL (
+    SELECT checkpoint_seq
+    FROM agent.agent_compactions
+    WHERE agent_id = $1
+      AND has_replacement_history
+    ORDER BY id DESC
+    LIMIT 1
+) AS c ON c.checkpoint_seq > COALESCE(a.prompt_floor_seq, -1)
+WHERE a.id = $1
+database write admission gate closedadmission_timeoutassert_table_existstable_presence.query-f-lthumbnail: pdftoppm rendering failed.screenshotthumbnail: failed to rename pdftoppm outputpngthumbnail: pdftoppm did not produce expected PNGthumbnail: pdftoppm not availablethumbnail: pdftoppm timed out (30s)thumbnail: libreoffice PDF conversion failedlibreoffice--headless--convert-tothumbnail: libreoffice conversion failedthumbnail: libreoffice did not produce expected outputthumbnail: libreoffice not availablethumbnail: libreoffice HTML conversion failedthumbnail: ffmpeg sandbox unavailablethumbnail: ffmpeg frame extraction failedthumbnail: ffmpeg completed but output file missingthumbnail: ffmpeg not availablethumbnail: ffmpeg timed outthumbnail: image decode task panickedthumbnail: image decode timed outthumbnail: image chrome unavailable; expected /opt/meta-chromium/chromethumbnail: failed to read native Chromium policy; refusing browser launchthumbnail: Xvfb not available, skipping CDP screenshotthumbnail: native browser admission failedhatch-thumb-browser---remote-debugging-port=0--no-sandbox--disable-gpu--force-color-profile=srgb--disable-dev-shm-usage--disable-background-networking--disable-default-apps--disable-extensions--disable-sync--disable-translate--no-first-run--hide-scrollbars--host-resolver-rules=MAP * ^NOTFOUND--disable-remote-fonts--disable-file-access-from-file-urlsabout:blankDBUS_SESSION_BUS_ADDRESSdisabled:DISPLAY:99thumbnail: browser profile creation failedthumbnail: CDP local admission failedthumbnail: owned browser render failed.pdf?select id from context.subscriptions where id = $1 for updateupdate context.group_cursors g set acknowledged_position = g.batch_position,
+        window_position = case when g.batch_position >= g.window_position then null else g.window_position end,
+        batch_position = null, lease_token = null, lease_expires_at = null, evidence_expires_at = null, retry_at = null, last_error = null,
+        acknowledged_at = clock_timestamp() from context.subscription_sources ss
+        where g.subscription_id = $1 and g.lease_token = any($2) and g.lease_expires_at > clock_timestamp()
+        and ss.subscription_id = g.subscription_id and ss.source_id = g.source_id and ss.activeverify_profilePROFILE.mdthe shopping profile already reflects the current shopping contextshopping context runs must submit a complete candidate so the email evidence is verifiedshopping profile context was truncated; skipped rewrite from a partial profileShopping profile unchanged: profile is above the safe rewrite cap.shopping_profile_context_truncatedshopping context run cannot settle against a truncated live profileshopping apply received an empty verified artifact outside context ingestionstaged shopping profile has no body below its frontmatter.PROFILE.promote.mdentriesentries_by_sectionentries_without_claimcreatedupdatedshopping_profile_entriesshopping_profile_uncitedyiesnot_context_ingestionevidence_truncatedshopping profile context exceeded safe rewrite captruncatedconnected_sourcesconnectedshopping_profile_permissionConnection status only in this inventory. Context-triggered Instagram evidence, when present, arrives under shopping_context.context_ingestion.`shopping_context.index_markdown` contains the complete current profile body when `truncated` is false. If `truncated` is true, it contains only a prefix; do not stage a replacement from it. Preserve valid current entries unless the Ground Rules permit deletion.next_step_handoffcounterpartypurposecontact_numberhandoff_condition/user_handoff/conditionclassifier_arm_idcleanflagged_highflagged_lowwindows_failed_openthe outcome of the browser action it sentthe order it submittedhow the user answered its payment approvalthe outcome of a sign-in or payment entrythe browser environment it is replacing{count}Main chat{read_messages_tool}{chat_id}%b %-d, %-I:%M %p{last_active}{name}{messages}<browser_status as_of=tasks="0"session/browser_status_none.md<browser_status as_of="{as_of}" tasks="0">No active browser tasks.</browser_status>
+{as_of}The user does not see your commentary, so do not emit commentary.The user does not see your private reasoning or commentary.The user does not see your private reasoning or commentary. Do not emit commentary.Do not emit commentary.
+HEIF FileRef could not be stored as JPEG; preserving original referenceHEIF FileRef check failed; preserving original referencetask_failedfailed to generate local video thumbnail; continuing without thumbnailvideo FileRef MIME type cannot be canonicalized; preserving original referencevideo FileRef could not be materialized; preserving original referencevideo FileRef store task failed; preserving original referencehatch-engine/crates/hatch-agent/src/session/impl_session/message_execution/message_abort.rs:238inspectmuse.read/transcription/status</recent_conversation[escaped: /recent_conversation<recent_conversation[escaped: recent_conversationsubscription-statusplanshidden submission arrived after its stream was terminally cancelled

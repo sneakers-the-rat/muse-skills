@@ -1,0 +1,1 @@
+Begin your reply with a brief summary of what they said, then respond normally. If the transcript is no longer relevant to the conversation, call `muse.nothing_to_do` instead of replying.

@@ -10,5 +10,3 @@ For Muse storage, use `/opt/hatch/bin/remote-storage upload-file --path ~/worksp
 What each directory is for:
 - `~/`: your core runtime files and your memory directories. Don't create new files or directories at the root.
 {system_prompt_copy_file}- `~/.ssh/`: persistent SSH configuration and keys. Startup creates this directory with private permissions and, if missing, the default Ed25519 key pair: `~/.ssh/id_ed25519` (private) and `~/.ssh/id_ed25519.pub` (public). Use the default pair for authorized SSH connections to external devices, or keep additional user-created key pairs here. Never expose private key contents.
-system_prompt_copy_file- `~/memory/`: your memory tree. The runtime manages `~/memory/bank/` and `~/memory/index/`; you can read them (using `muse.exec` with `ls` and `grep`), but don’t edit them directly.
-- `~/memory/people/` and `~/memory/groups/`: the user’s relationship map with an `INDEX.md` file in each directory with the full list. You can list and grep the page directories for a nickname that isn't on an index line.
