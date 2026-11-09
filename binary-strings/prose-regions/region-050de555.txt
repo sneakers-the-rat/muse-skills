@@ -1,0 +1,192 @@
+The requesting conversation is no longer availableThe requesting turn is no longer availableShare a Feed item, Idea, Space, Goal, or file.The file path has no file nameChoose a file in the workspace using its path or sandbox URI.Feed item not foundvideoIdea not foundSpace not foundGoal not foundBoth owners confirmed the connection.senqueue peer outbox envelopeUnable to refresh changed shared Space identitiesunexpected owner approval responseprovider connection identity is no longer currentread provider connection ruleshatch.circle-resource.v1Connections are disabledhumana Space invitation is claimed as a Spaceno 1:1 conversation with the inviterconnection_request_receivedclaim_sentconnection_upgrade_claimowner_grantcontact disappeared during the upgradeconnection_upgrade_claimedconnection_request_sentconnection_upgradetrust_presetpairing.space_only_upgradedonly a space-only invitation can be claimed by a paired contactcontrol.space_invite_claiminvite_claim_sentcould not record connection activitycontactsubjectfingerprintthe action does not fit the approval previewinvalid chat worker actionchat_worker_actionchat.worker_actionoperation_idpeer request reconciliation failedfailed to disconnect an ended peer request's linkrequest_endedfailed to refresh confirmed peer contacttriggerpeer_imagerepair/v1/peer/sign-delegatesign peer delegate via authddecode signed delegate tokenpersist peer preset grantconnection_versionpresetgrant.seededpeer_grantseededload peer contact for space edit grantload live grants for space edit grantspace_editspace.editpersist space edit grantfailed to enqueue seeded grant noticegrant.revokedfailed to enqueue grant revocation noticepartialpeer_health_snapshotfailed to publish peer admission mirror to peerdfailed to read peer admission mirror; disabling previously admitted authorityread peer admission mirrorfailed to disable peer admission after snapshot read failurepeer admission mirror publication failed; rotating publisher tokenrebuild peer admission mirrorretry peer admission mirror publicationread peer admission mirror snapshotpeerd mirror status observed after failed disable (diagnostic only)peerd mirror status unavailable after failed disablevalidate peer invite requestcreate_request_id must be non-nil/v1/peer/sign-invite-v2inviteinviter_offered_presetpairing.request_supersededprevious_relationship_generation_idrequest_supersededfailed to write a peer conversation activity rowfailed to repair default peer DM titlespeer DM title has an invalid session idfailed to reconcile peer profile photo
+INSERT INTO requests (
+  request_id, root_request_id, parent_request_id, request_origin,
+  transcript_surface, root_work_class
+)
+VALUES ($1, $2, $3, $4, $5::runtime.transcript_surface, $6)
+ON CONFLICT (request_id) DO UPDATE SET
+  root_request_id = COALESCE(requests.root_request_id, excluded.root_request_id),
+  parent_request_id = COALESCE(requests.parent_request_id, excluded.parent_request_id),
+  request_origin = CASE
+    WHEN requests.request_origin = 'internal.runtime_replay' THEN excluded.request_origin
+    ELSE requests.request_origin
+  END,
+  transcript_surface = excluded.transcript_surface,
+  root_work_class = CASE
+    WHEN requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing'
+      THEN excluded.root_work_class
+    ELSE requests.root_work_class
+  END
+WHERE (requests.root_request_id IS NULL AND excluded.root_request_id IS NOT NULL)
+   OR (requests.parent_request_id IS NULL AND excluded.parent_request_id IS NOT NULL)
+   OR (requests.request_origin = 'internal.runtime_replay'
+       AND excluded.request_origin <> 'internal.runtime_replay')
+   OR requests.transcript_surface IS DISTINCT FROM excluded.transcript_surface
+   OR (requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing')
+call_idoutput
+INSERT INTO tool_outputs (event_seq, call_id, status, output_text, error_text, created_at)
+VALUES ($1, $2, $3, $4, $5, to_timestamp($6::double precision / 1000.0))
+ON CONFLICT (event_seq) DO UPDATE SET
+  call_id = excluded.call_id,
+  status = excluded.status,
+  output_text = excluded.output_text,
+  error_text = excluded.error_text
+arguments
+INSERT INTO tool_calls (event_seq, call_id, tool_name, status, arguments_json, created_at)
+VALUES ($1, $2, $3, 'started', $4, to_timestamp($5::double precision / 1000.0))
+ON CONFLICT (call_id) DO UPDATE SET
+  event_seq = excluded.event_seq,
+  tool_name = excluded.tool_name,
+  status = excluded.status,
+  arguments_json = excluded.arguments_json
+
+INSERT INTO chat_event_derived_write_backlog (event_seq, resources_json)
+VALUES ($1, $2)
+ON CONFLICT (event_seq) DO UPDATE SET
+  resources_json = excluded.resources_json,
+  updated_at = now()
+
+UPDATE events
+SET display_text_ready = $2,
+    reply_target_message_id = $3,
+    payload_json = $4
+WHERE event_seq = $1
+
+INSERT INTO messages (message_id, event_seq, role, body, created_at)
+SELECT e.message_id, e.event_seq, e.role, $2, e.created_at
+FROM events e
+WHERE e.event_seq = $1
+  AND e.message_id IS NOT NULL
+  AND e.role IS NOT NULL
+ON CONFLICT (message_id) DO UPDATE SET
+  body = excluded.body
+UPDATE chat_private.peer_conversations SET requester_chat_id = NULL
+         WHERE conversation_id = $1 AND requester_revision = $2
+           AND requester_chat_id = $3 AND NOT requester_unavailable
+           AND chat_id = $5
+           AND EXISTS (SELECT 1 FROM agent.agents
+                       WHERE id = $4 AND session_id = $3)peer handoff disagrees with its asking-chat claimpeer handoff requester changed before admissionSELECT session_id, COALESCE(prompt_floor_seq, -1) AS prompt_floor_seq,
+                kind = 'root' AND parent_agent_id IS NULL
+                AND ephemeral IS DISTINCT FROM TRUE
+                AND status NOT IN ('shutdown', 'not_found') AS eligible
+         FROM agent.agents WHERE agent_id = $1 FOR UPDATEstartup_root_changedSELECT EXISTS(SELECT 1 FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND accepted_ordinal < $2)startup mailbox promotion cannot overtake an earlier accepted input
+SELECT accepted_ordinal, submission_json FROM agent.message_mailbox
+WHERE agent_id = $1 AND state = 'accepted'
+  AND accepted_ordinal < $2 AND accepted_ordinal > $3
+ORDER BY accepted_ordinal LIMIT 128
+
+SELECT payload_json
+FROM agent.runtime_restart_checkpoints
+WHERE agent_id = $1
+FOR UPDATE
+message mailbox attachment cannot overtake an older priority peer
+INSERT INTO agent.runtime_restart_checkpoints (
+  agent_id, mode, recovery_class, recovery_owner_id, execution_config_json,
+  payload_json, created_at, updated_at
+) SELECT $1, $2, $3, $4, $5, $6, $7, $7
+WHERE EXISTS (
+  SELECT 1
+  FROM agent.agents
+  WHERE agent_id = $1
+    AND status NOT IN ('shutdown', 'not_found')
+)
+ON CONFLICT (agent_id) DO NOTHING
+SELECT EXISTS (SELECT 1 FROM agent.agents WHERE agent_id = $1 AND status NOT IN ('shutdown', 'not_found'))conversation epoch
+INSERT INTO agent.message_mailbox (
+  submission_id, agent_id, conversation_epoch, submission_kind,
+  routing_scope, state, checkpoint_custody, stream_owner_message_id,
+  submission_json, transcript_event_seq, attached_at
+) VALUES (
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+  CASE WHEN $6 = 'attached' THEN now() ELSE NULL END
+)
+ON CONFLICT (submission_id) DO NOTHING
+RETURNING accepted_ordinal, accepted_at
+startup mailbox promotion requires its previously accepted input
+SELECT agent_id, conversation_epoch, submission_kind, routing_scope,
+       state, stream_owner_message_id, submission_json,
+       transcript_event_seq, accepted_ordinal, accepted_at
+FROM agent.message_mailbox
+WHERE submission_id = $1
+FOR UPDATE
+update chat.message_bindings set admitted_at = coalesce(admitted_at, now())
+                    where jarvis_message_id = $1 and chat_id = $2 and binding_epoch = $3 and transport = $4binding epochconversation_epochsubmission_kindrouting_scope
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = $5,
+    stream_owner_message_id = $2,
+    submission_json = $3,
+    transcript_event_seq = coalesce($4, transcript_event_seq),
+    attached_at = now()
+WHERE submission_id = $1
+  AND state = 'accepted'
+  AND stream_owner_message_id IS NULL
+mailbox stream ownerselect a.account_id from chat_private.accounts a
+             join chat_private.binding_authorizations b on b.provider = a.provider and b.account_id = a.account_id
+             where b.provider = $1 and b.binding_id = $2
+               and a.connection_id = $3 and not a.revoked for share of adirect input has no captured binding epochaccount_retiredselect connection_id, generation, transport_json, delivery_target
+             from chat_private.binding_authorizations
+             where provider = $1 and binding_id = $2 and chat_id = $3
+               and account_id = $4 and external_kind = 'direct' and participation = 'active'
+             for shareaccount_authorization_retiredtransport_jsontransport_authorization_absentdelivery_targetselect epoch from chat_private.bindings
+         where chat_id = $1 and provider = $2 and not revoked for sharetransport_authorization_changedbinding_retiredSELECT pg_advisory_xact_lock(hashtextextended('activity-monitor-root-carrier:' || $1, 0))
+WITH lineage(message_id) AS (
+    SELECT $1::text
+    UNION
+    SELECT user_message_id
+    FROM activity_monitor_carrier_user_messages
+    WHERE carrier_message_id = $1
+      AND (root_agent_id IS NULL OR root_agent_id = $2)
+    UNION
+    SELECT $3::text
+    WHERE $3 IS NOT NULL AND $4
+)
+INSERT INTO activity_monitor_message_threads (
+    message_id, activity_thread_id, created_at, updated_at
+)
+SELECT message_id, $5, $6, $6
+FROM lineage
+ON CONFLICT(message_id) DO UPDATE SET
+    activity_thread_id = excluded.activity_thread_id,
+    updated_at = excluded.updated_at
+WHERE activity_monitor_message_threads.activity_thread_id
+    IS DISTINCT FROM excluded.activity_thread_id
+
+SELECT activity_thread_id
+FROM activity_monitor_message_threads
+WHERE message_id = $1
+LIMIT 1
+
+INSERT INTO activity_monitor_agent_threads (agent_id, activity_thread_id, created_at, updated_at)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT(agent_id) DO UPDATE SET
+    activity_thread_id = excluded.activity_thread_id,
+    updated_at = excluded.updated_at
+WHERE activity_monitor_agent_threads.activity_thread_id IS DISTINCT FROM excluded.activity_thread_id
+activity_monitor_upsert_activity_thread_actionactivity_monitor_list_thread_actionsactivity_monitor_action_by_idactivity_monitor_list_recent_thread_actions
+INSERT INTO activity_monitor_message_threads (message_id, activity_thread_id, created_at, updated_at)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT(message_id) DO UPDATE SET
+    activity_thread_id = excluded.activity_thread_id,
+    updated_at = excluded.updated_at
+WHERE activity_monitor_message_threads.activity_thread_id IS DISTINCT FROM excluded.activity_thread_id
+activity_monitor_message_thread_lookupactivity_monitor_read_threadactivity_monitor_reactivate_finished_threadfailed to reactivate finished activity threadtimeoutdatabase write admission gate closedadmission_timeoutassert_table_existstable_presence.queryagent_status broadcast presence statusstandalone/mirror/streamapplication/x-ndjsonadmission snapshot upload stalledclient rendering snapshot read failed; keeping lifts inline this turntoo many group attachment snapshotsinvalid group attachment snapshot referenceinvalid group attachment MIME typeduplicate group attachment snapshot referencegroup attachment snapshots exceed limitcompany transcript revision is staleconversation activity projection unavailablemdtranscript file notification unavailablepreparingawaiting_replytranscript messages missinglatest_statuscompany_logototal_messagesmessage_countsnapshot_pathtranscript_pathexternal_party_conversationconversation preview exceeds the state budgetconversation preview widget is missingconversation preview state could not be updatedhost_message_idconversation preview card belongs to another ownerconversation preview is not its transcript fileconversation preview could not be savedconversation preview changed before publicationconversation preview could not be presentedconversation preview is not visibletask_runninguser input has no usable canonical admission receipt
+
+canonical user input does not match its authenticated admissionspace_preview_repairspace preview repair: handler not registeredspace preview repair: handler registry unavailablespace_preview_missingspace preview repair: runtime work store unavailablequeued Space preview repairspace preview repair: seeding failedspace preview repair: catalog read failed on viewbrowser task request trace is missingbrowser task request trace has no workload classfailed to persist browser task projectiontask_missingcapture_failedexpiredtake_failedtake_timeoutstale_headpayload_validationbroker_fence_changedinventory_unavailablenot_attemptedwrittencaptured_and_presentedclient preview digest mismatchclient preview is too largeclient preview observation returned no capture decisionclient browser ended during observationclient browser changed during observation/api/computer/assets/desktop-v2.pngsolvedwaitedmovedalready_clearThis background contribution is no longer current or enabled for this conversation. Leave the message unsent.No rule fully covers this message.Expected a message reviewGive a short reason for the decisionThe review turn is no longer activeSaved message not foundConversation worker not foundThe message changed or its review is complete. Read it again.Do not replace the text when declining a messageThe conversation or its rules changed. Ask the worker for a new draft.owner_requestSend a nonempty messageMessage preparation timed outhistoryowner_messageschat_summaryowner_in_chatparticipant_identitiesA widget changed during reviewAn attachment changed during reviewA review revision cannot introduce an unreviewed fileOwner task has an invalid canonical admission timeauthenticated_owner_messagesmain_muse_handoff_referenceworker_report_stateworker_result_referenceThe sharing rules require the user's instruction or approval for this message.The user's approval could not be checked, so the draft has not been sent. Retry `connection.review_message` in this turn while the owner's answer is available. If the check still fails, tell the user the draft remains unsent. No automatic retry is scheduled.
+owner task review failed; leaving the draft for the main MuseThe owner task changed during review. The message remains pending.owner message review failed; leaving the draft pendingThe owner input changed during review. The message remains pending.saved message disappearedconnection not foundSaved message integrity check failedThe conversation or its rules changed. Prepare the message again using the current context.An attachment changed after this message was prepared. Prepare a new message.The main Muse decision does not match the saved messagethe connection is no longer activeconnection review revision could not be preparedThe suggested revision could not be prepared. Review the saved draft or ask the worker for a new one.connection message reviewedallowask_ownerconnection approval has no durable identityThe user did not approve this message. Leave it unsent.the sharing rules belong to another conversationThe conversation changed before delivery.connection message queuedconnection_messageconnection.send_messageruntime.connection_messageconnection message approvalunexpected connection approval responseSharing rule review timed outinvalid connection review; requesting one correctionSharing rule review retry timed outinvalid connection review after one correction; holding the draftbundled Ideas localization catalog is unavailablefailed to load bundled Ideas localization provenancefailed to load bundled Ideas dogfood provenanceIdea catalog sharing context read failedIdea share variant projection read failedIdea share revision projection read failedIdea direct sharing read failedIdea publication hold read failedanchor_kindanchor_idfailed to batch-read idea source metadata for downstream eventsresource_selectoredit requests are not availablecontrol.space_edit_requestwaitingrequestedpeer_profile_photo_refreshcould not seed owner photo refreshcould not restore owner photo checkpointfiles can only be shared in a direct peer conversationcontent_truncatedrequired_review_imageShared items must refer to local files before sendingresolve DM conversation for grant noticeresolve DM conversation for relationship confirmationcontrol.relationship_confirmationartifact proxy dial failedartifact proxy redial failedartifact proxy send failedCatalog page timed outCatalog unavailableCatalog cursor did not advanceInvalid catalog resourceInvalid catalog responseInvalid catalog signatureCircle is no longer activeResource metadata is too largeload peer relationship for SAS confirmationload peer SAS confirmation replayreconcile peer SAS confirmation replaypairingacquire exact-link SAS confirmation leasepeerd SAS confirmation lease is shorter than the required commit bound/v1/peer/sign-relationship-confirmationsign peer relationship confirmation via authddecode signed relationship confirmationparse signed relationship confirmationverify authd relationship confirmationauthd relationship confirmation notice id does not match signed tupleauthd relationship confirmation does not match requested tuplefailed to release SAS confirmation leasefailed to reconcile replayed SAS confirmation lease
+SELECT payload_json FROM runtime_restart_checkpoints WHERE agent_id = $1 FOR UPDATESELECT submission_json, octet_length(submission_json)::bigint AS serialized_bytes
+         FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND submission_id <> $2startup_queue_fullclient browser observation capacity is busybrowser task control transition is still settlingagentmaintenance_occurrencemaintenance_attemptrequest_generationgeneric_maintenancejitter_offset_secsjitter_window_secsmaintenance occurrence collided with terminalized work item"((?:sandbox://|file://|peer-file://|/|workspace/)[^"]+)"|'((?:sandbox://|file://|peer-file://|/|workspace/)[^']+)'|(?:url\(\s*|(?:src|href|poster)\s*=\s*)((?:sandbox://|file://|peer-file://|/|workspace/)[^\s)'">]+)widget asset literal patternSELECT event_seq, event_name, source, role::text AS role,
+                    visibility::text AS visibility, message_id, agent_id,
+                    parent_agent_id, parent_message_id, reply_to_message_id,
+                    transcript_surface::text AS transcript_surface, payload_json,
+                    request_id, root_request_id, parent_request_id,
+                    extract(epoch from created_at)::bigint AS created_at
+             FROM runtime.events WHERE idempotency_key = $1SELECT ci.item_json, ci.message_source,
+                        extract(epoch from ci.created_at)::bigint AS created_at,
+                        p.client_context_json
+                 FROM agent.context_items ci
+                 LEFT JOIN agent.context_item_resume_projection p
+                   ON p.agent_id = ci.agent_id AND p.seq = ci.seq
+                 WHERE ci.agent_id = $1 AND ci.seq = $2XML:com.adobe.xmpRaw profile type iptcRaw profile type 8bimreserve re-homed voice result custodymark already re-homed voice results seencheck re-homed voice result mailbox admissionmessage_event_stream_idlemid > lencalled `Result::unwrap()` on an `Err` valuevalidationtransportforeground_rootpeer_chat_rootgroup_chat_rootexternal_party_chat_rootcompany_conversation_rootmail_conversationdelegate_main_requestworkflow_subagentspaces_builderspaces_builder_litespaces_builder_editspaces_builder_python_editbrowser_taskdeep_researchideas_builderspace_taskself_improvement_stepflight_tracking_steppeer_sync_stepfeed_workflow_stepephemeral_agent_stepscheduler_cron_executescheduler_cron_resolveexecute_resolve_workersystem_cron_productvoice_delegaterealtime_voicecompaniondeveloperassistantimpressionclickengagementfeedback_upfeedback_downchunk layer indexdeep data not supported yetavatar_sharelocal_mapimage_optionsdiscovery_pool_idea_idshared_spacespace_build_completednode_cardinternal_link_action_cardgeneric_listexternal_linkslidesStripe Link must be reconnected before it can list payment optionsStripe Link is not connected, so it has no payment options to listwallet_provider_errorafter_inferenceawaiting_approvalafter_tool_dispatchcreatedrenamedunarchiveddeletedpinnedÿNot enough planes read from TIFF imagePlanar TIFF with CMYK color type is not supportedimage does not contain non-deep rgb channels
