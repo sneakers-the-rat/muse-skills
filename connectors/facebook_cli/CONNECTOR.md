@@ -6,6 +6,8 @@
 
 - Read that JSON whole, or save it to a file and parse it. Lists end with their `paging` cursor, so cutting the output with `head` drops results and the way to the next page.
 
+- Marketplace `search`, `saved` and `my-listings` continue a list with `--next-page`, as the Marketplace guides describe. Other lists page with `--after` and the cursor their guide names.
+
 ## Connect the account
 
 ```sh
@@ -39,7 +41,7 @@
   - No account is linked, or the error is `facebook_account_ineligible` (`INVALID_VIEWER_CONTEXT`). Guidance needs a usable linked account, so follow Connect the account instead.
   - The error has a `consent_url` or `error_reason: PROFESSIONAL_CONSENT_REQUIRED`. The user's approval comes first. Run guidance if the command still fails after they approve.
   - The command was rate-limited (HTTP 429).
-  - A search returned empty results, or the user asked a general how-to question. Neither is a failure.
+  - A search returned empty results, a Marketplace `--next-page` or page code found no page to continue, or the user asked a general how-to question. None of these is a failure.
   - The failed command is `guidance` itself.
 
 - Run guidance once for each failed command. When the same command fails again with the same error in this task, reuse the earlier guidance instead of running it again.

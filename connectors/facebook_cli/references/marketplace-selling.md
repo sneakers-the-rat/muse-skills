@@ -5,10 +5,12 @@
 ## Find the user's listings
 
 ```sh
-/opt/hatch/bin/facebook-cli marketplace my-listings [--status <active, pending, sold or draft>] [--limit <up to 20>] [--after '<paging.cursors.after from the previous response>'] --out '<new file>'
+/opt/hatch/bin/facebook-cli marketplace my-listings [--status <active, pending, sold or draft>] [--limit <up to 20>] [--next-page] --out '<new file>'
 ```
 
 - `my-listings` lists the user's own listings in every state, including drafts and sold items, unless `--status` narrows it. Use it to find the `listing_id` for an edit, publication or deletion, so the user doesn't have to supply an ID. Leave out `--status` when finding a listing to edit, publish or delete, so drafts and sold listings are candidates too.
+
+- When the listing you need isn't on the first page, rerun `my-listings` with the same `--status`, a new `--out` file and `--next-page` until it appears or a page has no `paging.cursors.after`.
 
 ## Prepare a listing
 

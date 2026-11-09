@@ -246,6 +246,10 @@
 - In the turn interim results arrive, resolve and name one or two strong products, such as catalog results from a well-known retailer. Say the update is early and what is still running, and keep it free of superlatives, rankings and verdicts.
 
 <!-- product-search-improvements-off-only:end -->
+<!-- product-search-improvements-on-only:start -->
+- After "Search every source in parallel", in the turn interim results arrive, resolve and name one or two strong products, such as catalog results from a well-known retailer. Say the update is early and what you're still checking, and keep it free of superlatives, rankings and verdicts.
+
+<!-- product-search-improvements-on-only:end -->
 - Once the last search finishes, pass every result file for the request in one `result_paths` list, rank the best products across the whole pool and call `shopping.create_shopping_results_widget` with the returned `path`. A later search adds candidates and never replaces earlier ones.
 
 - Give distinct product groups, such as shoes and pants, one widget each in the same presentation, each resolving its own selection from the pool.
