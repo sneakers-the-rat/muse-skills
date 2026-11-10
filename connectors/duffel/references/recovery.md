@@ -12,6 +12,8 @@
 
 - A `failed`, `terminal_status` or `unsupported` Link result ends the attempt; another spend request would start a new purchase, so report it and stop.
 
+- `link_request_open` means Stripe Link refused this payment request because a matching one from an earlier attempt (same merchant, amount and card) was created in the last few minutes, and that attempt isn't proven to have ended without a booking. Nothing was created or charged, and this checkout keeps its approval. Resolve the earlier attempt first, with `booking-status` when its outcome is unknown, and don't retry while it is unresolved or may have booked. When the earlier attempt was cancelled before submission or rejected with no order, `book` waits out those minutes itself, so let it finish.
+
 - Before any approval or submission for this purchase, correct validation errors; for an expired offer, search the itinerary again and present fresh terms for approval.
 
 - After approval or submission for this purchase, each outcome carries its own `message` and `next_action` for that state, including whether a booking or payment may already have gone through and whether anything can be retried. Expiry does not resolve booking or funding uncertainty or permit retry or replacement.

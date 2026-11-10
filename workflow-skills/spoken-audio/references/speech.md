@@ -24,7 +24,7 @@ Honor the user's voice choice. Otherwise prefer Helio (`avocado_v2:MAI_03`),
 the default, or Aria (`avocado_v2:MAI_01`), both production Meta AI voices.
 Never say "MAI" to the user.
 
-On ordinary VMs, the CLI corrects unambiguous catalog ID spellings and uses a
+On Secure VMs, the CLI corrects unambiguous catalog ID spellings and uses a
 default when an ID is absent from both the catalog and saved library. It keeps
 supported dynamic voice IDs. Check the reported substitution and the returned
 `voice`/`voice2`, or `speakers` for scripts. If the user requested a particular
@@ -75,7 +75,7 @@ supported publication tools.
 Correct input errors before another attempt. Report an auth failure or an
 uncorrectable request error at once, without retrying. For HTTP 500 with
 `---THERE WAS AN ERROR---`, use any CLI substitution diagnostics to check the
-effective IDs sent upstream. On ordinary VMs an unknown requested ID may already
+effective IDs sent upstream. On Secure VMs an unknown requested ID may already
 have become a valid default; do not reject the original ID or swap voices again.
 Supported dynamic IDs need not appear in the catalog or saved library. If the
 CLI says the saved library was unreadable, it kept the requested IDs; fix that

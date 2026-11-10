@@ -1,0 +1,64 @@
+a research window runs no browser specialistsbrowser runtime identity is missingbrowser authority changedbrowser call has no admitted submissionbrowser session belongs to another taskbrowser.execution_actorbrowser.execution_ownerbrowser.record_codea browser code record must carry a codebrowser.code_recordedbrowser.unread_inputsruntime.browser_seat_inputs.detail_jsonbrowser.record_sign_inbrowser.sign_in_contextbrowser.sign_in_sitebrowser.acknowledge_inputbrowser.working_specialistsbrowser.record_checkout_waitbrowser.settle_checkout_waitbrowser.bind_checkout_approvalbrowser.checkout_waits_for_taskbrowser.resumed_checkout_approvalsbrowser.settle_resumed_checkout_waitbrowser.specialist_refschedulerFailed to reschedule a write opFailed to schedule write op for insertbrowser policy state retains the completion senderpurchase_requests.handoff_without_fundingstripe_link_spend_requestsoptional model fallback setup timed out; using primary routebrowser_tasks.managed_activeselect * from runtime.stripe_link_spend_requests where approval_id = $1 for updateupdate runtime.stripe_link_spend_requests set lifecycle_state = 'closed',
+            claiming_browser_task_lineage_id = null,
+            cancellation_confirmation_task_state_revision = null,
+            cancellation_confirmation_response_message_id = null,
+            close_reason = 'browser_purchase_verified', closed_at = now()
+            where approval_id = $1funding does not belong to the completed purchasebrowser.abort_task_invocationsbrowser.end_invocationbrowser.request_invocation_stopbrowser.user_control_takeoverbrowser.control_is_suspendedobservemissing browser observationbrowser service input changed on replaybrowser service receipt is missingbrowser service input has no replybrowser service intent is missingbrowser service receipt is unavailablebrowser specialist required
+SELECT event_seq, event_name, source, role::text AS role, visibility::text AS visibility,
+       message_id, agent_id, parent_agent_id, parent_message_id, reply_to_message_id,
+       transcript_surface::text AS transcript_surface, payload_json,
+       (extract(epoch from created_at))::bigint AS created_at
+FROM runtime.events WHERE idempotency_key = $1
+runtime.cancellation
+SELECT ci.item_json, ci.message_source,
+       (extract(epoch from ci.created_at))::bigint AS created_at,
+       projection.client_context_json
+FROM agent.context_items AS ci
+LEFT JOIN agent.context_item_resume_projection AS projection
+  ON projection.agent_id = ci.agent_id AND projection.seq = ci.seq
+WHERE ci.agent_id = $1 AND ci.seq = $2
+cancellation retry does not match its committed identity
+SELECT
+  GREATEST(
+    (SELECT COALESCE(MAX(seq), -1) FROM context_items WHERE agent_id = $1),
+    (SELECT COALESCE(MAX(seq), -1) FROM context_item_resume_projection WHERE agent_id = $1),
+    COALESCE((SELECT handoff_context_high_water_seq FROM agent.agents WHERE agent_id = $1), -1),
+    (SELECT COALESCE(MAX(root_seq), -1) FROM agent.companion_trace_imports WHERE root_agent_id = $1),
+    (SELECT COALESCE(MAX(producer_seq), -1) FROM agent.companion_trace_imports WHERE producer_agent_id = $1),
+    COALESCE((SELECT settled_seq FROM agent.companion_trace_sources WHERE producer_agent_id = $1), -1)
+  ) AS max_item_seq,
+  COALESCE((SELECT prompt_floor_seq FROM agents WHERE id = $1), -1)
+    AS prompt_floor_seq,
+  (SELECT COALESCE(MAX(checkpoint_seq), -1)
+     FROM agent_compactions
+     WHERE agent_id = $1
+       AND checkpoint_seq IS NOT NULL
+       AND has_replacement_history)
+    AS checkpoint_seq
+max_item_seqcheckpoint_seqcontext_seqlegacy completion has no verifiable batch ownerUPDATE agent.agents SET handoff_context_high_water_seq =
+                GREATEST(COALESCE(handoff_context_high_water_seq, -1), $2)
+             WHERE agent_id = $1SELECT state, submission_json, accepted_at, transcript_event_seq,
+                    stream_owner_message_id FROM agent.message_mailbox
+             WHERE agent_id = $1 AND submission_id = $2 FOR UPDATEstartup_submission_missingsubmission_jsonreply_to_targetlegacy startup cancellation changed its replyaccepted_atcompletedinvalid startup mailbox statestartup_submission_terminalstartup_execution_ownedstartup_already_cancelledtranscript_event_seqstream_owner_message_idstartup cancellation input already has execution custodystartup_submission_changedUPDATE agent.message_mailbox SET state = 'aborted', terminalized_at = now(),
+                    transcript_event_seq = $3
+             WHERE agent_id = $1 AND submission_id = $2 AND state = 'accepted'
+               AND stream_owner_message_id IS NULL AND transcript_event_seq IS NULLstartup cancellation custody changed before commitSELECT state, submission_json, accepted_at, transcript_event_seq,
+                    stream_owner_message_id, checkpoint_custody FROM agent.message_mailbox
+             WHERE agent_id = $1 AND submission_id = $2 FOR UPDATElegacy startup quota rejection changed its replycheckpoint_custodypending startup input already has a transcript eventstartup_quota_rejectionUPDATE agent.message_mailbox SET state = 'completed', terminalized_at = now(),
+                    transcript_event_seq = $3
+             WHERE agent_id = $1 AND submission_id = $2 AND state = 'accepted'
+               AND stream_owner_message_id IS NULL AND checkpoint_custody IS NULL
+               AND transcript_event_seq IS NULLstartup quota rejection custody changed before commitbrowser.inputbrowser.answer_inputbrowser.pending_inputsbrowser.withdraw_inputbrowser.interrupt_questionbrowser.code_question_targetbrowser.wallet_pickbrowser.question_interruptedbrowser.callbrowser.begin_callinvalid browser continuationbrowser.complete_callbrowser.advance_actionbrowser.pending_actionsbrowser.reconcile_actiontransferredapproval_rejectedprovider_mismatchdestination_resolution_faileddestination_changedstorage_unavailableThe tab left the origin of the sign-in page you assessed, so nothing was entered. Assess the page again with login.advance.purchase funding changed before handoffupdate runtime.purchase_requests set active_browser_task_id = $2, active_checkout_id = $3, updated_at = now() where purchase_id = $1update runtime.purchase_requests set state = 'purchased', updated_at = now()
+        where active_browser_task_id = $1 and active_checkout_id = $2 and state = 'open'select purchase_id from runtime.purchase_requests
+         where active_browser_task_id = $1 and active_checkout_id = $2
+           and funding_approval_id = $3 and state = 'open' for updateselect revision from runtime.browser_task_service_state where task_id = $1 for updatepurchase source journal changed before handoffinsert into runtime.browser_task_service_state (task_id, revision, state_json) values ($1, $2, $3)
+        on conflict (task_id) do update set revision = excluded.revision, state_json = excluded.state_json, updated_at = now()purchase destination journal changed before handoffselect exists(
+        select 1 from runtime.stripe_link_spend_requests
+        where (approval_id = $1 and (
+            owner_browser_task_id is distinct from $2 or lifecycle_state <> 'closed'
+            or close_reason is null or close_reason not in (
+                'create_no_effect', 'create_provider_refused', 'create_duplicate', 'task_ended_before_delivery')
+            or stripe_spend_request_id is not null or assigned_at is not null
+            or assigned_browser_task_id is not null or cancel_attempt_id is not null))
+        or (owner_browser_task_id = $2 and
+            (lifecycle_state <> 'closed' or claiming_browser_task_lineage_id is not null)))resolve the existing payment before releasing purchase fundingproactivity CLI pacing is unavailablewrite CLI pacing requestread CLI pacing responseCLI pacing is unavailablewrite Shopify checkout runtime requestread Shopify checkout runtime responseconnector authorizationpath contains NUL

@@ -74,6 +74,8 @@
 
 - [Instacart](/opt/hatch/connectors/instacart/CONNECTOR.md) for grocery search, carts and checkout links at the user's chosen store.
 
+- [Grab](/opt/hatch/connectors/grab_mcp/CONNECTOR.md) for grocery search, carts and checkout.
+
 - [Deglaze](/opt/hatch/connectors/deglaze_mcp/CONNECTOR.md) for the user's saved recipes, meal plans and grocery lists.
 
 ## Websites

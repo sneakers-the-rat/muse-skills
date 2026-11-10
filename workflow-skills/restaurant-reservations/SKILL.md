@@ -22,6 +22,12 @@
 
 - If nothing here fits, look on the web for a maintained API or MCP server and set it up with [Custom Connectors and MCPs](/opt/muse/skills/custom-connector-setup/SKILL.md), or build a custom connector.
 
+### When available
+
+- These connectors depend on the user's channel or devices. `muse.connector_search` shows which ones this session has.
+
+- [Grab](/opt/hatch/connectors/grab_mcp/CONNECTOR.md) for finding and booking restaurant tables.
+
 ## Websites
 
 - Use `browser.browse` to check live tables on the restaurant's own booking page or its reservation partner. Carry the exact branch, local date and time and party size, and ask for the available times with their deposit and cancellation terms.

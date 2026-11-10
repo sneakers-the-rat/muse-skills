@@ -59,7 +59,7 @@ confidential VM, the user must connect it before catalog text search,
 image search, or requests for product details can send data to Meta.
 Follow the command's consent instructions and runtime card guidance. The
 user can connect or disconnect it in Settings > Connectors > Social >
-Shopping search. Disconnecting blocks new catalog requests. Standard VMs need no connection consent and have no
+Shopping search. Disconnecting blocks new catalog requests. Secure VMs need no connection consent and have no
 Shopping search settings row.
 
 While connected, Search defaults to Allow. Ask requests approval for the

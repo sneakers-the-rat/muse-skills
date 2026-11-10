@@ -80,4 +80,8 @@ and `cancel_reservation` ask for approval in Muse every time. A structured
 
 ## Related skills
 
+- [Grocery and Food Delivery](/opt/muse/skills/groceries/SKILL.md)
+
+- [Restaurant Reservations](/opt/muse/skills/restaurant-reservations/SKILL.md)
+
 - Use `muse.skill_search` to find other skills and `muse.connector_search` to find other connectors.
