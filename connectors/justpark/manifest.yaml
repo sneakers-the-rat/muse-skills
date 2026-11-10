@@ -1,0 +1,87 @@
+version: 1
+gating:
+  allowed_countries: [GB]
+metadata:
+  visible_in_settings: true
+connector: justpark
+display_name: "JustPark"
+icon: justpark
+description: "Find parking, check your JustPark bookings and vehicles, and add vehicles"
+cli:
+  binary: justpark
+  skill: justpark
+auth:
+  provider: justpark
+  required: true
+  # JustPark's pre-registered confidential client. CAGI holds its secret.
+  client_id: "01a19d86-c57b-70b7-bff8-36e2ddd999f4"
+  mcp:
+    endpoint: "https://mcp.justpark.com/mcp"
+    oauth:
+      type: "oauth"
+      authorization_url: "https://www.justpark.com/oauth/mcp/authorize"
+      token_url: "https://www.justpark.com/api/v5/mcp/oauth/token"
+      scope: "mcp:driver:read mcp:driver:write"
+      # Local PKCE configuration only. brokers_provider routes exchange and
+      # refresh to CAGI, which sends client_secret_post.
+      token_endpoint_auth_method: "none"
+    tool_names:
+      parking.search: [search_parking, get_listing_details]
+      account.read: [get_me, list_bookings, get_booking_details, list_vehicles]
+      vehicles.add: [add_vehicle]
+surrogation:
+  name: justpark
+  schema: oauth
+  mode: direct_oauth
+  privsep: true
+  hosts:
+    - mcp.justpark.com
+    - www.justpark.com
+  token_proxy:
+    - field: credentials.access_token
+      placement: bearer_header
+  stripped:
+    - credentials.refresh_token
+  token_refresh:
+    - path: /api/v5/mcp/oauth/token
+actions:
+  read:
+    default: allow
+    label: "Search parking and read your JustPark account"
+    response_guard: verification_codes
+    methods:
+      parking.search:
+        # Consent grants read access; no side effects require fresh approval.
+        approval_policy: default
+        label: "Search parking spaces and read their details"
+        approval_phrase: "search parking spaces and read their details on JustPark"
+      account.read:
+        # Consent grants read access; no side effects require fresh approval.
+        approval_policy: default
+        label: "Read your profile, bookings and vehicles"
+        approval_phrase: "read your profile, bookings and vehicles on JustPark"
+  write:
+    default: ask
+    label: "Add vehicles to your JustPark account"
+    response_guard: verification_codes
+    methods:
+      vehicles.add:
+        # Adding a registration charges nothing and repeats return the same
+        # vehicle, so standing approval may cover it; it asks by default.
+        approval_policy: default
+        label: "Add vehicles to your account"
+        approval_phrase: "add this vehicle to your JustPark account"
+consent_screen:
+  bullets:
+    - icon: data_types
+      title: "Find parking with JustPark"
+      text: "Muse will access your JustPark account information, including your name, email address, parking bookings and vehicles. To complete your requests, Muse will also search JustPark's parking spaces, prices and availability."
+    - icon: info
+      title: "You choose what Muse can do"
+      text: "By default, Muse asks before adding a vehicle to your account. You book and pay for parking on JustPark. Disconnect at any time in Settings."
+    - icon: caution
+      title: "Details can change"
+      text: "Prices and availability can change, so check the details on JustPark before you book."
+  footer_paragraphs:
+    - "The info used for your tasks is part of your interactions with Muse, which we may use to improve AI at Meta. You can manage this in Settings. [Learn more](https://muse.ai/privacy)"
+    - "Muse will exchange info with JustPark. To learn more, view their [terms](https://www.justpark.com/terms-and-conditions) and [privacy policy](https://www.justpark.com/privacy-policy)."
