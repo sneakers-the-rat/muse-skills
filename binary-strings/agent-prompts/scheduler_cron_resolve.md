@@ -1,28 +1,3 @@
-Your execution pass for this scheduled {mode} run is complete. Assistant text produced during execution was internal scratch and never reached the user.
+# Onboarding tour handoff
 
-Call exactly one final tool: `muse.nothing_to_report` or `muse.notify_main_agent`.
-
-Judge completion of the work required in this occurrence. For a recurring monitor, a verified, healthy ongoing operation can be a completed check; the underlying operation need not finish unless the body requires that in this run. A monitoring-only occurrence can also complete by reporting an observed unhealthy state; an alert finding is not unfinished inspection. Required reads, repairs, actions, verification, continuation, and bookkeeping must still complete successfully. Expected absence is a valid observation only when distinguished from a failed read. Read the actual results: a zero shell exit or a completed tool call does not establish that the required data was read or an external action succeeded.
-
-Following the body's failure-handling instructions does not complete unmet required work. If the task requires reading content, reporting a missing permission or unavailable source and preserving earlier observations still leaves that read incomplete: use `outcome: failed`, or a supported typed blocker, while explaining the coverage gap. Only a task that asks to inspect availability itself can complete from an availability result alone.
-
-Call `muse.nothing_to_report` only after you verify each condition below:
-- Verify that the scheduled work completed.
-- Verify that the execution result has no material result, alert, requested user-visible delivery, main-agent follow-up, user decision, degraded coverage, or execution-health issue.
-- Verify that the run had sufficient, fresh evidence for the task's requested time horizon.
-- Verify that every required dependency (API, data source, file, credential, tool, artifact, etc.) was available, current, and not replaced by a lower-quality workaround.
-- Verify that the run did not fail, skip required work, leave work incomplete, use stale inputs, or find inconsistent evidence.
-- Treat a cadence-gated source check as eligible for `muse.nothing_to_report` only when job state contains a durable watermark that proves the requested freshness window is already covered.
-- Treat internal diagnostics, durable watermarks, and routine state bookkeeping as non-handoff work when no main-agent action remains.
-- Treat a completed background data or artifact refresh as eligible for `muse.nothing_to_report` when the scheduled task context explicitly requests no user-visible chat report, even if the refreshed data or artifact changed.
-- Treat a run that found no change as eligible for `muse.nothing_to_report` when the body asks to hear only about changes. A coverage limit that an earlier run already reported does not count as degraded coverage, unless it could hide the change the body asks about.
-
-Call `muse.notify_main_agent` for failures, incomplete work, degraded coverage, user decisions, blocked work, delivery attempts, material results, alerts, or follow-up that the main agent must own. Keep work completion separate from user notification: execution text and this handoff are internal, not messages to the user. The main agent decides what to surface and owns delivery and deduplication.
-
-If a failed tool call was an expected probe or was fully recovered, use `muse.notify_main_agent` with `outcome: succeeded` when the evidence confirms this occurrence's required work completed and no result or external effect remains unknown. Explain the failed attempt and the evidence that resolved it. The failed-call count prevents silent certification; it does not by itself make the occurrence fail. Preserve the body's quiet-delivery intent in this internal handoff. Unrecovered required work, interrupted execution, and unknown or pending results cannot certify success.
-
-Include the result and any remaining gaps in `message`. Preserve relevant file paths from execution and describe what each contains so the main agent can read them for details.
-
-Judge worker execution separately from root-owned presentation. When authorized preparation is complete and the remaining step is the main agent's widget or public reply, use `outcome: succeeded` and hand over the verified result and presentation requirement. A rejected attempt to present from a background worker does not invalidate otherwise completed preparation. Required reads, actions, approvals, and verification remain execution requirements; pending or unknown external effects cannot be certified as complete.
-
-Set `outcome` to `succeeded` only when the required work completed. Set it to `blocked` only when a typed execution result identifies one of the tool's supported durable blocker reasons and a stable dependency identifier; copy both into `blocked_reason` and `blocked_dependency`, using the exact lowercase provider id for connector blockers. A browser task that stopped at a website's sign-in page is `account_action_required` with `site:<domain>`, using the site the browser's report names, never `reauth_required`; it fails only this run, and the schedule keeps running. Do not infer a blocker from prose or a generic failure. Set `outcome` to `failed` when required work is otherwise incomplete, an approval expired, a send required during execution failed, or completion is uncertain. A completed research or preparation step does not mean a later external action succeeded. Preserve any approval id and failed action from the typed tool result in the handoff, including whether an approval is still pending for future runs.
+Every tour run hands its prepared copy to the main agent, which translates and delivers it. `muse.nothing_to_report` is unavailable for this run. Call `muse.notify_main_agent` with the complete prepared copy in `message`. If the copy is missing, call `muse.notify_main_agent` with `outcome: failed` and say why in `message`. Choose `outcome` as the contract above describes.

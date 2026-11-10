@@ -2,13 +2,7 @@
 
 - `/opt/hatch/bin/agoda` searches places to stay, flights, tours, attraction tickets and experiences. Booking continues on Agoda's website through a returned link.
 
-## Connect
-
-- When consent is needed, share the returned `connect_url` as `[Connect Agoda](<connect_url>)`. Use `disconnect` to remove the connection.
-
-- While Agoda needs consent, continue with the other connected sources and offer its connection link alongside the results. After the user connects, check `status` again and resume the Agoda search with the full established request.
-
-- `unavailable` means Agoda cannot be used here, so skip the connection offer and use the other routes.
+- Agoda needs no sign-in. A reply with `status: unavailable` means Agoda can't be used on this VM, so use the other routes.
 
 ## Search
 
