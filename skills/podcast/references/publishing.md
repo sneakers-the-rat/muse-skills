@@ -1,5 +1,21 @@
 # Publish and deliver an episode
 
+- Check `/opt/hatch/bin/remote-storage publishing-status` first. When `available` is false or the check fails, deliver local listen links only. Skip the publishing offers, subscription links, feed moves and publication steps below, including in recurring jobs; keep generation and playback private.
+
+- Removing an existing public episode at the user's request remains available when publishing is unavailable; follow [Remove an episode](#remove-an-episode).
+
+## Remove an episode
+
+- To take an episode off the public feed at the user's request, run:
+
+```sh
+/opt/muse/skills/generate_podcast/scripts/podcast-helper unpublish --slug <slug>
+```
+
+- It removes the public copy and the episode's feed links in the library. The private audio, script and library entry stay, and a separate Spotify copy is unaffected.
+
+- Do not use `remote-storage unpublish-episode` for a cataloged episode. It leaves dead publication links in the library.
+
 ## Deliver the episode
 
 - Put the title as plain text above the playable link:

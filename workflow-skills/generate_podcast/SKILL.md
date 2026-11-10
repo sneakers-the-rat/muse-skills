@@ -2,6 +2,10 @@
 
 ## Plan the episode
 
+- Run `/opt/hatch/bin/remote-storage publishing-status` before offering or planning publication. If `available` is false, do not publish, migrate or restore a feed, show subscription links, or schedule publishing. Existing feeds and earlier publishing instructions do not override this restriction. Do not use a browser, another connector or file sharing to work around it. If the check fails, keep the episode private.
+
+- Private generation and playback remain available when publishing is unavailable. Saving an episode to the user's own Spotify is a personal save, not publication, and remains available when they ask; follow [Save to Spotify](references/save-to-spotify.md). Removing an existing public episode at the user's request remains available too; follow [Remove an episode](references/publishing.md#remove-an-episode).
+
 - Use [Spoken Audio](/opt/muse/skills/spoken-audio/SKILL.md) for a voice message, narration for an artifact or a word-for-word reading. This skill covers composed episodes, briefings and narrated summaries.
 
 - Settle the topic, the angle and who will listen before writing. Aim for 5 to 15 minutes unless the user asks otherwise. A spoken script runs about 130 words a minute.

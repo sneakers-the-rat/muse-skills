@@ -138,6 +138,13 @@ def main():
         "reconnected later.",
     )
 
+    # ── unpublish ───────────────────────────────────────────────────
+    sp_unpub = subparsers.add_parser(
+        "unpublish",
+        help="Remove an episode from its public feed, keeping the private episode",
+    )
+    sp_unpub.add_argument("--slug", required=True)
+
     # ── migrate-feed ────────────────────────────────────────────────
     sp_migrate = subparsers.add_parser(
         "migrate-feed",
@@ -192,6 +199,8 @@ def main():
             cmd_manifest(args)
         elif args.command == "publish":
             cmd_publish(args)
+        elif args.command == "unpublish":
+            cmd_unpublish(args)
         elif args.command == "migrate-feed":
             cmd_migrate_feed(args)
         elif args.command == "save-to-spotify":
@@ -1120,6 +1129,19 @@ def cmd_publish(args):
     print(json.dumps(result, separators=(",", ":")))
 
 
+def cmd_unpublish(args):
+    """Take an episode off its public feed and clear its library links.
+
+    The daemon removes the public copy and the catalog's published URLs
+    together, so the library never keeps links to audio that is gone.
+    """
+    daemon_api_request(
+        "POST",
+        f"/podcasts/episodes/{urllib.parse.quote(args.slug, safe='')}/unpublish",
+    )
+    print(json.dumps({"ok": True, "slug": args.slug, "unpublished": True}, separators=(",", ":")))
+
+
 # Host-independent feed path prefix, matched the same way the Rust side matches
 # the media path: a feed URL recorded before a podcast-domain migration carries
 # its original host but the same path.
@@ -1236,6 +1258,9 @@ def publish_finishing_moves(slug, feed_title, feed_description, cover_image, **k
     be completed, refuse rather than fork the show. Call with the show's lock
     held.
     """
+    unavailable = publishing_unavailable()
+    if unavailable:
+        return unavailable
     moved = None
     if _pending_migrations_for(feed_title):
         moved = do_migrate_feed(feed_title)
@@ -1504,10 +1529,42 @@ def is_legacy_feed_id(feed_id):
 
 
 def cmd_migrate_feed(args):
-    retry_pending_legacy_deletes()
-    with show_lock(args.feed_title):
-        result = do_migrate_feed(args.feed_title)
+    result = publishing_unavailable()
+    if not result:
+        retry_pending_legacy_deletes()
+        with show_lock(args.feed_title):
+            result = do_migrate_feed(args.feed_title)
     print(json.dumps(result, separators=(",", ":")))
+
+
+def publishing_unavailable():
+    """The refusal to return when this VM cannot publish, or None when it can.
+
+    Confidential VMs also refuse in the trusted worker and in publish-review,
+    but those refusals arrive as generic errors after the episode is
+    synthesized and cataloged. Checking first keeps the outcome a terminal
+    `blocked` refusal instead of a failure the agent would retry.
+    """
+    response, stderr = _remote_storage_json("publishing-status")
+    available = response.get("available")
+    if available is True:
+        return None
+    if available is False:
+        return {
+            "ok": False,
+            "blocked": True,
+            "retryable": False,
+            "error": (
+                "Podcast publishing is unavailable on this VM. The episode stays "
+                "private; share its local listen link instead."
+            ),
+        }
+    return {
+        "ok": False,
+        "blocked": False,
+        "retryable": True,
+        "error": f"Not published: could not check publishing availability ({stderr}).",
+    }
 
 
 def do_migrate_feed(feed_title):

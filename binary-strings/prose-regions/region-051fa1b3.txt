@@ -1,0 +1,195 @@
+AI GeneratedUSER.mdHEARTBEAT.mdinsert into runtime.browser_task_requests (request_id, input_digest, root_session_id, task_id, state_revision)
+         values ($1, $2, $3, $4, $5) on conflict (request_id) do nothing returning request_idbrowser request does not own the taskselect exists(select 1 from runtime.browser_task_requests
+             where request_id = $1 and input_digest = $2 and root_session_id = $3
+             and task_id = $4 and state_revision = $5)browser request was already admitted/v1/subscribe/credential-eventsfeed post image resolution failedwire media selection's post yielded no image; trying the next entrypost_unresolvedwire media selection refused; trying the next entryweb_url_refusedwire media selection's open-web clip skippedjournaled_web_video_skippedwire media selection's reader-life entry skippedjournaled_local_skippedwire media selection's commissioned illustration skippedgenerated_media_retiredfeed fill draft's commission not rendered; falling back to its record mediafill media resolution exceeded the interaction budget; materializing without the unresolved medianone_selectedunresolvedfeed media reclaim reference probe failedfeed carousel clips misaligned; the videos degrade to their poster stillsfeed carousel resolved under the two-item floor; publishing the unit without itagent_status broadcast presence statusfailed to resolve root session for runtime-work activity-thread presenceagent_status ignored voice Companion activity-thread presence with ambiguous root sessionsfailed to resolve runtime-work bindings for activity-thread presenceagent_status ignored runtime-work activity-thread presence with ambiguous root sessionsfailed to resolve root session candidate for activity-thread presence updateagent_status cleared activity-thread presenceagent_status ignored blocked activity-thread fallback for non-waiting threadagent_status ignored blocked activity-thread activity for unloaded root sessionagent_status blocked activity-thread fallback did not changeagent_status accepted blocked activity-thread fallbackagent_status ignored runtime-work activity-thread activity for unloaded root sessionagent_status runtime-work activity-thread status did not changeagent_status accepted runtime-work activity-thread statusagent_status accepted voice Companion activity-thread statusagent_status ignored retained forwarded activity-thread presence with ambiguous root sessionsagent_status accepted retained forwarded activity-thread statusegress_approval finalized orphaned activity thread on resolved approvalegress_approval failed to finalize orphaned activity threadfailed to resolve root session for presence updatedatabase write admission gate closedadmission_timeoutassert_table_existstable_presence.querydeleted
+UPDATE events
+SET payload_json = $2,
+    display_text_ready = true,
+    reply_target_message_id = NULL
+WHERE event_seq = $1
+
+UPDATE messages
+SET body = ''
+WHERE message_id = $1
+
+DELETE FROM resources
+WHERE event_seq = $1
+
+DELETE FROM message_reactions
+WHERE message_id = $1
+
+INSERT INTO requests (
+  request_id, root_request_id, parent_request_id, request_origin,
+  transcript_surface, root_work_class
+)
+VALUES ($1, $2, $3, $4, $5::runtime.transcript_surface, $6)
+ON CONFLICT (request_id) DO UPDATE SET
+  root_request_id = COALESCE(requests.root_request_id, excluded.root_request_id),
+  parent_request_id = COALESCE(requests.parent_request_id, excluded.parent_request_id),
+  request_origin = CASE
+    WHEN requests.request_origin = 'internal.runtime_replay' THEN excluded.request_origin
+    ELSE requests.request_origin
+  END,
+  transcript_surface = excluded.transcript_surface,
+  root_work_class = CASE
+    WHEN requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing'
+      THEN excluded.root_work_class
+    ELSE requests.root_work_class
+  END
+WHERE (requests.root_request_id IS NULL AND excluded.root_request_id IS NOT NULL)
+   OR (requests.parent_request_id IS NULL AND excluded.parent_request_id IS NOT NULL)
+   OR (requests.request_origin = 'internal.runtime_replay'
+       AND excluded.request_origin <> 'internal.runtime_replay')
+   OR requests.transcript_surface IS DISTINCT FROM excluded.transcript_surface
+   OR (requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing')
+output
+INSERT INTO tool_outputs (event_seq, call_id, status, output_text, error_text, created_at)
+VALUES ($1, $2, $3, $4, $5, to_timestamp($6::double precision / 1000.0))
+ON CONFLICT (event_seq) DO UPDATE SET
+  call_id = excluded.call_id,
+  status = excluded.status,
+  output_text = excluded.output_text,
+  error_text = excluded.error_text
+arguments
+INSERT INTO tool_calls (event_seq, call_id, tool_name, status, arguments_json, created_at)
+VALUES ($1, $2, $3, 'started', $4, to_timestamp($5::double precision / 1000.0))
+ON CONFLICT (call_id) DO UPDATE SET
+  event_seq = excluded.event_seq,
+  tool_name = excluded.tool_name,
+  status = excluded.status,
+  arguments_json = excluded.arguments_json
+
+INSERT INTO chat_event_derived_write_backlog (event_seq, resources_json)
+VALUES ($1, $2)
+ON CONFLICT (event_seq) DO UPDATE SET
+  resources_json = excluded.resources_json,
+  updated_at = now()
+
+UPDATE events
+SET display_text_ready = $2,
+    reply_target_message_id = $3,
+    payload_json = $4
+WHERE event_seq = $1
+UPDATE chat_private.peer_conversations SET requester_chat_id = NULL
+         WHERE conversation_id = $1 AND requester_revision = $2
+           AND requester_chat_id = $3 AND NOT requester_unavailable
+           AND chat_id = $5
+           AND EXISTS (SELECT 1 FROM agent.agents
+                       WHERE id = $4 AND session_id = $3)peer handoff disagrees with its asking-chat claimpeer handoff requester changed before admissionSELECT session_id, COALESCE(prompt_floor_seq, -1) AS prompt_floor_seq,
+                kind = 'root' AND parent_agent_id IS NULL
+                AND ephemeral IS DISTINCT FROM TRUE
+                AND status NOT IN ('shutdown', 'not_found') AS eligible
+         FROM agent.agents WHERE agent_id = $1 FOR UPDATEstartup_root_changedSELECT EXISTS(SELECT 1 FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND accepted_ordinal < $2)startup mailbox promotion cannot overtake an earlier accepted inputselect submission_id, submission_json from agent.message_mailbox
+                 where agent_id = $1 and state in ('completed', 'aborted', 'invalid')
+                   and (submission_id = $2 or strpos(submission_json, $3) > 0)
+                 for updateselect submission_id, submission_json from agent.message_mailbox
+                 where agent_id = $1 and submission_id = $2
+                   and state in ('completed', 'aborted', 'invalid') for updateupdate agent.message_mailbox m set submission_json = cleared.payload
+             from unnest($2::text[], $3::text[]) as cleared(submission_id, payload)
+             where m.agent_id = $1 and m.submission_id = cleared.submission_id
+SELECT accepted_ordinal, submission_json FROM agent.message_mailbox
+WHERE agent_id = $1 AND state = 'accepted'
+  AND accepted_ordinal < $2 AND accepted_ordinal > $3
+ORDER BY accepted_ordinal LIMIT 128
+
+SELECT payload_json
+FROM agent.runtime_restart_checkpoints
+WHERE agent_id = $1
+FOR UPDATE
+message mailbox attachment cannot overtake an older priority peer
+INSERT INTO agent.runtime_restart_checkpoints (
+  agent_id, mode, recovery_class, recovery_owner_id, execution_config_json,
+  payload_json, created_at, updated_at
+) SELECT $1, $2, $3, $4, $5, $6, $7, $7
+WHERE EXISTS (
+  SELECT 1
+  FROM agent.agents
+  WHERE agent_id = $1
+    AND status NOT IN ('shutdown', 'not_found')
+)
+ON CONFLICT (agent_id) DO NOTHING
+SELECT EXISTS (SELECT 1 FROM agent.agents WHERE agent_id = $1 AND status NOT IN ('shutdown', 'not_found'))conversation epoch
+INSERT INTO agent.message_mailbox (
+  submission_id, agent_id, conversation_epoch, submission_kind,
+  routing_scope, state, checkpoint_custody, stream_owner_message_id,
+  submission_json, transcript_event_seq, attached_at
+) VALUES (
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+  CASE WHEN $6 = 'attached' THEN now() ELSE NULL END
+)
+ON CONFLICT (submission_id) DO NOTHING
+RETURNING accepted_ordinal, accepted_at
+startup mailbox promotion requires its previously accepted input
+SELECT agent_id, conversation_epoch, submission_kind, routing_scope,
+       state, stream_owner_message_id, submission_json,
+       transcript_event_seq, accepted_ordinal, accepted_at
+FROM agent.message_mailbox
+WHERE submission_id = $1
+FOR UPDATE
+update chat.message_bindings set admitted_at = coalesce(admitted_at, now())
+                    where jarvis_message_id = $1 and chat_id = $2 and binding_epoch = $3 and transport = $4binding epochconversation_epochsubmission_kindrouting_scope
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = $5,
+    stream_owner_message_id = $2,
+    submission_json = $3,
+    transcript_event_seq = coalesce($4, transcript_event_seq),
+    attached_at = now()
+WHERE submission_id = $1
+  AND state = 'accepted'
+  AND stream_owner_message_id IS NULL
+mailbox stream ownerselect a.account_id from chat_private.accounts a
+             join chat_private.binding_authorizations b on b.provider = a.provider and b.account_id = a.account_id
+             where b.provider = $1 and b.binding_id = $2
+               and a.connection_id = $3 and not a.revoked for share of adirect input has no captured binding epochaccount_retiredselect connection_id, generation, transport_json, delivery_target
+             from chat_private.binding_authorizations
+             where provider = $1 and binding_id = $2 and chat_id = $3
+               and account_id = $4 and external_kind = 'direct' and participation = 'active'
+             for shareaccount_authorization_retiredtransport_jsontransport_authorization_absentconnection_iddelivery_targetselect epoch from chat_private.bindings
+         where chat_id = $1 and provider = $2 and not revoked for sharetransport_authorization_changedbinding_retiredselect submission_id,submission_json,(extract(epoch from accepted_at)*1000)::bigint from agent.message_mailbox where agent_id=$1 and submission_id=any($2) order by accepted_ordinalselect submission_id from agent.message_mailbox where agent_id=$1 and submission_kind='user' order by accepted_ordinal desc limit 1select request_id,created_at_ms from agent.chat_worker_requests where chat_id=$1 and generation=$2 and worker_agent_id=$3 and instruction='' and state<>'cancelled' and coalesce(result_json,'') not like $4 order by created_at_ms desc,request_id desc limit 1select submission_id,submission_json,accepted_ordinal from agent.message_mailbox
+         where agent_id=$1 and submission_kind='user'
+         and accepted_ordinal >= (select accepted_ordinal from agent.message_mailbox where agent_id=$1 and submission_id=$2)
+         order by accepted_ordinal limit $3select submission_id from agent.message_mailbox where agent_id=$1 and submission_id=any($2) order by submission_id for shareSELECT pg_advisory_xact_lock(hashtextextended('activity-monitor-root-carrier:' || $1, 0))
+WITH lineage(message_id) AS (
+    SELECT $1::text
+    UNION
+    SELECT user_message_id
+    FROM activity_monitor_carrier_user_messages
+    WHERE carrier_message_id = $1
+      AND (root_agent_id IS NULL OR root_agent_id = $2)
+    UNION
+    SELECT $3::text
+    WHERE $3 IS NOT NULL AND $4
+)
+INSERT INTO activity_monitor_message_threads (
+    message_id, activity_thread_id, created_at, updated_at
+)
+SELECT message_id, $5, $6, $6
+FROM lineage
+ON CONFLICT(message_id) DO UPDATE SET
+    activity_thread_id = excluded.activity_thread_id,
+    updated_at = excluded.updated_at
+WHERE activity_monitor_message_threads.activity_thread_id
+    IS DISTINCT FROM excluded.activity_thread_id
+
+SELECT activity_thread_id
+FROM activity_monitor_message_threads
+WHERE message_id = $1
+LIMIT 1
+
+INSERT INTO activity_monitor_agent_threads (agent_id, activity_thread_id, created_at, updated_at)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT(agent_id) DO UPDATE SET
+    activity_thread_id = excluded.activity_thread_id,
+    updated_at = excluded.updated_at
+WHERE activity_monitor_agent_threads.activity_thread_id IS DISTINCT FROM excluded.activity_thread_id
+activity_monitor_list_assigned_agentsactivity_monitor_upsert_activity_thread_actionactivity_monitor_list_thread_actionsactivity_monitor_action_by_idactivity_monitor_list_recent_thread_actionsactivity_monitor_carrier_user_messages
+INSERT INTO activity_monitor_message_threads (message_id, activity_thread_id, created_at, updated_at)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT(message_id) DO UPDATE SET
+    activity_thread_id = excluded.activity_thread_id,
+    updated_at = excluded.updated_at
+WHERE activity_monitor_message_threads.activity_thread_id IS DISTINCT FROM excluded.activity_thread_id
+activity_monitor_message_thread_lookupactivity_monitor_runtime_work_ids_for_threadactivity_monitor_read_threadactivity_monitor_finish_activity_threadactivity_monitor_resolve_active_agent_threadactivity_monitor_reactivate_finished_threadfailed to reactivate finished activity threadtoo many group attachment snapshotsinvalid group attachment snapshot referenceinvalid group attachment MIME typeduplicate group attachment snapshot referencegroup attachment snapshots exceed limitcompany conversation result return route missingThe conversation reached its message limit and is paused. No further messages will be sent. The conversation card shows the recorded messages.pausedcompany_conversation_idcompany conversation result authority changedThe conversation was ended. Review the recorded replies for any confirmed outcomes before it ended.The conversation stopped with an unknown delivery outcome. No uncertain message was replayed; the transcript keeps every recorded reply.Sending to the company failed, so the conversation stopped. The failed message did not reach the company. Review earlier replies for any confirmed outcomes.The conversation stopped. The transcript has its recorded messages and final status; this alone does not confirm an order or booking.conversation has not finishedconversation activity settlement unavailablecompany transcript revision is staleconversation activity projection unavailableA queued message in this conversation was not sent. Do not resend it from the old task. Read the current conversation and report the confirmed outcome and anything left unresolved. Before trying again, ask the owner to renew the request, then create a new saved send for review. This notice grants no permission to send or approve a business action.
+company task owner input is no longer availablemdtranscript file notification unavailableidle company conversation close failedThe company sent new messages in this conversation after your report. Read them with `mailbox.read_messages`, continue within your brief if they need an answer, and finish again with `company_conversation.finish`, reporting what is new.
