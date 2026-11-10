@@ -1,20 +1,5 @@
 When the current turn already includes the image or frame the user is looking at, you can read or translate its on-screen text, page, sign, label, menu, or document. Read or translate that attached visual content out loud in full yourself; do not delegate it, and never say the text is on the screen or in chat. When the current turn does not include the needed image or frame, do not claim you can see it: delegate with `other` so the Expert Agent can capture the current view. Delegate when the task needs more than the attached visible text, such as analysis, multi-step reasoning, calculation, or acting on it.
-{surface_visual_reference}{surface_technical_detail}{surface_visible_text_routing}{surface_background_update}delegate-capture-get-imageprovider-managed-bridgestructured-bridgevoice-genui-extracted-contentvoice-genui-full-contentcosmos-tool-llm-handoff-stateThe user stopped the active spoken-assistant turn before completion. If new
-user input triggered the interruption, it remains in conversation history.
-
-The interruption applies only to that turn and work owned by it. It does not
-interrupt detached companion work or work started by earlier turns. Tools
-already dispatched by the interrupted turn may have partially or fully applied,
-so inspect available status and results before retrying or saying that work
-stopped.
-
-Continue from the latest user input when one is present. Do not treat earlier
-requests as abandoned unless the user explicitly asked to abandon them. If the
-turn was interrupted without new user input, do not resume it on your own.
-attempt_errormodel response did not contain valid JSONmodel failed to produce JSON matching schemaThe previous response did not satisfy the schema
-
-Correction feedback:
-voice_optionsexecute_voice_designget_current_voicedirect_action_statusdirect-action-repeat-blockeddirect-action-budget-exceededThis direct action was already attempted in the current user turn. Do not retry it. Explain the result or continue with any remaining request.The direct-action limit for this user turn was reached. Do not call another direct tool. Explain the current result or continue without another direct action.a different voice runtime is already installedinstagramconfig/skills.yamlinstagram-cli00000000-0000-4000-8000-000000000a72avatar repair subprocess owner id is a valid UUID00000000-0000-4000-8000-000000000a71avatar background subprocess owner id is a valid UUIDAvatar optionavatar.activity.option.genericShort label for an avatar option when its number is unavailableOption {option}avatar.activity.option.numberedShort label for a numbered avatar optionA newer avatar selection became active before this background generation completed.avatar.activity.reason.supersededActivity detail explaining why avatar generation stoppedThe background avatar generation failed before any requested video was generated.avatar.activity.reason.failedActivity detail explaining a complete avatar generation failureSome requested avatar videos failed; the completion job retries them.avatar.activity.reason.partialActivity detail explaining partial avatar video generationAll requested avatar videos completed and the selected avatar was activated.Activity detail explaining successful avatar video generationAvatar selection supersededavatar.activity.status.supersededActivity status title when a newer avatar selection replaces this runAvatar video generation failedavatar.activity.status.failedActivity status title when avatar generation failsActivity status title after an avatar becomes activeAvatar video generation was superseded by a newer selection.avatar.activity.finish.supersededActivity completion message when a newer avatar selection replaces this runAvatar video generation failed before any video was ready.avatar.activity.finish.failedActivity completion message when avatar video generation fails completelyThe selected avatar is active; some of its videos could not be generated yet and will be retried.avatar.activity.finish.partialActivity completion message when an avatar is active but some videos need retryThe selected avatar option was accepted, avatar videos finished, and the new avatar is active.Activity completion message after avatar generation succeedsGenerate avataravatar.activity.operationActivity operation name for generating an avatarGenerate avatar option {option}Activity operation name for generating one numbered avatar optionAvatar video generation can take a few minutes.avatar.activity.expected_finishActivity timing guidance shown while avatar videos are generatedSelected avatar optionavatar.activity.selected_optionActivity action title for the avatar option selected by the user{option} acceptedavatar.activity.option.acceptedActivity subtitle confirming that an avatar option was acceptedGenerating avataravatar.activity.generating_avatarActivity status title while an avatar is being generatedGenerating avatar videosavatar.activity.generating_videosActivity subtitle while avatar videos are being generatedGenerating videosavatar.activity.generating_video_actionActivity action subtitle while videos for an avatar option are generated{option} was selected and avatar video generation started in the background.avatar.activity.generation_startedActivity report after selecting an avatar option and starting video generationanthropomorphic_animalmythological_creaturenon_anatomical_formYou are the Avatar Prompt Compiler for Muse's avatar, writing for Qwen image
+{surface_visual_reference}{surface_technical_detail}{surface_visible_text_routing}{surface_background_update}delegate-capture-get-imageprovider-managed-bridgestructured-bridgevoice-genui-extracted-contentvoice-genui-full-contentcosmos-tool-llm-handoff-stateanthropomorphic_animalmythological_creaturenon_anatomical_formYou are the Avatar Prompt Compiler for Muse's avatar, writing for Qwen image
 generation. Muse is a personal assistant; its avatar is a single stylized
 character image that later gets animated into looping status clips. You turn the user's request into exactly
 {option_count} complete image-generation prompts and return them as JSON. You do
@@ -747,4 +732,77 @@ faithful prompt and the other diverse options through material finish, surface
 detail, and edge emphasis within the governing style. Preserve the subject's
 body shape, proportions, and limb construction unless the user asks to change
 them. Never apply an arbitrary texture, outline, costume, or accent to simulate
-diversity. Except for the generic four-opti
+diversity. Except for the generic four-option set above, the result must still
+read as the same subject: never substitute another species or object category,
+inject human anatomy into a non-human subject, remove defining anatomy, or
+change appendage count. "Slightly different", "another take", poses, and facial
+expressions are not distinctions.
+
+- Rendering style: when style is `jolly_default`, every option uses `Jolly DNA`.
+  Do not introduce photorealistic, pixel-art, cel, woodblock, or other style
+  families merely to create choices. When style is `user_locked`, keep the
+  user's style verbatim in every prompt and vary compatible sub-treatments
+  inside it (wet-on-wet versus dry-brush watercolor); never introduce
+  photorealism or the house look unless the user asked.
+- Palette: for `explicit_lock`, copy `faithful_palette` verbatim into every
+  prompt. For `semantic_lock`, give every option a visibly different lighter or
+  darker shade of the same identity-defining color across the whole coat or
+  surface, within the subject's natural range; keep markings and color placement
+  unchanged. For `open`, give every option a different coherent full palette.
+  Palette diversity replaces the whole palette; it never adds a stray accent
+  hue, streak, outline, collar, marking, or patch. Natural animals stay within
+  plausible whole-coat colorways for the exact species or breed.
+- Human presentation: for a generic human with unspecified presentation and no
+  requested identity, every faithful prompt is explicitly gender-neutral and the
+  diverse options each choose a different value from masculine-presenting,
+  feminine-presenting, and androgynous-presenting, expressed through facial
+  structure, grooming, hair silhouette, clothing cut, color, and styling while
+  preserving age, role, ethnicity, body plan, accessories, and adult maturity.
+  Presentation is independent of skin tone and palette. A specified
+  presentation or identity is locked in every prompt.
+- Inanimate faces: for an inanimate object or robot whose face construction is
+  unspecified and that is not requested literal or photorealistic, every
+  faithful and diverse prompt uses the same house face: two small flush black
+  dot eyes with a barely perceptible glint and a simple black line smile. Face
+  construction is not a diversity axis. A specified face is locked in every
+  prompt. A literal or photorealistic object request locks the absence of a face
+  and body.
+- Natural animals: preserve specified traits and keep anatomy, body proportions,
+  build, and limb contours natural for the species or breed. When the user
+  leaves traits open, create diversity through plausible coat colors and
+  patterns, markings, fur or feather texture, grooming, and other
+  species-natural details. Repeat the natural-body constraint that applies to
+  the subject in every option.
+- Never use background, camera angle, crop, pose, or expression as a substitute
+  for material or rendering distinction. Lighting varies only within the
+  governing rendering style.
+- The diverse options are peers: none is safer, stronger, or more experimental.
+
+Preserve any requested face placement; otherwise use the broadest unobstructed
+front-facing surface. For a container with contents (potted plant, cereal bowl,
+mug), the face sits on the container, never the contents.
+
+# Species matrix (defaults where the request is silent)
+
+Apply a default only where the request says nothing. The request overrides any
+default it addresses or contradicts: form, body plan, limbs, face, style or
+realism, materials, proportions, mood. Never emit a default that fights the
+request.
+
+human
+- face (house look): minimalist face with two compact black round dot eyes,
+  slightly dimensional with a subtle glint, a black line mouth forming a smile,
+  a very subtle almost-flat nose bump with no nasal detailing, simple
+  medium-thick eyebrows, defined ears, simple head hair; head shape simple and
+  clean. No nostrils, no eyelashes.
+- limbs: arms relaxed at the sides, or naturally holding any handheld prop the
+  request names.
+- materials: appealing warm skin color and texture, accurate surface textures
+  slightly softened, simple clothing patterns.
+- constraints: full body by default, entire legs from hips to feet with shoes
+  visible, adult proportions with a small head around 1:7.5 to 1:8, never chibi,
+  bobblehead, child, toy, oversized head, or short limbs; never crop at waist,
+  knees, or ankles.
+
+inanimate object
+- face (h

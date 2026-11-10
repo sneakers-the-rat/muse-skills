@@ -1,0 +1,148 @@
+select p.* from agent.connection_participants p
+                join agent.connections c using(connection_id)
+                where p.connection_id=$1 and c.active and p.audience=c.audience
+                order by p.kind,p.display_name,p.participant_idSELECT goal_id, connection_id, requested_at_ms, content_locale
+                     FROM goals.connection_closures ORDER BY requested_at_ms, goal_id LIMIT $1SELECT EXISTS (SELECT 1 FROM goals.connection_closures)update self_improvement.connector_sync_accounts set cursor = $1,
+                revision = revision + 1, updated_at = $2 where connector = $3 and account_id = $4
+                and generation = $5 and revision = $6insert into self_improvement.connector_sync_observations as existing
+                        (event_id, connector, account_id, generation, source_id, source_at, evidence, state, observed_at, expires_at)
+                        values ($1,$2,$3,$4,$5,$6,$7,'pending',$8,$9)
+                        on conflict (event_id) do update
+                        set expires_at = greatest(existing.expires_at, excluded.expires_at)
+                        where existing.state in ('pending', 'deferred', 'deferred_flight')update self_improvement.connector_sync_observations set state = 'deleted', evidence = '{}'
+                        where connector = $1 and account_id = $2 and generation = $3 and source_id = $4 returning event_idupdate self_improvement.follow_up_queue set state = 'cancelled',
+                            disposition_reason = 'connector_source_deleted', terminal_at = now(), updated_at = now()
+                            where follow_up_id = $1 and state = 'pending'SELECT bool_and(coalesce(i.indisvalid, false)) FROM unnest($1::text[]) AS n(name)
+                 LEFT JOIN pg_index i ON i.indexrelid=to_regclass(n.name)SELECT pg_try_advisory_lock(hashtext('hatch.connection_grounding_index'))SET lock_timeout='5s'SET statement_timeout='10min'SELECT indisvalid FROM pg_index WHERE indexrelid=to_regclass($1)BEGIN ISOLATION LEVEL READ COMMITTED; SET LOCAL statement_timeout = '250ms'SELECT pg_try_advisory_xact_lock(hashtextextended($1, 0))agent.volatile_context_pins.lifecycle
+DELETE FROM agent.volatile_context_pin_bodies AS body
+WHERE body.body_hash = ANY($1::bytea[])
+  AND NOT EXISTS (
+      SELECT 1 FROM agent.volatile_context_pins AS pin
+      WHERE pin.body_hash = body.body_hash
+  )
+SELECT body_hash FROM agent.volatile_context_pin_bodies ORDER BY body_hash LIMIT $1SELECT body_hash FROM agent.volatile_context_pin_bodies WHERE body_hash > $1 ORDER BY body_hash LIMIT $2BEGIN READ ONLY; SET LOCAL statement_timeout = '250ms'; SET LOCAL lock_timeout = '50ms'SELECT agent_id, variant_hash, CASE WHEN variant_hash <> 'handoff_policy' THEN octet_length(body)::bigint END AS inline_bytes FROM agent.volatile_context_pins WHERE (agent_id, variant_hash) > ($1, $2) ORDER BY agent_id, variant_hash LIMIT $3SELECT pg_total_relation_size('agent.volatile_context_pin_bodies')en-UStransaction.acquire_and_beginregistry_lockselect id, domains from context.subscriptions where subscription_key = $1 for updatesubscription.lookup_for_updatedomainssources.enroll_previousinsert into context.subscriptions (id, subscription_key, domains) values ($1,$2,$3)subscription.insertupdate context.group_cursors g set lease_token=null, lease_expires_at=null, evidence_expires_at=null,
+                        window_position=null, batch_position=null, retry_at=null,
+                        available_position=coalesce((select max(e.append_position) from context.events e
+                          where e.source_id=g.source_id and e.group_id=g.group_id
+                          and e.append_position>g.acknowledged_position and e.append_position<=g.available_position
+                          and (e.expires_at is null or e.expires_at>statement_timestamp())
+                          and ($2 or e.content_hints && $3::text[])),g.acknowledged_position)
+                        where subscription_id=$1hints.reconcile_leasestransaction.commitsources.enroll_desiredupdate context.subscription_sources ss set active = ($2 or s.source_domain = any($3))
+                from context.sources s where ss.subscription_id = $1 and s.id = ss.source_idupdate context.group_cursors g set lease_token = null, lease_expires_at = null, evidence_expires_at = null
+                from context.subscription_sources ss where g.subscription_id = $1
+                and ss.subscription_id = g.subscription_id and ss.source_id = g.source_id and not ss.activeleases.invalidate_removedupdate context.subscriptions set domains = $2, updated_at = now() where id = $1 and domains <> $2coverage.update
+JOIN LATERAL (
+  SELECT MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/kind') AS kind,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/action') AS action,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/handoff_message_id') AS handoff_message_id,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/handoff_source') AS handoff_source,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/submission_message_id') AS submission_message_id,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/submission_source') AS submission_source,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/assistant_message_id') AS assistant_message_id
+  FROM runtime.event_payload_fields AS f
+  WHERE f.event_seq = e.event_seq AND f.field_path IN (
+    '/metadata/kind', '/metadata/action', '/metadata/handoff_message_id',
+    '/metadata/handoff_source', '/metadata/submission_message_id', '/metadata/submission_source',
+    '/metadata/assistant_message_id'
+  )
+) AS metadata ON true
+completedfailedinterruptedfollow_up_settlementnothing_to_doabortedphone live transcript observation unavailablewith candidates as (
+                       select work_id,
+                              state as prior_state,
+                              lease_owner as prior_lease_owner,
+                              heartbeat_at as prior_heartbeat_at,
+                              deadline_at as prior_deadline_at,
+                              (metadata_json::jsonb)->>'schedule_reason'
+                                as prior_schedule_reason,
+                              (metadata_json::jsonb)->>'maintenance_occurrence'
+                                as occurrence,
+                              (metadata_json::jsonb)->>'maintenance_attempt'
+                                as attempt,
+                              coalesce(
+                                (metadata_json::jsonb)->>'schedule_reason',
+                                ''
+                              ) = $5::text as recovery_phase_already_assigned
+                       from runtime.work_items
+                       where work_class = 'maintenance_job'
+                         and terminalized_at is null
+                         and (metadata_json::jsonb)->>'maintenance_kind' = $1
+                         and ($10::text is null or work_id > $10::text)
+                         and (
+                           (
+                             state = 'queued'
+                             and (deadline_at is null or deadline_at <= now())
+                           )
+                           or (
+                             state = 'running'
+                             and (lease_owner is null or lease_owner <> $2)
+                           )
+                         )
+                       order by work_id
+                       limit $9
+                       for update
+                     ),
+                     updated as (
+                       update runtime.work_items work
+                       set lease_owner = null,
+                           state = 'queued',
+                           deadline_at = case
+                             when candidates.recovery_phase_already_assigned
+                               then work.deadline_at
+                             else $3::timestamptz
+                           end,
+                           updated_at = now(),
+                           metadata_json = case
+                             when candidates.recovery_phase_already_assigned
+                               then work.metadata_json
+                             else (
+                               work.metadata_json::jsonb || jsonb_build_object(
+                                 'schedule_policy', $4::text,
+                                 'schedule_reason', $5::text,
+                                 'cadence_secs', $6::bigint,
+                                 'jitter_offset_secs', $7::bigint,
+                                 'jitter_window_secs', $8::bigint
+                               )
+                             )::text
+                           end
+                       from candidates
+                       where work.work_id = candidates.work_id
+                       returning work.work_id, work.request_id, work.request_origin,
+                                 work.deadline_at, $1::text as maintenance_kind,
+                                 candidates.occurrence,
+                                 candidates.attempt, candidates.prior_state,
+                                 candidates.prior_lease_owner,
+                                 candidates.prior_heartbeat_at,
+                                 candidates.prior_deadline_at,
+                                 candidates.prior_schedule_reason,
+                                 not candidates.recovery_phase_already_assigned
+                                   as recovery_phase_assigned
+                     )
+                     select * from updated order by work_idbackground_sync_disabledselect domains from context.subscriptions where id = $1 for updateupdate context.subscriptions set last_polled_at = clock_timestamp() where id = $1select g.source_id, g.group_id, g.acknowledged_position,
+              coalesce(g.window_position, g.available_position) as through_position, ss.start_position
+            from context.group_cursors g join context.subscription_sources ss
+              on ss.subscription_id = g.subscription_id and ss.source_id = g.source_id
+            join context.sources s on s.id = g.source_id
+            where g.subscription_id = $1 and ss.active and g.acknowledged_position < g.available_position
+              and not (s.source_domain = any($2))
+              and (g.lease_expires_at is null or g.lease_expires_at <= clock_timestamp())
+              and (g.retry_at is null or g.retry_at <= clock_timestamp())
+            order by g.last_pulled_at nulls first, g.source_id, g.group_id limit 1 for update of gacknowledged_positionstart_positione.id, e.dedupe_key as key, e.group_key, e.payload_kind, e.content_hints,
+     e.occurred_at, e.ingested_at, e.ttl_secondsappend_positionupdate context.group_cursors set acknowledged_position = $4,
+                window_position = null, batch_position = null, lease_token = null,
+                lease_expires_at = null, evidence_expires_at = null, retry_at = null, last_error = null,
+                last_pulled_at = clock_timestamp()
+                where subscription_id = $1 and source_id = $2 and group_id = $3select exists(select 1 from context.group_cursors g
+                join context.subscription_sources ss on ss.subscription_id = g.subscription_id and ss.source_id = g.source_id
+                join context.sources s on s.id = g.source_id
+                where g.subscription_id = $1 and ss.active and g.acknowledged_position < g.available_position
+                and not (s.source_domain = any($2)))select id, source_domain, source_key as key, display_name, created_at::text as created_at
+            from context.sources where id = $1update context.group_cursors set window_position = $4, batch_position = $5,
+            lease_token = $6, lease_expires_at = least(clock_timestamp() + $7 * interval '1 second', $8::timestamptz), evidence_expires_at = $8, last_pulled_at = clock_timestamp(), retry_at = null
+            where subscription_id = $1 and source_id = $2 and group_id = $3 returning lease_expires_atmissing conditional maintenance schedule stateprivacy_identifier_eventrelationships.chat_lookupfailuredispositionreconsider_atcandidateheld_at`DateTime + TimeDelta` overflowedcandidate_id
