@@ -1,0 +1,22 @@
+update spaces.spaces as space
+                             set content_share_allowed = false,
+                                 content_share_review_sha256 = $3
+                             from (select space_slug,
+                                          content_share_allowed as allowed,
+                                          content_share_review_sha256 as review_key
+                                   from spaces.spaces
+                                   where space_slug = $1
+                                     and source = 'local'
+                                     and current_build_id = $2
+                                   for update) as prior
+                             where space.space_slug = prior.space_slug
+                               and space.source = 'local'
+                               and space.current_build_id = $2
+                               and ($4
+                                    or prior.allowed is distinct from false
+                                    or starts_with(coalesce(prior.review_key, ''), $5))
+                             returning space.space_id::text,
+                                       not (prior.allowed is not distinct from false
+                                            and (starts_with(coalesce(prior.review_key, ''), $5)
+                                                 or not $4)),
+                                       space.has_server_actions

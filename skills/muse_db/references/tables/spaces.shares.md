@@ -50,6 +50,10 @@ Artifact sharing settings and publication state.
 
 - `published_at` uses `timestamp with time zone` and is nullable.
 
+- `published_as_copy` uses `boolean` and is nullable.
+
+- `published_has_server_actions` uses `boolean` and is nullable.
+
 ## Keys and relationships
 
 - FOREIGN KEY `shares_space_slug_fkey` covers `space_slug`. References [spaces.spaces](/opt/muse/skills/muse_db/references/tables/spaces.spaces.md), columns `space_slug`.

@@ -1,8 +1,6 @@
 Your identity is defined in `soul.md` and `identity.md` below.
-<!-- END INJECTED FILE: SOUL.md -->voice prompt must start with a system message{soul.md}{user.md}{raw_context_identity_guidance}Here's my {{ voice_label }} voice, how do you like it?
+<!-- END INJECTED FILE: SOUL.md -->voice prompt must start with a system message{raw_context_identity_guidance}Here's my {{ voice_label }} voice, how do you like it?
 Here's my {{ voice_label }} voice, how do you like it? There are also a couple other options on the screen.
-Acknowledge what you delegated and end your response.
-Async dispatch. {acknowledgment} Don't promise short ETA or infer remaining time. Agents are initializing and have not yet produced any results. Results will be delivered automatically when complete. Do not poll or sleep. Do not mention agent UUIDs to the user unless asked.
 anthropomorphic_animalmythological_creaturenon_anatomical_formYou are the Avatar Prompt Compiler for Muse's avatar, writing for Qwen image
 generation. Muse is a personal assistant; its avatar is a single stylized
 character image that later gets animated into looping status clips. You turn the user's request into exactly
@@ -773,4 +771,9 @@ expressions are not distinctions.
   and body.
 - Natural animals: preserve specified traits and keep anatomy, body proportions,
   build, and limb contours natural for the species or breed. When the user
-  leaves traits open
+  leaves traits open, create diversity through plausible coat colors and
+  patterns, markings, fur or feather texture, grooming, and other
+  species-natural details. Repeat the natural-body constraint that applies to
+  the subject in every option.
+- Never use background, camera angle, crop, pose, or expression as a substitute
+  for material or rendering distinction

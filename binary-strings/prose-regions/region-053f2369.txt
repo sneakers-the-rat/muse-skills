@@ -1,0 +1,95 @@
+feed_idea_unitidea slot: budget store unavailable; skippingidea slot: budget read failed; skippingidea slot: prompt read failed; centroid uses the unfiltered windowidea slot: too few units since the prompt changed; centroid uses the unfiltered windowidea slot: centroid built from units published since the prompt changedidea slot: fresh centroid read failed; falling back to the unfiltered windowidea slot: centroid read failedfeed_unitidea slot: anchor no-repeat read failedidea slot: candidate lookup failedidea slot: dogfood visibility read failedidea slot: onboarding-only read failedidea slot: dropped candidates too far behind the newest Ideas contextidea slot: near-duplicate memory read failedidea slot: dropped candidates restating a recent suggestionidea slot: dropped candidates with no claim on this paperidea slot: prompt declares no subject; ranking on memory affinityidea slot: memory affinity read failed; ranking without itidea slot: shortlisted candidates for the seatidea slot: newest unit read failed; skippingself_improvement.ideasgenerated_cardidea slot: card freshness read failedidea slot: Ideas context database failedidea slot: latest Ideas context read failedidea slot: prompt embed failedidea slot: prompt embed task failedinsert into agent.chat_worker_requests (request_id,chat_id,generation,worker_agent_id,owner_chat_id,owner_agent_id,origin_json,instruction,created_at_ms,state,result_json,result_submission_id) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) on conflict(request_id) do nothingselect * from agent.chat_worker_requests where request_id=$1 for updatechat worker request identity collision~/USER.md~/IDENTITY.mdconnection source requiredDELETE FROM meta_ai.media WHERE conversation_id = ANY($1)DELETE FROM meta_ai.messages WHERE conversation_id = ANY($1)DELETE FROM meta_ai.conversations WHERE conversation_id = ANY($1)SELECT generation, applied_purged_before_ms FROM meta_ai.sync_state WHERE singleton FOR UPDATEUPDATE meta_ai.sync_state SET applied_deletion_seq = greatest(applied_deletion_seq, $1), updated_at = now() WHERE singletonSELECT message_id, media_index, media_key, cache_state FROM meta_ai.media WHERE conversation_id = $1
+INSERT INTO meta_ai.media AS x (
+  conversation_id, message_id, media_index, generation, media_key, kind, origin, mime_type,
+  byte_size, file_name, caption, cache_state
+)
+SELECT $1, r.message_id, r.media_index, $2, r.media_key, r.kind, r.origin, r.mime_type,
+       r.byte_size, r.file_name, r.caption, 'none'
+FROM unnest($3::text[], $4::integer[], $5::text[], $6::text[], $7::text[], $8::text[],
+            $9::bigint[], $10::text[], $11::text[])
+  AS r(message_id, media_index, media_key, kind, origin, mime_type, byte_size, file_name,
+       caption)
+ON CONFLICT (conversation_id, message_id, media_index) DO UPDATE SET
+  generation = excluded.generation,
+  media_key = excluded.media_key,
+  kind = excluded.kind,
+  origin = excluded.origin,
+  mime_type = excluded.mime_type,
+  byte_size = excluded.byte_size,
+  file_name = excluded.file_name,
+  caption = excluded.caption,
+  cache_state = CASE WHEN x.media_key = excluded.media_key OR x.cache_state = 'blocked'
+                     THEN x.cache_state ELSE 'none' END,
+  fetch_failures = CASE WHEN x.media_key = excluded.media_key THEN x.fetch_failures ELSE 0 END,
+  last_fetch_error = CASE WHEN x.media_key = excluded.media_key THEN x.last_fetch_error END,
+  retry_not_before = CASE WHEN x.media_key = excluded.media_key THEN x.retry_not_before END
+WHERE (x.generation, x.media_key, x.kind, x.origin, x.mime_type, x.byte_size, x.file_name,
+       x.caption)
+  IS DISTINCT FROM
+      (excluded.generation, excluded.media_key, excluded.kind, excluded.origin,
+       excluded.mime_type, excluded.byte_size, excluded.file_name, excluded.caption)
+
+INSERT INTO meta_ai.messages AS m (
+  conversation_id, message_id, generation, ordinal, role, sent_at, body, text_truncated,
+  search_vector, media_omitted
+)
+SELECT $1, r.message_id, $2, r.ordinal, r.role, r.sent_at, r.body, r.text_truncated,
+       to_tsvector('simple', r.vector_text), r.media_omitted
+FROM unnest($3::text[], $4::integer[], $5::text[], $6::timestamptz[], $7::text[],
+            $8::boolean[], $9::text[], $10::integer[])
+  AS r(message_id, ordinal, role, sent_at, body, text_truncated, vector_text, media_omitted)
+ON CONFLICT (conversation_id, message_id) DO UPDATE SET
+  generation = excluded.generation,
+  ordinal = excluded.ordinal,
+  role = excluded.role,
+  sent_at = excluded.sent_at,
+  body = excluded.body,
+  text_truncated = excluded.text_truncated,
+  search_vector = excluded.search_vector,
+  media_omitted = excluded.media_omitted
+WHERE (m.generation, m.ordinal, m.role, m.sent_at, m.body, m.text_truncated, m.media_omitted)
+  IS DISTINCT FROM
+      (excluded.generation, excluded.ordinal, excluded.role, excluded.sent_at, excluded.body,
+       excluded.text_truncated, excluded.media_omitted)
+SELECT EXISTS (SELECT 1 FROM meta_ai.tombstones WHERE conversation_id = $1)DELETE FROM meta_ai.media x USING unnest($2::text[], $3::integer[]) AS d(message_id, media_index) WHERE x.conversation_id = $1 AND x.message_id = d.message_id AND x.media_index = d.media_index
+INSERT INTO meta_ai.conversations AS c (
+  conversation_id, generation, title, created_at, last_activity_at, change_token_ms,
+  message_count, text_bytes, messages_truncated, needs_refetch_until
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+ON CONFLICT (conversation_id) DO UPDATE SET
+  generation = excluded.generation,
+  title = excluded.title,
+  created_at = excluded.created_at,
+  last_activity_at = excluded.last_activity_at,
+  change_token_ms = excluded.change_token_ms,
+  message_count = excluded.message_count,
+  text_bytes = excluded.text_bytes,
+  messages_truncated = excluded.messages_truncated,
+  needs_refetch_until = greatest(c.needs_refetch_until, excluded.needs_refetch_until),
+  updated_at = now()
+WHERE (c.generation, c.title, c.created_at, c.last_activity_at, c.change_token_ms,
+       c.message_count, c.text_bytes, c.messages_truncated)
+  IS DISTINCT FROM
+      (excluded.generation, excluded.title, excluded.created_at, excluded.last_activity_at,
+       excluded.change_token_ms, excluded.message_count, excluded.text_bytes,
+       excluded.messages_truncated)
+UPDATE meta_ai.conversations SET needs_refetch_until = $2 WHERE conversation_id = $1 AND $2 > coalesce(needs_refetch_until, '-infinity'::timestamptz)WITH requested AS (
+           SELECT * FROM unnest($1::text[], $2::bigint[]) AS r(goal_id, revision)
+         ), locked AS MATERIALIZED (
+           SELECT g.goal_id, g.connection_request_id, g.connection_revision,
+                  g.connection_follow_up_at, r.revision
+           FROM goals.goals g JOIN requested r USING (goal_id)
+           WHERE g.connection_id=$3 AND g.source='assistant_tracking'
+           ORDER BY g.goal_id FOR UPDATE OF g
+         ), claimed AS (
+           UPDATE goals.goals g
+           SET connection_follow_up_at=NULL, connection_request_id=$4,
+               connection_revision=g.connection_revision+1
+           FROM locked l WHERE g.goal_id=l.goal_id
+             AND g.status='active' AND l.connection_revision=l.revision
+             AND l.connection_follow_up_at <= now()
+             AND l.connection_request_id IS DISTINCT FROM $4
+           RETURNING g.goal_id
+         ) SELECT (SELECT count(*) FROM claimed) +
+                  (SELECT count(*) FROM locked WHERE connection_request_id=$4)A follow-up must name work from its conversationTracked work changed before the follow-up was queuedbackground job has an unsupported content localesweep of open step attempts after terminal transition failedobjective state read failed; recurring window uses its first-run lookbackcoalesced_into_existing_incomplete_runtriggerworkflow-skills-v1content_schemawindow_lower_boundenqueuecoalescedleaseactive_runwait_cancelledqueuedobjective_not_registeredcoalesced_into_existing_occurrenceideas_null_state_relevanceideas null-state relevanceen-UShatch-engine/crates/hatch-server/prompts/self_improvement/ideas_null_state_relevance.mdself_improvement/ideas_null_state_relevance.md{{CANDIDATE_CARDS_JSON}}ideas null-state relevance payload failed; treating all relevance as 0ideas null-state relevance attempt failed; retrying with a fresh turnideas null-state relevance declined; treating all relevance as 0failed to read idea build statuses for Ideas tab cardsexplore_defaultfailed to read idea card item selectionsidea_cards.recent_rowsfailed to hydrate idea card tag iconsbundled_new_user.null_stateidea cards feed assembling category rowspreserving pinned eval-fixture Ideas feed; skipping rematerializeskipping Ideas feed rematerialize while limited feed is activefailed to hydrate idea card item badgesfailed to hydrate idea card source metadataapi.idea_cards_materialized_fallback_tailskipping maintenance Ideas feed rematerialize while limited feed is activeIdeas feed already composed for this run; skipping rematerializeidea_cards.snapshot_publishidea cards snapshot publish skipped cards without feed-eligible backing rowsidea cards snapshot publish skipped incomplete row sectionsideas feed composer payload failed; rendering deterministic feedideas feed composer plan acceptedideas feed composer plan decode failed; rendering deterministic feedvector_count_mismatchfailed to load idea grounding facts for diversityclusteredclustered_partialexact_onlyexact_only_partialskipped_unavailableideas semantic fact clusteringOnly Internal announcements accept fallback copyInternal announcement requires public fallback copyinternal_fallback_messageInternal fallback exceeds message limitWWW messages require agent-written deliveryInternal announcement requires delivery instructionsInternalWorker priority is reserved for worker owner noticesInternal priority is reserved for code-owned main-chat deliveriesfollow-up metadata must be a JSON objectfollow-up must expire after it becomes deliverablefollow-up message must not be emptyfollow-up key must not be emptyfollow-up producer must not be emptyhardcoded product campaign producer is retiredpresentation_localeenqueue follow-upfollow_up_queue_deliveryfollow-up enqueued but the delivery worker could not be kickedfailed to read user time file for proactive delivery timezonestripe-linkinspectStripe Link connection inspection failedStripe Link connection status failedconnector_call_reasonmeta_ai_reconcileMeta AI sync attempt not recordedMeta AI enrollment refresh failed; syncing on the confirmed enrollmentmeta_ai_consentMeta AI sync skipped

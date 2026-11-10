@@ -180,8 +180,6 @@
 
 - `invocation_id` resolves in [spaces.action_invocations.invocation_id](/opt/muse/skills/muse_db/references/tables/spaces.action_invocations.md), [spaces.action_results.invocation_id](/opt/muse/skills/muse_db/references/tables/spaces.action_results.md).
 
-- `item_id` resolves in [saved.items.item_id](/opt/muse/skills/muse_db/references/tables/saved.items.md).
-
 - `item_key` resolves in [shell.user_state.item_key](/opt/muse/skills/muse_db/references/tables/shell.user_state.md).
 
 - `jarvis_message_id` resolves in [runtime.messages.message_id](/opt/muse/skills/muse_db/references/tables/runtime.messages.md).

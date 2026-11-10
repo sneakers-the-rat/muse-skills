@@ -55,15 +55,7 @@
 
 - Reuse results already in context and never rerun a successful command with the same arguments in the same task, except to read fresh state after an uncertain write. Rate-limit stops still apply. When a script will process a result, save the first call's output under `~/workspace/` and read that file.
 
-- Use separate `muse.exec` calls for analytics reads and metric-definition lookups. In scripts, check every Instagram call's exit status before processing its output. A failed call is not an empty result.
-
-- Before reporting, explaining or rewriting any Instagram metric, including user-supplied figures, read [Account insight metrics](references/account-insights-metrics.md). Re-read it when its definitions leave context.
-
-- For `account-insights` fields, post rows and user-supplied figures that correspond to a field listed in [Account insight metrics](references/account-insights-metrics.md), use that field's documented display name and do not fetch metadata only to rename it. For analytics results keyed by a Metric Catalog name, resolve each metric you will report with `analytics-metric-metadata` and use its returned display name exactly. That returned display name is authoritative over CLI field names, user wording and descriptive labels in other results. Omit a metric only when its required metadata lookup returns no display name rather than naming it yourself.
-
-- Preserve the documented or returned display name every time the metric appears, including when repeating the user's wording, describing unavailable data, writing a formula, and in later prose, headings, tables, comparisons and recommendations. Replace user shorthand rather than echoing it as a metric name. Never shorten the display name or add a qualifier: write **Accounts reached**, not "reach," and **Views**, not "content views." Before responding, check the final answer for renamed metrics.
-
-- Preserve the metric's returned unit as well as its display name. Never describe event counts, such as Views, interactions, profile visits, saves or taps, as people or accounts; describe account-count metrics as accounts, not people.
+- In scripts, check every Instagram call's exit status before processing its output. A failed call is not an empty result.
 
 - Change Instagram state only when the user requests it. Keep the selected account, target and supplied values unchanged through approval; report completion only from a successful result.
 
@@ -76,6 +68,40 @@
 - For a request covering a whole list, fetch every page while pages add new items. Stop before reusing a cursor already used for that list, or when a page claims more results but adds nothing, and build both stops into any pagination script. If you stop early, state what remains.
 
 - When a request needs a separate `user-profile`, `profile` or `post` call for more than 50 accounts or posts, handle the 50 most recent and stop. Report those results and how many remain, because Instagram rate-limits these calls after a few dozen.
+
+## Metrics and analytics
+
+- Before reporting, explaining or rewriting any Instagram metric, including user-supplied figures, read [Account insight metrics](references/account-insights-metrics.md). Re-read it when its definitions leave context.
+
+- For `account-insights` fields, post rows and user-supplied figures that correspond to a field listed in [Account insight metrics](references/account-insights-metrics.md), use that field's documented display name and do not fetch metadata only to rename it. For analytics results keyed by a Metric Catalog name, resolve each metric you will report with `analytics-metric-metadata` and use its returned display name exactly. That returned display name is authoritative over CLI field names, user wording and descriptive labels in other results. Omit a metric only when its required metadata lookup returns no display name rather than naming it yourself.
+
+- Preserve the documented or returned display name every time the metric appears, including when repeating the user's wording, describing unavailable data, writing a formula, and in later prose, headings, tables, comparisons and recommendations. Replace user shorthand rather than echoing it as a metric name. Never shorten the display name or add a qualifier: write **Views**, not "content views." Before responding, check the final answer for renamed metrics.
+
+- Never use the word "reach" (in any casing) in user-facing output, including prose, headings, tables, formulas and quoted user wording. Use **Accounts reached** for the metric; rewrite other uses.
+
+- Preserve the metric's returned unit as well as its display name. Never describe event counts, such as Views, interactions, profile visits, saves or taps, as people or accounts; describe account-count metrics as accounts, not people.
+
+- Use separate `muse.exec` calls for analytics reads and metric-definition lookups.
+
+### Read post insights
+
+- `individual-post-insights` reads lifetime metrics for one owned post, reel or story. Use the selected item's `post_id` from `posts` or `post`, or its story media ID from `own-stories`, as `--post`. No reporting window is supported.
+
+```sh
+/opt/hatch/bin/instagram-cli individual-post-insights --account-id <user_own_fbid> --post <media_id>
+```
+
+- Follow [Analytics](references/analytics.md#owned-media-results) for media definitions and availability. Report access errors without substituting another account or reconnecting.
+
+### Read account insights
+
+- For account totals, follower changes or daily trends over a supported rolling window, use `analytics-account-insights`: `--time-range last-7d`, `last-14d`, `last-28d` or `last-90d`. Keep relative requests for these windows as rolling windows even when you calculate their dates.
+
+- For another relative window, a calendar month or explicit date bounds, use `account-insights` for the metrics it returns. It defaults to 30 days and supports `--period last_7_days`, `last_30_days`, `last_90_days`, `this_month` or `this_year`, paired `--start-date`/`--end-date`, or paired Unix-second `--start-time`/`--end-time`. Never replace requested dates with a rolling window. If the metric requires `analytics-account-insights`, explain its supported windows and ask whether one is acceptable.
+
+- For result fields, follow [Account analytics results](references/account-analytics-results.md) for `analytics-account-insights` and [Account insight metrics](references/account-insights-metrics.md) for `account-insights`. [Analytics](references/analytics.md) covers optional series, comparisons and top content.
+
+- Follow [Social Content Performance](/opt/muse/skills/social-content-performance/SKILL.md) for analysis across the user's own accounts. For other accounts, find Social Competitor Analysis with `muse.skill_search`; if unavailable, use only their public profile, posts and analytics data, and name unavailable comparisons.
 
 ## Read content
 
@@ -146,26 +172,6 @@
 ```
 
 - Report the reply posted only when the result has `reply_comment_id`. Report an uncertain outcome without repeating the reply.
-
-## Read post insights
-
-- `individual-post-insights` reads lifetime metrics for one owned post, reel or story. Use the selected item's `post_id` from `posts` or `post`, or its story media ID from `own-stories`, as `--post`. No reporting window is supported.
-
-```sh
-/opt/hatch/bin/instagram-cli individual-post-insights --account-id <user_own_fbid> --post <media_id>
-```
-
-- Follow [Analytics](references/analytics.md#owned-media-results) for media definitions and availability. Report access errors without substituting another account or reconnecting.
-
-## Read account insights
-
-- For account totals, follower changes or daily trends over a supported rolling window, use `analytics-account-insights`: `--time-range last-7d`, `last-14d`, `last-28d` or `last-90d`. Keep relative requests for these windows as rolling windows even when you calculate their dates.
-
-- For another relative window, a calendar month or explicit date bounds, use `account-insights` for the metrics it returns. It defaults to 30 days and supports `--period last_7_days`, `last_30_days`, `last_90_days`, `this_month` or `this_year`, paired `--start-date`/`--end-date`, or paired Unix-second `--start-time`/`--end-time`. Never replace requested dates with a rolling window. If the metric requires `analytics-account-insights`, explain its supported windows and ask whether one is acceptable.
-
-- For result fields, follow [Account analytics results](references/account-analytics-results.md) for `analytics-account-insights` and [Account insight metrics](references/account-insights-metrics.md) for `account-insights`. [Analytics](references/analytics.md) covers optional series, comparisons and top content.
-
-- Follow [Social Content Performance](/opt/muse/skills/social-content-performance/SKILL.md) for analysis across the user's own accounts. For other accounts, find Social Competitor Analysis with `muse.skill_search`; if unavailable, use only their public profile, posts and analytics data, and name unavailable comparisons.
 
 ## Change post settings
 
