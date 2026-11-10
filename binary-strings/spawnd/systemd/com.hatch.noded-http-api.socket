@@ -1,0 +1,24 @@
+[Unit]
+Description=com.hatch.noded public ingress socket
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${host_bin_dir}/hatch-noded
+
+[Socket]
+# Keep the parent directory root-owned. The runtime cell sees it through a
+# read-only bind, so neither noded nor an in-cell process can replace the
+# listener systemd owns. PeerAcl, not pathname ownership, authenticates ingress.
+ExecStartPre=+/usr/bin/install -d -m 0755 -o root -g root /run/hatch
+ExecStartPre=+/usr/bin/install -d -m 0755 -o root -g root /run/hatch/noded
+ListenStream=/run/hatch/noded/http-api.sock
+DirectoryMode=0755
+SocketUser=${noded_user}
+SocketGroup=${noded_group}
+SocketMode=0666
+FileDescriptorName=http-api
+Service=com.hatch.noded.service
+RemoveOnStop=true
+# Stale default ACLs on upgraded hosts can override SocketMode.
+ExecStartPost=+/bin/chmod 0666 /run/hatch/noded/http-api.sock
+
+[Install]
+WantedBy=sockets.target

@@ -1,0 +1,52 @@
+[Unit]
+Description=Hatch private proactivity browser (local cell only)
+After=network.target hatch-rv.target com.hatch.browser-path-setup.service com.hatch.proactivity-browser-path-setup.service com.hatch.proactivity-browser-broker.socket com.hatch.browser-lease-helper.socket com.hatch.daemon.socket
+Requires=com.hatch.proactivity-browser-broker.socket com.hatch.proactivity-browser-path-setup.service
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${host_bin_dir}/browser-broker
+PartOf=hatch-rv.target
+
+[Service]
+Type=simple
+User=hatch-browser-broker
+Group=hatch-browser-broker
+Slice=hatch-host.slice
+PermissionsStartOnly=true
+NoNewPrivileges=true
+ProtectProc=default
+ProcSubset=all
+ProtectSystem=strict
+ProtectHome=tmpfs
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=false
+RestrictRealtime=true
+RestrictNamespaces=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+SystemCallArchitectures=native
+UMask=0077
+# hatch/browser-profiles is the one persistent browser profile every broker
+# restores, merges into and syncs live; each broker unit names it.
+StateDirectory=hatch/proactivity-browser-broker hatch/browser-profiles
+StateDirectoryMode=0700
+ReadWritePaths=/run
+Environment=PATH=${host_bin_dir}:${image_bin_dir}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=JARVIS_DAEMON_BROWSER_CONTROL_SOCK=/run/hatch/daemon/browser-control.sock
+EnvironmentFile=${env_file}
+EnvironmentFile=-${env_override_file}
+ExecStart=${host_bin_dir}/browser-broker \
+    --instance proactivity \
+    --socket /run/hatch/proactivity-browser-broker/proactivity-browser-broker.sock \
+    --allowed-peer-uid ${browser_broker_allowed_peer_uid} \
+    --browser-vm-image ${browser_vm_image}
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=proactivity-browser-broker
+Restart=on-failure
+RestartSec=2s
+# Foreground local browsing waits for this broker to relinquish all HBI clients.
+TimeoutStopSec=20

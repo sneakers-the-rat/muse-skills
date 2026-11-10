@@ -1,0 +1,109 @@
+[Unit]
+Description=Hatch Cron browser broker (independent leased browser route)
+Documentation=https://github.com/par-msl/jarvis/blob/main/docs/browser-architecture.md
+After=network.target hatch-rv.target com.hatch.cron-browser-path-setup.service com.hatch.cron-browser-broker.socket com.hatch.browser-lease-helper.socket com.hatch.daemon.socket
+# com.hatch.cron-browser-broker.socket declaratively owns the control UDS: it creates
+# the socket dir /run/hatch/cron-browser-broker, binds the listener with
+# SocketUser=hatch-browser-broker + SocketMode=0666, and hands the broker the
+# listening fd via socket activation (mirrors com.hatch.authd). browser-path-setup
+# also creates that dir (idempotent) alongside the other browser bind sources on
+# RV attach.
+Requires=com.hatch.cron-browser-broker.socket
+Requires=com.hatch.cron-browser-path-setup.service
+# The helper socket stays available while the broker performs its bounded
+# shutdown checkpoint. Do NOT order the broker after browser-container: the
+# checkpoint synchronously asks the helper to stop that unit, and systemd's
+# reverse stop ordering would wait for the broker to exit before stopping it.
+# These are ordering-only edges; neither socket is pulled in by them, and a
+# failure must not stop the broker.
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${host_bin_dir}/browser-broker
+PartOf=hatch-rv.target
+
+[Service]
+Type=simple
+User=hatch-browser-broker
+Group=hatch-browser-broker
+# Host-side privsep worker slice expected by strict verify + Sentinel
+# trusted-caller anchoring (see services/browser_broker.rs, install_contract.rs).
+Slice=hatch-host.slice
+PermissionsStartOnly=true
+
+# The broker owns the local VMVM lease boundary and control socket. Lock it down
+# so a broker compromise does not trivially read other system state.
+NoNewPrivileges=true
+# Unit-identity ACLs and Sentinel HITL exemption checks require reading
+# /proc/<pid>/cgroup for peer processes.
+ProtectProc=default
+ProcSubset=all
+ProtectSystem=strict
+ProtectHome=tmpfs
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=false
+RestrictRealtime=true
+RestrictNamespaces=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+SystemCallArchitectures=native
+UMask=0077
+# hatch/browser-profiles is the one persistent browser profile every broker
+# restores, merges into and syncs live; each broker unit names it.
+StateDirectory=hatch/cron-browser-broker hatch/browser-profiles
+StateDirectoryMode=0700
+
+# The broker writes its JSON audit trail to stdout (StandardOutput=journal
+# below). Its ambient state and short-lived VMVM deployment
+# handoff live under /var/lib/hatch/cron-browser-broker, owned by StateDirectory
+# above. The control
+# socket dir `/run/hatch/cron-browser-broker` and the UDS inside it are created by the
+# com.hatch.cron-browser-broker.socket unit (SocketUser/SocketMode declared once),
+# NOT via `RuntimeDirectory=`, which would wipe the shared `/run/hatch/` tree.
+# cron-browser-path-setup.service creates its own paths on Cron activation.
+# That subdir is DELIBERATELY not bind-mounted into the runtime cell (see the
+# socket-bind invariant in templates/nspawn/htch-runtime.nspawn). Browser
+# automation runs in the daemon; its host-side connect supervisor reaches this
+# socket without exposing the path to arbitrary in-cell processes. The retired
+# browser CLI privsep worker is not part of this route.
+# ReadWritePaths must name a path that EXISTS at mount-namespace setup time
+# (before any ExecStartPre), so name the always-present tmpfs root `/run` — the
+# broker only needs write access for the self-bind fallback when it is started
+# outside socket activation (dev/tests/standalone unit).
+ReadWritePaths=/run
+
+Environment=PATH=${host_bin_dir}:${image_bin_dir}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+# The broker reads browser-session takeover state to drive its takeover guard
+# from the daemon's host-reachable, PeerACL-gated browser-control listener
+# (/run/hatch/daemon/browser-control.sock, bound by com.hatch.daemon.socket) —
+# NOT the in-cell no-auth sandbox API. The cell is the untrusted sandbox and has
+# no path to the broker; routing the guard read through the in-cell sandbox-api
+# would let cell code shape what the host guard sees.
+Environment=JARVIS_DAEMON_BROWSER_CONTROL_SOCK=/run/hatch/daemon/browser-control.sock
+EnvironmentFile=${env_file}
+EnvironmentFile=-${env_override_file}
+
+# Resolve the allow-list at start time so a misconfigured peer uid fails the
+# unit instead of silently rejecting every SO_PEERCRED check at the broker.
+# The standalone unit at hatch-engine/crates/browser-broker/systemd/browser-broker.service
+# reads BROWSER_BROKER_ALLOWED_PEER_UIDS from its environment; the spawnd-managed
+# unit substitutes the runtime-cell daemon uid directly because that env file is
+# not authored in the managed-image path. The `--socket` path matches the
+# com.hatch.cron-browser-broker.socket ListenStream: the broker inherits the activated
+# fd and only self-binds that path when run outside socket activation.
+ExecStart=${host_bin_dir}/browser-broker \
+    --instance cron \
+    --socket /run/hatch/cron-browser-broker/cron-browser-broker.sock \
+    --allowed-peer-uid ${browser_broker_allowed_peer_uid} \
+    --browser-vm-image ${browser_vm_image}
+
+# Default 90s stop window lets SIGTERM checkpoint a live route or release it
+# when handoff is unavailable.
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=cron-browser-broker
+Restart=on-failure
+RestartSec=2s

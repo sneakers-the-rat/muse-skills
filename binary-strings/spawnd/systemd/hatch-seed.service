@@ -1,0 +1,18 @@
+[Unit]
+Description=Migrate and prepare the RV-backed /home/hatch bind source
+# DefaultDependencies=no is required because this unit runs before
+# local-fs.target (via Before=home-hatch.mount). With the default
+# After=sysinit.target+basic.target, it creates a cycle:
+#   sockets.target → basic.target → sysinit.target → local-fs.target
+#   → home-hatch.mount → hatch-seed.service → basic.target (cycle!)
+# hatch.mount + home-hatch.mount are image-owned (par-msl/hatch-image); this
+# unit is pulled in by hatch.mount's Wants=, so it carries no [Install].
+DefaultDependencies=no
+After=hatch.mount
+Before=home-hatch.mount
+BindsTo=hatch.mount
+
+[Service]
+Type=oneshot
+ExecStart=/opt/hatch/bin/hatch-seed.sh
+RemainAfterExit=yes

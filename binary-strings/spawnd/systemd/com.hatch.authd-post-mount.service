@@ -1,0 +1,68 @@
+[Unit]
+Description=Refresh early host services after the RV authd rebind
+# Concrete mount edges, deliberately NOT After=hatch-rv.target: this unit is
+# itself a hatch-rv.target member. The bounded authd restart/readiness proof is
+# isolated in com.hatch.authd-rv-rebind.service so unrelated proxy refreshes
+# never sit on the parked daemon's identity-release critical path.
+# Companion rule: bundle-setup/AGENTS.md "systemd Boot Ordering" and the
+# host-path-setup.service comment.
+After=home-hatch.mount var-lib-hatch.mount com.hatch.host-path-setup.service com.hatch.authd-rv-rebind.service com.hatch.telemetry-proxy-bugreport.socket
+Wants=com.hatch.authd-rv-rebind.service com.hatch.telemetry-proxy-bugreport.socket
+PartOf=hatch-rv.target
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${host_bin_dir}/hatch-authd
+ConditionPathIsMountPoint=${jarvis_home}
+# The rebind may recover after this unit's first fail-closed check. Retrying
+# preserves the post-mount refresh contract without coupling this sticky unit's
+# stop lifecycle to the rebind service. The limit also bounds persistent proxy
+# refresh failures.
+StartLimitIntervalSec=30min
+StartLimitBurst=10
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# Type=oneshot defaults to an infinite start timeout. Bound the nested systemctl
+# jobs so a stuck proxy refresh fails and reaches the retry policy above.
+TimeoutStartSec=130
+# Fail closed at start without Requires= stop propagation: a later live rebind
+# must not deactivate this sticky post-mount refresh or its consumers.
+ExecStartPre=/usr/bin/systemctl is-active --quiet com.hatch.authd-rv-rebind.service
+# Stefi and telemetry-proxy both start pre-RV. Restart them in one transaction
+# after authd has rebound to its RV store and host-path-setup has created the
+# durable buglog directories. Keeping them in one transaction lets systemd
+# coalesce Stefi's PartOf relationship with telemetry-proxy instead of bouncing
+# Stefi twice. try-restart remains a no-op for either inactive service.
+ExecStart=/usr/bin/systemctl try-restart com.hatch.telemetry-proxy.service com.hatch.stefi-proxy.service
+# healthd starts before the RV is available. A persistent RV dev deploy can
+# bind a newer /opt/hatch underneath that old process, so re-exec it from the
+# selected tree after the bind unit's daemon-reload. try-restart is deliberate:
+# a stopped/failed healthd has no stale process to replace and retains its own
+# normal multi-user.target lifecycle.
+ExecStart=/usr/bin/systemctl try-restart com.hatch.healthd.service
+# A persistent RV dev deploy can add socket units that the baked image does not
+# know about. hatch-rv.target's boot job is assembled before the RV override is
+# bound; the bind unit's daemon-reload discovers the new .wants links, but it
+# does not retroactively add them to that already-running target transaction.
+# Start the selected tree's still-inactive socket members one at a time.
+# Existing sockets are no-ops, failed optional conditions remain non-fatal, and
+# a newly bundled privsep CLI becomes reachable after replacement without
+# restarting the whole target (which would jam the systemd job queue). Each
+# start waits for its socket, and hatch-rv.target waits for this unit, so the
+# units ordered after the target start after the daemon resumes in nearly every
+# wake. Queuing the starts with --no-block let them start during the resume and
+# slowed the daemon's execution-ready (docs/deploy-and-systemd.md). Only the
+# cron-store and blob-proxy sockets are queued without waiting: they are ordered
+# after db-preflight, which can outlast this unit's start timeout, and
+# hatch-rv.target already waits for db-preflight.
+ExecStart=/bin/sh -c 'for link in /opt/hatch/etc/systemd/hatch-rv.target.wants/*.socket; do [ -L "$link" ] || continue; unit=$(/usr/bin/basename "$link"); /usr/bin/systemctl is-active --quiet "$unit" && continue; if [ "$unit" = com.hatch.cron-store.socket ] || [ "$unit" = com.hatch.blob-proxy.socket ]; then /usr/bin/systemctl start --no-block "$unit"; else /usr/bin/systemctl start "$unit"; fi || true; done'
+# Bridge the fixed RV-local loader too. A persistent RV deploy can introduce
+# this service after the target transaction was assembled, just like the
+# sockets above. Queue it without waiting: it is optional and the imported
+# payload already waits for hatch-rv.target to settle.
+ExecStart=-/usr/bin/systemctl start --no-block com.hatch.rv-local-loader.service
+Restart=on-failure
+RestartSec=1s
+
+[Install]
+WantedBy=hatch-rv.target

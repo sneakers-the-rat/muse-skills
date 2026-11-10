@@ -1,0 +1,29 @@
+[Unit]
+# RV-coupled socket must skip the implicit early sockets.target phase.
+DefaultDependencies=no
+Description=com.hatch.sentinel egress approvals admin socket
+After=com.hatch.host-path-setup.service
+Requires=com.hatch.host-path-setup.service
+# Keep the activation listener through Sentinel/runtime-cell failures. A later
+# connection must be able to start Sentinel again after BindsTo stops it.
+# Deliberate runtime shutdown closes activation sockets before stopping services.
+PartOf=hatch-rv.target
+
+[Socket]
+# Reject unconsumed connections after failed activation instead of repeatedly
+# activating against an unavailable cell. Fresh requests can retry without a
+# permanent trigger-limit failure closing the listener.
+FlushPending=yes
+TriggerLimitIntervalSec=0
+ListenStream=/run/hatch/sentinel/egress-approvals-admin.sock
+DirectoryMode=0755
+SocketUser=${sentinel_user}
+SocketGroup=${sentinel_group}
+SocketMode=0666
+FileDescriptorName=runtime-auth
+Service=com.hatch.sentinel.service
+RemoveOnStop=true
+ExecStartPost=+/bin/chmod 0666 /run/hatch/sentinel/egress-approvals-admin.sock
+
+[Install]
+WantedBy=hatch-rv.target

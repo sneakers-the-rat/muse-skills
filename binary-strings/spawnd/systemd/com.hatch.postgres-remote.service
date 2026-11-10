@@ -1,0 +1,76 @@
+[Unit]
+Description=Hatch remote PostgreSQL relay
+ConditionPathExists=!${keep_services_down_early_marker}
+# Remote PostgreSQL only: this boot must have published remote mode.
+ConditionPathExists=/run/hatch/postgres-mode/remote
+ConditionPathExists=!/dev/sev-guest
+ConditionPathExists=!/sys/devices/virtual/misc/sev-guest
+ConditionKernelCommandLine=!jarvis_cvm=true
+# Like the local server, the relay is independent of db-preflight. rv-graft's
+# proof gate already holds the daemon until preflight succeeds; ordering after
+# preflight would delay the daemon's first query by its post-proof tail, and
+# requiring it would stop the relay under the daemon whenever authd restarts
+# or the runtime cell cycles.
+# After the image's bridge units, so at stop the relay exits before them.
+# authd answers its token requests. Deliberately NOT after the RV rebind or
+# the RV mount: the warm build parks sessions at the password challenge with
+# only the tenant id, before a token can exist, and its token wait rides out
+# the refusals of the pre-rebind authd on its own.
+After=com.hatch.postgres-mode.service com.hatch.postgres-remote.socket postgres-bridge.socket postgres-bridge.service com.hatch.authd.socket
+Requires=com.hatch.postgres-remote.socket
+# Stop-only ordering, as for the local server: the daemon's bounded stop
+# writes restart checkpoints and seals the resume handoff over this transport,
+# so at stop the daemon must exit first. Inert at boot, when the RV attaches
+# after the daemon is already active.
+Before=com.hatch.daemon.service
+Wants=postgres-bridge.socket com.hatch.authd.socket
+PartOf=hatch-rv.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=exec
+DynamicUser=yes
+User=hatch-postgres-remote
+Group=hatch-postgres-remote
+# The image's bridge socket's mode admits root and this group only; the relay
+# is the group's one member.
+SupplementaryGroups=postgres-bridge
+Slice=hatch-db.slice
+UMask=0077
+NoNewPrivileges=true
+PrivateDevices=true
+PrivateTmp=true
+ProtectProc=default
+ProcSubset=all
+ProtectSystem=strict
+ProtectHome=true
+ProtectControlGroups=true
+ProtectHostname=true
+ProtectKernelLogs=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+# Unix sockets only: its clients, authd and the image's bridge. The relay has
+# no IP peer at all.
+RestrictAddressFamilies=AF_UNIX
+RestrictNamespaces=true
+RestrictRealtime=true
+LockPersonality=true
+CapabilityBoundingSet=
+IPAddressDeny=any
+InaccessiblePaths=-/etc/hatch -/etc/tls -/var/lib/hatch -/hatch -/var/lib/hatch-runtime
+Environment=RUST_LOG=info
+# Yolk writes /etc/hatch/env at prepare-wake, so JARVIS_FQDN is available before
+# the reliable volume mounts. The relay resolves this VM's tenant id from it to
+# pre-dial and park warm sessions in the dead window before the token exists.
+EnvironmentFile=${env_file}
+EnvironmentFile=-${env_override_file}
+WorkingDirectory=/
+ExecStart=${host_bin_dir}/hatch-dbctl serve-remote-bridge
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hatch-postgres-remote
+Restart=on-failure
+RestartSec=1s
+TimeoutStopSec=10
+LimitNOFILE=4096
+LimitCORE=0

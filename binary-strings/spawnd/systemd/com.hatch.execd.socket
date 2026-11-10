@@ -1,32 +1,49 @@
 [Unit]
-# RV-coupled socket must skip the implicit early sockets.target phase.
-DefaultDependencies=no
-Description=com.hatch.execd taint-query socket
+# Deliberately mount-independent early socket: binds at sockets.target
+# beside com.hatch.daemon.socket so the pre-RV daemon and cell can dial
+# execd from the first second of boot. No host-path-setup or hatch-rv.target
+# start dependencies (see the doctrine exception rationale in
+# com.hatch.daemon.socket); the /run/hatch/exec parent is created below
+# with the same owner/mode host-path-setup.sh re-applies post-RV.
+Description=com.hatch.execd socket
 ConditionPathExists=!${keep_services_down_early_marker}
-After=com.hatch.host-path-setup.service
-Requires=com.hatch.host-path-setup.service
 PartOf=hatch-rv.target
 
 [Socket]
-# Second activated socket for com.hatch.execd.service (named, not matching the
-# unit name, so it declares its target Service explicitly). Served by the
-# host-side execd anchor, which answers Sentinel's "is this pid's subtree
-# clean?" taint queries. Lives in the host-only /run/hatch/exec alongside
-# execd.sock: the cell can name no path under it, so the answer to "is this
-# subtree clean?" can never come from a responder cell-root stood up. See
-# com.hatch.execd.socket for the full rationale and the directory's owner.
-Service=com.hatch.execd.service
-ListenStream=/run/hatch/exec/execd-taint.sock
-FileDescriptorName=execd-taint
+# Create the socket parent dirs this unit binds under, with the same owners and
+# modes host-path-setup.sh applies post-RV (it re-applies them later,
+# idempotently) — the authd.socket precedent this unit follows now that it
+# binds pre-RV and cannot require host-path-setup.
+#
+# /run/hatch/exec is a HOST-ONLY directory: it is not an nspawn bind source and
+# nothing creates it inside the runtime cell. That is the point. The in-cell
+# daemon reaches this socket only through its connect supervisor, which redoes
+# the AF_UNIX connect in the host mount namespace; when that host connect fails
+# the supervisor deliberately lets the child's own connect() run so cell-local
+# sockets keep working. So an execd path the cell can also name is a hijack
+# surface: /run/hatch/daemon (where this socket used to live) also exists as a
+# cell-writable tmpfs dir holding the daemon's own in-cell listeners, so during
+# any execd restart window cell-root could plant a listener there and receive
+# tool-exec RPCs. With this path the fall-through can only be ENOENT.
+#
+# root:root 0755, NOT the setgid ${shared_group} shape com.hatch.daemon.socket
+# gives /run/hatch/daemon: systemd owns the socket file via SocketUser/Group/
+# Mode below, and a root-owned parent is what stops anything else unlinking or
+# replacing it. The o+x bit is load-bearing — the daemon's supervisor has
+# entered the cell user namespace and carries a cell-mapped uid with no host
+# group at all, and Sentinel (execd-taint.sock, same dir) runs as its own
+# account.
+ExecStartPre=+/usr/bin/install -d -m 0755 -o root -g root /run/hatch
+ExecStartPre=+/usr/bin/install -d -m 0755 -o root -g root /run/hatch/exec
+ListenStream=/run/hatch/exec/execd.sock
+# Named so execd can resolve this fd by name: it now consumes two activated
+# sockets (this RPC socket, served by the in-cell child, and execd-taint, served
+# by the host-side anchor), and systemd does not guarantee fd order.
+FileDescriptorName=execd
 SocketUser=${daemon_user}
 SocketGroup=${shared_group}
-# Standard mode. The gate is NOT the filesystem: the anchor runs this listener through
-# the shared PeerAcl accept loop, which admits only Sentinel's cgroup and fails closed
-# with an audit line on anything else. Permissions were the gate before that existed,
-# which is why this used to be a special 0660 + hatch-sentinel arrangement; with real
-# peer admission the special case only added systemd surface to keep in sync.
-SocketMode=0666
+SocketMode=0660
 RemoveOnStop=true
 
 [Install]
-WantedBy=hatch-rv.target
+WantedBy=sockets.target

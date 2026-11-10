@@ -1,0 +1,24 @@
+[Unit]
+# RV-coupled socket must skip the implicit early sockets.target phase.
+DefaultDependencies=no
+Description=com.hatch.sentinel egress approvals socket
+After=com.hatch.host-path-setup.service
+Requires=com.hatch.host-path-setup.service
+# The RV owns the listener lifetime; Sentinel can stop and be socket-activated
+# again when its runtime-cell dependency recovers.
+PartOf=hatch-rv.target
+
+[Socket]
+FlushPending=yes
+TriggerLimitIntervalSec=0
+ListenStream=/run/hatch/sentinel/egress-approvals.sock
+DirectoryMode=0755
+SocketUser=${sentinel_user}
+SocketGroup=${sentinel_group}
+SocketMode=0600
+FileDescriptorName=approval-request
+Service=com.hatch.sentinel.service
+RemoveOnStop=true
+
+[Install]
+WantedBy=hatch-rv.target

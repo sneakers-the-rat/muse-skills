@@ -1,0 +1,23 @@
+[Unit]
+Description=Import the RV-local systemd service
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathIsMountPoint=/hatch
+# Wait for the seeder to normalize /hatch ownership and for the RV-backed
+# keep-services-down marker to be visible. Do not order this target member
+# After=hatch-rv.target; that would close a target-member cycle.
+DefaultDependencies=no
+RequiresMountsFor=/hatch /home/hatch /var/lib/hatch
+After=hatch.mount hatch-seed.service home-hatch.mount var-lib-hatch.mount
+BindsTo=hatch.mount
+PartOf=hatch-rv.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=${host_bin_dir}/hatch-rv-local-unit load
+# Clean partial imports after failed starts as well as normal RV detach.
+ExecStopPost=${host_bin_dir}/hatch-rv-local-unit unload
+SyslogIdentifier=hatch-rv-local-loader
+
+[Install]
+WantedBy=hatch-rv.target

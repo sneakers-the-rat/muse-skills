@@ -1,0 +1,25 @@
+[Unit]
+# RV-coupled socket must skip the implicit early sockets.target phase.
+DefaultDependencies=no
+Description=com.hatch.telemetry-proxy bugreport socket
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathIsMountPoint=${var_lib_dir}
+PartOf=com.hatch.telemetry-proxy.service hatch-rv.target
+
+[Socket]
+# This world-connectable socket crosses the runtime-cell user namespace. The
+# proxy enforces the daemon-only route gate from SO_PEERCRED + cgroup identity.
+ListenStream=/run/hatch/telemetry/bugreport.sock
+DirectoryMode=0755
+SocketUser=${telemetry_proxy_user}
+SocketGroup=${telemetry_proxy_user}
+SocketMode=0666
+FileDescriptorName=bugreport
+Service=com.hatch.telemetry-proxy.service
+RemoveOnStop=true
+# Stale default ACLs on upgraded hosts can override SocketMode. Reconcile the
+# bound socket mode explicitly after bind.
+ExecStartPost=+/bin/chmod 0666 /run/hatch/telemetry/bugreport.sock
+
+[Install]
+WantedBy=hatch-rv.target

@@ -1,0 +1,42 @@
+[Unit]
+Description=Hatch per-boot systemd unit profiler
+# Timer-triggered oneshot: carries NO [Install]/WantedBy of any boot target and
+# nothing Requires= it, so it is off the boot-critical path. Ordered After the
+# daemon so it snapshots a settled system; the timer
+# fires it well after boot. Writes to the reliable volume, so gate on the mount.
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${host_bin_dir}/hatch-boot-profiler
+RequiresMountsFor=${var_lib_dir}
+# Ordered after the app-services targets + daemon so, when the timer fires it,
+# the units it profiles have already been brought up. The collector ALSO calls
+# `systemctl is-system-running --wait` for the authoritative "boot finished"
+# gate; ordering here is belt-and-suspenders (nothing Requires= this unit, so it
+# stays off the boot-critical path).
+After=hatch-rv-services.target hatch-rv.target com.hatch.host-path-setup.service com.hatch.daemon.service com.hatch.telemetry-proxy.socket
+Wants=com.hatch.telemetry-proxy.socket
+PartOf=hatch-rv.target
+
+[Service]
+Type=oneshot
+User=${rescue_user}
+Group=${shared_group}
+SupplementaryGroups=${rescue_group}
+Slice=hatch-host.slice
+# Yield to any real work: this is best-effort observability, never urgent.
+Nice=19
+CPUSchedulingPolicy=idle
+IOSchedulingClass=idle
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=${var_lib_dir} /run
+InaccessiblePaths=-/etc/tls
+RestrictAddressFamilies=AF_UNIX
+# Bounded so the settle-wait + collection can never hang a boot slot.
+TimeoutStartSec=300
+Environment=PATH=${host_bin_dir}:${image_bin_dir}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+EnvironmentFile=${env_file}
+EnvironmentFile=-${env_override_file}
+WorkingDirectory=/
+ExecStart=${host_bin_dir}/hatch-boot-profiler
+SyslogIdentifier=hatch-boot-profiler

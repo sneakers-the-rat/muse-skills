@@ -1,0 +1,52 @@
+[Unit]
+Description=Hatch browser lease helper
+Documentation=https://github.com/par-msl/jarvis/blob/main/docs/browser-architecture.md
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${host_bin_dir}/hatch-browser-lease-helper
+After=network.target com.hatch.stefi-proxy.socket
+Requires=com.hatch.stefi-proxy.socket
+PartOf=hatch-rv.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+Slice=hatch-host.slice
+StandardInput=socket
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+RestrictAddressFamilies=AF_UNIX
+# Scope the writable surface to just the dirs the helper actually writes instead
+# of all of /run + /var. The viewer bind-mount itself runs in PID 1's mount
+# namespace via nsenter, but the helper may create the fixed viewer-socket
+# placeholder under each broker's fixed viewer directory as the leased
+# take-over bridge target. Lease ops only READ the stefi-proxy socket; each
+# broker-owned lease staging leaf is the helper's only other runtime write
+# path. The fixed local Chrome profile leaf is writable only so
+# the helper can clear its disposable working copy and the retired persistent
+# profile while the cell is stopped.
+# RuntimeDirectory below is writable regardless of this list.
+ReadWritePaths=-/run/hatch/browser-broker/viewer -/run/hatch/browser-broker/lease -/run/hatch/cron-browser-broker/viewer -/run/hatch/cron-browser-broker/lease -${browser_cell_profile_dir} -${browser_cell_state_dir}/profile -${var_lib_dir}/browser-work/uploads
+# The leased-viewer bind-mount must propagate to the host mount namespace so
+# nginx's take-over route sees it.
+MountFlags=shared
+# AGENTS.md section 5: own ONLY this helper leaf, never the shared /run/hatch
+# parent. The actual activation socket lives under /run/hatch/browser-lease-helper.
+RuntimeDirectory=hatch-browser-lease-helper
+RuntimeDirectoryMode=0755
+# Accept=yes starts one service instance per request. All instances share this
+# directory, so a completed request must not remove it while the next instance
+# is constructing its mount namespace. /run remains boot-ephemeral.
+RuntimeDirectoryPreserve=yes
+
+Environment=PATH=${host_bin_dir}:${image_bin_dir}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+EnvironmentFile=${env_file}
+EnvironmentFile=-${env_override_file}
+
+ExecStart=${host_bin_dir}/hatch-browser-lease-helper
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hatch-browser-lease-helper
+TimeoutStopSec=10

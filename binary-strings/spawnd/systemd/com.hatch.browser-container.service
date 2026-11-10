@@ -1,0 +1,112 @@
+[Unit]
+Description=Hatch on-demand local browser cell (direct egress)
+Documentation=https://github.com/par-msl/jarvis/blob/main/docs/browser-architecture.md
+ConditionPathExists=!${keep_services_down_early_marker}
+# Rootfs-presence gate (Condition, NOT Assert): the self-contained HBI rootfs is
+# baked by par-msl/hatch-image. A CVM whose image predates it cleanly SKIPS (no
+# failed-unit noise) rather than failing every boot; the AssertPathExists below
+# then fails LOUD only for a corrupt image (rootfs present, chrome payload gone).
+ConditionPathExists=${browser_cell_root_dir}/usr/local/bin/entrypoint.sh
+AssertPathExists=${browser_cell_root_dir}/opt/meta-chromium/chrome
+# NAT module gate (Condition, NOT Assert): a live deploy cannot replay the early
+# boot preload once module loading is locked down, so a VM that did not boot with
+# the browser-cell NAT prerequisites cleanly skips local cell for this boot.
+ConditionPathExists=${browser_cell_nat_modules_ready_file}
+# Browser work is not part of the daemon's boot-health contract. Keep the
+# browser cell out of the first-boot critical path so Chrome/nspawn startup does
+# not compete with runtime-cell rootfs migration and database bootstrap on a
+# freshly provisioned CVM.
+After=network-online.target hatch-rv.target com.hatch.browser-path-setup.service com.hatch.runtime-cell.service com.hatch.daemon.service
+Wants=network-online.target
+Requires=com.hatch.browser-path-setup.service
+PartOf=hatch-rv.target
+
+[Service]
+Type=simple
+Slice=hatch-browser.slice
+Delegate=yes
+# First OOM victim under global memory pressure (daemon self-protects at -700,
+# rescue at -1000): a runaway page dies before the agent does.
+OOMScoreAdjust=800
+# ReadWritePaths is evaluated at mount-namespace setup (before ExecStartPre), so
+# name the always-present tmpfs root plus the persistent browser state dir.
+# browser-path-setup creates the /run subdir at boot; live apply mirrors those
+# host paths before restarts.
+ReadWritePaths=/run /var/lib/hatch/browser ${browser_cell_profile_dir}
+EnvironmentFile=${env_file}
+EnvironmentFile=-${env_override_file}
+EnvironmentFile=-/run/hatch-browser-lease-helper/local-browser.env
+# DIRECT-egress SSRF fence at the cell cgroup (VMVM-parity; no Sentinel proxy).
+# Chrome egresses directly to the public internet via the host masquerade, so the
+# ONE guarantee that must not depend on Chrome cooperating -- no reach to
+# internal/reserved SSRF targets -- is enforced here. This default-allow /
+# reserved-deny set mirrors Sentinel's is_allowed_global_ipv4 / _ipv6, so the cell
+# can never open a socket to internal/reserved ranges. Loopback (127.0.0.0/8,
+# ::1) is deliberately left ALLOWED (local CDP/control UDS). The gateway subnet
+# (198.19.x, in 198.18.0.0/15) is denied as a socket DESTINATION but still routes
+# as an L3 next-hop, so direct egress works.
+IPAddressDeny=0.0.0.0/8
+IPAddressDeny=10.0.0.0/8
+IPAddressDeny=100.64.0.0/10
+IPAddressDeny=169.254.0.0/16
+IPAddressDeny=172.16.0.0/12
+IPAddressDeny=192.0.0.0/24
+IPAddressDeny=192.0.2.0/24
+IPAddressDeny=192.168.0.0/16
+IPAddressDeny=198.18.0.0/15
+IPAddressDeny=198.51.100.0/24
+IPAddressDeny=203.0.113.0/24
+IPAddressDeny=224.0.0.0/4
+IPAddressDeny=240.0.0.0/4
+# IPv6 direct egress is not configured (v4-only cell: the veth has no v6 address,
+# route, or masquerade). Deny ALL IPv6 at the socket layer as the belt, so there
+# is no v6 SSRF surface even if the rootfs somehow acquired a v6 route -- rather
+# than a partial v6 denylist that would miss Sentinel's NAT64/6to4/Teredo/
+# embedded-v4 ranges. A complete Sentinel-parity v6 allow-model + NDP is the
+# follow-up when v6 direct egress is enabled and CVM-validated.
+IPAddressDeny=::/0
+# nspawn config (PrivateUsers, caps, tmpfs, binds, veth) lives in
+# htch-browser.nspawn, read via --settings=override. HBI's OCI image sets
+# ENTRYPOINT ["tini","-g","--",entrypoint.sh] + ENV HOME=/var/lib/hatch/browser,
+# but nspawn --directory ignores the OCI config, so replicate both here: run tini
+# and pass HOME (the browser-daemon + Chrome read it). tini -g forwards SIGTERM to
+# the whole process group on stop; -s makes tini a subreaper so it (not nspawn's
+# stub PID1) reaps Chrome's reparented zygote/renderer grandchildren -- replicating
+# tini's docker-PID1 behavior, since under --as-pid2 tini runs as PID2 and would
+# not otherwise PR_SET_CHILD_SUBREAPER. No host BindReadOnly: the HBI rootfs is
+# self-contained.
+# The browser veth is created by nspawn below. A hard-killed nspawn can leave the
+# host side behind; clear that stale link before retrying so restart does not
+# wedge on "File exists". Then reload networkd after the RV-backed /opt/hatch
+# network file is definitely mounted and before that veth appears; otherwise
+# networkd can keep only the generic ve-* profile loaded from early boot and
+# assign a random 192.168/28 host address while the cell post-start configures
+# host0 for the fixed 198.19.0.4/30 link.
+# The helper clears this disposable working profile before each cold start.
+# Keep the narrow session deletion for systemd's automatic restart path, which
+# can restart Chrome without crossing the helper preparation boundary. The
+# root shell only enters the fixed profile directory; rm runs as HBI's mapped
+# hatch identity
+# because Default is browser-writable. The relative path avoids broad host
+# traversal rights while preventing host-root symlink deletion.
+ExecStartPre=+/bin/sh -c 'cd ${browser_cell_profile_dir} && exec /usr/bin/setpriv --reuid=${browser_cell_hbi_hatch_host_uid} --regid=${browser_cell_hbi_broker_host_gid} --clear-groups -- /usr/bin/rm -rf -- Default/Sessions'
+ExecStartPre=+/bin/sh -c '/usr/sbin/ip link delete ${browser_cell_veth} 2>/dev/null || true'
+ExecStartPre=+/usr/bin/networkctl reload
+ExecStart=+/usr/bin/systemd-nspawn --quiet --keep-unit --settings=override --as-pid2 --kill-signal=SIGTERM --setenv=HOME=/var/lib/hatch/browser --setenv=HATCH_BROWSER_CELL_NSPAWN=1 --setenv=CBH_MODE --directory=${browser_cell_root_dir} --machine=${browser_cell_machine} /usr/bin/tini -g -s -- /usr/local/bin/entrypoint.sh
+# --as-pid2 runs no init, so configure host0 (addr + default route) in the cell
+# netns after start.
+ExecStartPost=+${host_bin_dir}/hatch-browser-network-post-start ${browser_cell_machine} ${browser_cell_address_cidr} ${browser_cell_gateway_ip}
+# No custom ExecStop: the HBI entrypoint handles SIGTERM and nspawn forwards it
+# (the retired cell's browser-daemon-targeting stop script does not apply to HBI).
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=browser-cell
+Restart=on-failure
+RestartSec=2s
+KillMode=mixed
+TimeoutStartSec=2min
+TimeoutStopSec=20
+LimitNOFILE=65535
+# No [Install] section: browser-broker starts the cell on demand through the
+# privileged lease helper. Keeping the nspawn/Chrome work out of hatch-rv.target
+# prevents browser startup from competing with critical VM boot health.

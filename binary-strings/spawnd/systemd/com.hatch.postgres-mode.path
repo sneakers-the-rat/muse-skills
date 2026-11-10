@@ -1,0 +1,29 @@
+[Unit]
+Description=Watch Hatch guest metadata writes to latch the PostgreSQL mode early
+# Yolk writes /etc/hatch/guest-metadata.json at prepare-wake, before the
+# reliable volume's key. Firing the mode latch on that write, rather than after
+# the volume mounts, lets the remote relay pre-dial hatchdb during the dead
+# window before the daemon's first storage open.
+#
+# PathChanged=, never PathExists=: the writer's ExecCondition skips a VM whose
+# metadata does not ask for remote, and systemd retriggers a level-watched
+# (PathExists=) unit the moment it goes inactive, which would spin every such
+# VM through ~200 writer starts and fail this unit with trigger-limit-hit.
+# PathChanged= consumes each metadata write as one edge: one writer start per
+# Yolk write and no retrigger loop, while a wake that rewrites the metadata
+# (a pool claim included) still latches pre-mount. A boot whose metadata
+# predates this watch latches at the mount instead, through the writer's
+# mount-wants backstop; the flag is per-boot in /run, so nothing is missed.
+DefaultDependencies=no
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionKernelCommandLine=!jarvis_cvm=true
+After=sysinit.target
+Before=shutdown.target
+Conflicts=shutdown.target
+
+[Path]
+PathChanged=/etc/hatch/guest-metadata.json
+Unit=com.hatch.postgres-mode.service
+
+[Install]
+WantedBy=multi-user.target

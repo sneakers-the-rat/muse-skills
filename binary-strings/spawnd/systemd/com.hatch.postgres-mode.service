@@ -1,0 +1,46 @@
+[Unit]
+Description=Hatch PostgreSQL mode for this boot
+# Runs once per boot, triggered by its .path unit when Yolk writes the
+# VM's guest metadata at prepare-wake (before the volume's key). When the
+# metadata asks for remote PostgreSQL, it creates
+# /run/hatch/postgres-mode/remote; otherwise it writes nothing, and every unit
+# and client uses local PostgreSQL. A VM whose metadata does not ask skips it
+# outright. Nothing removes the flag, and a boot that started local PostgreSQL
+# stays local, so restarting this unit never changes the mode. Units order
+# after it but never depend on it. No mount-namespace sandboxing: the writer
+# must see the real /etc/hatch and /run.
+StartLimitIntervalSec=0
+ConditionPathExists=${host_bin_dir}/hatch-dbctl
+# No mount dependency: the latch reads only /etc/hatch (guest metadata, written
+# at prepare-wake) and writes only /run, so it can run before the reliable
+# volume attaches. It is pulled both by com.hatch.postgres-mode.path (on the
+# metadata write, early) and, as a backstop, by var-lib-hatch.mount below; the
+# once-per-boot latch makes a second start a no-op.
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+# Local PostgreSQL orders after this unit, so a VM that does not ask for remote
+# must not pay for the writer: systemd conditions cannot read JSON, and every
+# Yolk v4 VM has the file, `{}` when empty. Matching the quoted key alone, not
+# its value, lets any file that names the key reach the writer, which validates
+# the file, the value and the VM, so this skip can never disagree with
+# preflight's own reading of the request.
+ExecCondition=/usr/bin/grep -qsF '"REMOTE_POSTGRES_ENABLED"' /etc/hatch/guest-metadata.json
+ExecStart=${host_bin_dir}/hatch-dbctl postgres-mode latch
+RemainAfterExit=yes
+TimeoutStartSec=30
+SyslogIdentifier=hatch-postgres-mode
+NoNewPrivileges=yes
+RestrictAddressFamilies=AF_UNIX
+IPAddressDeny=any
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=var-lib-hatch.mount

@@ -1,0 +1,65 @@
+[Unit]
+Description=Rebind authd to RV-backed state
+# authd starts before the RV exists, so its first process opens the image-local
+# /var/lib/hatch tree. After the overmount, reload its state and prove the
+# new epoch has finished opening its eager stores before any RV consumer is
+# released. Keep this as a concrete mount dependency, not After=hatch-rv.target:
+# this unit is itself a target member.
+#
+# Ordering contract: authd reads only /var/lib/hatch (plus /run and /etc);
+# its sole /home read is a telemetry-only build-metadata fallback, and
+# host-path-setup explicitly excludes authd paths (authd state prep is
+# authd.service's own ExecStartPre, spawnd prepare-authd-state, on var-lib
+# only). So this gate waits for var-lib-hatch.mount only — not
+# home-hatch.mount or host-path-setup — keeping the home-mount wait off the
+# wake critical path. RV identity release stays fail-closed on /home/hatch
+# through rv-graft's own RequiresMountsFor. Do not re-add home ordering here
+# without tracing a real authd dependency on it.
+#
+# The one non-mount edge kept from the old transitive home ordering:
+# opt-hatch-rv-remote-deploy-mount binds a dev-deployed /opt/hatch override
+# and daemon-reloads Before=hatch-seed.service (itself Before=home-hatch.mount),
+# so ordering after home used to guarantee the restart below execs the
+# DEPLOYED authd binary and unit. var-lib-hatch.mount carries no hatch-seed
+# edge, so keep that guarantee explicitly. Pure ordering, no pull-in: on
+# production VMs the unit condition-skips instantly at hatch.mount time, well
+# before var-lib is ready, so this adds no wake latency.
+After=opt-hatch-rv-remote-deploy-mount.service
+After=var-lib-hatch.mount com.hatch.authd.service
+# On a remote PostgreSQL boot the replacement authd mints every role's CAT at
+# startup, which it does only when /run/hatch/postgres-mode/remote exists, so
+# the writer finishes first. Ordering only, like every consumer of the writer:
+# a failed or skipped writer must not block the rebind. A VM whose guest
+# metadata does not name the remote key skips the writer by its ExecCondition
+# grep.
+After=com.hatch.postgres-mode.service
+Wants=com.hatch.authd.service
+PartOf=hatch-rv.target
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${host_bin_dir}/hatch-authd
+# Bound persistent recovery failures across five full reload/restart attempts.
+StartLimitIntervalSec=30min
+StartLimitBurst=5
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# notify-reload waits for a new READY. On failure the helper cold-restarts
+# and checks active state, so a skipped Condition cannot mint a sticky proof.
+# Allow the full 90s notify-reload timeout and its possible 60s stop, followed
+# by the recovery restart's 60s stop, 90s start, and job overhead.
+TimeoutStartSec=330
+# var-lib-hatch.mount is an ordering peer rather than a required target
+# dependency. Fail, rather than condition-skip, if its overmount is not ready so
+# Restart=on-failure can retry and never mint a sticky image-local proof.
+ExecStartPre=/usr/bin/mountpoint --quiet ${var_lib_dir}
+ExecStartPre=+${host_bin_dir}/spawnd prepare-authd-state --var-lib-dir ${var_lib_dir}
+ExecStart=${host_bin_dir}/spawnd authd-rv-rebind
+# A false Condition= on authd makes its restart job a successful no-op. Do not
+# let this oneshot become the sticky success proof unless authd is actually up.
+ExecStart=/usr/bin/systemctl is-active --quiet com.hatch.authd.service
+Restart=on-failure
+RestartSec=1s
+
+[Install]
+WantedBy=hatch-rv.target

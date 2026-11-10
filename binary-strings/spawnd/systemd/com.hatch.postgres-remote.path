@@ -1,0 +1,33 @@
+[Unit]
+Description=Start the Hatch remote PostgreSQL relay socket once remote mode latches
+# The relay socket is otherwise pulled only by hatch-rv.target, which the
+# reliable volume's mount gates. Starting it when the mode writer latches
+# remote (well before the mount) lets the relay pre-dial and park its warm
+# sessions in the dead window before the daemon's first storage open.
+#
+# PathExists= is level-triggered on purpose, and this unit is deliberately not
+# PartOf=hatch-rv.target: the flag survives in /run across a suspend, so when
+# the RV teardown stops the socket, this unit starts it (and, through the
+# socket's ExecStartPost=, a fresh relay) right back up. That restart is the
+# per-wake re-arm: the fresh relay parks a new warm set, whose completion
+# rides the token wait into the resume when authd cannot mint before the
+# freeze. No trigger loop is possible: the socket's conditions mirror this
+# unit's, so a triggered start always leaves the socket active — except under
+# a keep-services-down brake set at runtime, whose reconcile therefore sweeps
+# this unit together with the socket. A real shutdown stops this unit first
+# (Conflicts=shutdown.target), so stop-at-shutdown is never undone.
+DefaultDependencies=no
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=!/dev/sev-guest
+ConditionPathExists=!/sys/devices/virtual/misc/sev-guest
+ConditionKernelCommandLine=!jarvis_cvm=true
+After=sysinit.target com.hatch.postgres-mode.service
+Before=shutdown.target
+Conflicts=shutdown.target
+
+[Path]
+PathExists=/run/hatch/postgres-mode/remote
+Unit=com.hatch.postgres-remote.socket
+
+[Install]
+WantedBy=multi-user.target

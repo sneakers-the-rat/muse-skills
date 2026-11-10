@@ -1,0 +1,22 @@
+[Unit]
+Description=Hatch kill-switch reconcile for pre-RV units
+# Deliberately NO ConditionPathExists brake gate: this unit IS the brake's
+# enforcement point for the units that start before the reliable volume
+# attaches, so it must run at every attach precisely WHEN the marker is set.
+# host-path-setup.service (the reconcile's former home) is itself gated on
+# exactly when the brake was on — the twin marker was never written and
+# nothing swept the escapees. Ordered after the concrete mount so the RV
+# marker read is real, and after host-path-setup so the dev-controls
+# directory exists on unbraked boots; both edges are inert when those jobs
+# are absent or skipped.
+RequiresMountsFor=${var_lib_dir}
+After=var-lib-hatch.mount com.hatch.host-path-setup.service
+PartOf=hatch-rv.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=+${host_bin_dir}/dev-controls-reconcile.sh
+
+[Install]
+WantedBy=hatch-rv.target

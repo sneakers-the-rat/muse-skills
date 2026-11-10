@@ -1,0 +1,78 @@
+[Unit]
+Description=Bind or reap the RV dev-deploy /opt/hatch override
+# The Condition is the dev-deploy DIRECTORY, not the .ready marker inside it,
+# because this unit now has two jobs and the second one needs to run precisely
+# when the marker is absent: bind a complete, still-authorized override, or
+# DELETE an override that is no longer authorized. Gating on .ready would skip
+# the unit exactly when there is something to reap. Absent a dev deploy the
+# directory does not exist and the unit stays the inert no-op it always was.
+#
+# bin/hatch-rv-deploy-bind.sh (the ExecStart) owns the decision; it needs
+# .ready (written LAST by jarvis-remote-deploy, cleared before the rsync, so a
+# tree interrupted mid-rsync is never bound) AND live authorization, which is
+# either the hatchling's Hen pin (JARVIS_CD_PINNED=1, below) or the ephemeral
+# current-session marker. Do not restate that contract here.
+#
+# The .ready FILENAME is a fixed bare `opt-hatch.ready` -- deliberately the exact
+# path older bind units gate on -- so a new writer's marker is always visible to
+# whatever unit is installed (the seed-and-bind bootstrap must bind through the
+# ALREADY-installed unit before a new one can be delivered; old units ignore the
+# content and just bind on existence). Enforced only here at boot: there is no
+# safe live umount of the busy /opt/hatch, so a powered-on VM keeps its dev build
+# until it next boots -- including a VM that was unpinned mid-session.
+ConditionPathExists=/hatch/remote-deploy
+# Run in the SAME early-boot phase as hatch-seed.service, hence
+# DefaultDependencies=no. hatch-seed is an early unit (DefaultDependencies=no,
+# Before=home-hatch.mount -> before local-fs.target). Ordering
+# Before=hatch-seed.service (below) from a NORMAL service would pull in the
+# implicit After=sysinit.target/basic.target and close a boot ordering cycle:
+#   basic.target -> this unit -> hatch-seed.service -> home-hatch.mount ->
+#   local-fs.target -> sysinit.target -> basic.target.
+# DefaultDependencies=no drops that implicit late-phase back-edge so the
+# Before=hatch-seed ordering stays inside the early phase. Teardown stays clean
+# via BindsTo=hatch.mount (below) + the RV unmount at shutdown.
+DefaultDependencies=no
+# Order after the RV root (/hatch) mount so the bind source exists, and after the
+# read-only squashfs mount-over so the RV deploy wins. opt-hatch.mount is absent
+# on writable-rootfs dev VMs, where After= is a harmless no-op. Before
+# hatch-rv.target so com.hatch.daemon and its PartOf peers start on the bound
+# tree. Do NOT also order it after that target: the reverse edge is an ordering
+# cycle (see com.hatch.host-path-setup.service). BindsTo=hatch.mount ties the
+# bind to the RV: when the RV unmounts at shutdown, this unit (and its ExecStop
+# umount) is torn down too, and because it starts Before=hatch-rv.target the stop
+# runs After the daemon/target stop -- the clean reverse-order teardown.
+After=hatch.mount opt-hatch.mount
+Before=hatch-rv.target
+# Order before hatch-seed.service so the RV /opt/hatch override is bound before
+# systemd resolves and executes its helper from /opt/hatch/bin. Safe ONLY
+# because this unit is DefaultDependencies=no (above), putting it in
+# hatch-seed's early phase; a normal (post-sysinit) service ordered before
+# hatch-seed would deadlock the boot transaction (see the cycle note above).
+Before=hatch-seed.service
+BindsTo=hatch.mount
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# JARVIS_CD_PINNED is the boot-persistence gate: hatch-init re-derives it from
+# the hatchling's Hen pin state into /etc/hatch/env at EVERY boot, so an
+# override outlives a reboot only while its VM is pinned out of CD.
+EnvironmentFile=-/etc/hatch/env
+EnvironmentFile=-/etc/hatch/env.override
+# Bind the RV tree over /opt/hatch, or reap it when it is no longer authorized.
+# The whole decision lives in the verbatim host script
+# bin/hatch-rv-deploy-bind.sh, which owns its own rationale; keep it there
+# rather than growing this line back into a one-liner.
+# The script is resolved from the BAKED /opt/hatch, because this unit runs
+# before the bind it performs -- as is this unit file itself, read from the same
+# baked /opt/hatch/etc/systemd, so the two are always the same version.
+ExecStart=/opt/hatch/bin/hatch-rv-deploy-bind.sh
+# Re-enumerate /opt/hatch/etc/systemd from the now-bound tree so systemd loads
+# the dev-deployed unit definitions (binaries already resolve via the bind).
+ExecStartPost=/usr/bin/systemctl daemon-reload
+# Clean ordered stop; lazy fallback so early services holding /opt/hatch/bin/*
+# open can't EBUSY-block shutdown. systemd-shutdown's umount-all is the backstop.
+ExecStop=/bin/sh -c 'findmnt -rno SOURCE /opt/hatch 2>/dev/null | grep -q "remote-deploy/opt/hatch" && { umount /opt/hatch 2>/dev/null || umount -l /opt/hatch 2>/dev/null; } || true'
+
+[Install]
+WantedBy=hatch.mount

@@ -1,14 +1,134 @@
 [Unit]
-Description=com.hatch.daemon voice-speak socket
+# Deliberately mount-independent early socket: the listener binds at
+# sockets.target so clients connect from the first second of boot — pre-RV
+# connects queue in the kernel backlog and drain the moment the parked daemon
+# reaches accept, instead of getting connection-refused while the reliable
+# volume attaches. The daemon itself is safe to start early because it parks
+# at the AwaitRvIdentity barrier (hatch-server daemon_service) until
+# `spawnd rv-graft` writes /hatch/data/resume/rv-identity-ready post-mount
+# (the daemon reads it through its /run/hatch/resume bridge view).
+# This is a signed-off exception to the "RV-coupled units are
+# WantedBy=hatch-rv.target" doctrine in bundle-setup/AGENTS.md: the unit
+# references neither host-path-setup nor hatch-rv.target, so it cannot drag
+# the RV graph into the early boot transaction, and it creates its own
+# /run/hatch parents below (the authd.socket precedent) instead of requiring
+# host-path-setup.
+Description=com.hatch.daemon socket
 ConditionPathExists=!${keep_services_down_early_marker}
 
 [Socket]
+# Create the socket parent dirs this unit binds under. Worker-gated parents
+# start root-only when their deferred group does not exist; worker prep promotes
+# them to their final contract owner and mode after account reconciliation.
+# /run/hatch/daemon is setgid ${shared_group} so bound sockets inherit the group,
+# and 2750 keeps host login users (thatch, ...) out.
 ExecStartPre=+/usr/bin/install -d -m 0755 -o root -g root /run/hatch
-ExecStartPre=+/bin/sh -c 'if getent group hatch-w-tts >/dev/null 2>&1; then exec /usr/bin/install -d -m 0750 -o root -g hatch-w-tts /run/hatch/voice-speak; fi; exec /usr/bin/install -d -m 0700 -o root -g root /run/hatch/voice-speak'
-ListenStream=/run/hatch/voice-speak/voice-speak.sock
-Service=com.hatch.daemon.service
+ExecStartPre=+/usr/bin/install -d -m 2750 -o ${daemon_user} -g ${shared_group} /run/hatch/daemon
+# Root-owned RT-3 lifecycle handoff root (control-daemon.sh exports per-key
+# files from daemon-ctl/env/ as root; see T285455409 for the retired sourcing
+# race). Pinned here as well as in host-path-setup.sh because that oneshot is
+# RemainAfterExit=yes and WantedBy=hatch-rv.target: an in-place live-update
+# never re-runs it, and this socket unit starts pre-RV, before it has ever run
+# on a cold boot. Without this line the directory would be created by spawnd's
+# own fallback at whatever the daemon unit's UMask= yields, which is not the
+# mode the access-control contract pins.
+ExecStartPre=+/usr/bin/install -d -m 0755 -o root -g root /run/hatch/daemon-ctl
+ExecStartPre=+/usr/bin/install -d -m 0750 -o root -g hatch-space-share /run/hatch/space-share
+# checkout-spend group is image-provisioned; mirror host-path-setup.sh's
+# fallback so the socket unit never fails on an image without the group
+# (checkout-spend IPC stays inaccessible until the image supplies it).
+ExecStartPre=+/bin/sh -c 'if getent group hatch-checkout-spend >/dev/null 2>&1; then exec /usr/bin/install -d -m 0750 -o root -g hatch-checkout-spend /run/hatch/checkout-spend; fi; exec /usr/bin/install -d -m 0700 -o root -g root /run/hatch/checkout-spend'
+# Same fallback shape for the present-widget parent: the wearables worker
+# group is spawnd-ensured post-RV while this socket starts pre-RV, so a cold
+# CVM boot creates it root-only first and privsep-worker-prep reapplies the
+# group gate once the account exists.
+ExecStartPre=+/bin/sh -c 'if getent group hatch-w-wearables-display >/dev/null 2>&1; then exec /usr/bin/install -d -m 0750 -o root -g hatch-w-wearables-display /run/hatch/present-widget; fi; exec /usr/bin/install -d -m 0700 -o root -g root /run/hatch/present-widget'
+# Voice GenUI text/none arbitration has no widget-rendering authority. Keep it
+# on a separate parent gated by the genui-display-render worker's own primary
+# group so that worker does not inherit wearables-display's restricted-method
+# socket capability. Worker prep applies the same deferred promotion as above.
+ExecStartPre=+/bin/sh -c 'if getent group hatch-w-genui-display-render >/dev/null 2>&1; then exec /usr/bin/install -d -m 0750 -o root -g hatch-w-genui-display-render /run/hatch/voice-genui-decision; fi; exec /usr/bin/install -d -m 0700 -o root -g root /run/hatch/voice-genui-decision'
+# Keep the company conversation callback root-only until deferred worker
+# preparation creates hatch-w-poppy.
+ExecStartPre=+/bin/sh -c 'if getent group hatch-w-poppy >/dev/null 2>&1; then exec /usr/bin/install -d -m 0750 -o root -g hatch-w-poppy /run/hatch/poppy-conversation; fi; exec /usr/bin/install -d -m 0700 -o root -g root /run/hatch/poppy-conversation'
+# Same fallback shape again for the health-delete parent. hatch-w-health-cli
+# is spawnd-ensured post-RV while this socket starts pre-RV, so a cold boot
+# creates it root-only and privsep-worker-prep reapplies the group gate once
+# the account exists. Root-only is the safe direction:
+# health-cli cannot traverse it, so deletion fails closed rather than falling
+# back to a wider-reachable path.
+ExecStartPre=+/bin/sh -c 'if getent group hatch-w-health-cli >/dev/null 2>&1; then exec /usr/bin/install -d -m 0750 -o root -g hatch-w-health-cli /run/hatch/health-delete; fi; exec /usr/bin/install -d -m 0700 -o root -g root /run/hatch/health-delete'
+# The callback is reachable only by the dedicated measured-CVM media worker.
+# Before worker-account preparation, root:root 0700 keeps it fail closed.
+ExecStartPre=+/bin/sh -c 'if getent group hatch-w-media-generation-cvm >/dev/null 2>&1; then exec /usr/bin/install -d -m 0750 -o root -g hatch-w-media-generation-cvm /run/hatch/media-generation-tools; fi; exec /usr/bin/install -d -m 0700 -o root -g root /run/hatch/media-generation-tools'
+# The daemon matches each activated fd to its socket by bound path
+# (getsockname in acquire_from_activation_fds), so ListenStream order and count
+# do not matter and this list can change without lockstep daemon edits.
+# The execd socket is in its own com.hatch.execd.socket unit.
+# Cell-only surfaces (the space-* sockets under /run/hatch/sandbox/ and the
+# sandbox-api socket) are deliberately NOT here: the daemon binds them after
+# namespace entry, inside the cell's own /run tmpfs, so they exist only for
+# in-cell Spaces workers and tool subprocesses and no host peer can dial
+# them. This unit lists exactly the HOST-dialed listeners.
+ListenStream=/run/hatch/daemon/http-api.sock
+ListenStream=/run/hatch/daemon/metrics.sock
+ListenStream=/run/hatch/daemon/egress-approvals-events.sock
+# Realtime protocol socket for the Aquila voice sidecar. Created
+# unconditionally; the daemon accepts by default unless the
+# JARVIS_REALTIME_LISTENER=0 kill switch is set.
+ListenStream=/run/hatch/daemon/realtime-protocol.sock
+# Browser-control read socket for the host-side browser broker. Created
+# unconditionally and host-visible (the daemon, inside the cell, accepts on
+# it via socket activation and gates peers with a PeerACL). Lets the broker
+# read browser-session takeover state without dialing the in-cell no-auth
+# sandbox API.
+ListenStream=/run/hatch/daemon/browser-control.sock
+# RTC media-endpoint stats socket for the TEE rtc-sidecar (a host service).
+# Created unconditionally; the daemon accepts on it via socket activation and
+# PeerACL-gates the host sidecar peer.
+ListenStream=/run/hatch/daemon/rtc-stats.sock
+# Space-share RPC for the fully isolated share privsep worker. Socket
+# activation makes the listener host-visible while the daemon accepts on the
+# inherited fd inside the runtime cell. The parent dir is the narrow filesystem
+# gate; the daemon also PeerACL-gates accepted connections.
+ListenStream=/run/hatch/space-share/space-share.sock
+# Checkout-spend RPC for payment privsep workers. Host-visible and
+# socket-activated; the dedicated parent dir plus worker ReadWritePaths narrow
+# which host workers can reach it, and the daemon PeerACL rejects in-cell
+# forgers.
+ListenStream=/run/hatch/checkout-spend/checkout-spend.sock
+# Present-widget POST socket for the fully isolated wearables-display privsep
+# worker (the display-glasses Stop-hook card generator). Host-visible and
+# socket-activated; the daemon accepts on the inherited fd inside the cell and
+# PeerACL-gates peers. The worker is host-slice and cannot reach the in-cell
+# sandbox-api socket, so it POSTs here instead. Its own 0750 parent (group
+# hatch-w-wearables-display) is the narrow kernel gate: the daemon-side
+# PeerAcl sees every out-of-cell host identity as the same unmapped guest uid,
+# so directory traversal is what pins this listener to exactly one worker.
+ListenStream=/run/hatch/present-widget/present-widget.sock
+# Text/none-only Voice GenUI arbitration callback for genui-display-render.
+ListenStream=/run/hatch/voice-genui-decision/voice-genui-decision.sock
+# Company conversations (Personal Agent Protocol); traversal is limited to the
+# poppy worker.
+ListenStream=/run/hatch/poppy-conversation/api.sock
+# Health-deletion POST socket for the fully isolated health-cli privsep
+# worker. Host-visible and socket-activated; the daemon accepts on the
+# inherited fd inside the cell. Its own 0750 parent (group hatch-w-health-cli)
+# is the narrow kernel gate, for the same reason as present-widget above: the
+# daemon-side PeerAcl sees every out-of-cell host identity as the same
+# unmapped guest uid, so directory traversal is what pins this listener to
+# exactly one worker. Deliberately NOT a route on http-api.sock, where every
+# host-slice privsep worker would be able to reach it.
+ListenStream=/run/hatch/health-delete/health-delete.sock
+# Recreate the hatch-shared group gate from the old ExecStartPre.
+# The setgid dir ensures sockets inherit the group; 0660 mode ensures
+# only the owner and hatch-shared members can connect. This prevents
+# host login users (thatch, etc.) from reaching daemon sockets —
+# they'd appear as uid 65534 to the in-cell daemon and satisfy the
+# NginxIngress ACL checks.
+DirectoryMode=2750
 SocketUser=${daemon_user}
-SocketGroup=${proxy_clients_group}
+SocketGroup=${shared_group}
 SocketMode=0660
 RemoveOnStop=true
 

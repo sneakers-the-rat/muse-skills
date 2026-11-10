@@ -1,0 +1,22 @@
+[Unit]
+Description=com.hatch.daemon CVM media browser callback socket
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionKernelCommandLine=jarvis_cvm=true
+# The common socket provisions the worker-gated parent without touching the
+# reliable volume. Keep that ownership path; this unit only binds on a CVM.
+Requires=com.hatch.daemon.socket
+After=com.hatch.daemon.socket
+
+[Socket]
+Service=com.hatch.daemon.service
+ListenStream=/run/hatch/media-generation-tools/callback.sock
+# Do not widen a missing parent; worker preparation owns its eventual 0750
+# root:hatch-w-media-generation-cvm permissions.
+DirectoryMode=0700
+SocketUser=${daemon_user}
+SocketGroup=${shared_group}
+SocketMode=0660
+RemoveOnStop=true
+
+[Install]
+WantedBy=sockets.target

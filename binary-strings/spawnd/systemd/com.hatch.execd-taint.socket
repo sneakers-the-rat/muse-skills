@@ -1,0 +1,32 @@
+[Unit]
+# RV-coupled socket must skip the implicit early sockets.target phase.
+DefaultDependencies=no
+Description=com.hatch.execd taint-query socket
+ConditionPathExists=!${keep_services_down_early_marker}
+After=com.hatch.host-path-setup.service
+Requires=com.hatch.host-path-setup.service
+PartOf=hatch-rv.target
+
+[Socket]
+# Second activated socket for com.hatch.execd.service (named, not matching the
+# unit name, so it declares its target Service explicitly). Served by the
+# host-side execd anchor, which answers Sentinel's "is this pid's subtree
+# clean?" taint queries. Lives in the host-only /run/hatch/exec alongside
+# execd.sock: the cell can name no path under it, so the answer to "is this
+# subtree clean?" can never come from a responder cell-root stood up. See
+# com.hatch.execd.socket for the full rationale and the directory's owner.
+Service=com.hatch.execd.service
+ListenStream=/run/hatch/exec/execd-taint.sock
+FileDescriptorName=execd-taint
+SocketUser=${daemon_user}
+SocketGroup=${shared_group}
+# Standard mode. The gate is NOT the filesystem: the anchor runs this listener through
+# the shared PeerAcl accept loop, which admits only Sentinel's cgroup and fails closed
+# with an audit line on anything else. Permissions were the gate before that existed,
+# which is why this used to be a special 0660 + hatch-sentinel arrangement; with real
+# peer admission the special case only added systemd surface to keep in sync.
+SocketMode=0666
+RemoveOnStop=true
+
+[Install]
+WantedBy=hatch-rv.target

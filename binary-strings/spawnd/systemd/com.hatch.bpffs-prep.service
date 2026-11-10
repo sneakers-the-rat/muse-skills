@@ -1,0 +1,20 @@
+[Unit]
+Description=Prepare the shared bpffs pin namespace (/sys/fs/bpf/hatch)
+# Owns the two root-owned levels of the pin namespace shared by sentinel
+# (v1 pins) and execd (v3 pins): the bpffs root's kernel-default 0700 denies
+# non-root traversal, and /sys/fs/bpf/hatch is boot-ephemeral (bpffs clears
+# on reboot). It must exist BEFORE com.hatch.sentinel.service builds its
+# mount namespace, because sentinel's `-/sys/fs/bpf/hatch` ReadWritePaths
+# carve resolves at namespace setup — an entry naming exactly /sys/fs/bpf
+# loses to ProtectKernelTunables' per-submount read-only pass, so the carve
+# has to name this subdirectory, and the subdirectory has to be there first.
+# Consumers order themselves after this unit (Wants= + After=); it carries
+# no RV or product dependency and stays inert state after the one shot.
+# Deeper, owner-specific subtrees (sentinel's v1, execd's v3) stay with
+# their owning units.
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/sh -ec 'chmod 0711 /sys/fs/bpf; install -d -m 0711 -o root -g root /sys/fs/bpf/hatch'
+[Install]
+WantedBy=multi-user.target

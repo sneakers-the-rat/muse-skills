@@ -1,0 +1,58 @@
+[Unit]
+Description=Hatch Central Blackhole client filter refresh
+Documentation=https://github.com/par-msl/jarvis/blob/main/docs/browser-architecture.md
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${host_bin_dir}/hatch-browser-lease-helper
+After=network.target com.hatch.stefi-proxy.socket
+Requires=com.hatch.stefi-proxy.socket
+# The filter lives on the persistent state volume, so a booting VM screens
+# with its last good copy while this job checks WWW for a newer one.
+RequiresMountsFor=${var_lib_dir}
+PartOf=hatch-rv.target
+# A failure retries every 30 seconds, as the network or Stefi comes up; the
+# limit bounds a persistent failure to the hourly timer. A refused viewer (no
+# owner credential yet, an expired one, no access, or over quota) exits cleanly
+# and waits for the timer, or for the lease helper, which starts this job at
+# most once a minute when a browser checks while the host has no filter. Those
+# starts count toward the same limit.
+StartLimitIntervalSec=30min
+StartLimitBurst=10
+
+# Keeps the host's one copy of WWW's public client filter fresh for every
+# consumer; the local browser cell binds it read-only. The job is a no-op while
+# the filter is younger than a day, and a failure keeps the last good filter.
+# The Stefi proxy grants this unit's cgroup only the filter metadata route; the
+# download goes to Meta's CDN.
+[Service]
+Type=oneshot
+User=root
+Group=root
+Slice=hatch-host.slice
+UMask=0022
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectControlGroups=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+LockPersonality=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+RestrictNamespaces=true
+SystemCallArchitectures=native
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadWritePaths=-/var/lib/hatch/central-blackhole
+InaccessiblePaths=-/etc/hatch/credentials
+Environment=PATH=${host_bin_dir}:${image_bin_dir}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+EnvironmentFile=${env_file}
+EnvironmentFile=-${env_override_file}
+ExecStart=${host_bin_dir}/hatch-browser-lease-helper refresh-client-blocklist
+Restart=on-failure
+RestartSec=30s
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hatch-central-blackhole-filter
+TimeoutStartSec=5min

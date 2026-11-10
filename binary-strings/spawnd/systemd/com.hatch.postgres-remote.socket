@@ -1,0 +1,33 @@
+[Unit]
+Description=Hatch remote PostgreSQL relay socket
+DefaultDependencies=no
+ConditionPathExists=!${keep_services_down_early_marker}
+# Remote PostgreSQL only: this boot must have published remote mode.
+ConditionPathExists=/run/hatch/postgres-mode/remote
+ConditionPathExists=!/dev/sev-guest
+ConditionPathExists=!/sys/devices/virtual/misc/sev-guest
+ConditionKernelCommandLine=!jarvis_cvm=true
+After=sysinit.target com.hatch.postgres-mode.service
+PartOf=hatch-rv.target com.hatch.postgres-remote.service
+Before=shutdown.target
+Conflicts=shutdown.target
+
+[Socket]
+ListenStream=/run/hatch/postgres-remote/.s.PGSQL.5432
+DirectoryMode=0755
+SocketUser=root
+# Every remote PostgreSQL client on the host dials this socket. The relay's
+# PeerAcl admits only the processes that may hold a runtime database
+# credential, and the relay lets each log in only as the roles it may hold.
+SocketMode=0666
+RemoveOnStop=true
+FlushPending=true
+TriggerLimitIntervalSec=0
+# Start the relay once this socket listens rather than on the first client, so
+# it has warmed the path to hatchdb before the daemon's first storage open. Not
+# Wants=: systemd pulls Wants= even when the conditions above skip this socket,
+# which would start the relay on local-PostgreSQL boots too.
+ExecStartPost=-/usr/bin/systemctl start --no-block com.hatch.postgres-remote.service
+
+[Install]
+WantedBy=hatch-rv.target

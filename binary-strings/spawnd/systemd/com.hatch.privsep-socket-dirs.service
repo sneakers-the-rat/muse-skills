@@ -1,0 +1,36 @@
+[Unit]
+Description=Hatch privsep tool socket directories
+# Applies the bundle's tmpfiles rows for /run/hatch and /run/hatch/privsep so
+# the ~70 com.hatch.<tool>.socket binds can run at image boot, off the RV wake
+# path, without requiring the RV-gated host-path-setup oneshot. One fork here
+# replaces a per-socket ExecStartPre (the fork-per-socket cost the socket
+# template deliberately sheds).
+#
+# Pulled only by Wants= from the privsep socket units — no [Install], so it
+# never joins a target's readiness path on its own (the privsep-worker-prep
+# pattern). On a new-image boot the sockets are wanted by sockets.target and
+# pull this first; on an old-image pool guest the deploy-delivered sockets are
+# pulled by hatch-rv.target at graft and this runs there instead, ahead of the
+# binds either way through the sockets' After= edge.
+#
+# DefaultDependencies=no: the sockets ordering After= this unit are themselves
+# DefaultDependencies=no early units. The explicit tmpfiles-setup edge below
+# restores the one ordering default dependencies would have provided (a
+# default-deps socket orders After=sysinit.target, which is after
+# systemd-tmpfiles-setup.service); ordering-only, so a graft-time start does
+# not requeue the long-finished sysinit unit. It also makes this fragment's
+# 0755 win deterministically over the OS image's own 0775 hatch.conf row for
+# /run/hatch/privsep, matching what host-path-setup applies post-RV.
+DefaultDependencies=no
+After=systemd-tmpfiles-setup.service
+# Skip cleanly when the installed tree predates the fragment (a binary-only
+# hot swap never updates /opt/hatch/etc); systemd's ListenStream DirectoryMode
+# fallback and host-path-setup still cover the dirs there.
+ConditionPathExists=/opt/hatch/etc/tmpfiles.d/hatch-privsep-socket-dirs.conf
+
+[Service]
+Type=oneshot
+# Sticky: the graft-time socket wants see a stable success instead of
+# re-running the fragment for every socket in the wave.
+RemainAfterExit=yes
+ExecStart=/usr/bin/systemd-tmpfiles --create /opt/hatch/etc/tmpfiles.d/hatch-privsep-socket-dirs.conf

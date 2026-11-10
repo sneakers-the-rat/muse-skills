@@ -1,0 +1,104 @@
+[Unit]
+Description=Hatch PostgreSQL startup preflight
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${host_bin_dir}/hatch-dbctl
+RequiresMountsFor=/var/lib/hatch/postgres
+# Database migrations may read /home/hatch: migration 0355's home-config
+# importer treats absent files as authoritative-empty and commits a durable
+# receipt, so preflight must not run before home mounts. This pins the
+# protection at the data-mutation boundary now that authd-rv-rebind no longer
+# orders after home. home-hatch.mount is After=hatch-seed.service, so the seed
+# ordering is inherited; no extra edge is needed.
+RequiresMountsFor=/home/hatch
+# Deliberately NOT ordered After= PostgreSQL activation. The wake identity
+# release (rv-graft's proof wait, then the parked daemon) sits behind this
+# unit, and the disk-proof fast path never opens a database connection, so
+# waiting for the server to finish starting only re-serializes the release
+# behind ~0.5s of PostgreSQL startup. When a run does need a connection
+# (stale/absent proofs, pending migrations, explicit repair), `hatch-dbctl
+# startup-preflight` itself waits, bounded, for the server to accept
+# connections before its connect phase — same fail-closed outcome, without
+# taxing the fast path. The daemon's own storage open already rides out a
+# still-starting server with its bounded retry loop.
+#
+# The start-job pull survives: the render-time var-lib-hatch.mount.wants link
+# eager-starts PostgreSQL at data-mount activation, and the Wants= below is
+# the ordering-free belt so this unit can never run with no PostgreSQL start
+# job in flight. db-cluster keeps Requires=/After=: on a fresh reliable
+# volume it initializes the cluster before anything touches the data
+# directory, and on every other boot it condition-skips instantly, so the
+# edge costs nothing.
+After=var-lib-hatch.mount com.hatch.db-cluster.service com.hatch.authd-rv-rebind.service com.hatch.authd.service
+Wants=com.hatch.authd-rv-rebind.service postgresql@18-hatch.service
+# Preflight runs in this boot's mode, which the writer publishes before it.
+# Only that mode's server or relay passes its PID 1 condition.
+Wants=postgres-bridge.socket com.hatch.postgres-remote.socket
+After=com.hatch.postgres-mode.service postgres-bridge.socket com.hatch.postgres-remote.socket
+Requires=com.hatch.db-cluster.service com.hatch.authd.service
+Before=com.hatch.daemon.service
+# Runtime-cell restart propagation is stop/restart-only: it does not pull this
+# RV-gated unit into the early boot transaction. Once the RV is attached, a
+# cell restart reruns the cheap disk-proof path and republishes the read-only
+# proof before Before=com.hatch.daemon.service allows its daemon to restart.
+PartOf=hatch-rv.target com.hatch.runtime-cell.service
+# 10/300s (was 5/60s): the retired wait-for-db-preflight.sh gate was the
+# only thing that revived this unit after burst exhaustion. Runtime-cell
+# restarts now propagate here, but transient fresh-RV races (daemon credential
+# retries, PG settling) still need room to clear on their own. The
+# in-process active-clients retry in hatch-dbctl slows each attempt too.
+StartLimitIntervalSec=300
+StartLimitBurst=10
+# The daemon does not Wants= this unit (it starts pre-RV at
+# multi-user.target and parks at the AwaitRvIdentity barrier); the boot
+# pull-in lives here: hatch-rv.target starts this preflight at RV attach.
+# rv-graft withholds the identity marker until this exact candidate proof is
+# current, so the daemon cannot open PostgreSQL during migration. Deliberately
+# NOT a
+# var-lib-hatch.mount.wants pull: that races hatch-rv.target startup and
+# kills the first preflight attempt (see STALE_HOST_WANTS_SYMLINKS).
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User=root
+Group=root
+EnvironmentFile=${env_file}
+EnvironmentFile=-${env_override_file}
+Environment=JARVIS_AUTHD_SOCK=/run/hatch/auth/authd.sock
+Environment=HATCH_DB_PREFLIGHT_RUNTIME_PROOF_PATH=/run/hatch/runtime-cell/postgres-startup-preflight-success.json
+ExecStartPre=/usr/bin/systemctl is-active --quiet com.hatch.authd-rv-rebind.service
+ExecStart=${host_bin_dir}/hatch-dbctl startup-preflight
+# Diagnostics have their own deadline as well as nonfatal exit status. A stuck
+# probe must not consume this required unit's startup timeout.
+ExecStartPost=-+/usr/bin/timeout --kill-after=1s 5s ${host_bin_dir}/record-daemon-lifecycle-boundaries.sh
+# Relay the record the line above just wrote into the runtime cell's read-only
+# lifecycle projection. Order matters: the recorder is the producer, this is the
+# relay, and the relay must not run first.
+#
+# A WAKE starts the daemon pre-RV, so its HATCH_DAEMON_LIFECYCLE_*_READY_AT_MS
+# env snapshot predates every post-mount boundary and the relayed projection is
+# the only source of the readiness breakdown. rv-graft waits on the proof this
+# unit's ExecStart writes, but the record comes from the ExecStartPost above,
+# which runs AFTER that proof. rv-graft polls every 25ms and can therefore
+# publish before the recorder has produced anything. This line closes that
+# window by construction rather than by timing. The daemon re-reads the
+# projection at websocket-ready, not at start, so a write this late still lands
+# in the readiness rollup. `-+` keeps it root and best-effort: a relay failure
+# costs telemetry, never the preflight.
+ExecStartPost=-+/usr/bin/timeout --kill-after=1s 5s ${host_bin_dir}/spawnd publish-post-mount-boundaries
+# A transient preflight failure can leave dependent sockets' initial starts
+# failed. Requeue them after every success; their After= edges wait until
+# this oneshot is active. Never wait synchronously here for our own dependents.
+# Starting an already active socket is a no-op, including on cell restarts.
+ExecStartPost=/usr/bin/systemctl start --no-block com.hatch.cron-store.socket
+# Optional blob storage must not fail database readiness if its socket is masked.
+ExecStartPost=-/usr/bin/systemctl start --no-block com.hatch.blob-proxy.socket
+# hatch-dbctl's offline reclaims keep their own SQL deadline; rv-graft's proof
+# wait restarts until this unit succeeds.
+TimeoutStartSec=30min
+Restart=on-failure
+RestartSec=1s
+SyslogIdentifier=hatch-db-preflight
+
+[Install]
+WantedBy=hatch-rv.target

@@ -1,0 +1,38 @@
+[Unit]
+Description=Hatch PostgreSQL cluster initialization
+StartLimitIntervalSec=0
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${host_bin_dir}/hatch-dbctl
+# Local PostgreSQL unless this boot published remote mode.
+ConditionPathExists=!/run/hatch/postgres-mode/remote
+# Triggering (|) conditions: the unit runs when EITHER holds and is skipped,
+# with no process at all, when neither does. The cluster's configuration is the
+# read-only bundle tree at /opt/hatch/etc/postgresql/18/hatch that the
+# PostgreSQL unit reads directly, and the data-directory owner is revalidated
+# by PostgreSQL itself, so an initialized cluster has exactly one durable thing
+# left for ensure-cluster to converge: the pgsql_tmp redirect symlink inside
+# the data directory. A cluster created before that redirect shipped, or whose
+# swap was deferred because the directory still held spill files, keeps
+# triggering here until the link exists; then it is skipped for good. Both
+# paths are evaluated after the RV mount below, so the checks see the real
+# data directory rather than the empty mountpoint.
+ConditionPathExists=|!/var/lib/hatch/postgres/hatch/PG_VERSION
+ConditionPathIsSymbolicLink=|!/var/lib/hatch/postgres/hatch/base/pgsql_tmp
+RequiresMountsFor=/var/lib/hatch/postgres
+After=var-lib-hatch.mount com.hatch.postgres-mode.service
+Before=postgresql@18-hatch.service com.hatch.db-preflight.service
+PartOf=hatch-rv.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+EnvironmentFile=${env_file}
+EnvironmentFile=-${env_override_file}
+ExecStart=${host_bin_dir}/hatch-dbctl ensure-cluster --skip-start
+RemainAfterExit=yes
+TimeoutStartSec=300
+SyslogIdentifier=hatch-db-cluster
+
+[Install]
+WantedBy=var-lib-hatch.mount

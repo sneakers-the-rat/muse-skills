@@ -1,0 +1,109 @@
+[Unit]
+Description=Hatch research browser broker (deep research on its own leased research VM)
+Documentation=https://github.com/par-msl/jarvis/blob/main/docs/browser-architecture.md
+After=network.target hatch-rv.target com.hatch.browser-path-setup.service com.hatch.research-browser-broker.socket com.hatch.browser-lease-helper.socket com.hatch.daemon.socket
+# com.hatch.research-browser-broker.socket declaratively owns the control UDS: it
+# creates the socket dir /run/hatch/research-browser-broker and its lease/ leaf,
+# binds the listener with SocketUser=hatch-browser-broker + SocketMode=0666, and
+# hands the broker the listening fd via socket activation. There is no
+# research path-setup unit and no viewer.
+Requires=com.hatch.research-browser-broker.socket
+# The other After= edges are ordering-only. The helper socket stays available
+# while the broker releases its research lease on shutdown. browser-path-setup
+# creates /run/hatch/browser-broker and /run/hatch/browser, which the masks
+# below can only hide once they exist; a failed User path setup must not fail
+# research. Do not order after the other brokers' sockets: reverse stop
+# ordering would hold their listeners open through this broker's long stop
+# window.
+ConditionKernelCommandLine=!jarvis_cvm=true
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${host_bin_dir}/browser-broker
+PartOf=hatch-rv.target
+
+[Service]
+Type=simple
+User=hatch-browser-broker
+Group=hatch-browser-broker
+# Host-side privsep worker slice expected by strict verify + Sentinel
+# trusted-caller anchoring (see services/browser_broker.rs, install_contract.rs).
+Slice=hatch-host.slice
+PermissionsStartOnly=true
+
+# The broker owns the research VMVM lease boundary and control socket. Lock it
+# down so a broker compromise does not trivially read other system state.
+NoNewPrivileges=true
+# Unit-identity ACLs require reading /proc/<pid>/cgroup for peer processes.
+ProtectProc=default
+ProcSubset=all
+ProtectSystem=strict
+ProtectHome=tmpfs
+# Every broker runs as hatch-browser-broker (with hatch-shared), so the kernel
+# treats them as one principal. These masks close the filesystem reach from
+# this namespace to state research never uses:
+#   - /var/lib/hatch and its RV bind source /hatch: every other broker's state
+#     directory and the shared browser profile store. Research keeps no
+#     durable state. An empty read-only tmpfs replaces /var/lib/hatch so the
+#     host's public Central Blackhole client filter, which the broker pushes
+#     into its leased VM, can be bound back read-only; nothing else under it
+#     is visible. (An InaccessiblePaths mask would drop that nested bind.)
+#   - the other brokers' runtime trees (lease tunnel sockets, viewer bridges),
+#     the local browser cell's runtime tree, and the daemon's host control
+#     sockets (the browser-control socket admits any hatch-shared peer).
+#   - edge TLS material and host credentials.
+# Its local peers are the lease helper, the telemetry proxy, and its own
+# /run/hatch/research-browser-broker tree; the lease tunnel uses AF_INET.
+# A `-` mask applies only to a directory that exists when this namespace is
+# built; research starts on demand, after the RV graph created them.
+InaccessiblePaths=-/hatch
+TemporaryFileSystem=/var/lib/hatch:ro
+BindReadOnlyPaths=-/var/lib/hatch/central-blackhole/filter
+InaccessiblePaths=-/run/hatch/browser-broker
+InaccessiblePaths=-/run/hatch/cron-browser-broker
+InaccessiblePaths=-/run/hatch/proactivity-browser-broker
+InaccessiblePaths=-/run/hatch/spaces-browser-broker
+InaccessiblePaths=-/run/hatch/browser
+InaccessiblePaths=-/run/hatch/daemon
+InaccessiblePaths=-/etc/hatch/credentials
+InaccessiblePaths=-/etc/tls
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=false
+RestrictRealtime=true
+RestrictNamespaces=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+SystemCallArchitectures=native
+UMask=0077
+# No StateDirectory: research mounts no profile store and keeps no durable
+# state. Its only writable surface is its runtime tree, which the socket unit
+# creates, NOT `RuntimeDirectory=` (which would wipe the shared `/run/hatch/`
+# tree). ReadWritePaths must name a path that EXISTS at mount-namespace setup
+# time, so name the always-present tmpfs root `/run`.
+ReadWritePaths=/run
+
+Environment=PATH=${host_bin_dir}:${image_bin_dir}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+EnvironmentFile=${env_file}
+EnvironmentFile=-${env_override_file}
+
+# The `--socket` path matches the com.hatch.research-browser-broker.socket
+# ListenStream: the broker inherits the activated fd and only self-binds that
+# path when run outside socket activation. Research keeps its own HBI pin.
+ExecStart=${host_bin_dir}/browser-broker \
+    --instance research \
+    --socket /run/hatch/research-browser-broker/research-browser-broker.sock \
+    --allowed-peer-uid ${browser_broker_allowed_peer_uid} \
+    --browser-vm-image ${research_browser_vm_image}
+
+# A shutdown waits behind an in-flight cold research launch (lease create plus
+# readiness), then releases the research lease. The default 90s would SIGKILL
+# mid-launch and strand the lease until its TTL instead of releasing it.
+TimeoutStopSec=360
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=research-browser-broker
+Restart=on-failure
+RestartSec=2s

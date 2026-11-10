@@ -76,15 +76,30 @@ part of every snapshot:
   `JARVIS_TELEMETRY_PROXY_ALLOWED_USERS`, and the comments explaining
   each socket's peer gating) exist nowhere on disk here. One file per
   unit, named by unit name (e.g. `com.hatch.telemetry-proxy.service`).
-  Extracted by `scripts/extract_spawnd_units.py`, which segments the
-  embedded texts (each starts at a line exactly `[Unit]`; a unit's
-  file name comes from its `Description=` base plus its body
-  section's suffix, or, for a socket with a prose description, from
-  the stem of its own `Service=` line) using the shared machinery in
-  the binary-inspect library (`binary_inspect.extract.spawnd_units`).
-  Texts that name nothing recoverable — prose-described slices,
-  helper services and guest units — are skipped rather than filed
-  under a made-up name, and the run summary counts them. In
+  Extracted by `scripts/extract_spawnd_units.py` using the shared
+  machinery in the binary-inspect library
+  (`binary_inspect.extract.spawnd_units`), which names the texts in
+  two tiers. Most names are **code-attributed**: the binary produces
+  each text from a tiny getter function in its code, and its own
+  (getter, name) registry pairs the getter with the file name, so
+  the name comes from the binary's data structures, not from
+  reading the text. The remaining names are **heuristic**: matched
+  from the text's own lines (its `Description=` base plus its body
+  section's suffix, or a socket's `Service=` stem) or by elimination
+  against the unit names the binary lists elsewhere. A heuristic
+  name is a unique match, not a name printed in the text, and the
+  two provenances are kept apart: each contents entry in
+  `binary-map.json` carries a `tier` field (`code-attributed` or
+  `heuristic`), and code-attributed entries also record the getter
+  and registry-record addresses the name was read from. Where the
+  tiers disagree, the code attribution is the record and the run
+  summary prints the disagreement. Texts neither tier can ground —
+  on the current binary, a socket whose registry name is stored as
+  a code reference the reader does not follow, the guest CA-trust
+  and Home Assistant guest units, and three fused script bundles
+  that are not single units — are skipped rather than filed under
+  a made-up name, and the run summary counts them (currently 137
+  of 144 texts are filed: 136 code-attributed, 1 heuristic). In
   `binary-map.json` spawnd has its own bin entry next to hatch's,
   with a unit count and one contents entry per unit file, so each
   file can be re-sliced from the binary at its recorded offset.
