@@ -1,0 +1,1 @@
+hatch-engine/crates/hatch-self-improvement/prompts/ideas/generate.md

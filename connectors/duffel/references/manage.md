@@ -13,4 +13,4 @@
 
 - `cancel-booking` rechecks the exact quote and asks for approval once before the irreversible cancellation.
 
-- This connector does not handle paid bags or other extras, cancelling some passengers, date, time or name changes, pets, unaccompanied minors, check-in or boarding passes. Direct those to the airline instead of improvising with raw APIs.
+- After booking, this connector doesn't add bags or other extras, cancel some passengers, or change dates, times or names, and it doesn't handle pets, unaccompanied minors, check-in or boarding passes. Direct those to the airline instead of improvising with raw APIs.

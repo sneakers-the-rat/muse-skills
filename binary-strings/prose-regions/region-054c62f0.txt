@@ -1,0 +1,37 @@
+select r.suggestion_id as event_id, r.connector, e.payload->'evidence' as evidence
+                from self_improvement.connector_context_records r join context.events e on e.id = r.event_id
+                join self_improvement.connector_sync_accounts a on a.connector = r.connector
+                  and a.account_id = r.account_id and a.generation = r.generation
+                where r.suggestion_id = any($1) and r.current
+                  and (e.expires_at is null or e.expires_at > statement_timestamp())
+                  and coalesce(e.occurred_at,e.ingested_at)
+                    + greatest(interval '48 hours', coalesce(e.ttl_seconds, 0) * interval '1 second') > $2connectorselect r.source_id, r.group_id, r.append_position,
+                       exists(select 1 from context.events e where e.id = r.event_id
+                         and (e.expires_at is null or e.expires_at > statement_timestamp())) as available,
+                       (coalesce(ss.start_position >= r.append_position, false)
+                         or coalesce(g.acknowledged_position >= r.append_position, false)) as settled
+                     from self_improvement.connector_context_records r
+                     left join context.subscriptions s on s.subscription_key = $2
+                     left join context.subscription_sources ss
+                       on ss.subscription_id = s.id and ss.source_id = r.source_id
+                     left join context.group_cursors g
+                       on g.subscription_id = s.id and g.source_id = r.source_id
+                         and g.group_id = r.group_id
+                     where r.suggestion_id = $1 and r.currentavailablesource_idappend_positionsettledselect allocation, producer, priority, not_before, expires_at,
+                            metadata_json->>'attention_deadline' as attention_deadline,
+                            coalesce(metadata_json->'after_main_turn' = 'true'::jsonb, false)
+                              as after_main_turn
+                     from self_improvement.follow_up_queue
+                     where state = 'pending'
+                       and expires_at > $1
+                       and ($2 or priority in ($3, $5))
+                       and ($4 or producer <> 'proactive_notifier')
+                     order by not_before asc, created_at ascselect terminal_at, priority
+                     from self_improvement.follow_up_queue
+                     where state = 'delivered'
+                       and producer <> 'internal'
+                       and allocation = $2
+                       and terminal_at > $1
+                     order by terminal_at ascselect max(terminal_at)
+                     from self_improvement.follow_up_queue
+                     where state = 'delivered'follow_up_id, producer, message, source_root_agent_id, priority, allocation, not_before, expires_at, delivery_instructions, allowed_tools, metadata_json, conversation_derived, state, disposition_reason, delivery_submission_id, claimed_at, terminal_at, created_at, updated_at, chat_id, chat_binding_epoch
