@@ -1,6 +1,6 @@
 # Shopify UCP checkout protocol
 
-- Use this protocol after the user selects catalog products from one Shopify merchant whose product details carry a `checkout_token`, after a browser completion result supplies a privately captured `shopify_cart`, or when the user asks about a native order confirmed in this conversation by a successful `checkout complete` or a successful `order get` after an unclear completion.
+- Use this protocol after the user selects Meta Catalog products from one Shopify merchant, after a browser completion result supplies a privately captured `shopify_cart`, or when the user asks about a native order confirmed in this conversation by a successful `checkout complete` or a successful `order get` after an unclear completion.
 
 - Every command runs as `/opt/hatch/bin/shopify-ucp-cli`, and every command except `order get` takes a JSON input file.
 
@@ -20,15 +20,15 @@
 
 ## Check the products
 
-- Keep each selected product's exact `product_id` and storefront `url`. A product with a `checkout_token` gets a UCP checkout, and the checkout itself decides how it completes. Ignore the catalog and product-details checkout flags.
+- Keep each selected product's exact `product_id` and storefront `url`. The UCP checkout itself decides how it completes. Ignore the catalog and product-details checkout flags.
 
 - Put products in one checkout only when their URLs clearly identify the same storefront. Matching brand names are not enough, and a checkout never mixes merchants.
 
 - The checkout endpoint makes the final decision.
 
-- For each selected catalog product, keep the `checkout_token` string from the product-details response that confirmed its variant. Run `/opt/hatch/bin/shopping product-details --product-id <product_id>` only for a product you have no response for. It is signed and tells the checkout which merchant and variant to use, so copy it exactly and never write or edit one yourself.
+- For each selected catalog product, keep the top-level `checkout_token` string from the product-details response that confirmed its variant. Run `/opt/hatch/bin/shopping product-details --product-id <product_id>` only for a product you have no response for. It is signed and tells the checkout which merchant and variant to use, so copy it exactly and never write or edit one yourself.
 
-- A product whose details have no `checkout_token` cannot be checked out directly, so offer browser checkout from its product URL.
+- A product whose product-details response has no top-level `checkout_token`, or reports a `checkout.rail` other than `shopify_ucp`, cannot be checked out directly, so offer browser checkout from its product URL.
 
 ## Keep an optional cart
 
@@ -50,11 +50,18 @@
 
 ## Choose the payment route
 
-- Keep a payment route explicitly selected for this purchase, including Link selected by the purchase handoff. Otherwise ask with `muse.create_options` and wait, offering Shop Pay, Link and Use another method. A saved default or an existing connection alone does not select a route.
+- Keep a payment route the user explicitly selected for this purchase.
 
-- For Use another method, follow `/opt/muse/skills/shopping/references/browser-checkout.md` from the selected product URLs, explain that the user will enter payment during browser takeover and do not create a UCP checkout.
+- Otherwise, use a connected wallet without asking the user:
+  - Call `wallet.list_payment_methods` with `provider: "shop-pay"`. Use Shop Pay when its `status` is `connected`.
+  - When Shop Pay is not connected, do not share its `next_action.markdown` yet. Call `wallet.list_payment_methods` with `provider: "stripe-link"`, and use Link when its `status` is `connected`.
+  - When neither wallet is connected, ask with `muse.create_options` and wait, offering to set up Shop Pay or Link. Then share only the chosen wallet's `next_action.markdown`, as its connector docs describe.
 
-- For a wallet route, call `wallet.list_payment_methods` for its provider and resolve one exact saved card as that wallet's connector docs describe. If the user declines setup or no usable card results, return to the route choice.
+- Before creating the checkout, set up the chosen wallet and choose its card as that wallet's connector docs describe. If the user declines that setup, or it cannot finish, offer the other wallet with `muse.create_options` and wait.
+
+- Offer only Shop Pay and Link. Both pay without Muse seeing the card number. When the user declines both, tell them Muse pays only through Shop Pay or Link and leave the purchase unfinished.
+
+- When the user asks to enter payment on the merchant's site themselves, follow `/opt/muse/skills/shopping/references/browser-checkout.md` from the selected product URLs, explain that they will enter payment during browser takeover and do not create a UCP checkout.
 
 ## Prepare buyer details
 
@@ -139,9 +146,9 @@
 
 - Keep the selected wallet and card. Ask again only when the user asks to switch or the card is no longer listed, and never substitute another card.
 
-- For a switch to another wallet, resolve its exact card with `wallet.list_payment_methods` and keep the existing checkout, without asking the user to confirm the switch they just requested. For Use another method, continue the existing checkout in the browser from its URL and explain that the user will enter payment during takeover.
+- For a switch to another wallet, resolve its exact card with `wallet.list_payment_methods` and keep the existing checkout, without asking the user to confirm the switch they just requested. When the user asks to enter payment themselves, continue the existing checkout in the browser from its URL and explain that they will enter payment during takeover.
 
-- If setup for the requested wallet is declined or leaves no usable card, keep the checkout and ask the user to choose another route.
+- If setup for the requested wallet is declined or leaves no usable card, keep the checkout and offer the other wallet.
 
 - Take the first branch that matches the selected wallet:
 

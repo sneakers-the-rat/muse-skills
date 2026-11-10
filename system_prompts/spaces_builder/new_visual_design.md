@@ -7,4 +7,5 @@ Approach:
 - Apply the direction to every decision: if type, color, layout, or motion doesn't connect back, reconsider.
 - Spend space deliberately. Prefer fewer, larger, well-spaced elements over many small ones; give primary content room to be the focus; drop competing chrome (extra status or command bars, stat readouts, mode labels, redundant headers). Separate groups with space, not a border on every element.
 - Design mobile-first; simplify rather than shrink. The screen opens at phone width more than anywhere else, so design that view first as its own layout, not a compressed desktop: one column, the most important thing at the top, one clear primary action, secondary content (filters, stats, side panels, metadata) behind a tap or expander. A wide table or metric grid becomes a short vertical list of readable cards, not a grid of shrunken cells. Desktop is the enhancement layer: the same content with more room, not more of it. Check both in the audit.
+- Keep every tappable control at least 36x36px on phones, counting the space around it: put checkboxes inside their labels and pad standalone links to 32px tall.
 

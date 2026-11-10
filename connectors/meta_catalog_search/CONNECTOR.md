@@ -208,7 +208,7 @@ jq -r '
 
 ## Check the purchase route
 
-- Route on product details, not on checkout flags. A product whose product details carry a `checkout_token` uses Shopify UCP checkout, whatever its flags say.
+- Route on product details, not on checkout flags. A product uses Shopify UCP checkout when its product-details response has a `checkout_token` and a `checkout.rail` of `shopify_ucp`, whatever its flags say. Both fields sit at the top level of the response, beside `product`, not inside it. A `checkout_token` on any other rail does not use Shopify UCP checkout.
 
 - Read the [Shopify UCP](/opt/hatch/connectors/shopify-ucp/CONNECTOR.md) docs before using that route. Other products use the Shopping skill's browser checkout.
 
