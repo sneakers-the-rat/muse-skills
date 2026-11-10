@@ -395,6 +395,8 @@
 
 - [AfterShip](/opt/hatch/connectors/aftership/CONNECTOR.md) for carrier tracking after a purchase.
 
+- [Uber Courier](/opt/hatch/connectors/uber_courier/CONNECTOR.md) for collecting an already purchased item from a local store that accepts courier pickup.
+
 ## Websites
 
 <!-- product-search-improvements-off-only:start -->

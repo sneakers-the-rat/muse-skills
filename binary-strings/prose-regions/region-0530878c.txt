@@ -1,0 +1,87 @@
+select p.* from agent.connection_participants p
+                join agent.connections c using(connection_id)
+                where p.connection_id=$1 and c.active and p.audience=c.audience
+                order by p.kind,p.display_name,p.participant_idselect audience from agent.connections where connection_id=$1 and active for updateselect exists(select 1 from unnest($1::uuid[]) as directory_id
+                 where not exists(select 1 from agent.connections c where c.connection_id=directory_id))The conversation audience changeddelete from agent.connection_participants where connection_id=$1 and not (participant_id=any($2))A participant directory entry no longer existsupdate agent.connections set person_paths=$2,group_path=$3,updated_at_ms=$4
+                         where connection_id=$1 and (person_paths,group_path) is distinct from ($2,$3)insert into agent.connection_participants
+                  (connection_id,participant_id,audience,display_name,kind,owner_participant_id,directory_id,person_path,muse_id)  on conflict (connection_id,participant_id) do update set
+                  audience=excluded.audience,display_name=excluded.display_name,kind=excluded.kind,
+                  owner_participant_id=excluded.owner_participant_id,directory_id=excluded.directory_id,
+                  person_path=excluded.person_path,muse_id=excluded.muse_id
+                  where (connection_participants.audience,connection_participants.display_name,
+                         connection_participants.kind,connection_participants.owner_participant_id,
+                         connection_participants.directory_id,connection_participants.person_path,
+                         connection_participants.muse_id)
+                    is distinct from (excluded.audience,excluded.display_name,excluded.kind,
+                                      excluded.owner_participant_id,excluded.directory_id,
+                                      excluded.person_path,excluded.muse_id)insert into agent.connections
+                    (connection_id,provider,address,display_name,muse_id,audience,active,rules_revision,
+                     person_paths,search_document,created_at_ms,updated_at_ms)  on conflict (connection_id) do update set
+                    display_name=excluded.display_name,muse_id=excluded.muse_id,
+                    person_paths=excluded.person_paths,search_document=excluded.search_document,
+                    updated_at_ms=excluded.updated_at_ms
+                    where connections.provider='directory'
+                      and connections.address=excluded.address and connections.audience=excluded.audience
+                      and (connections.display_name,connections.muse_id,connections.person_paths)
+                          is distinct from (excluded.display_name,excluded.muse_id,excluded.person_paths)select exists (
+                    select 1 from unnest($1::uuid[],$2::text[]) as expected(id,identity)
+                    join agent.connections c on c.connection_id=expected.id
+                    where c.provider<>'directory' or c.address<>expected.identity or c.audience<>expected.identity)Participant directory identity changedselect exists(select 1 from chat_private.external_party_conversations where chat_id=$1)insert into chat_private.accounts
+                (provider, account_id, connection_id, revoked) values ($1,$2,$3,$4)
+                on conflict do nothingselect connection_id, revoked from chat_private.accounts
+                where provider = $1 and account_id = $2 for updateupdate chat_private.accounts set connection_id = $3, revoked = $4
+                where provider = $1 and account_id = $2update chat_private.binding_authorizations set participation = 'revoked'
+                where provider = $1 and account_id = $2
+                  and (($4 and connection_id = $3) or (not $4 and connection_id <> $3))SELECT generation, consent_version, consent_granted_at, phase, connected_at, enrollment_generation, enrollment_confirmed_at, activity_since_ms, synced_through_at, last_sync_attempt_at, last_sync_success_at, last_error_code, retry_not_before, paused_since, paused_reason, applied_deletion_seq, applied_purged_before_ms, reconcile_pending, reconcile_reason, reconcile_cursor, reconcile_started_seq, last_reconcile_at, partial_listing_since, backfill_cursor, backfill_started_at, backfill_floor_ms, backfill_reached_ms, backfill_completed_at, backfill_exists_cursor, last_pruned_at, updated_at FROM meta_ai.sync_state WHERE singleton
+INSERT INTO meta_ai.sync_state (
+  generation, consent_version, consent_granted_at, phase, connected_at, backfill_floor_ms
+)
+SELECT nextval('meta_ai.sync_generation_seq'), $1, $2, $3, now(), $4
+WHERE NOT EXISTS (SELECT 1 FROM meta_ai.conversations)
+  AND NOT EXISTS (SELECT 1 FROM meta_ai.messages)
+  AND NOT EXISTS (SELECT 1 FROM meta_ai.media)
+  AND NOT EXISTS (SELECT 1 FROM meta_ai.tombstones)
+  AND NOT EXISTS (SELECT 1 FROM meta_ai.deletion_checks)
+ON CONFLICT (singleton) DO NOTHING
+RETURNING generation
+UPDATE meta_ai.sync_state SET updated_at = now() WHERE singleton AND generation = SELECT conversation_id, change_token_ms FROM meta_ai.conversations WHERE generation = $1 AND ($2::text IS NULL OR conversation_id > $2) ORDER BY conversation_id LIMIT $3WITH doomed AS ( SELECT conversation_id FROM meta_ai.conversations WHERE generation IS DISTINCT FROM (SELECT generation FROM meta_ai.sync_state WHERE singleton) LIMIT $1 ), media AS ( DELETE FROM meta_ai.media x USING doomed d WHERE x.conversation_id = d.conversation_id ), gone AS ( DELETE FROM meta_ai.messages m USING doomed d WHERE m.conversation_id = d.conversation_id ) DELETE FROM meta_ai.conversations c USING doomed d WHERE c.conversation_id = d.conversation_idWITH doomed AS ( SELECT conversation_id, message_id FROM meta_ai.messages WHERE generation IS DISTINCT FROM (SELECT generation FROM meta_ai.sync_state WHERE singleton) LIMIT $1 ), media AS ( DELETE FROM meta_ai.media x USING doomed d WHERE x.conversation_id = d.conversation_id AND x.message_id = d.message_id ) DELETE FROM meta_ai.messages m USING doomed d WHERE m.conversation_id = d.conversation_id AND m.message_id = d.message_idWITH doomed AS ( SELECT conversation_id, message_id, media_index FROM meta_ai.media WHERE generation IS DISTINCT FROM (SELECT generation FROM meta_ai.sync_state WHERE singleton) LIMIT $1 ) DELETE FROM meta_ai.media x USING doomed d WHERE x.conversation_id = d.conversation_id AND x.message_id = d.message_id AND x.media_index = d.media_indexWITH doomed AS ( SELECT conversation_id FROM meta_ai.tombstones WHERE generation IS DISTINCT FROM (SELECT generation FROM meta_ai.sync_state WHERE singleton) LIMIT $1 ) DELETE FROM meta_ai.tombstones t USING doomed d WHERE t.conversation_id = d.conversation_idWITH doomed AS ( SELECT conversation_id FROM meta_ai.deletion_checks WHERE generation IS DISTINCT FROM (SELECT generation FROM meta_ai.sync_state WHERE singleton) LIMIT $1 ) DELETE FROM meta_ai.deletion_checks k USING doomed d WHERE k.conversation_id = d.conversation_idUPDATE meta_ai.sync_state SET applied_purged_before_ms = $1, updated_at = now() WHERE singletonDELETE FROM meta_ai.teardown WHERE singleton AND NOT purge_pending AND NOT unenroll_pending AND refused_code IS NULL
+INSERT INTO meta_ai.teardown AS t (
+  enrollment_generation, purge_pending, unenroll_pending, refused_code, refused_at
+)
+VALUES ($1, $2, $3, $4::text, CASE WHEN $4::text IS NULL THEN NULL ELSE now() END)
+ON CONFLICT (singleton) DO UPDATE SET
+  enrollment_generation = coalesce(excluded.enrollment_generation, t.enrollment_generation),
+  purge_pending = t.purge_pending OR excluded.purge_pending,
+  unenroll_pending = t.unenroll_pending OR excluded.unenroll_pending,
+  refused_code = excluded.refused_code,
+  refused_at = excluded.refused_at,
+  updated_at = now()
+UPDATE meta_ai.teardown SET unenroll_pending = false, updated_at = now() WHERE singleton AND enrollment_generation IS NOT DISTINCT FROM $1UPDATE meta_ai.teardown SET refused_code = $1, refused_at = now(), updated_at = now() WHERE singletonSELECT 1 FROM meta_ai.teardown WHERE singleton FOR UPDATEWITH live AS ( SELECT generation FROM meta_ai.sync_state WHERE singleton ) SELECT EXISTS (SELECT 1 FROM meta_ai.conversations WHERE generation IS DISTINCT FROM (SELECT generation FROM live)) OR EXISTS (SELECT 1 FROM meta_ai.messages WHERE generation IS DISTINCT FROM (SELECT generation FROM live)) OR EXISTS (SELECT 1 FROM meta_ai.media WHERE generation IS DISTINCT FROM (SELECT generation FROM live)) OR EXISTS (SELECT 1 FROM meta_ai.tombstones WHERE generation IS DISTINCT FROM (SELECT generation FROM live)) OR EXISTS (SELECT 1 FROM meta_ai.deletion_checks WHERE generation IS DISTINCT FROM (SELECT generation FROM live))UPDATE meta_ai.teardown SET purge_pending = false, updated_at = now() WHERE singletonUPDATE meta_ai.teardown SET unenroll_pending = false, refused_code = NULL, refused_at = NULL, updated_at = now() WHERE singletonSELECT enrollment_generation, purge_pending, unenroll_pending, refused_code, refused_at, since, updated_at FROM meta_ai.teardown WHERE singletoninsert into goals.engagement_events
+                     (event_id, goal_id, event_type, surface, value, request_id, metadata,
+                      created_at)
+                     values ($1, $2, $3, $4, $5, $6, $7, coalesce($8::timestamptz, now()))
+                     returning event_id, goal_id, event_type, surface, value, request_id, metadata,
+                               created_at::text as created_athandoff event sequence
+SELECT e.event_seq, e.event_name, coalesce(e.message_id, '') AS message_id,
+       e.payload_json
+FROM events e
+WHERE e.idempotency_key = $1
+  AND e.payload_json IS NOT NULL
+context event identity already belongs to another writerSELECT event_seq FROM events WHERE idempotency_key = $1runtime_events_main_public_root_message_uidxSELECT request_id, root_request_id, parent_request_id,
+                                        event_name, visibility::text, role::text, source,
+                                        transcript_surface::text, message_id, reply_to_message_id,
+                                        agent_id, parent_agent_id, parent_message_id
+                                 FROM events WHERE event_seq = $1delta.presentationruntime.messages.body
+INSERT INTO messages (message_id, event_seq, role, body, created_at)
+VALUES ($1, $2, $3::runtime.message_role, $4, to_timestamp($5::double precision / 1000.0))
+ON CONFLICT (message_id) DO NOTHING
+
+SELECT event_seq AS seq, event_name, role::text AS role
+FROM events
+WHERE message_id = $1
+  AND transcript_surface = 'main_chat'
+  AND visibility = 'public'
+  AND event_name IN ('message.user', 'message.assistant')
+  AND (parent_message_id IS NULL OR TRIM(parent_message_id) = '')
+LIMIT 1
+seqtranscript_surfacereply_to_message_idDELETE FROM chat.event_transports WHERE event_seq = $1INSERT INTO chat.event_transports (event_seq, provider) VALUES  ON CONFLICT (provider, event_seq) DO NOTHING, (€ç

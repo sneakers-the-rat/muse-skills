@@ -50,6 +50,12 @@
 
 - If nothing here fits, look on the web for a maintained API or MCP server and set it up with [Custom Connectors and MCPs](/opt/muse/skills/custom-connector-setup/SKILL.md), or build a custom connector.
 
+### When available
+
+- These connectors depend on the user's channel or devices. `muse.connector_search` shows which ones this session has.
+
+- [Uber Courier](/opt/hatch/connectors/uber_courier/CONNECTOR.md) for local delivery of an item after the purchase and pickup arrangements are confirmed.
+
 ## Websites
 
 - Search and transact on these sites with `browser.browse`, giving the exact item, condition, price range and the city or postcode where it will change hands. Have the task return each listing's price, condition, location, seller rating and payment or shipping terms.

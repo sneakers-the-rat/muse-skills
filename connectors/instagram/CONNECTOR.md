@@ -1,6 +1,6 @@
 # Instagram
 
-- `/opt/hatch/bin/instagram-cli` works with the Instagram accounts the user links through Meta Accounts Center. It searches accounts and reads profiles, posts, comments, likers, stories, feeds, saved items and insights, manages saved collections, interests and profile details, publishes or schedules stories and feed media, and replies to comments on the user's posts.
+- `/opt/hatch/bin/instagram-cli` works with the Instagram accounts the user links through Meta Accounts Center. It searches accounts and reads profiles, posts, comments, likers, stories, feeds, saved items and insights, manages saved collections, interests and profile details, publishes or schedules stories and feed media, replies to comments on the user's posts, and edits captions on the user's published posts.
 
 - Direct messages use the separate [Instagram Messages](/opt/hatch/connectors/instagram_messages/CONNECTOR.md) connector and its own connection. Content access does not grant messaging access.
 
@@ -67,7 +67,7 @@
 
 - Change Instagram state only when the user requests it. Keep the selected account, target and supplied values unchanged through approval; report completion only from a successful result.
 
-- `--retries N` retries transient failures and defaults to 0. Keep `--retries 0` for writes unless they only edit existing text or state. `post-feed`, `post-story`, `comment-reply`, `set-profile-picture`, `profile-banner` and `update-bio --action add-link` reject any other value because a retry could repeat the change.
+- `--retries N` retries transient failures and defaults to 0. Keep `--retries 0` for writes unless they only edit existing text or state. `post-feed`, `post-story`, `comment-reply`, `edit-post`, `set-profile-picture`, `profile-banner` and `update-bio --action add-link` reject any other value because a retry could repeat the change.
 
 - On `429 Too Many Requests`, stop every `instagram-cli` call for the task, including calls from scripts. For a post or reel link, continue with the fallbacks in [content questions](references/content-questions.md). Otherwise report what you completed and what remains.
 
@@ -255,6 +255,19 @@
 
 - If the user declines the approval, or an error shows the request never ran (such as a consent link, a not-connected account or a 403), nothing was archived; follow the error rules above. If the call fails otherwise or its outcome is unclear, report every item as unconfirmed and do not repeat the call.
 
+## Edit a published post
+
+- `edit-post` changes only the caption of one post, reel or carousel the selected account owns. Take `--media-id` from `posts` or `post`, and resolve an ambiguous post first. `--caption` is the complete new caption; `''` clears it. Single-quote it so `$` and backticks stay literal.
+
+- A caption edit asks for approval each time unless the user allowed it for the current task.
+
+```sh
+/opt/hatch/bin/instagram-cli edit-post --account-id <user_own_fbid> \
+  --media-id <post_id> --caption '<complete new caption>'
+```
+
+- The result has the stored `caption`, which Instagram may have sanitized. After an uncertain result, read the post with `post` before any further edit.
+
 ## Read and edit profile links
 
 - Read links with `profile` and use the selected link's positive `link_id` for an edit. A `null` link list is unavailable and legacy ID `-1` cannot be edited. Ask which link when ambiguous.
@@ -381,9 +394,9 @@ EDITOR_JSON='[
 
 ## What the connector cannot do
 
-- `instagram-cli` cannot follow, unfollow, remove followers, block, like, create top-level comments, delete, unarchive or pin posts, or edit captions. It cannot read the ranked home timeline or another person's following list. Say so plainly when asked.
+- `instagram-cli` cannot follow, unfollow, remove followers, block, like, create top-level comments, delete, unarchive or pin posts. It cannot read the ranked home timeline or another person's following list. Say so plainly when asked.
 
-- A browser task on instagram.com through `browser.browse` can edit a caption or delete a post once the user signs in there, with the change in `task` and the existing `task_id` or `"new"` for separate work. Delete a post only after the user confirms that exact post.
+- A browser task on instagram.com through `browser.browse` can delete a post once the user signs in there, with the change in `task` and the existing `task_id` or `"new"` for separate work. Delete a post only after the user confirms that exact post.
 
 ## Present results
 
