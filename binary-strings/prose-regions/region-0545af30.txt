@@ -1,0 +1,22 @@
+SELECT bool_and(coalesce(i.indisvalid, false)) FROM unnest($1::text[]) AS n(name)
+                 LEFT JOIN pg_index i ON i.indexrelid=to_regclass(n.name)select a.id from agents a
+    join chat.chats c on c.chat_id = a.session_id
+    where a.kind = 'root' and a.parent_agent_id is null and a.session_id = $1
+      and a.ephemeral is distinct from true and c.origin in ('fresh', 'fork')
+      and c.status <> 'deleted'
+    order by a.created_at desc, a.id desc limit 1INSERT INTO agents (agent_id, id, session_id, kind, parent_id, parent_agent_id, root_session_id, depth, created_at, updated_at, model, status, last_assistant_message, ephemeral, agent_type, presentation_root_session_id, spawn_metadata_json, originating_location_context_json)
+             VALUES ($1, $1, $2, $3, $4, $4, $5, $6, $7, $8, $9, $10, NULL, $11, $12, $13, $14, $15)
+INSERT INTO agent_ancestors (descendant_id, ancestor_id, distance)
+VALUES ($1, $1, 0)
+ON CONFLICT (descendant_id, ancestor_id) DO NOTHING
+
+INSERT INTO agent_ancestors (descendant_id, ancestor_id, distance)
+SELECT $1, ancestor_id, distance + 1
+FROM agent_ancestors
+WHERE descendant_id = $2
+ON CONFLICT (descendant_id, ancestor_id) DO NOTHING
+
+INSERT INTO agent_ancestors (descendant_id, ancestor_id, distance)
+VALUES ($1, $2, 1)
+ON CONFLICT (descendant_id, ancestor_id) DO NOTHING
+freshINSERT INTO runtime.maintenance_markers (marker_key, detail_json) VALUES ('event_hook_admissions_v1', '{}') ON CONFLICT (marker_key) DO NOTHINGINSERT INTO runtime.event_hook_admissions (hook_id, revision, definition_sha256, script_sha256, enabled)  ON CONFLICT (hook_id) DO NOTHINGactivity_id, kind, muse_id, at_ms, dismissed, payload, dedupe_keyselect clock_timestamp()reconciliation retry time must be after database finalization time
