@@ -10,6 +10,10 @@
 
 - When the resolution is anything else or missing, share the link and stop, without assuming the request can resume.
 
+- `link_spend_limit_exceeded` means `book` stopped before the approval card: nothing was requested or charged. The limit covers the whole Link wallet, so another Link card doesn't help. Tell the user the total is above their Link limit. Rerun `book` only after they say they raised it enough for this total; otherwise offer the airline's own site.
+
+- `link_card_ineligible` means `book` stopped before the approval card because Link would refuse that card for this purchase: nothing was requested or charged. Tell the user why. When the error says other saved cards can pay, offer the ones from `wallet.list_payment_methods` that the error doesn't rule out; rerun `book` with the chosen card's `--payment-method-id`, or help them pay another way.
+
 - A `failed`, `terminal_status` or `unsupported` Link result ends the attempt; another spend request would start a new purchase, so report it and stop.
 
 - `link_request_open` means Stripe Link refused this payment request because a matching one from an earlier attempt (same merchant, amount and card) was created in the last few minutes, and that attempt isn't proven to have ended without a booking. Nothing was created or charged, and this checkout keeps its approval. Resolve the earlier attempt first, with `booking-status` when its outcome is unknown, and don't retry while it is unresolved or may have booked. When the earlier attempt was cancelled before submission or rejected with no order, `book` waits out those minutes itself, so let it finish.

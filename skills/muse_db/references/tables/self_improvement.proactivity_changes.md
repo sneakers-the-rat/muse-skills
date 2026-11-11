@@ -46,6 +46,16 @@ Brief agent-reported completed changes. Delivery acknowledges the ledger without
 
 - `delivered_at` uses `timestamp with time zone` and is nullable.
 
+- `standalone_notice_id` uses `text` and is nullable.
+
+  Opaque correlation identifier; no declared local table relationship.
+
+- `report_not_before` uses `timestamp with time zone` and is nullable.
+
+- `report_suppression_reason` uses `text` and is nullable.
+
+- `report_note` uses `text` and is nullable.
+
 ## Keys and relationships
 
 - PRIMARY KEY `proactivity_changes_pkey` covers `change_id`.

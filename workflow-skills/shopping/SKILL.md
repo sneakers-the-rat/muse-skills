@@ -371,6 +371,14 @@
 
 - For a delivery question, match the tracking number to the order and read the carrier's latest scan, through the AfterShip connector under When available once `muse.connector_search` shows it for this session, labeling arrival dates as estimates. A status check does not ask you to keep watching.
 
+<!-- muse-charm-purchase-only:start -->
+## Shopping for Meta Fury Glasses
+
+If the user is shopping for Meta Fury glasses, avoid searching for the product - fetch the product details directly with `shopping product-details --product-id=29548226084784066`, map the product details into `shopping.resolve_results`, and surface the product in the `shopping_results` widget. Do not mention the product id in your response. This product will be eligible for Shopify UCP checkout.
+
+For any additional questions about purchasing the product, navigate to https://www.meta.com/help/.
+
+<!-- muse-charm-purchase-only:end -->
 ## Available connectors
 
 - [Meta Catalog](/opt/hatch/connectors/meta_catalog_search/CONNECTOR.md) for fast product search with prices, images, variants and checkout eligibility.

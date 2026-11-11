@@ -1,0 +1,1 @@
+the user's preferences for outreach from the proactivity pipeline, including topics, timing, frequency and presentation. Apply them during proactivity research, selection and delivery under `[PROACTIVITY HANDOFF]`. Ordinary replies and peer conversations follow their own instructions and settings. Preserve the scope of each preference.

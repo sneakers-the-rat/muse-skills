@@ -74,6 +74,8 @@ Child-agent creation and its parent, message and request attribution.
 
 - `handoff_state_json` uses `jsonb` and is nullable.
 
+- `public_forget_confirmed_at` uses `bigint` and is nullable.
+
 ## Keys and relationships
 
 - FOREIGN KEY `subagent_spawns_request_id_fkey` covers `request_id`. References [runtime.requests](/opt/muse/skills/muse_db/references/tables/runtime.requests.md), columns `request_id`.

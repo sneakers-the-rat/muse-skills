@@ -46,7 +46,7 @@
 
 - [Instagram](/opt/hatch/connectors/instagram/CONNECTOR.md) for the user's posts, owned-post lifetime insights, account insights and metric definitions.
 
-- [Facebook](/opt/hatch/connectors/facebook_cli/CONNECTOR.md) for managed Page insights, Page post metrics and the reactions and comments on personal posts.
+- [Facebook](/opt/hatch/connectors/facebook_cli/CONNECTOR.md) for reactions and comments on personal posts, Page post metrics and managed Page insights<!-- facebook-pages-tranche2-only:start -->, best time to post, content ideas and trends in its niche<!-- facebook-pages-tranche2-only:end -->.
 
 - [Threads](/opt/hatch/connectors/threads/CONNECTOR.md) for the user's posts, post insights, top posts and account insights.
 

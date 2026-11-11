@@ -149,11 +149,14 @@
 <!-- facebook-group-posts-only:start -->
   - text<!-- facebook-profile-media-only:start --> and media<!-- facebook-profile-media-only:end --> posts in Groups the user can post in
 <!-- facebook-group-posts-only:end -->
-  - drafts, posts, Reels and schedules on Pages the user manages
+  - drafts, posts, Reels<!-- facebook-pages-tranche2-only:start -->, Stories<!-- facebook-pages-tranche2-only:end --> and schedules on Pages the user manages
+<!-- facebook-pages-tranche2-only:start -->
+  - replying to, hiding and deleting comments on posts of Pages the user manages, acting as the Page
+<!-- facebook-pages-tranche2-only:end -->
   - the user's own Marketplace listings
   - saved items and collections
 
-- Reactions, edits and deletions of posts or comments aren't available, so suggest only the writes above.
+- Reactions, edits and deletions of posts or comments aren't available<!-- facebook-pages-tranche2-only:start -->, except deleting comments on posts of Pages the user manages, listed above<!-- facebook-pages-tranche2-only:end -->, so suggest only the writes above.
 
 - Personal<!-- facebook-group-posts-only:start --> and Group<!-- facebook-group-posts-only:end --> posts, comments, Page writes and Marketplace publishes, edits and deletes each show the user an approval card. Creating a draft listing uses the normal permission prompt, and saved-item changes are allowed by default.
 
@@ -171,12 +174,28 @@
 
 - [Saved items](/opt/hatch/connectors/facebook_cli/references/saved.md) (`saved list`, `saved add`, `saved remove`, `saved collections list`, `saved collections create`). Read it before any `saved` command.
 
-- [Facebook Pages](/opt/hatch/connectors/facebook_cli/references/pages.md) (`pages list`) before any `pages` command, then [Page insights](/opt/hatch/connectors/facebook_cli/references/pages-insights.md) (`pages account-insights`, `pages posts list`, `pages posts get`) or [Page publishing](/opt/hatch/connectors/facebook_cli/references/pages-publishing.md) (`pages drafts`, `pages posts create`, `pages posts reschedule`, `pages posts cancel-schedule`) for the task. `pages list` returns the Pages the user manages, and no command lists the Pages they follow, so explain that limit for a followed-Page request.
+- [Facebook Pages](/opt/hatch/connectors/facebook_cli/references/pages.md) (`pages list`<!-- facebook-pages-tranche2-only:start -->, `pages info`<!-- facebook-pages-tranche2-only:end -->) before any `pages` command, then [Page insights](/opt/hatch/connectors/facebook_cli/references/pages-insights.md) (`pages account-insights`, `pages posts list`, `pages posts get`) or [Page publishing](/opt/hatch/connectors/facebook_cli/references/pages-publishing.md) (`pages drafts`, `pages posts create`, `pages posts reschedule`, `pages posts cancel-schedule`) for the task. `pages list` returns the Pages the user manages, not the Pages they follow.
 
 - [Marketplace](/opt/hatch/connectors/facebook_cli/references/marketplace.md) before any `marketplace` command, then [Marketplace buying](/opt/hatch/connectors/facebook_cli/references/marketplace-buying.md) (`marketplace search`, `marketplace listing details`, `marketplace seller-info`, `marketplace saved`) or [Marketplace selling](/opt/hatch/connectors/facebook_cli/references/marketplace-selling.md) (`marketplace my-listings`, `marketplace listing create`, `edit`, `publish` and `delete`) for the task.
 
 - [Shopping from Facebook Reels](/opt/hatch/connectors/facebook_cli/references/shopping-links.md) (`post read --out`) for products shown in a Reel or video post.
 
+<!-- facebook-pages-tranche2-only:start -->
+- Read the guide for a Page feature below before running any command for that request, including `me` and `pages list`, because each guide starts with the requests to decline before any lookup.
+
+- [Followers and following](/opt/hatch/connectors/facebook_cli/references/followers.md) (`me followers`, `me following`, `pages followers`, `pages following`) for who follows the user or a Page they manage, and the people and Pages they follow.
+
+- [Page inspiration](/opt/hatch/connectors/facebook_cli/references/pages-inspiration.md) (`pages inspiration`) for a managed Page's best time to post, content ideas, trends, trending audio, and top posts and creators in its niche.
+
+- [Page content protection and creator guidance](/opt/hatch/connectors/facebook_cli/references/pages-rights-and-guidance.md) (`pages copyright content-protection`, `pages knowledge search`) for a managed Page's Content Protect matches and disputes, and questions about Facebook's policies, guidelines and features for creators and Pages that aren't about ads.
+
+- [Page earnings and payouts](/opt/hatch/connectors/facebook_cli/references/pages-monetization.md) (`pages monetization`) for a managed Page's earnings, monetization programs and payouts.
+
+- [Page stories](/opt/hatch/connectors/facebook_cli/references/pages-stories.md) (`pages stories`) for a managed Page's live stories and their view counts, and for publishing or deleting a story as the Page.
+
+- [Page comment moderation](/opt/hatch/connectors/facebook_cli/references/pages-comments.md) (`pages comments reply`, `hide`, `delete`) for replying to, hiding and deleting comments on a managed Page's posts.
+
+<!-- facebook-pages-tranche2-only:end -->
 ## Suggest Facebook tasks
 
 - When the user asks what they can do with Facebook, offer three to five read-only tasks that combine commands, phrased as outcomes, such as "See which of your Marketplace listings still have no photos." Fit them to the user's interests, the time of year and the conversation, and offer to walk through any of them.

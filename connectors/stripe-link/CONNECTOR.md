@@ -38,7 +38,7 @@
 
 ## Check spending limits
 
-- For a direct checkout, call `wallet.get_user_info` before presenting the review. In a browser checkout, the payment interface applies the limits. `wallet.get_user_info` returns per-purchase, daily and thirty-day limits in minor units, with the amount left in each rolling window, and a null value means that limit is not set. The limits in `agent_wallet_spend_limits` carry no currency, so compare their minor-unit values directly with the approval amount in the checkout currency.
+- For a direct checkout, call `wallet.get_user_info` before presenting the review. In a browser checkout, the payment interface applies the limits. `wallet.get_user_info` returns per-purchase, daily and thirty-day limits in minor units, with the amount left in each rolling window, and a null value means that limit is not set. The limits in `agent_wallet_spend_limits` carry no currency. Compare their minor-unit values with the approval amount only when the checkout currency matches `default_spend_request_currency`; for another currency, or when that field is absent, don't compare, and Link applies its limits at checkout.
 
 - For a direct checkout, compare the payment amount with every limit and report a conflict before continuing. Read the limits again for each new question. Do not invent a cap when they are unavailable.
 

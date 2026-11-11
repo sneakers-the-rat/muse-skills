@@ -1,0 +1,19 @@
+[Unit]
+Description=Refresh the runtime after a pinned RV development override binds
+DefaultDependencies=no
+ConditionPathExists=/run/hatch/rv-deploy-runtime-refresh-pending
+ConditionPathExists=!/run/hatch/rv-deploy-session
+ConditionPathExists=!${keep_services_down_early_marker}
+# This worker must not block the attach transaction that its restart needs.
+# Explicit After=target and DefaultDependencies=no avoid implicit member ordering.
+After=opt-hatch-rv-remote-deploy-mount.service hatch-rv.target
+PartOf=hatch-rv.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+TimeoutStartSec=180
+ExecStart=${host_bin_dir}/hatch-rv-deploy-refresh.sh
+
+[Install]
+WantedBy=hatch-rv.target

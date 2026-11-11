@@ -4,13 +4,21 @@
 
 - After you find the Page and handle consent below, you can read [Page insights](/opt/hatch/connectors/facebook_cli/references/pages-insights.md) to report how the Page and its posts are performing, or [Page publishing](/opt/hatch/connectors/facebook_cli/references/pages-publishing.md) to draft, publish, schedule or delete posts.
 
+<!-- facebook-pages-tranche2-only:start -->
+- Decline a Page request meant to defraud people, forge earnings statements or payment proof, or redirect someone else's payouts. Decline before running any command, including `pages list`, and don't suggest another tool or site.
+
+<!-- facebook-pages-tranche2-only:end -->
 ## Find a Page
 
 ```sh
 /opt/hatch/bin/facebook-cli pages list [--limit <1 to 20, default 20>] [--after '<paging.cursors.after from the previous response>']
 ```
 
-- `pages list` reads the user's managed Pages. Use this to match the user's intended Page. Follow each returned `paging.cursors.after` with `pages list --after` until the Page is found or no cursor remains, because an empty page with a cursor is not the end. Ask when the match stays ambiguous.
+- `pages list` reads the user's managed Pages. Use this to match the user's intended Page. Follow each returned `paging.cursors.after` with `pages list --after` until the Page is found or no cursor remains, because an empty page with a cursor is not the end.
+
+- When it's unclear which Page or Pages the user means, for example they name no Page and manage more than one, or the name they give matches more than one managed Page, list the matching Pages by name and ask which they mean before running any other command for any of them, because reading or changing each Page shows or touches data from a Page the user didn't choose.
+
+- A request for all of the user's Pages, such as "compare views across all my Pages", selects every managed Page. Run each command with each Page's own `page_id`.
 
 - An empty `pages list` result does not prove the user manages no Pages.
 
@@ -30,6 +38,22 @@
 
 - `pages access --page-id` is an optional diagnostic of the user's permissions on a Page. It is neither a consent check nor a grant, and data reads check access on their own.
 
+<!-- facebook-pages-tranche2-only:start -->
+## Read Page details
+
+```sh
+/opt/hatch/bin/facebook-cli pages info --page-id '<page_id>'
+```
+
+- `pages info` reads what a Page the user manages shows about itself, including its About text and bio, categories, websites, public phones and emails, location, hours, action button, products it sells, username, profile link and verification.
+
+- Answer from the fields the user asked about.
+
+- A null or empty field means the Page doesn't list it. A field named in `field_failures` couldn't be read, and one in `truncated_fields` was shortened or left out, so report those as unavailable rather than empty.
+
+- Hours intervals count seconds from the start of the local day, so 32400 is 9:00 AM, and a `close` past 86400 runs past midnight. Name the returned `timezone` with the times, or say it wasn't returned.
+
+<!-- facebook-pages-tranche2-only:end -->
 ## Continue a list
 
 - Pass the exact `paging.cursors.after` to `pages list --after`, or a non-null `cursor` to `posts list --cursor` with the same Page and time range.

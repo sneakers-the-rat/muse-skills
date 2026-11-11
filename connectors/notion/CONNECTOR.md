@@ -24,6 +24,8 @@
 
 - `--arguments-json` must be one JSON object, and arrays or bare values are rejected.
 
+- When `call-tool` returns `ok: false`, `error` says why; for a Notion tool error it holds Notion's message. A validation error means the arguments were wrong, so correct them against the schema instead of telling the user Notion can't do the task.
+
 ```text
 /opt/hatch/bin/notion-cli list-tools
 /opt/hatch/bin/notion-cli call-tool --name <tool> --arguments-json '<json-object>'

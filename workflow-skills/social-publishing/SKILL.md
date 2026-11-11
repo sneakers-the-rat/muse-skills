@@ -40,7 +40,7 @@
 
 ## Available connectors
 
-- [Facebook](/opt/hatch/connectors/facebook_cli/CONNECTOR.md) for personal<!-- facebook-group-posts-only:start --> and Group<!-- facebook-group-posts-only:end --> text posts<!-- facebook-profile-media-only:start -->, photo and video posts with per-item captions, personal Reels<!-- facebook-profile-media-only:end -->, comments and replies, and Page drafts, posts, Reels and scheduling.
+- [Facebook](/opt/hatch/connectors/facebook_cli/CONNECTOR.md) for personal<!-- facebook-group-posts-only:start --> and Group<!-- facebook-group-posts-only:end --> text posts<!-- facebook-profile-media-only:start -->, photo and video posts with per-item captions, personal Reels<!-- facebook-profile-media-only:end -->, comments and replies, and Page drafts, posts, Reels and scheduling<!-- facebook-pages-tranche2-only:start -->, plus a managed Page's best posting times, content ideas and trends<!-- facebook-pages-tranche2-only:end -->.
 
 - [Instagram](/opt/hatch/connectors/instagram/CONNECTOR.md) for publishing the user's posts, reels and stories.
 

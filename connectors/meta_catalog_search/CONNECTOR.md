@@ -115,6 +115,8 @@ catalog_results=$(mktemp "${TMPDIR:-/tmp}/shopping-catalog-search.XXXXXX")
 
 - `--currency` takes a three-letter code, which also selects the market, and defaults to the shopper's currency. `--min-price` and `--max-price` are inclusive bounds in hundredths of that currency, so `2500` means 25.00.
 
+- `--country` takes a two-letter ISO 3166-1 code which limits the search results to products shipped to that country.
+
 - `--seller-type secondhand` suits used, pre-owned, thrifted, vintage or refurbished inventory, and `direct` favors direct sellers.
 
 - `--intent` says what the user is shopping for. It changes how results are ordered, not which products are retrieved:
