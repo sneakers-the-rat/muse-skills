@@ -1,7 +1,9 @@
 # Home Assistant on This VM: Install and Setup Without a Browser
 
 **Last verified:** 2026-10-29 with Home Assistant Core 2026.10.4 on a
-uv-managed Python 3.14.10
+uv-managed Python 3.14.10. `step-text` was checked against that release's
+translations on 2026-11-10; the device-action order below is not yet verified
+end to end.
 
 Use this guide whenever Home Assistant on this VM comes up: to check on it,
 install, start, stop, update or remove it, set it up, or add an integration.
@@ -31,6 +33,7 @@ install, start, stop, update or remove it, set it up, or add an integration.
 | `start` / `stop` | Starts Home Assistant and keeps it running, or stops it and keeps it stopped |
 | `setup` | Onboards Home Assistant and stores its access token; resumes an interrupted setup |
 | `rollback` | Returns to the release before the last upgrade and its database, setting aside changes made since; only with the user's agreement (see Install) |
+| `step-text` | Reads a config flow reply on stdin and adds the step's own text (see Add an Integration) |
 
 - Read `status` before acting, and again after any command:
 
@@ -143,14 +146,45 @@ install, start, stop, update or remove it, set it up, or add an integration.
 | Answer a step | `POST /api/config/config_entries/flow/<flow_id>` with the fields of the returned `data_schema` |
 | List entries | `GET /api/config/config_entries/entry` |
 
-- Read each reply's `type`. `form` asks for the next step's fields, `abort`
-  gives a reason, and `create_entry` means it is done. Before reporting
-  success, check that `status` lists the integration as `connected`.
+- Pipe every flow reply (starting, answering or reading a flow) into
+  `/opt/muse/assets/home-assistant/home-assistant step-text` in the same
+  `exec`, and read its output rather than the raw reply. The API leaves out the words Home Assistant shows on each
+  step; `step-text` adds them, and passes Home Assistant's own error through as
+  `error`:
 
-- If a form asks for a third-party password or API key, stop that flow. The
-  user has no Home Assistant screen to enter it on, and the credential must not
-  pass through chat. Tell the user that this integration cannot be set up from
-  Muse yet.
+| Field | Meaning |
+|---|---|
+| `type` | `form` asks for `fields`; `menu` offers the `menu` choices, answered with `{"next_step_id": "<choice>"}`; `progress` is still working, so read the flow again with `GET /api/config/config_entries/flow/<flow_id>`; `external` needs a sign-in on a website, so stop that flow as for an account password below; `abort` stopped with a `reason`; `create_entry` is done |
+| `title`, `instructions` | The step's own text, with its placeholders filled in |
+| `flow_id` | The flow to answer next |
+| `fields` | What to send: each field's `name`, `type`, `options` or `default` where it has them, with its `label` and `help`; a section's own `fields` go in an object under the section's `name` |
+| `errors` | Why the last answer was refused, per field (`base` is the whole step) |
+
+- When `instructions` asks for something done at the device, such as pressing
+  a button on it, holding its power button, or putting it in pairing mode, tell
+  the user exactly that and follow the order it gives. Your message reaches the
+  user only when your reply ends, so:
+  - If the action comes before submitting, end your reply with the action and
+    ask the user to tell you once it is done; then submit at once, since some
+    steps allow only seconds. "Select Submit" in the text means answering the
+    step.
+  - If the action comes after submitting (Lutron Caséta: "after submitting
+    this form, press the black button"), ask the user to tell you when they
+    are at the device. When they do, submit with `exec` and `background` set,
+    and end your reply telling them to do it now; its result arrives when the
+    request finishes. This is often Home Assistant's first connection to the
+    device, so its Home Link approval can appear at the same moment: tell the
+    user to approve it first, and if the step fails right after, try again.
+  - A step with no fields usually means such an action. If it then fails, read
+    `errors`, and offer to try again.
+
+- Before reporting success, check that `status` lists the integration as
+  `connected`.
+
+- If a form asks for a password, API key, or pairing code, stop that flow.
+  The user has no Home Assistant screen to enter it on, and it must not pass
+  through chat. Tell the user that this integration cannot be set up from Muse
+  yet.
 
 ## Reaching Home Devices
 

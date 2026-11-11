@@ -5,6 +5,16 @@
 Use this guide when fresh discovery identifies a Lutron Smart Bridge with
 HomeKit/HAP and the user asks to control lights or shades.
 
+## With Home Assistant
+
+**Last verified:** 2026-11-10 on a Lutron Smart Bridge with Home
+Assistant Core 2026.10.4 (paired by the button press).
+
+When Home Assistant on this VM is set up and the user wants the bridge there,
+add it with the `lutron_caseta` integration (`home_assistant.md`, "Add an
+Integration") instead of the path below. It pairs by a press of the black
+button on the back of the bridge, with no setup code.
+
 ## Recommended Path
 
 1. Re-discover the bridge and use its advertised HAP endpoint through the Home
