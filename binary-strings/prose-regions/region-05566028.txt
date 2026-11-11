@@ -1,0 +1,110 @@
+feed_idea_unitidea slot: budget store unavailable; skippingidea slot: budget read failed; skippingidea slot: prompt read failed; centroid uses the unfiltered windowidea slot: too few units since the prompt changed; centroid uses the unfiltered windowidea slot: centroid built from units published since the prompt changedidea slot: fresh centroid read failed; falling back to the unfiltered windowidea slot: centroid read failedfeed_unitidea slot: anchor no-repeat read failedidea slot: candidate lookup failedidea slot: dogfood visibility read failedidea slot: onboarding-only read failedidea slot: dropped candidates too far behind the newest Ideas contextidea slot: near-duplicate memory read failedidea slot: dropped candidates restating a recent suggestionidea slot: dropped candidates with no claim on this paperidea slot: prompt declares no subject; ranking on memory affinityidea slot: memory affinity read failed; ranking without itidea slot: shortlisted candidates for the seatidea slot: newest unit read failed; skippingself_improvement.ideasgenerated_cardidea slot: card freshness read failedidea slot: Ideas context database failedidea slot: latest Ideas context read failedidea slot: prompt embed failedidea slot: prompt embed task failedDELETE FROM meta_ai.media WHERE conversation_id = ANY($1)DELETE FROM meta_ai.messages WHERE conversation_id = ANY($1)DELETE FROM meta_ai.conversations WHERE conversation_id = ANY($1)SELECT generation, applied_purged_before_ms FROM meta_ai.sync_state WHERE singleton FOR UPDATEUPDATE meta_ai.sync_state SET applied_deletion_seq = greatest(applied_deletion_seq, $1), updated_at = now() WHERE singletonSELECT message_id, media_index, media_key, cache_state FROM meta_ai.media WHERE conversation_id = $1
+INSERT INTO meta_ai.media AS x (
+  conversation_id, message_id, media_index, generation, media_key, kind, origin, mime_type,
+  byte_size, file_name, caption, cache_state
+)
+SELECT $1, r.message_id, r.media_index, $2, r.media_key, r.kind, r.origin, r.mime_type,
+       r.byte_size, r.file_name, r.caption, 'none'
+FROM unnest($3::text[], $4::integer[], $5::text[], $6::text[], $7::text[], $8::text[],
+            $9::bigint[], $10::text[], $11::text[])
+  AS r(message_id, media_index, media_key, kind, origin, mime_type, byte_size, file_name,
+       caption)
+ON CONFLICT (conversation_id, message_id, media_index) DO UPDATE SET
+  generation = excluded.generation,
+  media_key = excluded.media_key,
+  kind = excluded.kind,
+  origin = excluded.origin,
+  mime_type = excluded.mime_type,
+  byte_size = excluded.byte_size,
+  file_name = excluded.file_name,
+  caption = excluded.caption,
+  cache_state = CASE WHEN x.media_key = excluded.media_key OR x.cache_state = 'blocked'
+                     THEN x.cache_state ELSE 'none' END,
+  fetch_failures = CASE WHEN x.media_key = excluded.media_key THEN x.fetch_failures ELSE 0 END,
+  last_fetch_error = CASE WHEN x.media_key = excluded.media_key THEN x.last_fetch_error END,
+  retry_not_before = CASE WHEN x.media_key = excluded.media_key THEN x.retry_not_before END
+WHERE (x.generation, x.media_key, x.kind, x.origin, x.mime_type, x.byte_size, x.file_name,
+       x.caption)
+  IS DISTINCT FROM
+      (excluded.generation, excluded.media_key, excluded.kind, excluded.origin,
+       excluded.mime_type, excluded.byte_size, excluded.file_name, excluded.caption)
+
+INSERT INTO meta_ai.messages AS m (
+  conversation_id, message_id, generation, ordinal, role, sent_at, body, text_truncated,
+  search_vector, media_omitted
+)
+SELECT $1, r.message_id, $2, r.ordinal, r.role, r.sent_at, r.body, r.text_truncated,
+       to_tsvector('simple', r.vector_text), r.media_omitted
+FROM unnest($3::text[], $4::integer[], $5::text[], $6::timestamptz[], $7::text[],
+            $8::boolean[], $9::text[], $10::integer[])
+  AS r(message_id, ordinal, role, sent_at, body, text_truncated, vector_text, media_omitted)
+ON CONFLICT (conversation_id, message_id) DO UPDATE SET
+  generation = excluded.generation,
+  ordinal = excluded.ordinal,
+  role = excluded.role,
+  sent_at = excluded.sent_at,
+  body = excluded.body,
+  text_truncated = excluded.text_truncated,
+  search_vector = excluded.search_vector,
+  media_omitted = excluded.media_omitted
+WHERE (m.generation, m.ordinal, m.role, m.sent_at, m.body, m.text_truncated, m.media_omitted)
+  IS DISTINCT FROM
+      (excluded.generation, excluded.ordinal, excluded.role, excluded.sent_at, excluded.body,
+       excluded.text_truncated, excluded.media_omitted)
+SELECT EXISTS (SELECT 1 FROM meta_ai.tombstones WHERE conversation_id = $1)DELETE FROM meta_ai.media x USING unnest($2::text[], $3::integer[]) AS d(message_id, media_index) WHERE x.conversation_id = $1 AND x.message_id = d.message_id AND x.media_index = d.media_index
+INSERT INTO meta_ai.conversations AS c (
+  conversation_id, generation, title, created_at, last_activity_at, change_token_ms,
+  message_count, text_bytes, messages_truncated, needs_refetch_until
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+ON CONFLICT (conversation_id) DO UPDATE SET
+  generation = excluded.generation,
+  title = excluded.title,
+  created_at = excluded.created_at,
+  last_activity_at = excluded.last_activity_at,
+  change_token_ms = excluded.change_token_ms,
+  message_count = excluded.message_count,
+  text_bytes = excluded.text_bytes,
+  messages_truncated = excluded.messages_truncated,
+  needs_refetch_until = greatest(c.needs_refetch_until, excluded.needs_refetch_until),
+  updated_at = now()
+WHERE (c.generation, c.title, c.created_at, c.last_activity_at, c.change_token_ms,
+       c.message_count, c.text_bytes, c.messages_truncated)
+  IS DISTINCT FROM
+      (excluded.generation, excluded.title, excluded.created_at, excluded.last_activity_at,
+       excluded.change_token_ms, excluded.message_count, excluded.text_bytes,
+       excluded.messages_truncated)
+UPDATE meta_ai.conversations SET needs_refetch_until = $2 WHERE conversation_id = $1 AND $2 > coalesce(needs_refetch_until, '-infinity'::timestamptz)~/USER.md~/IDENTITY.mdconnection source requiredconversation identity unavailable; leaving participants unresolvedconversation identity lookup timed out; leaving participants unresolved/hatch/webhooks/deliveries/acklease_expires_at_msruntime.skillsskill command runtime context registration failedJARVIS_HOMEJARVIS_VAR_LIB_DIRCREDENTIALS_DIRECTORYJARVIS_TRACE_CONTEXTJARVIS_RUNTIME_CONTEXT_TOKENresponse_oversizeMeta AI answers keep their own expirymeta_ai_syncMeta AI sync pass not seeded; the next scheduled pass does the workbackground job has an unsupported content localefailed to load idea quality rows for HTTP feed selectionfailed to read active feed for rotation; selecting without itfailed to load persisted idea bandit state for HTTP feed selectionfailed to read idea memory affinity; ranking without the affinity termfailed to fetch ideas explore policy for HTTP feed selectioninsert into context.subscription_sources
+        (subscription_id, source_id, active, start_position, discovery_position)
+        select $1, s.id, true, boundary.position, boundary.position
+        from (select id, last_append_position from context.sources
+          where ($2 or source_domain = any($3)) and not exists
+            (select 1 from context.subscription_sources ss where ss.subscription_id = $1 and ss.source_id = context.sources.id)
+          order by id for update) s
+        cross join lateral (select case
+          when $4 then s.last_append_position
+          when $5::timestamptz is null then 0
+          else coalesce((select min(e.append_position) - 1 from context.events e
+            where e.source_id=s.id and e.ingested_at > $5
+              and e.append_position <= s.last_append_position), s.last_append_position)
+          end as position) boundary
+        on conflict do nothingcontext.subscription.pullbatch_limits1–100 new events, at most 100 history events, 1 MiB, lease 1–5400 secondsselect ss.source_id, ss.start_position, ss.discovery_position, s.last_append_position
+        from context.subscription_sources ss join context.sources s on s.id = ss.source_id
+        where ss.subscription_id = $1 and ss.active and ss.discovery_position < s.last_append_position
+        order by ss.discovered_at nulls first, ss.source_id limit 1discovery_positionlast_append_positionwith page as materialized (
+            select group_id, append_position, content_hints from context.events
+            where source_id = $1 and append_position > $2 and append_position <= $3
+            and (expires_at is null or expires_at > statement_timestamp())
+            order by append_position limit 1000
+        ), heads as (
+            insert into context.group_cursors
+                (subscription_id, source_id, group_id, acknowledged_position, available_position)
+            select $4, $1, group_id, $5, max(append_position) from page
+            where ($6 or content_hints && $7::text[]) group by group_id
+            on conflict (subscription_id,source_id,group_id) do update
+                set available_position = greatest(context.group_cursors.available_position, excluded.available_position)
+            returning available_position
+        ) select case when count(*) < 1000 then $3 else max(append_position) end from pageupdate context.subscription_sources set discovery_position = $3, discovered_at = clock_timestamp()
+            where subscription_id = $1 and source_id = $2select exists(select 1 from context.subscription_sources ss
+        join context.sources s on s.id = ss.source_id where ss.subscription_id = $1
+        and ss.active and ss.discovery_position < s.last_append_position)defcon_level_3_daily_capshopping_daily_capdaily cadence read failed; admitting signal-triggered objective cyclestatusthrottledscheduler_grace_secondsprevious_cycle_idprevious_admitted_atsignal_admitted_runssignal_admission_limithatch_inference_defcon_level_3_enableddefcon_cadencedaily cadence throttled objective cycleadmissiondaily cadence read failed; admitting automatic objective cycleobjectivestartfailed to stamp boot generation on inline-triggered runproactivity_context_profileretired historical backfill state before objective runfailed to retire historical backfill state; continuing objective runrestart_checkpoint_parkeddurable_owner_retainedrestart_checkpoint_parked_agent_idrestart_checkpoint_parked_atprior_diagnosticsterminal_step_error_codeobjective execution gate wait cancelledbackfill_completehistorical backfill retired; pending march marked completedatabase write admission gate closedadmission_timeoutassert_table_existstable_presence.queryrun cancelledfeed step failure CAS lost to a concurrent settler; that settler owns the terminal eventfeed step failure CAS erroredfeed step adopted-submission settle erroredhttp://localhost/hatch/feed-engagement-populationGoalsRevised memoryMemory changesChanged since preparationOnly Internal announcements accept fallback copyInternal announcement requires public fallback copyinternal_fallback_messageInternal fallback exceeds message limitThis producer requires agent-written deliveryInternal announcement requires delivery instructionsInternalWorker priority is reserved for worker owner noticesInternal priority is reserved for code-owned main-chat deliveriesfollow-up metadata must be a JSON objectfollow-up must expire after it becomes deliverablefollow-up message must not be emptyfollow-up key must not be emptyfollow-up producer must not be emptyhardcoded product campaign producer is retiredpresentation_localeenqueue follow-upfollow_up_queue_deliveryfollow-up enqueued but the delivery worker could not be kickedfailed to read user time file for proactive delivery timezonestripe-linkinspectStripe Link connection inspection failedStripe Link connection status failedconnector_call_reasonCircle is no longer activemeta_ai_reconcileMeta AI sync attempt not recordedMeta AI enrollment refresh failed; syncing on the confirmed enrollmentmeta_ai_consentMeta AI sync skipped�

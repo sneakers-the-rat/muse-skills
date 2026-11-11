@@ -1,0 +1,20 @@
+completedfaileddb_readinternal error: entered unreachable codeassistant_message_idpublication_terminalsummaryerrorAcceptanceHandoffsourcemessage_idparent_message_idsubagent_completion_child_agent_idsproducer_agent_idAcceptanceTracerequest_idroot_request_idparent_request_idrequest_originroot_request_originmessage_senderemail_sentmessage_sentfile_createdfile_updatedreminder_setweb_searchtask_runningpeer_conversationsuccesspendingblockedstoppedSuccessErrorPendingBlockedStoppedEmailSentMessageSentFileCreatedFileUpdatedReminderSetWebSearchTaskRunningidtitlestatuscreated_atselect t.activity_thread_id as owner_id, c.action_count,
+                a.action_id, a.activity_thread_id, a.action_index, a.agent_id,
+                a.agent_depth, a.icon, a.title, a.subtitle, ''::text as report,
+                a.has_report, a.status, a.created_at
+         from activity.activity_monitor_threads t
+         cross join lateral (
+           select count(*) as action_count
+           from activity.activity_monitor_thread_actions
+           where activity_thread_id = t.activity_thread_id
+         ) c
+         left join lateral (
+           select action_id, activity_thread_id, action_index, action_seq,
+                  agent_id, agent_depth, icon, title, subtitle,
+                  octet_length(report) > 0 as has_report, status, created_at
+           from activity.activity_monitor_thread_actions
+           where activity_thread_id = t.activity_thread_id
+           order by action_index desc, action_seq desc limit $2
+         ) a on true
+         where t.activity_thread_id = any($1)
+         order by t.activity_thread_id, a.action_index, a.action_seqaction_countaction_idhas_reportwrite_admissionwritepostgres write completed slowly
