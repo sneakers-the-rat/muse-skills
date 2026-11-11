@@ -1,0 +1,59 @@
+idea_idfailed to classify dogfood idea widgets for history hydrationfailed to prefetch idea widget records for history hydrationbackground task failedartifact catalog: could not resolve file artifact identities; projecting those nodes without oneen-USwrite_admissionwritepostgres write completed slowlypostgres write failedretrying idempotent postgres writehatch:db:operationcancelledunlocked_observationappeal_http_failureappeal_transport_failuresuperseded_or_unchangedappeal_unlock_unconfirmedsummarization: truncating oversized field to the char cap before summarizationDISCLAIMER: Due to obligations imposed on Meta by global laws and regulations, including requirements from the United States Federal Trade Commission (FTC), this content has been summarized since the source content is no longer available.one-shot postgres write invoked more than onceinvalid_appeal_responsepermissions_unavailableselect b.*, a.connection_id as current_connection_id,
+                    a.revoked as account_revoked
+                from chat_private.binding_authorizations b
+                join chat_private.accounts a using(provider, account_id)
+                where b.provider = $1 and b.binding_id = $2account_revokedcurrent_connection_idSELECT EXISTS(SELECT 1 FROM runtime.maintenance_markers WHERE marker_key = 'event_hook_admissions_v1')update self_improvement.connector_sync_accounts set cursor = $1,
+                revision = revision + 1, updated_at = $2 where connector = $3 and account_id = $4
+                and generation = $5 and revision = $6insert into self_improvement.connector_sync_observations as existing
+                        (event_id, connector, account_id, generation, source_id, source_at, evidence, state, observed_at, expires_at)
+                        values ($1,$2,$3,$4,$5,$6,$7,'pending',$8,$9)
+                        on conflict (event_id) do update
+                        set expires_at = greatest(existing.expires_at, excluded.expires_at)
+                        where existing.state in ('pending', 'deferred', 'deferred_flight')update self_improvement.connector_sync_observations set state = 'deleted', evidence = '{}'
+                        where connector = $1 and account_id = $2 and generation = $3 and source_id = $4 returning event_idupdate self_improvement.follow_up_queue set state = 'cancelled',
+                            disposition_reason = 'connector_source_deleted', terminal_at = now(), updated_at = now()
+                            where follow_up_id = $1 and state = 'pending'DISTINCT ON (r.host_muse,r.resource_id)c.active AND r.kind='space' AND r.host_muse<>'self'
+    AND p.archived_at_ms IS NULL AND (
+      (p.peer_muse=r.host_muse AND EXISTS (
+        SELECT 1 FROM peer.contacts contact
+        WHERE contact.muse_id=r.host_muse AND contact.status='verified'))
+      OR EXISTS (SELECT 1 FROM peer.circles circle
+        JOIN peer.circle_members member USING(circle_id)
+        WHERE circle.circle_id=p.circle_id AND circle.left_at_ms IS NULL
+          AND member.muse_id=r.host_muse)) AND r.host_muse= AND r.resource_id= ORDER BY r.host_muse,r.resource_id,r.shared_at_ms DESC,r.binding_idSELECT context_item_id, call_id, data_fbids, data_summarized_at IS NOT NULL AS summarized FROM context_items WHERE data_fbids IS NOT NULL AND data_fbids && $1::bigint[] ORDER BY data_cleanup_checked_at ASC NULLS FIRST, context_item_id ASCcontext_item_iddata_fbidssummarizedselect distinct idea_id,
+                            metadata_json -> 'publication_hold' ->> 'fingerprint',
+                            metadata_json -> 'publication_hold' ->> 'reason'
+                       from ideas.idea_sources
+                      where idea_id = any($1::text[])
+                        and (source_namespace, source_kind) in (
+                          ('idea_share', 'pending_share'),
+                          ('user', 'http_create'),
+                          ('shared_www', 'shared_idea')
+                        )
+                        and metadata_json -> 'publication_hold' ->> 'fingerprint' is not null
+                        and metadata_json -> 'publication_hold' ->> 'reason' is not null
+JOIN LATERAL (
+  SELECT MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/kind') AS kind,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/action') AS action,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/handoff_message_id') AS handoff_message_id,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/handoff_source') AS handoff_source,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/submission_message_id') AS submission_message_id,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/submission_source') AS submission_source,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/assistant_message_id') AS assistant_message_id
+  FROM runtime.event_payload_fields AS f
+  WHERE f.event_seq = e.event_seq AND f.field_path IN (
+    '/metadata/kind', '/metadata/action', '/metadata/handoff_message_id',
+    '/metadata/handoff_source', '/metadata/submission_message_id', '/metadata/submission_source',
+    '/metadata/assistant_message_id'
+  )
+) AS metadata ON true
+follow_up_settlementnothing_to_doabortedoperation_id, task_id, agent_id, checkout_wait_json,
+    checkout_approval_id, checkout_resume_agent_id,
+    (checkout_wait_state in ('withdraw_pending', 'withdraw_on_arrival')) as withdrawal_pending
