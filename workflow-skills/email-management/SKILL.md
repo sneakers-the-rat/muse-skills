@@ -74,7 +74,7 @@
 
 - [IMAP Email](/opt/hatch/connectors/imap_email/CONNECTOR.md) for iCloud Mail and other mailboxes connected with an app password, including unread mail, attachments, drafts, sending and folders.
 
-- [Superhuman Mail](/opt/hatch/connectors/superhuman_mcp/CONNECTOR.md) for mail the user handles in Superhuman.
+- [Superhuman Mail](/opt/hatch/connectors/superhuman/CONNECTOR.md) for mail the user handles in Superhuman.
 
 ## Websites
 

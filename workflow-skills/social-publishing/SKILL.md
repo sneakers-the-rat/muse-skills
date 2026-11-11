@@ -62,7 +62,7 @@
 
 - [vidIQ](/opt/hatch/connectors/vidiq_mcp/CONNECTOR.md) for YouTube titles, thumbnails and scripts.
 
-- [FLUX by Black Forest Labs](/opt/hatch/connectors/bfl_mcp/CONNECTOR.md) for generating and editing images.
+- [FLUX by Black Forest Labs](/opt/hatch/connectors/flux/CONNECTOR.md) for generating and editing images.
 
 - [Runway](/opt/hatch/connectors/runway_mcp/CONNECTOR.md) for generating and editing video, product marketing videos and localized ads.
 

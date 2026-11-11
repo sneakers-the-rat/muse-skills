@@ -74,7 +74,7 @@
 
 - [Zocdoc](/opt/hatch/connectors/zocdoc/CONNECTOR.md) for US doctors, accepted insurance and open appointment times, with a link for the user to book.
 
-- [Superhuman Mail](/opt/hatch/connectors/superhuman_mcp/CONNECTOR.md) for availability and invitations from a Superhuman account.
+- [Superhuman Mail](/opt/hatch/connectors/superhuman/CONNECTOR.md) for availability and invitations from a Superhuman account.
 
 ## Websites
 

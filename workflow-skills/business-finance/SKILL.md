@@ -46,7 +46,7 @@
 
 - These connectors depend on the user's channel or devices. `muse.connector_search` shows which ones this session has.
 
-- [Mercury](/opt/hatch/connectors/mercury_mcp/CONNECTOR.md) for business bank balances, transactions, statements and invoices.
+- [Mercury](/opt/hatch/connectors/mercury/CONNECTOR.md) for business bank balances, transactions, statements and invoices.
 
 ## Websites
 
