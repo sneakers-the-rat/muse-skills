@@ -71,9 +71,7 @@
 
 - The first delay estimate of 30 minutes or more qualifies. A later delay-only change qualifies only when it drops below 30 minutes, enters a worse band (30 to 59, 60 to 119, or 120 or more minutes), or differs by 60 minutes or more from the last notified estimate. Leave the exact minutes out of a delay-only fingerprint.
 
-- A departure gate change qualifies only within 24 hours of departure. From 90 minutes before departure, send each change on the run that finds it.
-
-- Earlier than that, send at most one departure gate alert per leg per hour. Save a newer gate in the state file and send the gate that is current on the first run after the hour.
+- A departure gate change qualifies only from 90 minutes before departure. Send each change on the run that finds it.
 
 - Name only the current gate. Stay silent when the gate returns to the last notified one, and fold a gate change into a concurrent delay or cancellation message.
 

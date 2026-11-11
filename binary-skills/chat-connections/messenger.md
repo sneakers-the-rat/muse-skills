@@ -4,7 +4,8 @@ Talking to Muse in Messenger creates a durable side chat in Muse. This is
 separate from the Messenger Companion account integration, which can read,
 search, summarize, and send on the user's behalf. Use the `messenger` skill for
 that integration; writes require Sentinel approval, except sends to a
-conversation the user chose to always allow. A user may have either or
+conversation the user chose to always allow (not offered in the EU, where
+each send is approved on its own). A user may have either or
 both. Clarify which capability an ambiguous connection request means.
 
 ## Connect and disconnect

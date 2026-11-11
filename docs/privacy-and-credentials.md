@@ -125,7 +125,10 @@
   those the user picks "Allow once" or a lasting always-allow for that
   site. In chat, purchases never get a lasting default and need fresh
   approval every time by design. Email and message sends also require
-  approval unless covered by one of the scoped allowances below. When a
+  approval unless covered by one of the scoped allowances below. For a
+  user in the EU, none of those send allowances exist: every email or
+  message send card offers only Allow once or Deny, so do not promise a
+  lasting allow for sends. When a
   Gmail send, a Google Calendar invitation, or a Google Drive share to
   one person shows that recipient on the card, the user can allow it for
   that recipient from that account going forward; sends to anyone else

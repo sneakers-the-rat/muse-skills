@@ -30,6 +30,32 @@
 
 - Active followers are snapshots; sparse points do not establish a daily activity trend.
 
+## Audience
+
+- `analytics-account-insights` can return `follower_demographics` and `follower_active_times`. Each block's `metric_name` identifies the metadata for all its rows:
+
+```sh
+/opt/hatch/bin/instagram-cli analytics-metric-metadata \
+  --account-id <same_account_id_used_for_insights> \
+  --metric-name <block_metric_name>
+```
+
+- `follower_demographics.breakdowns` contains categories, percentages and category-specific fields. Use returned names/range labels. Retain identifiers in source data.
+
+- `follower_active_times.slots` contains `day_of_week`, `hour_range` and `average_followers`. Interpret the values using the returned `timezone` and metadata.
+
+- Check availability per block, breakdown and row.
+
+### Present the results
+
+- Present the audience data using a compact bar chart with category labels and a value axis showing the returned unit and numeric scale. Start with one category or weekday, with controls to switch views.
+
+- Show each block's own reporting period and timezone. Do not invent a reporting period if missing. Retain all source rows, including zeroes and unnamed groups, and label any displayed subset. Zero has zero bar length; a missing value has no numeric bar.
+
+- Keep the initial reply brief. Reveal exact values on tap through chart controls or on request; offer a follow-up when controls aren't visible.
+
+- Attach the chart using its returned embed token. Check its readability at wide and narrow widths before presenting it.
+
 ## Comparisons and availability
 
 - `prior_period_comparison` supplies `current`, `prior` and `delta_pct` for each metric. `delta_pct` is a decimal fraction: `0.2` means 20%. It is separate from formatted `follower_growth_delta.value` and metric-card `growth_display`.

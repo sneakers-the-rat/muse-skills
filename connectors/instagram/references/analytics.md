@@ -18,7 +18,7 @@
 /opt/hatch/bin/instagram-cli analytics-metric-cards --account-id <user_own_fbid> --username <handle> --username <handle> --days 28
 ```
 
-- `analytics-metric-metadata` resolves a metric's display name and definition, and `--metric-name` can repeat. Use the returned display name and definition verbatim. Omit a metric that has no display name, and never invent a missing definition.
+- `analytics-metric-metadata` resolves a metric's display name and definition, and `--metric-name` can repeat. Use the returned `external_name` as the display name and `external_definition` as the definition. Omit a metric that has no display name, and never invent a missing definition. `value_usage` explains how to interpret the values.
 
 - The account **Viewers** key is `instagram_organic_account_content_meta_viewer_count`, optional during rollout. Follow [Audience metric selection](account-insights-metrics.md#audience-metric-selection) for selection, labels and availability.
 

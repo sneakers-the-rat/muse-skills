@@ -46,6 +46,9 @@
 /opt/hatch/bin/spotify-api library --filter PLAYLISTS
 /opt/hatch/bin/spotify-api save --uri <spotify_uri>
 /opt/hatch/bin/spotify-api save --current
+/opt/hatch/bin/spotify-api unsave --uri <spotify_uri>
+/opt/hatch/bin/spotify-api unsave --current
+/opt/hatch/bin/spotify-api unsave --uris <uri1,uri2>
 /opt/hatch/bin/spotify-api create-collection --name "<name>" [--add-current]
 /opt/hatch/bin/spotify-api add-to-collection --collection-uri <uri> --uris <uri1,uri2>
 /opt/hatch/bin/spotify-api add-to-collection --collection-name "<name>" --current
@@ -57,6 +60,8 @@
 - `TRACKS` is rejected as a library filter. Find tracks with an unfiltered `library` call or `search --search-type TRACKS`.
 
 - `save --uri` saves a track, album, artist, show, episode, audiobook or playlist to the library.
+
+- `unsave --uri` removes a saved item from the library, and `unsave --current` removes the item playing now. `unsave --uris` removes up to 50 items in one call, of mixed types. It refuses playlists, and it does not remove an item from a playlist. `unsave --current` reads what is playing without asking for read access. When it returns `read_not_authorized`, run `now-playing` as a separate call, which can ask the user; only after it succeeds, pass its `item.uri` to `unsave --uri`. If `now-playing` is refused too, say that Spotify read access isn't allowed, so what is playing can't be read.
 
 - For the item playing now, such as "like this song" or "add this to my Running playlist", pass `--current`, or `--add-current` to `create-collection`. The command reads what Spotify is playing when it runs, so don't run `now-playing` first. The response names the item and playlist it used.
 
@@ -109,7 +114,7 @@
 /opt/hatch/bin/spotify-api add-to-queue --query "<title>" [--artist "<artist>"]
 ```
 
-- Typed requests start playback with `play`, which also takes `--uid <uid>` to start from one item in the context. Any conversation can use `pause`, `resume`, `skip`, `previous`, `seek --position-ms <ms>`, `set-volume --volume-percent <0 to 100>`, `transfer --target-device-id <id>`, `get-queue` and `add-to-queue --item-uri <uri>`. `add-to-queue --query` finds a song by title and queues Spotify's top match in one step, without a separate `search`; pass `--artist` when the user names one, and name the song from `queued` in the reply.
+- Typed requests start playback with `play`, which also takes `--uid <uid>` to start from one item in the context. Any conversation can use `pause`, `resume`, `skip`, `previous`, `seek --position-ms <ms>`, `set-playback-options --shuffle` or `--no-shuffle` with `--repeat off|one|all` on the active device, `set-volume --volume-percent <0 to 100>`, `transfer --target-device-id <id>`, `get-queue` and `add-to-queue --item-uri <uri>`. Options left out of `set-playback-options` stay as they are. `add-to-queue --query` finds a song by title and queues Spotify's top match in one step, without a separate `search`; pass `--artist` when the user names one, and name the song from `queued` in the reply.
 
 - `play` and `add-to-queue` need an active Spotify Connect device. `play`, `set-volume` and `transfer` take `--target-device-id`, so prefer passing it over relying on the active device. Run `devices` immediately before setting `--target-device-id` and use an ID from that response. If the list is empty or the named device is missing, ask the user to choose an available device instead of reusing an old ID.
 
@@ -118,6 +123,8 @@
 ## Recover from errors
 
 - A successful playback response means the change took effect. The CLI already retries server errors, so report a remaining error once in plain words.
+
+- `set-playback-options` reads playback back after sending and returns `playback_options`, the shuffle (`on` or `off`) and repeat (`off`, `one` or `all`) now in effect, with `confirmed`. Report those without running `now-playing`. When `ok` is true: if `confirmed` is `false`, say which option didn't take; if it is `null`, an option shows `null` because it couldn't be read, so say the change was sent but not verified, not that it failed. When `ok` is false, Spotify refused the change: report that error, and mention any option `playback_options` shows, since one may already have changed. The options are not applied atomically, so before trying again, compare `playback_options` with the request and resend only the options that don't show yet.
 
 - `stale_target_device` and `device_list_unavailable` mean no playback command was sent. Run `devices` and ask the user to choose an available device.
 
@@ -162,7 +169,7 @@
 
 ## Limits
 
-- `home`, `recommendations`, `check-saved`, `remove`, `section-items`, playlist deletion, removing items from a playlist and reordering a playlist are unavailable. Do not promise them.
+- `home`, `recommendations`, `check-saved`, `section-items`, playlist deletion, removing items from a playlist and reordering a playlist are unavailable. Do not promise them.
 
 - `spotify-api` is limited to 300 requests a minute, with bursts of up to 50. Prefer one broad call over many narrow ones.
 

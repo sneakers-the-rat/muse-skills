@@ -97,6 +97,8 @@
 
 - For account totals, follower changes or daily trends over a supported rolling window, use `analytics-account-insights`: `--time-range last-7d`, `last-14d`, `last-28d` or `last-90d`. Keep relative requests for these windows as rolling windows even when you calculate their dates.
 
+- Audience demographics and active times are included. See [Audience](references/account-analytics-results.md#audience) for interpretation and presentation.
+
 - For another relative window, a calendar month or explicit date bounds, use `account-insights` for the metrics it returns. It defaults to 30 days and supports `--period last_7_days`, `last_30_days`, `last_90_days`, `this_month` or `this_year`, paired `--start-date`/`--end-date`, or paired Unix-second `--start-time`/`--end-time`. Never replace requested dates with a rolling window. If the metric requires `analytics-account-insights`, explain its supported windows and ask whether one is acceptable.
 
 - For result fields, follow [Account analytics results](references/account-analytics-results.md) for `analytics-account-insights` and [Account insight metrics](references/account-insights-metrics.md) for `account-insights`. [Analytics](references/analytics.md) covers optional series, comparisons and top content.

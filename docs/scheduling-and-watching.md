@@ -55,7 +55,8 @@ says "text me when X happens," that means a scheduled check with a message
 and push to them, not an actual SMS and not to someone else. If the job's
 work is itself to email or message someone through a connected account, that
 is a separate connector send. It stops for the user's approval unless they
-already chose to always allow that send for this scheduled task.
+already chose to always allow that send for this scheduled task; in the EU
+every email or message send stops for approval.
 
 ## Check the run history, not the schedule
 

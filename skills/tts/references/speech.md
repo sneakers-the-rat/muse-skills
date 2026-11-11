@@ -21,8 +21,8 @@ is ambiguous. For the current designed voice, read `~/user/voice.json`, match
 its `saved_voice_id` to the saved record and use that record's `voice_id`.
 
 Honor the user's voice choice. Otherwise prefer Helio (`avocado_v2:MAI_03`),
-the default, or Aria (`avocado_v2:MAI_01`), both production Meta AI voices.
-Never say "MAI" to the user.
+the default, or Aria (`avocado_v2:MAI_01`), both production voices from the
+voice library. Never say "MAI" to the user.
 
 On Secure VMs, the CLI corrects unambiguous catalog ID spellings and uses a
 default when an ID is absent from both the catalog and saved library. It keeps

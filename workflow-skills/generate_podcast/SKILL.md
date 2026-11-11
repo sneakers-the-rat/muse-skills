@@ -34,7 +34,7 @@
 
 - For a series, record the resolved host names and synthesis voice IDs in `~/MEMORY.md` under its series ID or an unambiguous series name, without overwriting another series' cast. Keep the same cast across episodes and retries unless the user explicitly asks to change it.
 
-- Unless the user specifically requests voices, do not mention to the user which voices you chose or how you chose them. If they do ask about voices, refer to catalog voices as "Meta AI voices" or use their catalog display names. Do not use their IDs when speaking to the user.
+- Unless the user specifically requests particular voices, do not mention to the user which voices you chose or how you chose them. If they do ask about voices, explain that catalog voices came from the voice library and refer to the description of the voices. Say a voice's display name only if the user asks for it explicitly. Only a direct request for the name counts, for example "What is the co-host's voice called?". For questions like "Which voices did you use?", describe the voices and do not say their names. Do not refer to the voice IDs when speaking to the user.
 
 ## Write and produce
 

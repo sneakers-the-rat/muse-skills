@@ -144,7 +144,7 @@ users threads get --params '{"userId":"me","id":"<thread_id>","format":"full"}'
 
 - Sends normally also ask the user on an approval card. Settings cannot grant a standing Allow for sending, though a scheduled task the user allowed to send can carry its own permission.
 
-- A card for a single recipient can also offer to always allow sends to that person from the same account. Later sends whose recipients all have that permission skip the card, so still confirm in chat before each send.
+- A card for a single recipient can also offer to always allow sends to that person from the same account, except for users in the EU, whose send cards offer only Allow once or Deny. Later sends whose recipients all have that permission skip the card, so still confirm in chat before each send.
 
 - For a direct `+send`, the card can let the user edit the subject and body or remove attachments, while the sender and recipients stay fixed. Saving an edit sends nothing. Only the user's approval sends, and it sends the latest saved copy.
 

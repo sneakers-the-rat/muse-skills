@@ -111,6 +111,8 @@ catalog_results=$(mktemp "${TMPDIR:-/tmp}/shopping-catalog-search.XXXXXX")
 
 - `--material` takes one material to use for this search. Repeat it for multiple materials.
 
+- Catalog search returns one variant per product page, and it may not be the size, color or material you asked for. When a result doesn't match, check its other variants as "Confirm a variant" describes, since the product that the user wants may still be another variant of the returned catalog product.
+
 - Always pass `--domain` when the user names a retailer, giving its hostname without a scheme, path or port. Repeat it for multiple retailers.
 
 - `--currency` takes a three-letter code, which also selects the market, and defaults to the shopper's currency. `--min-price` and `--max-price` are inclusive bounds in hundredths of that currency, so `2500` means 25.00.
@@ -204,9 +206,16 @@ jq -r '
 
 - Run `/opt/hatch/bin/shopping product-details --product-id ID` for a returned product, adding `--currency` when the result has one, to read its variants.
 
-- For a requested size, find it in the size variant group and fetch its candidate `product_ids` while holding color and the other chosen attributes constant. Choose only a response whose `product.selected_variant_info` confirms the whole combination and whose availability allows purchase, and treat `is_available: false` as unavailable.
+- For a requested size or color, find it in that variant group and fetch its candidate `product_ids` while holding the other chosen attributes constant. A response confirms an attribute when the option that lists its own `product.id` in that variant group has the requested value, or when `product.selected_variant_info` shows it; some merchants list only the color in `selected_variant_info`. Choose only a response that confirms the whole combination and whose availability allows purchase, and treat `is_available: false` as unavailable.
 
 - Use the confirmed response's `product.id` for checkout, not an ID read from `variant_groups`, and route it on that same response. Never pick an arbitrary candidate when the attributes cannot be confirmed, and keep the IDs and this lookup out of your reply.
+
+- When you fetch a candidate, add `--out` with a new file. The command then also writes that variant as a one-product catalog results file. When the response confirms the variant, pass that file to `shopping.resolve_results` with the search's results file and select the variant's `product.id`, so the card shows the price, image and link of the variant the user asked for.
+
+```text
+variant_results=$(mktemp "${TMPDIR:-/tmp}/shopping-variant.XXXXXX")
+/opt/hatch/bin/shopping product-details --product-id ID --currency USD --out "$variant_results"
+```
 
 ## Check the purchase route
 

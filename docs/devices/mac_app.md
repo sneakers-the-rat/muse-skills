@@ -94,7 +94,8 @@ not substitute `computer.control` to reach the same protected data or effect.
   one person, including a text (SMS) to one phone number, the user can choose
   Allow once, always allow it for that recipient, or Deny; an always-allow
   covers only that recipient from that account, never the whole app, and
-  later sends to that person go through without asking. An always-allow for
+  later sends to that person go through without asking. Users in the EU get
+  only Allow once or Deny on every send. An always-allow for
   iMessages to a number does not cover texts to it, or the reverse. A group
   message or a recipient the Mac cannot resolve asks each time unless the
   user has set that app to allow writes.
