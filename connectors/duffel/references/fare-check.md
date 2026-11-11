@@ -14,6 +14,8 @@
 
 - With these flags the search returns only offers on the booked flights, in every fare brand on sale, and `fare_check` compares the cheapest with the booked total. `lower` names it in `cheapest_offer`, with `drop` and `drop_pct`. `not_lower`, `no_matching_offer` and `currency_mismatch` mean no candidate this run, and `search_failed` is a failed read. A `lower` result is a price, not yet a qualifying drop: `cheapest_offer`, `drop` and `drop_pct` describe only the cheapest offer, whose scope may differ from the booking. Evaluate the returned offers below the booked total, cheapest first, under the scope and net-savings rules below until one qualifies.
 
+- For `no_matching_offer`, `fare_check.why_no_match` says why. Record each run's `fare_check.result` and `why_no_match` in the state file.
+
 - Compare an offer only when its priced scope matches the booked baseline exactly. That means every leg's dated flight numbers and airports, the passenger mix, the cabin or fare family, included bags, stop pattern, refund and change restrictions, currency and the basis for taxes and fees.
 
 - A one-way or single-leg offer isn't comparable with a round-trip or multi-leg total, and a booking total splits across legs only where line-item prices give the exact amount.

@@ -1,0 +1,69 @@
+SELECT is_promoted FROM shell.user_state WHERE source='peer_space' AND item_key=$1 FOR UPDATEshared Space is no longer availablepeer_spaceINSERT INTO shell.user_state (source,item_key,is_promoted) VALUES ('peer_space',$1,$2)
+                 ON CONFLICT (source,item_key) DO UPDATE SET is_promoted=excluded.is_promoted,updated_at_ms=$3UPDATE shell.tab_order SET tabs=$1 WHERE singletonconnection_id, provider, address, display_name, muse_id, agent_name, audience, active, rules_revision, regular_checkins, checkins_revision, person_paths, group_pathselect b.chat_id, b.provider, b.conversation_key, b.delivery_target,
+                            b.epoch, owner.body ->> 'user_id' as owner_account_id
+                     from chat_private.bindings b
+                     join chat.chats c using(chat_id)
+                     join chat_private.transport_state config
+                       on config.provider=b.provider and config.name='config'
+                     join chat_private.transport_state owner
+                       on owner.provider=b.provider and owner.name='owner'
+                     where b.chat_id=any($1) and b.provider='telegram' and not b.revoked
+                       and c.status='active' and config.body -> 'enabled' = 'true'::jsonb
+                       and owner.body ->> 'user_id' is not nullselect exists (select 1 from agent.root_turn_queue where submission_id = $1)select exists(select 1 from agent.group_inputs
+                   where group_id=$1 and disposition='pending')
+                 or exists(select 1 from agent.group_inputs
+                   where group_id=$1 and disposition='unread')
+                 or exists(select 1 from agent.chat_worker_requests
+                   where chat_id=$1 and state in ('pending','running','reported','completed'))
+                 or exists(select 1 from agent.chat_workers worker
+                   join agent.message_mailbox message on message.agent_id=worker.agent_id
+                   where worker.group_id=$1 and message.state in ('accepted','attached'))select distinct work.group_id from (
+                   (select worker.group_id from (
+                        select agent_id from agent.message_mailbox where state='accepted'
+                        union
+                        select agent_id from agent.message_mailbox where state='attached'
+                    ) message join agent.chat_workers worker on worker.agent_id=message.agent_id
+                    where worker.active and worker.group_id > $1
+                    order by worker.group_id limit $2)
+                   union all
+                   (select distinct source.group_id from agent.group_inputs source
+                    where source.group_id > $1 and disposition = 'pending'
+                      and exists(select 1 from agent.chat_workers w where w.group_id=source.group_id and w.active)
+                    order by source.group_id limit $2)
+                   union all
+                   (select distinct source.group_id from agent.group_inputs source
+                    where source.group_id > $1 and disposition = 'unread'
+                      and exists(select 1 from agent.chat_workers w where w.group_id=source.group_id and w.active)
+                    order by source.group_id limit $2)
+                   union all
+                   (select distinct chat_id as group_id from agent.chat_worker_requests
+                    where chat_id > $1 and state in ('pending','running','reported','completed')
+                      and exists(select 1 from agent.chat_workers w where w.group_id=chat_id and w.active)
+                    order by chat_id limit $2)
+                   union all
+                   (select distinct source.group_id from agent.group_replies source
+                    where source.group_id > $1 and enqueued = false
+                      and exists(select 1 from agent.chat_workers w where w.group_id=source.group_id and w.active)
+                    order by source.group_id limit $2)
+                   union all
+                   (select connection_id::text as group_id from (select distinct connection_id from agent.connection_messages
+                    where connection_id > coalesce(nullif($1, '')::uuid, '00000000-0000-0000-0000-000000000000'::uuid)
+                      and state in ('proposed','awaiting_user','awaiting_muse')
+                      and exists(select 1 from agent.chat_workers w where w.group_id=connection_id::text and w.active)
+                    order by connection_id limit $2) pending)
+                   union all
+                   (select connection_id::text as group_id from (select distinct connection_id from agent.connection_messages
+                    where connection_id > coalesce(nullif($1, '')::uuid, '00000000-0000-0000-0000-000000000000'::uuid)
+                      and not outcome_notified and state in ('queued','delivered','uncertain','denied','cancelled')
+                      and exists(select 1 from agent.chat_workers w where w.group_id=connection_id::text and w.active)
+                    order by connection_id limit $2) outcomes)
+                 ) work order by work.group_id limit $2select agent_id,generation,active from agent.chat_workers where group_id=$1 for updategenerationchat worker owner changedupdate chat_private.company_conversations set per_message_review=true where chat_id=$1SELECT EXISTS(SELECT 1 FROM agent.connections WHERE connection_id=$1 AND active)The work's connection is no longer activeINSERT INTO agent.connection_work (connection_id,work_id,coordinator,request_id)
+                     SELECT $1,work_id,$3,$4 FROM unnest($2::uuid[]) AS work_id
+                     ON CONFLICT (connection_id,work_id) DO NOTHINGSELECT count(*) FROM agent.connection_work WHERE connection_id=$1 AND work_id=ANY($2) AND request_id=$3This connection work has already been assignedc.active AND (
+    r.host_muse <> 'self' OR r.kind NOT IN ('space', 'goal')
+    OR (r.kind = 'space' AND EXISTS (
+        SELECT 1 FROM spaces.spaces live_space
+        WHERE live_space.space_id::text = r.resource_id AND live_space.space_slug = r.reference))
+    OR (r.kind = 'goal' AND EXISTS (
+        SELECT 1 FROM goals.goals live_goal WHERE live_goal.goal_id = r.resource_id))
+)€¬

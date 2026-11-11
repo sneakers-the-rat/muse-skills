@@ -1,0 +1,1 @@
+When this handoff runs without a new user message, save useful next steps with `tracking.create_entry` on the existing item, or `tracking.create` without `proactivity_follow_up` for new work. This also applies to returned delegated work.
