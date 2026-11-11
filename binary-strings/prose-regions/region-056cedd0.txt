@@ -1,0 +1,31 @@
+errorsuccesswrite_admissionwritepostgres write completed slowlypostgres write failedretrying idempotent postgres writeone-shot postgres write invoked more than onceselect * from runtime.phone_calls where operation_id = $1insert into runtime.phone_calls
+                 (operation_id, root_session_id, origin_message_id, request_json, call_id,
+                  created_at_ms, next_poll_at_ms, outcome_submission_id, transcript_submission_id,
+                  context_json, recovery_generation)
+                 values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+                 on conflict do nothingselect * from runtime.phone_calls
+                where next_poll_at_ms is not null and next_poll_at_ms <= $1
+                and not exists (select 1 from runtime.work_items w
+                    where w.work_id = 'maintenance:phone_recovery:call:' ||
+                        phone_calls.recovery_generation || ':' || phone_calls.operation_id
+                    and w.terminalized_at is null)
+                order by next_poll_at_ms, operation_id limit $2select * from runtime.phone_calls where root_session_id = $1
+                and (outcome_submission_id = $2 or transcript_submission_id = $2
+                     or result_json->'question_delivery'->>'submission_id' = $2
+                     or result_json->'update_delivery'->>'submission_id' = $2
+                     or result_json->'concierge_offer'->>'submission_id' = $2)select * from (
+                    select operation_id, call_id, created_at_ms, observed_at_ms,
+                        next_poll_at_ms, recovery_error, outcome_delivered, transcript_delivered,
+                        result_json->'recovery_error_details' as recovery_error_details,
+                        transcript is not null as transcript_available,
+                        coalesce(result_json->>'status',
+                            case when call_id is null and recovery_error = $4 then $3
+                                else $5 end) as status,
+                        request_json->>'to' as "to",
+                        request_json->>'counterparty' as counterparty,
+                        coalesce(coalesce(nullif(result_json->>'provider', 'unknown'),
+                            request_json->>'executor') = $7, false) as human_routed
+                    from runtime.phone_calls where root_session_id = $1
+                ) calls
+                where ($2::text[] is null or status = any($2::text[]))
+                order by created_at_ms desc, operation_id limit $6phone_gateway_rejectedunknownhuman_call_centerselect * from runtime.phone_calls where root_session_id = $1 and call_id = $2update runtime.phone_calls set outcome_submission_id = $3 where operation_id = $1 and outcome_submission_id = $2 and not outcome_deliveredupdate runtime.phone_calls set transcript_submission_id = $3 where operation_id = $1 and transcript_submission_id = $2 and not transcript_delivered

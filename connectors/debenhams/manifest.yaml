@@ -1,0 +1,92 @@
+version: 1
+gating:
+  allowed_countries:
+    default: [GB]
+    exempt_vm_channels: [prod, quail, canary]
+metadata:
+  visible_in_settings: true
+connector: debenhams
+display_name: Debenhams
+icon: debenhams
+description: Shop Debenhams, build a basket and check out on Debenhams
+request_quota:
+  mode: shadow
+  workers: [debenhams]
+  queries_per_minute: 30
+  burst: 10
+cli:
+  binary: debenhams
+  skill: debenhams
+auth:
+  provider: debenhams
+  required: true
+  mcp:
+    protocol_version: "2025-11-25"
+    cagi:
+      # The server is stateless: the agent carries the basket ID, so no MCP
+      # session is kept.
+      path: /v1/debenhams/mcp
+      # CAGI binds each basket to the user who created it and requires that
+      # capability on every call naming the basket.
+      resource_argument: basketId
+    tool_names:
+      shopping.read:
+        - search_products
+        - get_product
+        - get_similar_products
+        - get_basket
+        - get_delivery_options
+      basket.manage:
+        - add_to_basket
+        - update_basket_item
+        - remove_from_basket
+        - apply_promo_code
+        - remove_promo_code
+      # Returns a single-use link that opens this basket on debenhams.com,
+      # where the browser completes the purchase.
+      checkout.create:
+        - checkout
+actions:
+  read:
+    default: allow
+    label: Read permissions
+    response_guard: verification_codes
+    methods:
+      shopping.read:
+        label: Search products and view your basket and delivery options
+        approval_phrase: search Debenhams and view your basket
+  write:
+    default: ask
+    label: Write permissions
+    response_guard: verification_codes
+    methods:
+      basket.manage:
+        # A guest basket holds no stock and moves no money.
+        default: allow
+        label: Edit your Debenhams basket and promo codes
+        approval_phrase: edit your Debenhams basket
+        approval_buttons:
+          allow_once: "Update basket"
+          deny: "Don't update"
+          deny.task: "Don't update"
+      checkout.create:
+        label: Start checkout on Debenhams
+        approval_phrase: start checkout for your Debenhams basket
+        approval_buttons:
+          allow_once: "Start checkout"
+          deny: "Not yet"
+          deny.task: "Not yet"
+consent_screen:
+  bullets:
+    - icon: data_types
+      title: "Shop with Debenhams"
+      text: "Muse can search Debenhams, compare products and build a basket for you."
+    - icon: info
+      title: "Checkout happens on Debenhams"
+      text: "Muse asks before starting checkout, and you approve the payment on debenhams.com."
+    - icon: caution
+      title: "Check before you buy"
+      text: "Prices, stock and offers can change. Check them on Debenhams before you buy."
+  footer_paragraphs:
+    - "The info used for your tasks is part of your interactions with Muse, which we may use to improve AI at Meta. You can manage this in Settings. [Learn more](https://muse.ai/privacy)"
+    - "Muse will exchange info with Debenhams. To learn more, view their [terms](https://www.debenhams.com/terms-and-conditions) and [privacy policy](https://www.debenhams.com/privacy-notice)."
