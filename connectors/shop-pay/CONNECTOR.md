@@ -8,7 +8,7 @@
 
 - When Shop Pay is selected, use it for ordinary merchant card forms, including at non-Shopify stores, only if its `wallet.list_payment_methods` result includes `card_shaped` in `supported_credential_modes`. Otherwise, use Shop Pay only on the native route verified by the browser checkout. The checkout workflow presents the payment choice. A Shop Pay button on the merchant's page starts the merchant's own sign-in and does not establish support for the wallet route.
 
-- For direct Shopify UCP checkout, offer Shop Pay as a route before the checkout is created, as the [Shopify UCP](/opt/hatch/connectors/shopify-ucp/CONNECTOR.md) docs describe.
+- For direct UCP checkout, offer Shop Pay as a route before the checkout is created, as the [UCP](/opt/hatch/connectors/ucp/CONNECTOR.md) docs describe.
 
 - Shop Pay pays checkouts in US dollars, Canadian dollars, Mexican pesos, euros, Singapore dollars, Japanese yen and British pounds. Use the checkout's stated currency and exact total; Japanese yen amounts have no fractional units.
 

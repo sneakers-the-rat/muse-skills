@@ -1,0 +1,201 @@
+ !"#$%&'()*+,-./0123ÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿcontent-typeacceptx-typesafe-request-id# Rebuilding a retired Python-era Space
+
+The Space folders beside this file were built on the retired Python
+platform, kept by only some users. They stopped running and left the
+artifact library, but nothing was deleted: each folder is the user's
+master copy and backup. If the user thinks a Space was deleted, reassure
+them first. Artifacts already in the library were always web artifacts:
+never tell the user they were moved or converted from the old platform.
+
+The rebuild starts only when the user asks for it: finding a missing
+Space, or reassuring the user about one, never starts a rebuild on its
+own. Offer it and wait for a yes. If the user just wants a broken "space"
+fixed, try an ordinary `artifacts` edit first: if the edit works, it is
+not an old-platform Space and needs no rebuild. Never "fix" a
+missing-runtime error by adding or changing a `runtime` field in a
+`space.json`: that rewrites the user's backup and points live builders at
+it.
+
+Rebuild one Space at a time. If the user names one Space, confirm by
+display name that it is the one they mean before starting. If they ask for
+several, list the display names you found, confirm the list and the order
+once, then work through it in order, announcing each Space as you start it.
+
+## Never touch the old Space
+
+The old Space folder `~/workspace/spaces/<slug>/` is the user's master copy
+and backup. You only ever read it. Never write, edit, rename, move, or
+delete anything under it, and never run its code: no actions, no builds, no
+servers, no scripts. Parity is judged by reading source, never by executing
+the old Space. This holds even after the migration succeeds. If the user
+later wants the old Space deleted, that is a separate request they have to
+make themselves.
+
+Builders are bound by the same rule. Every instruction you send a builder
+points only at your staged copies under `~/workspace/migration-<slug>/` and
+says plainly that the builder must not read or write anything under
+`~/workspace/spaces/`.
+
+You prove the rule held, not just promise it, and the proofs are a script,
+never something you retype. Before anything else, take the snapshot:
+
+```
+python3 /opt/hatch/skills/spaces/scripts/legacy_space_migration.py snapshot --slug <slug>
+```
+
+It records a checksum manifest of the old Space (leaving out files the
+platform itself may touch), prints every database table with its row count
+for the inventory, and writes the full data dump the builder will import
+(`~/workspace/migration-<slug>/data.sql`). The same script's `verify`
+command re-checks the manifest later: changed, deleted, and added files
+all count. If it ever reports anything but MANIFEST CLEAN, the migration
+failed: tell the user exactly what changed and stop.
+
+All your scratch work lives in `~/workspace/migration-<slug>/`, never
+inside the old Space.
+
+## Step 1 â€” Inventory and stage (read-only)
+
+Record in `~/workspace/migration-<slug>/inventory.md`:
+
+- The `space.json` contents (name, slug, entry, verification).
+- Every action in `actions/*.py`, and any background jobs under
+  `actions/jobs/*.py`: each one's name, what input it takes, what it
+  returns, what it validates or rejects, and what it changes. Mark any
+  action whose effects leave the Space, such as sending mail or calling an
+  outside service. This list is the parity contract for step 3. (An
+  `AGENTS.md` in the old folder is the platform-seeded tombstone, not part
+  of the Space.)
+- Any entries under `~/workspace/cron.d/` this Space scheduled: the file's
+  owner names the Space, or its command runs code under the Space root.
+  Note what they did and when they ran, so the rebuild can declare the same
+  scheduled behavior. Leave the old entries themselves alone.
+- Every static asset the page uses: icons, background images, fonts.
+  Copy each one into `~/workspace/migration-<slug>/assets/` and record its
+  name and sha256.
+- The frontend source under `src/`. The old frontend is already React;
+  only the actions were Python. The rebuild keeps the same layout, flows,
+  labels, and copy, and only changes how actions are called.
+
+Generated folders such as `.space-build`, `node_modules`, or `.venv` are
+clues at most: never port their contents as the new implementation.
+
+The `snapshot` command already printed every table and its row count, and
+wrote `data.sql` when there was data: record the counts in the inventory.
+If it printed "no data", write that in the inventory and skip step 4. When
+you read old files yourself, read only; the script opens the database
+read-only, and so do you.
+
+## Step 2 â€” Create the new artifact
+
+Every rebuild is `kind: web_fullstack`: the rebuilt Space keeps its actions, its
+own database, and its scheduled behavior on the hosted runtime.
+
+Call `artifact.create_web_fullstack` with `name`, `verbatim_request`
+carrying the user's migration request copied exactly, and `capabilities`
+declared from the inventory. Creation derives both icon choices internally;
+do not pass `icon_subject` or `xmds_icon`. When the inventory recorded
+scheduled behavior, pass matching top-level `refresh_triggers`.
+Only creation reads `refresh_triggers`:
+declare the schedule here or the rebuilt Space comes back without it. Never add your own words to `verbatim_request`, and never pass a
+`slug`: web creates take no slug, and the platform derives one from the
+name before the build starts.
+
+Name the new artifact `<Old Space Name> v2`. That keeps the original name
+recognizable and gives the new artifact a slug of its own instead of
+colliding with the old Space's registration. If the name already ends in a
+version like "v2", raise the number instead of stacking suffixes.
+
+As soon as the build is running, send the builder the migration contract
+with `send_input`, keeping the parts that apply and saying plainly:
+
+- This is an exact rebuild of an existing app, not a redesign. The full
+  contract is in `~/workspace/migration-<slug>/inventory.md`.
+- For a `web_fullstack` rebuild: recreate every action from the inventory with
+  the same name, inputs, outputs, validation, and failure behavior, and
+  exercise each one against its contract in the build's own test phase.
+  The exception is actions the inventory marks as having outside effects:
+  build those to spec but never invoke them.
+- If the inventory records data: create the same tables and import every
+  row from `~/workspace/migration-<slug>/data.sql` through a migration,
+  keeping ids and values exactly as they are, so the data lands in the
+  durable database. No cleanup, no dedup, no type changes.
+- Copy each file from `~/workspace/migration-<slug>/assets/` into the
+  client's assets unchanged and use those copies.
+- Never read or write anything under `~/workspace/spaces/`.
+
+If a build attempt fails and you need to start over, delete the failed new
+artifact first (`action: delete` with `config` naming its kind, on the new
+artifact only, never the old Space), then create again with the same name.
+
+## Step 3 â€” Check the actions
+
+Reading the new artifact's files to verify this migration is part of this
+playbook: it is not the malfunction-inspection flow, and you change nothing
+while doing it.
+
+For each action in the inventory, check the new source against the parity
+contract: same name, same inputs, same outputs, same validation and failure
+behavior. Someone calling the old action and the new one must not be able
+to tell them apart. Tick each action off in `inventory.md` when the source
+matches the contract and the builder's test run exercised it. An action
+marked as having outside effects is ticked on source match alone and stays
+annotated as untested: never fire it during the migration, and name it to
+the user in the handoff.
+
+Never add, merge, or "improve" actions or contracts. If an old action has a
+bug the user never asked about, replicate the behavior and mention the bug
+to the user separately.
+
+## Step 4 â€” Verify the data
+
+Skip this step if the snapshot printed "no data". Otherwise, after the
+build succeeds and while no build is running, run:
+
+```
+python3 /opt/hatch/skills/spaces/scripts/legacy_space_migration.py verify --old-slug <old-slug> --new-slug <new-slug>
+```
+
+It re-checks the manifest and compares every table of the old and new
+databases read-only, in both directions: row counts and full content
+digests, so a missing or extra table fails too.
+
+Every table must report ok and the run must end with MANIFEST CLEAN,
+ALL MATCH, and exit code 0. On any mismatch, stop and tell the user what
+differs. The fix goes back through the builder as an `edit`; never repair
+the new database by hand, and never touch the old one at all.
+
+## Step 5 â€” Verify the look and the assets
+
+The new page must look and feel like the old one: same layout, same flows,
+same labels and copy, judged against the old frontend source. For every
+asset in the inventory, verify the copy the builder placed under the new
+artifact's client assets has the same sha256 you recorded in step 1.
+Nothing gets redesigned, restyled, or modernized.
+
+## Step 6 â€” Final checks
+
+- The build succeeded and the published page renders.
+- Every action in the parity checklist is ticked, with any untested
+  outside-effect actions named.
+- The data verification in step 4 reported ALL MATCH, and the migrated
+  data shows up in the page the way it did in the old Space.
+- Any scheduled behavior from the step 1 inventory is declared on the new
+  artifact: its `refresh_triggers` match the cron entries you recorded,
+  and no new cron entries were written.
+- Run the `verify` command one last time as the final gate: it must end
+  with MANIFEST CLEAN, ALL MATCH, and exit code 0, proving the data still
+  matches and the old Space is byte-untouched.
+
+## Step 7 â€” Hand off
+
+Tell the user, in plain language: which Space was rebuilt, the new
+artifact's name and where to find it, that every table's data was copied
+and verified, which actions (if any) could not be safely tested and why,
+and that the old Space is still there, unchanged, as their backup. If the
+library ever lists both the old Space and the v2 rebuild side by side,
+that pair is expected: never delete or hide the old entry to tidy up. Old
+published Space links are gone for good. Never claim the old Space itself
+became a supported artifact, never delete or alter it, and never offer to.
+If they want that later, they will ask.
+node_idcould not publish a Muse content card for prepared research{connection_id}serialize recipient nameitems_unavailablemalformed_requesttemporarily_unavailablealready_running{card_title}malformed SystemOne checker requestprompt_injection_checker: SystemOne request failed, fail-openprompt_injection_checker SSE extraction debugprompt_injection_checker: empty output from magi response, fail-openprompt_injection_checker: proxy request failed, fail-openpolicyguard-nvfp4application/pdfbrowser task relocation did not finishretry_exhaustedrelocating browser task changed before its requeuebrowser task relocation lost its durable owner fencebrowser task run requeued on its new routeresearch window snapshot sweep failed; maintenance GC is the backstopcheckout continuation has no purchase factsrouteearlier_taskbrowser_slot_ensure_transport_failedbrowser_slot_ensure_timed_outbrowser_slot_ensure_rejectedpresentation_root_session_idartifact_pool_icon_selectioninitialcontinuationprefilter_request(?ms)^[ \t]*<handoff>[ \t]*\n(.*?)\n[ \t]*</handoff>[ \t]*$valid regexcbrne_returned_text_guardcbrne_returned_text_reviewhttp://localhost/hatch/products/images/cdn-urlsimage/webp,image/png,image/jpeg,image/gif,image/*;q=0.8,*/*;q=0.5HatchShoppingImageAvailability/1.0{"ok":false,"error_code":"internal_error","error":"ui_control response serialization failed"}runtime_tool_outputdevice_command_consentlocal_workflowAsync dispatch. This is now running in the Expert Agent with full tools. Any bridge_text you passed is already being spoken to the user, so do NOT speak anything else this turn â€” end your turn now. Do NOT answer from memory, do NOT keep talking, and do NOT delegate this request again. The result will arrive automatically as a [Background update] input â€” surface it to the user then. Do not poll or sleep.upstream_unavailablemissing media_pathsidea_card_idunavailable_web_imagesThese image links could not be downloaded and will show as blank spots in the widget. If the images matter, recreate the widget with different image links or without them.missing 'id' argumentMedia workspace response exceeds its packet limitnew Media workspace call was insertedMedia workspace replay validation task failedMedia workspace replay budget lock poisonedstep assignment is missing `output_schema` (harness wiring bug)inspection spawn metadata is missinginspection id is missinginspection record path is missingOnly a browser task's Poppy agent starts a conversation with a company.failed to parse Stripe Link user infofailed to serialize Stripe Link user infoSOUL.mdIDENTITY.mddata_typebuilder metadata is missing expected_capability_manifest_revisionurl_id must be a non-negative integeroutlink_indices items must be non-negative integersurl_id is requiredoutlink_indices must be an array of non-negative integerslat is required for reverselon is required for reversevoice aquila: starting background compactionvoice aquila: compaction task panickedvoice aquila: voicification task panickedvoice aquila: background compaction complete{{TODO_SNAPSHOT}}`DateTime - TimeDelta` overflowedvoice fast-tool reverse geocode client unavailablevoice fast-tool reverse geocode failedvoice fast-tool reverse geocode timed outfailed to invalidate retained voice caller foreground authority after prompt injection detectionlast_seenpre-call history summary refresh task failedruntime.background_execJARVIS_HOMEdescriptor packet payload is emptyshort descriptor marker sendsquareQdrant/all-MiniLM-L6-v2-onnxattachmentimagerunningsearchno stored icon embeddings for this generation; loading the bundleicon embedding generation is partial; restoring the bundlethe bundled icon vectors are unusable; icons fall backicon embeddings already stored for this generationcounting stored icon embeddings failed; skipping the seedstored the bundled Ideas icon embeddingsstoring the icon embeddings failedstore_failedoutputconversation_epochgenerationdatabase write admission gate closedadmission_timeoutassert_table_existstable_presence.queryavocado-5.16-v4ask_unresolved_findingsask_resume_original_requestArtifactAnnotationsannotationsTracking and commitmentsGoalshealthrelationshipsmoneycareerinterestsproductivitysomething_elseabandoned\b\d{3}[- ]\d{2}[- ]\d{4}\bvalid SSN patternself_ratings must be an objectrecipientphone_numberbackground exec obligation could not be settledbackground exec obligations unavailable; retrying the restart sweepbackground exec recovery deferreduserConfirmationRequireduserConfirmationStatusfailed to reconcile background exec completion observersdetach-denied session cleanup could not confirm terminationmediaurl must be an absolute HTTP or HTTPS URL without credentialsBrowser controls are unavailable.tool_callunexpected Central Blackhole check responseCentral Blackhole check failedCentral Blackhole check timed outURL blocklist unavailable; URL-bearing tool calls will dispatch unscreenedCyber-tool-callcyber_tool_call_review/hatch/integrity/violationstool-call violation was not recordeddevice_error_codepublicationnative status video has no attempt identitycancelledhatch_tbac_tool_call_review--media-subagent-output-type--conversation-json--orientation--output-dircounterpartycontextcontact_numberhandoff_condition/user_handoff/conditionannounced_messages_over_voice_capannouncementsErrorCodeexec log maintenance failedtimeout kill failed, process may still be runningmedia.generate_imagevaluenon-UTF8 output filenamenext_actionShop Pay returned invalid JSONShop Pay returned invalid user infoShop Pay user info could not be projectedShop Pay returned invalid wallet dataShop Pay payment methods could not be projectedShop Pay returned invalid shipping addressescyber_tool_call_jev_review

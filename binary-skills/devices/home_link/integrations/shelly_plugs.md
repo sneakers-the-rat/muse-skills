@@ -36,6 +36,15 @@ The API depends on the generation, and the two are not compatible.
 
 ## Recommended Path
 
+If the plug is already in the Home Assistant on this VM (step 1 of
+`~/docs/devices/home_link.md` says how to tell), skip this guide's direct
+calls: read and switch it only through Home Assistant, as
+`~/docs/devices/home_link/integrations/home_assistant.md` describes. The same
+check applies there: before saying the attached load responded, read both the
+switch's state and the plug's power entity, and report it as unverified when
+Home Assistant has no power reading for the plug. Use the steps below only for
+a plug Home Assistant does not manage.
+
 1. Re-discover the plug and take its address and port from the current result.
 2. Reach it through the Home Link CONNECT proxy. It serves a documented HTTP
    API, so the HTTP section of `~/docs/devices/home_link.md` applies,

@@ -2,7 +2,7 @@
 
 - Link is Stripe's consumer wallet for saved payment methods. Once a purchase is authorized, Link funds a one-time virtual card, so the merchant never receives the user's real card.
 
-- Muse uses Link through the `wallet` tools with `provider: "stripe-link"` and the browser checkout's payment step. Direct checkouts in connectors such as Shopify UCP, Duffel and Expedia also pay with Link, and their docs describe their own approval step.
+- Muse uses Link through the `wallet` tools with `provider: "stripe-link"` and the browser checkout's payment step. Direct checkouts in connectors such as UCP, Duffel and Expedia also pay with Link, and their docs describe their own approval step.
 
 - Make the `wallet` calls yourself in the user's conversation. Subagents, group chats and scheduled tasks do not have the `wallet` tools, so they cannot set up Link or choose its payment method.
 
@@ -18,7 +18,7 @@
 
 - For a delayed or conditional charge, pass its amount, conditions and stated collection timing in the browser task, including relevant service dates. The checkout specialist uses those facts to set the Link card lifetime.
 
-- A browser checkout uses the three-letter currency the checkout states, without conversion. Direct Shopify UCP checkout accepts Link in US dollars, Canadian dollars, Mexican pesos, Singapore dollars and Japanese yen.
+- A browser checkout uses the three-letter currency the checkout states, without conversion. Direct UCP checkout accepts Link in US dollars, Canadian dollars, Mexican pesos, Singapore dollars and Japanese yen.
 
 ## Connect and choose a payment method
 
@@ -32,7 +32,7 @@
 
 - Before asking for a missing name, email address or phone number, call `wallet.get_user_info`. For a missing delivery address, call `wallet.list_shipping_addresses` and use the only or default address, and never use these values to sign in to a merchant.
 
-- Treat each payment-method ID as opaque and preserve every character. It goes only in a direct checkout's payment-method input, such as Shopify UCP completion or `--payment-method-id` for Duffel and Expedia `book`, or in the `wallet` field of `browser.browse`, never in a task brief, message, file or memory.
+- Treat each payment-method ID as opaque and preserve every character. It goes only in a direct checkout's payment-method input, such as UCP completion or `--payment-method-id` for Duffel and Expedia `book`, or in the `wallet` field of `browser.browse`, never in a task brief, message, file or memory.
 
 - Use `wallet.get_connection_status` only to manage the connection outside a purchase.
 

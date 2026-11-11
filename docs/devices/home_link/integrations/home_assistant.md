@@ -37,6 +37,8 @@ install, start, stop, update or remove it, set it up, or add an integration.
 | Field | Meaning |
 |---|---|
 | `installed` | The Muse install exists in `~/homeassistant` |
+| `installing` | An install or rollback is running now |
+| `enabled` | False after `stop`: the user wants Home Assistant kept stopped |
 | `running` / `ready` | The service runs / its API answers outside recovery mode. The first start can take minutes |
 | `recovery_mode` | Home Assistant started in recovery mode, usually because its first-start downloads failed |
 | `onboarded` / `credentials` | Setup is finished / the stored token works (`valid`, `invalid`, `missing`) |
@@ -159,9 +161,34 @@ install, start, stop, update or remove it, set it up, or add an integration.
   Assistant's own discovery (mDNS, SSDP and other UDP or multicast protocols)
   does not cross the Link, and neither do integrations that need UDP.
 
-- The first connection to each device raises a Home Link approval for that
-  address. Tell the user to expect it. Setup can fail while the approval waits;
-  after the user answers, start the integration's config flow again.
+- Home Assistant's first connection to a home-network address raises a Home
+  Link approval that names Home Assistant and offers "Always allow on your
+  home network" or Deny. Tell the user to expect it. Allowing lets Home
+  Assistant reach any device on the home network through the Link, so later
+  devices do not ask again; its internet requests still ask. Deny refuses only
+  that connection: Home Assistant may ask again the next time it tries the
+  device, and removing the integration stops it. Setup can fail while the approval waits; after the user
+  answers, start the integration's config flow again.
 
 - Before telling the user a device works, check that `status` lists its
   integration as `connected` and read one of its states.
+
+- Read and control devices through Home Assistant's REST API on
+  `http://127.0.0.1:8123`, with the stored token as a bearer token:
+
+| Action | Request |
+|---|---|
+| List an integration's entities | `POST /api/template` with `{"template": "{{ integration_entities('<domain or entry title>') }}"}` |
+| Read an entity | `GET /api/states/<entity_id>` |
+| Change an entity | `POST /api/services/<entity domain>/<service>` with `{"entity_id": "<entity_id>"}`, where the entity domain is the part of `entity_id` before the dot (for example `switch/turn_on` for `switch.kitchen_plug`) |
+
+- Once a device is in Home Assistant, read and control it only through Home
+  Assistant's API, including to check that a change took effect. Do not
+  contact the device directly through the Link: the
+  home-network approval covers Home Assistant only, so a direct request raises
+  its own approval for that device.
+
+- After changing a device, read its states back through Home Assistant before
+  saying the change took effect, and apply the checks the device's own guide
+  asks for, such as a smart plug's power reading. If those states are not
+  available, say the change is unverified.

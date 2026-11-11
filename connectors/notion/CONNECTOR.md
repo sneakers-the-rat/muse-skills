@@ -6,7 +6,7 @@
 
 - Run `status` before any other work. If it reports `not_connected`, run `authorize-url` and share exactly `[Connect Notion](<connect_url>)`, without the raw URL, then wait for the user to finish. Never ask for tokens in chat or edit the stored credentials.
 
-- After the user authorizes, the sign-in completes on its own. Run `status` again, and once it reports `connected`, its output also lists the available tools.
+- After the user authorizes, the sign-in completes on its own. Run `status` again, and once it reports `connected`, its output also lists the tool names.
 
 - If the sign-in does not complete on its own and the user has an authorization code, finish it with `exchange-code --code CODE`.
 
@@ -20,7 +20,11 @@
 
 ## Find and call a tool
 
-- Run `list-tools` before `call-tool` unless you already know the tool and its argument shape, and never guess a tool name. Use the returned name and `input_schema`.
+- Never guess a tool name or argument shape.
+
+- Find the tool with `list-tools`, which gives each tool's name and a one-line description.
+
+- Before the first call of a write tool, or of any tool whose argument shape you haven't seen, run `describe-tool --name <tool>` and read its whole description and `input_schema`.
 
 - `--arguments-json` must be one JSON object, and arrays or bare values are rejected.
 
@@ -28,6 +32,7 @@
 
 ```text
 /opt/hatch/bin/notion-cli list-tools
+/opt/hatch/bin/notion-cli describe-tool --name <tool>
 /opt/hatch/bin/notion-cli call-tool --name <tool> --arguments-json '<json-object>'
 ```
 
@@ -44,6 +49,18 @@
 - After an uncertain write, read the target before trying again, because Notion may already have made the change.
 
 - Read results keep Notion's raw dates and add UTC and local forms for creation and edit times and for timed properties. Date-only properties stay dates and must not be read as UTC instants.
+
+## Add rows to a database
+
+- Fetch the database with `notion-fetch`. The result lists each data source with its `collection://` URL and properties. If there are several, use the one the user means.
+
+- Call `notion-create-pages` with a top-level `"parent": {"data_source_id": "<id>"}` and one `pages` entry per row that sets the row's properties by name. Take `<id>` from the data source's `collection://<id>` URL.
+
+- Don't put `parent` inside a `pages` entry, because Notion rejects it.
+
+- Don't pass `data_source_id` at the top level without `parent`. Such creates have saved pages with no title or properties.
+
+- Fetch each new row and check its title and properties before telling the user it's saved.
 
 ## Related skills
 

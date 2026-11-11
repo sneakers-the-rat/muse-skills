@@ -2,7 +2,7 @@
 
 - `/opt/hatch/bin/shopify` connects to Shopify's official merchant MCP service. It is not Shopify's npm development CLI, and other Shopify connectors expose different tools, so take tool names and schemas from `list-tools`, never from memory.
 
-- Checking out Shopify products as a shopper is the separate Shopify UCP connector.
+- Checking out Shopify products as a shopper is the separate UCP connector.
 
 ```text
 /opt/hatch/bin/shopify status

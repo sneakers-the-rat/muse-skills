@@ -340,7 +340,7 @@
 
 - Choosing items or building a cart moves no money. When a connector provides checkout instructions, follow those instead of the routing below.
 
-- For [Meta Catalog](/opt/hatch/connectors/meta_catalog_search/CONNECTOR.md) products, confirm each selected product's exact variant as those docs describe. When its product-details response has a `checkout_token` and a `checkout.rail` of `shopify_ucp`, check out as the [Shopify UCP](/opt/hatch/connectors/shopify-ucp/CONNECTOR.md) docs describe.
+- For [Meta Catalog](/opt/hatch/connectors/meta_catalog_search/CONNECTOR.md) products, confirm each selected product's exact variant as those docs describe. When its product-details response has a `checkout_token` and a `checkout.rail` of `shopify_ucp`, check out as the [UCP](/opt/hatch/connectors/ucp/CONNECTOR.md) docs describe.
 
 <!-- purchase-preapproval-off-only:start -->
 - Otherwise follow [browser checkout](/opt/muse/skills/shopping/references/browser-checkout.md). For a request to buy, assign the browser task to complete checkout and confirm the order was placed.
@@ -350,12 +350,12 @@
 <!-- purchase-preapproval-on-only:end -->
 <!-- muse-promo-code-on-only:start -->
 
-- A catalog product's details (`pdp_coupon`, or the `variant_coupon_prices` row for another variant), Buy handoff or reply context (`coupon`) can carry a coupon. Its price already includes the saving, so quote it with the code and never subtract the saving again. Without one, quote the regular price. Once its `expires_at` passes (shown as "price checked until" in a `coupon` line, not "offer ends"), re-read the product's details before quoting it again: the offer has ended only when they carry no coupon and their `promo_offers_lookup_status` is `complete`; with any other status, quote the regular price without saying the offer ended. At checkout, apply the code as the Shopify UCP docs describe, including their complete-set rule, or have the browser task enter it in the basket. Then quote the checkout's refreshed total.
+- A catalog product's details (`pdp_coupon`, or the `variant_coupon_prices` row for another variant), Buy handoff or reply context (`coupon`) can carry a coupon. Its price already includes the saving, so quote it with the code and never subtract the saving again. Without one, quote the regular price. Once its `expires_at` passes (shown as "price checked until" in a `coupon` line, not "offer ends"), re-read the product's details before quoting it again: the offer has ended only when they carry no coupon and their `promo_offers_lookup_status` is `complete`; with any other status, quote the regular price without saying the offer ended. At checkout, apply the code as the UCP docs describe, including their complete-set rule, or have the browser task enter it in the basket. Then quote the checkout's refreshed total.
 
 - When the order has no coupon and no other code (none from the user, a requested deal search or another item, and none already applied on the checkout), quietly try at most three of the details' `promo_offers` at checkout, in their returned order: those with a `coupon_code`, `offer_type` `NORMAL`, a `quality_score` of at least 0.9, `requires_email` and `is_bxgy` false, and terms the basket meets. Apply them one at a time, the same way as a coupon, and stop at the first the merchant accepts. Never retry or stack them, and keep rejected ones out of your replies. Quote a saving only from the checkout's refreshed total; when none applies, continue at the regular price. A coupon withheld because the lookup was not `complete` does not start these attempts.
 <!-- muse-promo-code-on-only:end -->
 
-- Products routed to Shopify UCP checkout keep their merchant cart as the Shopify UCP connector docs describe, and a connector with its own cart support keeps it there. Otherwise, have the browser task build the merchant cart with the specified variants and quantities. Continue the same task when the user changes the cart.<!-- purchase-preapproval-on-only:start --> For changes outside the approved terms, follow `~/docs/chat/browser-purchase-preapproval.md` for renewal before continuing checkout.<!-- purchase-preapproval-on-only:end --> The store holds, prices and discounts that basket, so do not keep a list of your own as a cart. Follow the connector's instructions for cart reads, changes and widgets.
+- Products routed to UCP checkout keep their merchant cart as the UCP connector docs describe, and a connector with its own cart support keeps it there. Otherwise, have the browser task build the merchant cart with the specified variants and quantities. Continue the same task when the user changes the cart.<!-- purchase-preapproval-on-only:start --> For changes outside the approved terms, follow `~/docs/chat/browser-purchase-preapproval.md` for renewal before continuing checkout.<!-- purchase-preapproval-on-only:end --> The store holds, prices and discounts that basket, so do not keep a list of your own as a cart. Follow the connector's instructions for cart reads, changes and widgets.
 
 - Keep the catalog `cart_id` or browser `task_id` in context. Do not show internal IDs to the user. Cart reviews return through the browser task to this conversation as questions. Answer with `browser.browse`, the same `task_id`, `answer_to` set to the `question_id`, and your review in `task`. Payment authorization uses the payment approval interface. Do not ask for either decision twice.
 
@@ -374,7 +374,7 @@
 <!-- muse-charm-purchase-only:start -->
 ## Shopping for Meta Fury Glasses
 
-If the user is shopping for Meta Fury glasses, avoid searching for the product - fetch the product details directly with `shopping product-details --product-id=29548226084784066`, map the product details into `shopping.resolve_results`, and surface the product in the `shopping_results` widget. Do not mention the product id in your response. This product will be eligible for Shopify UCP checkout.
+If the user is shopping for Meta Fury glasses, avoid searching for the product - fetch the product details directly with `shopping product-details --product-id=29548226084784066`, map the product details into `shopping.resolve_results`, and surface the product in the `shopping_results` widget. Do not mention the product id in your response. This product will be eligible for UCP checkout.
 
 For any additional questions about purchasing the product, navigate to https://www.meta.com/help/.
 
@@ -387,7 +387,7 @@ For any additional questions about purchasing the product, navigate to https://w
 
 - [Instagram](/opt/hatch/connectors/instagram/CONNECTOR.md) for products tagged or shown in Instagram posts.
 
-- [Shopify UCP](/opt/hatch/connectors/shopify-ucp/CONNECTOR.md) for checkout of Meta Catalog products.
+- [UCP](/opt/hatch/connectors/ucp/CONNECTOR.md) for checkout of Meta Catalog products.
 
 - [Link by Stripe](/opt/hatch/connectors/stripe-link/CONNECTOR.md) for paying with a saved card through a one-time virtual card.
 
