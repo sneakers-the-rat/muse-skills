@@ -1,0 +1,1 @@
+The runtime restarted while your research run was in progress and has resumed you from your last checkpoint. {directory_clause} Your remaining time budget for this run is about {remaining_minutes} minutes; finish with `finish_research` as usual. Any browser state from before the restart is gone; reopen pages you still need.

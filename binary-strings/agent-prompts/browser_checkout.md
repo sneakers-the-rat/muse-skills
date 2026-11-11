@@ -1,4 +1,4 @@
-Nothing was submitted: no purchase is prepared in this assignment. Once Muse has confirmed the cart, record the final terms with checkout.prepare and status: ready, then call checkout.submit.The user did not answer the payment approval in time. Nothing was paid. Report it in browser.report.checkout decision selected no payment optioncheckout decision selected an incompatible walletcheckout decision changed the frozen purchase termsthe browser service did not answerthis browser task already tried its one tab move, in this run or an earlier onethe other network route is not available right nowno other browser or network route is configured for this tabno fresh browser is available right nowthe browser service refused the move## Workflow execution files
+Nothing was submitted: no purchase is prepared in this assignment. Once Muse has confirmed the cart, record the final terms with checkout.prepare and status: ready, then call checkout.submit.The user did not answer the payment approval in time. Nothing was paid. Report it in browser.report.checkout decision selected no payment optioncheckout decision selected an incompatible walletcheckout decision changed the frozen purchase termsthe browser service did not answerthis browser task already tried its one tab move, in this run or an earlier onethe other network route is not available right nowno other browser or network route is configured for this tabno fresh browser is available right nowthe browser service refused the movedaemon_startup.faileddaemon_startup.starteddaemon_startup.completed## Workflow execution files
 
 Shared workflow working directory: `{{WORKFLOW_WORK_DIR}}`
 
@@ -43,4 +43,4 @@ Shared workflow working directory: `{{WORKFLOW_WORK_DIR}}`
   schema or needed by a later workflow stage. Such paths are internal workflow
   handoffs, not user-facing deliverables.
 - Never expose the workflow working directory or anything inside it in the
-  workflow's final user-facing handback.{{WORKFLOW_WORK_DIR}}workspace/workflow schema output file path is emptypropertiesobject
+  workflow's final user-facing handback.{{WORKFLOW_WORK_DIR}}

@@ -1,0 +1,56 @@
+SELECT pg_advisory_xact_lock_shared(hashtextextended($1, 0))agent.volatile_context_pins.lifecycleSELECT pg_advisory_xact_lock(hashtextextended($1, 0))
+WITH owners AS MATERIALIZED (
+    SELECT DISTINCT agent_id COLLATE "C" AS agent_id
+    FROM unnest($1::text[]) AS input(agent_id)
+)
+SELECT pg_advisory_xact_lock(hashtextextended($2 || agent_id, 0))
+FROM owners ORDER BY agent_id COLLATE "C"
+agent.volatile_context_pins:SELECT agent_id FROM agent.agents WHERE agent_id = $1SELECT handoff_state_json -> $2::text AS state,
+                (extract(epoch FROM clock_timestamp()) * 1000)::bigint AS now_ms
+         FROM agent.subagent_spawns WHERE child_agent_id = $1 FOR UPDATEnow_msagent.subagent_spawns.handoff_state_jsonUPDATE agent.subagent_spawns
+         SET handoff_state_json = jsonb_set(COALESCE(handoff_state_json, '{}'::jsonb),
+                                           ARRAY[$2]::text[], $3::jsonb)
+         WHERE child_agent_id = $1insert into chat_private.publication_turns (execution_id, chat_id, disposition, phase)
+        select $1, $2, $3, $4 where pg_try_advisory_xact_lock_shared(hashtextextended($5, 0))
+        on conflict(execution_id) do nothing returning trueselect chat_id, phase, disposition from chat_private.publication_turns
+        where execution_id = $1 for updatedispositionphasepublication execution belongs to another chatcontext.subscription.advance_to_nowinsert into context.subscription_sources
+        (subscription_id, source_id, active, start_position, discovery_position)
+        select $1, s.id, true, boundary.position, boundary.position
+        from (select id, last_append_position from context.sources
+          where ($2 or source_domain = any($3)) and not exists
+            (select 1 from context.subscription_sources ss where ss.subscription_id = $1 and ss.source_id = context.sources.id)
+          order by id for update) s
+        cross join lateral (select case
+          when $4 then s.last_append_position
+          when $5::timestamptz is null then 0
+          else coalesce((select min(e.append_position) - 1 from context.events e
+            where e.source_id=s.id and e.ingested_at > $5
+              and e.append_position <= s.last_append_position), s.last_append_position)
+          end as position) boundary
+        on conflict do nothingselect ss.source_id, ss.start_position, ss.discovery_position, s.last_append_position
+        from context.subscription_sources ss join context.sources s on s.id = ss.source_id
+        where ss.subscription_id = $1 and ss.active and ss.discovery_position < s.last_append_position
+        order by ss.discovered_at nulls first, ss.source_id limit 1start_positiondiscovery_positionlast_append_positionwith page as materialized (
+            select group_id, append_position, content_hints from context.events
+            where source_id = $1 and append_position > $2 and append_position <= $3
+            and (expires_at is null or expires_at > statement_timestamp())
+            order by append_position limit 1000
+        ), heads as (
+            insert into context.group_cursors
+                (subscription_id, source_id, group_id, acknowledged_position, available_position)
+            select $4, $1, group_id, $5, max(append_position) from page
+            where ($6 or content_hints && $7::text[]) group by group_id
+            on conflict (subscription_id,source_id,group_id) do update
+                set available_position = greatest(context.group_cursors.available_position, excluded.available_position)
+            returning available_position
+        ) select case when count(*) < 1000 then $3 else max(append_position) end from pageupdate context.subscription_sources set discovery_position = $3, discovered_at = clock_timestamp()
+            where subscription_id = $1 and source_id = $2select exists(select 1 from context.subscription_sources ss
+        join context.sources s on s.id = ss.source_id where ss.subscription_id = $1
+        and ss.active and ss.discovery_position < s.last_append_position)context.subscription.readinessdefcon_level_3_daily_capshopping_daily_capdaily cadence read failed; admitting signal-triggered objective cyclethrottledscheduler_grace_secondsprevious_cycle_idprevious_admitted_atsignal_admitted_runssignal_admission_limithatch_inference_defcon_level_3_enabledgatekeeperdefcon_cadencedaily cadence throttled objective cycledaily cadence read failed; admitting automatic objective cycleobjectivestartfailed to stamp boot generation on inline-triggered runproactivity_context_profileretired historical backfill state before objective runfailed to retire historical backfill state; continuing objective runrestart_checkpoint_parkeddurable_owner_retainedrestart_checkpoint_parked_agent_idrestart_checkpoint_parked_atprior_diagnosticsterminal_step_error_coderecovery staging lost current queue or objective lease ownershiprecovery admission cancelled after stagingrestart recovery staging write failed; retaining lease and retryingrecovery admission cancelledobjective execution gate wait cancelledqueue_claim_ownerrestart recovery admission cleanup failed; retrying atomicallyqueue_drainlease_wait_reasonlease_wait_requeued_atqueue_claim_boot_idobjective lease claim result was ambiguous; retrying the same fenced ownerrequeue_lost_racequeued self-improvement runrecovery_pending_lease_ownerbackfill_completehistorical backfill retired; pending march marked completedatabase write admission gate closedadmission_timeoutassert_table_existstable_presence.querySELECT name FROM pragma_table_info(?1)
+        SELECT COUNT(*)
+        FROM sqlite_master
+        WHERE type = 'table'
+          AND name NOT LIKE 'sqlite_%'
+          AND name != ?1
+          AND name != ?2
+        __drizzle_migrations__hatch_cloudflare_migrationsapplied_atdrizzle_journal.jsonread drizzle journalread drizzle migration
