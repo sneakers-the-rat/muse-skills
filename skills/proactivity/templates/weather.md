@@ -1,12 +1,12 @@
 # Weather for a plan
 
-Tool: `widget.create_html_widget`. Prefer a native weather tool if one is actually available.
+Tool: `widget.create_html_widget`. Check the forecast with `browser.search`, using its weather results when available.
 
 Lead with the place, temperature and a large weather symbol. Let a short daily strip show the outlook, then add one useful consequence for the actual plan. Use the user’s units. Label a trip high as a trip high, not a current temperature.
 
 The example’s clouds, rain and sun must match the forecast. Choose or draw the right `currentColor` SVG for each day and remove unavailable days or measures. Do not invent a forecast, hourly curve or live state for visual effect. The sky wash is decorative. Include the source and local check time in the quiet footer.
 
-Show the exact confirmed place in the card. Follow the [location-link guidance](README.md#location-links) and deliver a native map or an ordinary chat link beside it. Carry verified destinations in the handoff rather than putting outbound links inside the HTML.
+Show the exact confirmed place in the card. Follow the [location-link guidance](README.md#location-links) and use `widget.create_map_widget` or an ordinary chat link beside it. Carry verified destinations in the handoff rather than putting outbound links inside the HTML.
 
 ## Example
 

@@ -1,6 +1,6 @@
 # HTML widget inspiration
 
-Use a native widget when its purpose, source data and supported actions fit the task. Use this library for HTML cards that need a bespoke presentation. Native flight and hotel results help compare or select offers to book. A booked flight’s status, a restaurant reservation and an existing hotel stay need a summary of the arrangement, not a new booking flow.
+Use a native widget when its purpose, source data and supported actions fit the task. Use this library for HTML cards that need a bespoke presentation. Use `widget.create_list_widget` for flight offers and `travel.create_hotel_results_widget` for hotel offers to compare or select bookings. A booked flight’s status, a restaurant reservation and an existing hotel stay need a summary of the arrangement, not a new booking flow.
 
 Tools: `widget.create_html_widget` and `widget.create_html_file_widget`.
 

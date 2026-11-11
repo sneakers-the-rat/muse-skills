@@ -4,7 +4,7 @@ Tools: `widget.create_html_widget` or `widget.create_html_file_widget`.
 
 Use a compact flight slip with a strong route, local times and a quiet status. Include a route line with an airplane marker and total duration. For a scheduled flight, set progress to 0 and label it as scheduled. Show a filled progress segment and remaining time only from verified flight data or a clearly labelled estimate based on actual departure and expected arrival. Never imply live aircraft location from a schedule. Restrict the progress value to 0–100%. Duration must come from the source or correctly account for both local dates and timezones. Label times as scheduled, estimated or actual. Each end needs its own date and timezone. Show gate and terminal only when known. The footer identifies the source and check time. Do not add a barcode, boarding claim or invented airline branding.
 
-Show the exact confirmed place in the card. Follow the [location-link guidance](README.md#location-links) and deliver a native map or an ordinary chat link beside it. Carry verified destinations in the handoff rather than putting outbound links inside the HTML.
+Show the exact confirmed place in the card. Follow the [location-link guidance](README.md#location-links) and use `widget.create_map_widget` or an ordinary chat link beside it. Carry verified destinations in the handoff rather than putting outbound links inside the HTML.
 
 ## Example
 

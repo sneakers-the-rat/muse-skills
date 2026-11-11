@@ -4,11 +4,11 @@ Tools: `widget.create_html_widget` or `widget.create_html_file_widget`.
 
 Twenty HTML starting points. Read this index, choose the closest layout, then read that file and adapt it. Change structure, color, spacing and copy when the user or content calls for it. Do not load all twenty.
 
-Prefer an available native weather tool when it fits. Keep observations, forecasts and planning advice distinct.
+Check the forecast with `browser.search`, using its weather results when available, then render it with `widget.create_html_widget` or `widget.create_html_file_widget`. Keep observations, forecasts and planning advice distinct.
 
 Each file is a self-contained widget fragment. Replace and HTML-escape text and attribute placeholders. Keep verified external URLs in the handoff for delivery as ordinary chat links. Remove unused optional fields and repeated rows. Never invent data to fill a design. Set every `*_ICON` placeholder to one of `sun`, `partly-cloudy`, `cloud`, `rain`, `snow`, `wind`, `fog` or `storm`, according to the corresponding source condition. These values select inline SVGs, not remote images. Use the closest honest symbol, or remove it if none fits. Never derive the forecast from the illustration. Keep observations, forecast times, units and source times explicit. Adapt weekend day labels to the user’s calendar.
 
-Show the exact forecast location. Carry each relevant stop’s location link and the forecast source separately in the handoff. Follow the [location-link guidance](../README.md#location-links) and deliver links through a native map or ordinary chat message, never an inert HTML control.
+Show the exact forecast location. Carry each relevant stop’s location link and the forecast source separately in the handoff. Follow the [location-link guidance](../README.md#location-links) and deliver links through `widget.create_map_widget` or an ordinary chat message, never an inert HTML control.
 
 Use the current files under `/opt/muse/assets/proactivity/templates/weather/`. Deployments replace these references. Write the adapted result in the current run’s workspace, leaving this read-only library untouched. Reuse a prepared widget’s exact durable ID and embed token only while its content remains valid. For changing facts, selection supplies the original sources, fields to refresh and this reference path. Delivery checks the current state and creates the card just before presenting it. A saved token preserves content, not freshness. Preserve the source’s observation or update time and the actual check time when they differ, with their timezones. A fresh read does not make old source data current.
 

@@ -2,9 +2,9 @@
 
 Tools: `widget.create_agenda_widget` for a plan. `widget.create_html_widget` for one event.
 
-Give a single event a clear date tile, time and place. Use the native agenda for a day, week or itinerary. Show the actual local date and timezone. Distinguish a proposal from a saved event, and a pending reservation from a confirmed one. Give each invitee a named chip, with initials grounded in that person’s name. Chips wrap, and a long guest list scrolls within its own keyboard-accessible region. Do not imply an invitation was sent or accepted unless verified. Include only preparation that helps the user arrive ready.
+Give a single event a clear date tile, time and place. Use `widget.create_agenda_widget` for a day, week or itinerary. Show the actual local date and timezone. Distinguish a proposal from a saved event, and a pending reservation from a confirmed one. Give each invitee a named chip, with initials grounded in that person’s name. Chips wrap, and a long guest list scrolls within its own keyboard-accessible region. Do not imply an invitation was sent or accepted unless verified. Include only preparation that helps the user arrive ready.
 
-Show the exact confirmed place in the card. Follow the [location-link guidance](README.md#location-links) and deliver a native map or an ordinary chat link beside it. Carry verified destinations in the handoff rather than putting outbound links inside the HTML.
+Show the exact confirmed place in the card. Follow the [location-link guidance](README.md#location-links) and use `widget.create_map_widget` or an ordinary chat link beside it. Carry verified destinations in the handoff rather than putting outbound links inside the HTML.
 
 ## Example
 

@@ -13,12 +13,25 @@
 
 - Give it the exact product or checkout URLs, the requested items, variants and quantities, known contact and delivery details, exclusions, the intended stage and the offer you compared:
 
+<!-- muse-promo-code-off-only:start -->
 ```json
 {
   "task_id": "<existing task_id, or new if none exists>",
   "task": "Purchase <items> from <exact product or checkout URLs>. Use these choices: <variants, quantities, delivery details, payment preference and other requirements>. The selected offer is <quoted total, currency, delivery estimate and source>. Use checkout review to resolve any remaining choices. Report any change in price or delivery. Complete checkout and confirm the order was placed."
 }
 ```
+<!-- muse-promo-code-off-only:end -->
+<!-- muse-promo-code-on-only:start -->
+- Pass `<promo codes>` to the `task` list in order: codes from the user or a deal search they asked for, the product's `pdp_coupon.coupon_code` or the selected variant's `coupon_code` in `variant_coupon_prices`, up to three applicable candidates from `promo_offers`.
+- If none of the above are present then `<promo codes>` is empty.
+
+```json
+{
+  "task_id": "<existing task_id, or new if none exists>",
+  "task": "Purchase <items> from <exact product or checkout URLs>. Use these choices: <variants, quantities, delivery details, payment preference and other requirements>. The selected offer is <quoted total, currency, delivery estimate and source>. Try these promo codes during checkout, keeping the first one the merchant accepts: <promo codes>. Use checkout review to resolve any remaining choices. Report any change in price or delivery. Complete checkout and confirm the order was placed."
+}
+```
+<!-- muse-promo-code-on-only:end -->
 
 - For a request to buy, say explicitly that the task completes checkout and confirms the order was placed. Ask it to stop after cart preparation only when that is what the user requested. The browser inspects the cart, presents cart and payment decisions, enters the approved card and checks the merchant's confirmation. Do not direct it through provider setup or individual checkout actions.
 

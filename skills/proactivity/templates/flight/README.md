@@ -4,11 +4,11 @@ Tools: `widget.create_html_widget` or `widget.create_html_file_widget`.
 
 Twenty HTML starting points. Read this index, choose the closest layout, then read that file and adapt it. Change structure, color, spacing and copy when the user or content calls for it. Do not load all twenty.
 
-Use native flight results for booking offers. These layouts describe booked flights and verified flight updates.
+Use `widget.create_list_widget` for flight booking offers, with its required flight data. These layouts describe booked flights and verified flight updates.
 
 Each file is a self-contained widget fragment. Replace and HTML-escape text and attribute placeholders. Keep verified external URLs in the handoff for delivery as ordinary chat links. Remove unused optional fields and repeated rows. Never invent data to fill a design. Keep local dates and timezones at both ends. Route progress needs actual flight data or an explicitly labelled estimate. Remove it for cancellations and situations where it would mislead. Grounded transfers, pickups and replacement bookings are different from proposals.
 
-Show the exact origin and destination airports. Carry their source location links and any verified pickup link in the handoff. An airport-wide map pin does not identify a particular gate, terminal or pickup door. Follow the [location-link guidance](../README.md#location-links) and deliver links through a native map or ordinary chat message, never an inert HTML control.
+Show the exact origin and destination airports. Carry their source location links and any verified pickup link in the handoff. An airport-wide map pin does not identify a particular gate, terminal or pickup door. Follow the [location-link guidance](../README.md#location-links) and deliver links through `widget.create_map_widget` or an ordinary chat message, never an inert HTML control.
 
 Use the current files under `/opt/muse/assets/proactivity/templates/flight/`. Deployments replace these references. Write the adapted result in the current run’s workspace, leaving this read-only library untouched. Reuse a prepared widget’s exact durable ID and embed token only while its content remains valid. For changing facts, selection supplies the original sources, fields to refresh and this reference path. Delivery checks the current state and creates the card just before presenting it. A saved token preserves content, not freshness. Preserve the source’s observation or update time and the actual check time when they differ, with their timezones. A fresh read does not make old source data current.
 
@@ -31,6 +31,6 @@ Use the current files under `/opt/muse/assets/proactivity/templates/flight/`. De
 | [Timezone comparison](timezone-comparison.html) | Clock changes could make the timing confusing. | Date-specific offsets and a correctly calculated elapsed duration. |
 | [Codeshare](codeshare.html) | The booked and operating flight identities differ. | Both confirmed identifiers. Do not suggest these are different flights. |
 | [Diverted flight](diverted-flight.html) | A confirmed diversion changes the destination. | An actual diversion and verified destination, not a routing guess. |
-| [Rebooked flight](rebooked-flight.html) | A replacement flight has been confirmed booked. | A confirmed booking. Use native flight results for unbooked offers. |
+| [Rebooked flight](rebooked-flight.html) | A replacement flight has been confirmed booked. | A confirmed booking. Use `widget.create_list_widget` for unbooked flight offers. |
 | [Baggage arrival](baggage-arrival.html) | Verified baggage information helps after landing. | Actual claim or baggage status. Do not infer bags are ready from landing. |
 | [Pickup coordination](pickup-coordination.html) | Arrival information supports an agreed pickup. | A real pickup plan and current arrival information. |

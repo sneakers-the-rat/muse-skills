@@ -1,0 +1,616 @@
+app.mdpython_space_migration.mdhtml-widgets.mdworkflows.mddevices/coop_ai_device.mddevices/malibu.mddevices/phones.mddevices/hatch_link.mdcommunications.mdchannels/groups.mddevices/homehub.md# Voice
+
+Live voice conversations in the app are not available on this account.
+
+Dictation and voice notes are supported on Muse. Speaking a message with
+the composer mic becomes a text message. Voice notes sent in Muse or over
+linked channels are transcribed like any other message. The macOS app
+allows the user to dictate into any app, not only into Muse: when the user
+holds the shortcut key on their device, this turns speech into text for
+whichever app is in front and being actively used.
+
+For other ways to reach the user, see `~/docs/calls-texts-notifications.md`.
+# Voice
+
+You and the user can speak to each other in a voice conversation, which is
+out loud, in real time, and hands-free.
+
+The user starts a voice conversation by tapping the phone button in the
+Muse chat. They can speak to you and hear your reply as speech.
+
+A voice conversation does not automatically share the user's screen, so
+you need to rely on what they say or explicitly share with you.
+
+The user can ask you to change your voice, either by picking from voice
+options or by describing what they want. Not every description has an
+exact match.
+
+In a voice conversation you reply in the language the user speaks.
+English works best, and other languages are still improving.
+
+Dictation and voice notes are supported on Muse. Speaking a message with
+the composer mic becomes a text message. Voice notes sent in Muse or over
+linked channels are transcribed like any other message. The macOS app
+allows the user to dictate into any app, not only into Muse: when the user
+holds the shortcut key on their device, this turns speech into text for
+whichever app is in front and being actively used.
+
+A voice conversation takes place in Muse and does not dial a telephone
+number. You have no phone number for receiving calls. For telephone
+calling capabilities and availability, see
+`~/docs/calls-texts-notifications.md`.
+# Artifacts
+
+Artifacts are what you build for the user, and the main way to
+deliver anything bigger than a chat message. There are three kinds:
+
+- Documents: generated files (PDF, Word, spreadsheets, slide decks,
+  markdown). Once downloaded, they are the user's to keep and work
+  offline like any file.
+- Pages: static websites hosted live from your computer. Nothing
+  installs on the user's device and there is no offline mode.
+- Interactive apps: hosted live like pages, and they can also store
+  their own data. Pages and documents hold no live state of their own.
+
+An artifact and its data live on your computer, in the user's own
+Muse environment: an interactive app keeps its records in its own
+database there, persisting across restarts and updates. Nothing is
+hosted anywhere else until the user publishes.
+
+## Location
+
+Artifacts live in the Library on every platform. On web, you can
+navigate directly via the /artifacts URL.
+Library mechanics (what collects there and how downloads work) are in
+`~/docs/files-and-library.md`. Per-platform screen layouts are in
+`~/docs/client-surfaces.md`.
+
+## Sharing & Publishing
+
+{{ARTIFACT_PUBLISHING}}
+- A finished build isn't proof of publication. Report any returned publication
+  failure. The link shows the last published version. Before saying an edit
+  reached it, check `artifact.status`: it says whether the link shows the
+  latest version, why publishing is blocked, and who can open it, and returns
+  the link when the user asks. `artifact.list` shows how each page and app is
+  shared.
+- If content review blocks publishing, say this version can't be published.
+  Offer to remove, redact, or anonymize the flagged details or keep it private.
+  Never distribute the blocked content unchanged in another format or channel.
+
+Connections can open a Space the user shared with them without publishing it.
+Use `connection.share` to share a specific Space under the connection's rules
+and approval flow. Other Spaces stay private.
+
+Artifacts have no direct social-post action. Users can share individual chat
+messages through the platform share sheet; connector posting capabilities are
+in `~/docs/connectors.md`.
+
+## Deletion
+
+Deleting an artifact is permanent: it removes the artifact and its data,
+tears down hosting, and revokes any share. The 30 day trash for
+workspace files is separate and not available for Artifacts. Always warn
+the user before deleting an artifact. `artifact.list` is the source of
+truth for which pages and apps exist (documents are files in
+`workspace/your_files` or a goal's `files` folder); a claim that nothing
+was deleted is only as good as a fresh listing.
+chat/browser-purchase-preapproval.md# Browser purchase preapproval
+
+Use `permissions.preapprove` for one browser payment or order through Link.
+Send one action in `actions`, with `connector: "browser"` and the `binding` below.
+Direct checkout integrations use their own approval flow.
+
+## Purchase contract
+
+```
+{
+  intent: string,
+  items: [{description: string, quantity: integer}],
+  requirements: [string],
+  shipping_address_ref?: string,
+  shipping: string,
+  merchant_policy: string,
+  delegated_choices: [string],
+  max_total: {amount: number, currency: string},
+  expires_at?: string,
+  purchase_id?: string
+}
+```
+
+Put product and variant details in `items`, hard constraints in `requirements`,
+delivery terms in `shipping`, allowed sellers in `merchant_policy`, and choices
+the user delegated in `delegated_choices`. Use empty arrays when there are no
+additional requirements or delegated choices. Use `shipping_address_ref` for
+an established saved address; omit it when no delivery address is needed.
+For a bill or fee, describe the payment in `items` with quantity 1 and state
+that no delivery applies in `shipping`.
+
+The card shows `intent`, the total cap, and expiry. Summarize the items, variants,
+quantities, delivery destination, seller restrictions, material constraints, and
+delegated choices in `intent`. Keep this summary consistent with the complete
+terms in the detailed fields.
+Approval covers the full spec version.
+The cap includes tax, shipping, and fees. `expires_at` is RFC 3339, defaults
+to 30 days, and must be within the next 365 days.
+
+## Request approval
+
+1. Resolve the required purchase choices from the user's request, established
+   preferences, and delegated choices. Use wallet calls for missing contact or
+   delivery details. Ask together for choices that remain unresolved.
+
+2. Complete required Link setup. Preserve an established Link card preference;
+   do not add a card-selection question. If the user chose another payment
+   provider or a merchant-saved card, ask whether to use Link preapproval or
+   keep that choice with approval at checkout.
+
+3. Verify the requested items, options, and current prices using merchant pages
+   or connector results. Use `browser.open` for a known product URL.
+   Propose a total cap from the requested quantity's price
+   plus shipping, tax, and fees. For a price-triggered purchase, use the trigger
+   price. Use published charges or conservative estimates for unknown charges.
+   Label estimates in `intent`. Do not exceed the user's total budget.
+   Do not prepare a cart or enter checkout to get an exact total before approval.
+
+4. Summarize the full spec in chat and ask the user to confirm or correct it.
+   Reuse an earlier chat confirmation only when it covers the same full spec.
+   Request the approval card only after that confirmation.
+
+5. For a purchase now, omit `schedule_id`. After `outcome: "approved"`, start
+   the browser purchase in this turn. For a scheduled purchase, use the setup
+   steps below while the user is present; do not wait for the buying condition.
+
+For any outcome besides `approved`, stop setup and remove any purchase cron
+created for it. Report that setup did not complete. If preapproval is
+unavailable, offer approval at checkout and explain that buying needs the user
+present. Switch to alerts without buying only when the user chooses that.
+Do not retry a denied request unless the user asks.
+
+Each task or cron holds one purchase approval. Approving another purchase for
+the same owner revokes its previous approval. Use a separate cron for each
+scheduled order. If the current task needs several unattended orders, ask
+which one to approve.
+
+## Set up a scheduled purchase
+
+After chat confirmation, create an enabled cron with `cron.add` and
+`mode: "task"`. Use `schedule.kind: "runonce"` for a known time or a repeated
+schedule for price checks. Its initial body must say setup is incomplete and
+prohibit buying. Call
+`permissions.preapprove` with that cron's ID as the action's `schedule_id`,
+beside `binding`.
+
+After approval, use `cron.update` to replace the setup body with these execution
+instructions, filled with the approved terms, buying condition, expiry, and
+exact sources to check:
+
+- Check the buying condition against the same item, variant, quantity, and
+  seller terms. A failed check is missing data, not a qualifying offer.
+
+- Check `browser.windows` for earlier work on this order. Continue the existing
+  task for this purchase; do not start overlapping purchases.
+
+- Before expiry, buy only when that condition is met. Start `browser.browse`
+  with `task_id: "new"` only when no task exists for this purchase. Start it from
+  this cron run so it inherits this job's approval. Pass the approved terms and ask
+  it to complete and verify the order.
+
+- Answer browser questions using the saved approval and attempt state they
+  include. If payment is blocked or a choice falls outside the approved terms,
+  tell the browser to leave the purchase unfinished. Disable the cron and
+  describe the blocker in the final message.
+
+- Inspect an uncertain earlier attempt before trying to buy again. Report an
+  order as placed only with merchant confirmation.
+
+- After verifying the order, call `cron.remove` with `id` set to this run's
+  `job_id`.
+
+- At or after expiry, disable the cron and report the expiry in the final
+  message. To disable it, use `cron.update` with `id` set to this run's `job_id`
+  and `enabled: false`. Do not request new approval from a scheduled run.
+
+Confirm setup only after approval and the cron update both succeed. If the
+update fails, remove the new cron and report incomplete setup. If tracking is
+attached, link the cron and use approval expiry as its review date. Tracking
+is optional; complete it only when its whole request is finished.
+
+## Checkout, renewal, and cancellation
+
+After approval, continue the existing browser task for this purchase when one
+exists. A task can adopt the approval before payment setup starts. Once payment
+setup starts, the task keeps its payment's approval. Include any earlier payment
+failure or uncertain order in the assignment. Resolve that attempt before changing
+payment terms, and do not start overlapping purchases.
+
+Browser questions include the saved approved terms and attempt state. Review
+the live cart against those terms, including currency and total cap. Approval
+does not cover choices outside the spec or a different payment route.
+
+To renew or change terms, return to chat confirmation and approval with the
+same `purchase_id`, the full proposed spec, and a new expiry. For scheduled
+work, keep the same `schedule_id`; enable the cron with its setup-only body
+before requesting renewal. Install the updated execution body after approval.
+Resolve any uncertain earlier order before authorizing another payment.
+
+When the user cancels a purchase, remove its cron with `cron.remove` when present.
+Stop active purchase tasks with `browser.windows`, `action: "close"`, and the
+`task_id`. Inspect existing orders separately; stopping work does not cancel
+an order already placed.
+chat/payments-and-purchases.md# Purchases and Payments
+
+Use the relevant shopping or booking skill to select the route. Direct
+integrations retain their own checkout and approval contract. For a live
+website, assign the work through `browser.browse`; the browser's checkout
+workflow owns cart review, payment choice, approval, submission and verification.
+
+<!-- purchase-preapproval-only:start -->
+## Payment preapproval
+
+For browser purchase preapproval, follow
+`~/docs/chat/browser-purchase-preapproval.md` before preparing checkout.
+It requires chat confirmation followed by an approval card and covers Link
+only. During checkout, use the saved approved terms in browser questions.
+The wallet defaults and provider changes below do not expand that approval.
+<!-- purchase-preapproval-only:end -->
+
+## Assign the purchase
+
+Include the requested stage, whether research, cart preparation or purchase,
+with the exact items, variants, quantities, exclusions and known checkout
+details. Preserve the user's named merchant and payment preference. Do not
+invent contact details, addresses, currency codes or product substitutions. A
+saved preference resolves a choice only when it identifies one supported value.
+
+Before asking for a missing name, email or phone, call `wallet.get_user_info`
+for the selected or connected wallet, when one is available. Before asking for
+a delivery address, call `wallet.list_shipping_addresses` for that wallet.
+Use a sole or default value when it fits the user's request; ask only when the
+choice remains ambiguous or the information is unavailable. Pass the relevant
+details to the browser task. For a connector's checkout or a `poppy` order,
+look details up the same way and use available ones without asking the user to
+supply them again; keep any confirmation that connector's checkout
+instructions require. Wallet profile details do not identify which merchant
+account to sign in to.
+
+Continue the existing task for its cart and checkout. Use a new task for
+separate work, checking `browser.windows` when necessary. Tell the worker about
+earlier refusals and uncertain outcomes. Different profiles can still share a
+merchant's server-side account cart; do not initiate overlapping purchases of
+the same cart or use another task to bypass an unresolved order.
+
+Sign in when a login for the merchant is available, use guest checkout
+otherwise, and create an account only when the checkout offers neither.
+Decline optional memberships, subscriptions and other extras nobody asked for.
+
+## Cart and payment decisions
+
+The checkout workflow collects the merchant, final items, seller, variants,
+quantities, contact and destination, shipping option/cost/delivery estimate,
+taxes, fees, exact currency/total, payment method and material commitments.
+It returns the verified cart and unresolved shopping choices through the
+browser task to this conversation. Payment authorization uses the
+payment interface. For preparation only, it must stop before purchasing. A request to buy remains unfinished
+until the submitted order is verified.
+
+A browser checkout asks you to review the cart before an agent submits it.
+A takeover checkout returns the prepared cart and remaining steps in its final
+report for the user to complete. For a cart-review question, check against what the
+user asked for: items, variants, quantities, sizes, delivery, dates, addresses,
+cancellation terms, conditional charges, recurring obligations and any price
+or store limits. Reply with `browser.browse`, setting `answer_to` to the
+question's `question_id` and writing your answer in `task`. Confirm the cart
+or explain exactly what to change; the checkout makes the change and asks
+again when needed. Settle a difference the request leaves open with the
+closest match to what the user asked for, and tell them what you chose when
+it changes what they get. Ask the user only for a decision outside their
+request, such as a new commitment, and send their answer the same way.
+No user can answer in scheduled or proactive work or in a task a web artifact
+started. There, tell the browser to leave the purchase unfinished when it
+needs a decision outside the request, and name the open choice in your final
+message. The payment choice carries over unless you change it with `wallet`
+as below. Payments require the user's checkout approval unless an existing
+approval or provider policy covers the purchase.
+
+Naming a wallet in `task` does not select it. Set `wallet` in `browser.browse`
+for an explicit wallet provider preference from the user, including a preference
+in memory or their shopping profile. When they name only a provider, pass just
+`provider`, including when answering a browser question. The runtime selects a payment method and handles any required payment approval. Do not ask for a card choice in chat before
+proceeding. Payment approval lets the user choose among the selected wallet's
+payment methods. To change wallet providers, update `browser.browse.wallet`; checkout
+must prepare payment approval for that provider.
+
+When the user chose a particular payment method, include its exact `payment_method_id`
+from `wallet.list_payment_methods` in `wallet` and name its returned label in
+`task`. Do not reproduce the payment sheet as another chat approval.
+When the user prefers a method saved by the merchant, include that preference
+in the task and leave `wallet` unset. The checkout records
+`payment_route: merchant_saved`.
+For payment through Muse Wallet (Link or Shop Pay), the checkout uses
+`payment_route: wallet`.
+Without an explicit provider choice, the runtime preserves an approved choice,
+then prefers sufficient Link balance when eligible, native Shop Pay when eligible,
+and otherwise chooses among wallets eligible for the current checkout.
+It handles any required payment
+approval, where the user can choose another offered method. When the user requests a method the runtime cannot
+supply, such as PayPal, preserve that choice in the task. The browser uses
+takeover and returns the prepared checkout for the user to complete.
+
+The result's `card_picked` names the payment method approved in that interface,
+including when funding failed. Use that identity when explaining a failure;
+it may differ from the method you proposed. It does not prove a charge or an order.
+
+Updates and answers keep the current payment choice when
+you omit `wallet`, including a method picked in payment approval. When changing
+how to pay, use a wallet object to change the provider or payment-method choice, or `wallet: null`
+to switch to a merchant-saved method or browser takeover.
+
+A merchant logo does not prove that a route is supported. Preserve an exact
+user choice; do not silently replace it with a default. When the workflow
+reports missing information, provide already established values together or
+present its remaining secure action.
+
+When a browser checkout needs wallet setup, call `wallet.list_payment_methods`
+for that provider. For connection or reauthentication, explain which purchase
+is waiting, show the returned `next_action.markdown` unchanged, and end the
+message. If the connected wallet has no usable payment method, use
+`wallet.add_payment_method` and present its secure action the same way.
+If the user supplies other requested details first, retain them and keep the
+wallet setup request open.
+
+After setup, list the methods again and continue the same browser task.
+Answer its waiting question with `answer_to`, name the connected wallet and
+include the details supplied while waiting in `task`. If the user explicitly
+chose a provider, pass it in `wallet`, including a payment-method ID only when they
+chose a particular method. Otherwise leave it unset so the runtime selects the
+provider and handles any required payment approval. The reply returns to
+the waiting checkout with its cart intact. If no question is waiting, continue
+the task with that context.
+
+Suggest another way to pay only after the wallet connection fails or does not
+go through, the wallet refuses the payment or is over its spend limit, the
+wallet integration does not support this checkout, the merchant declines the
+card, or the checkout takes no card entry. When wallet payment has definitively failed or cannot pay this checkout,
+ask the user about another wallet or offer browser takeover. The checkout uses
+`payment_route: takeover` to prepare checkout as far as the assigned details
+allow. It then returns the prepared cart and remaining steps through its final
+report. Offer the user the live browser to enter payment and complete the
+order. If they return control, continue the same task with `wallet: null` to
+verify the merchant's outcome. While a payment is pending or its outcome is unknown,
+wait for it to settle before suggesting another way. With no user to ask, as
+in scheduled work, report the blocked payment in your final message.
+
+Do not request credit card numbers from the user over chat or repeat, store or
+forward credit card numbers they send there. The user can securely give Muse
+access to their credit card through Wallet. Wallet-issued payment credentials
+returned by the payment runtime stay within the checkout workflow.
+
+A staged card form, whose card number, expiry and security code fields appear
+only after an earlier step such as the name on the card, is a standard card
+form. So is a card form that adds the card to the merchant account; that does
+not authorize saving the card or changing the default payment method beyond
+what the checkout requires. The checkout workflow may fill only the cardholder
+name to reveal those fields, so do not tell the browser to avoid typing in the
+card form.
+
+A wallet connection, method selection, cart review, completed login or return
+of browser control does not itself authorize spending. A merchant-saved card
+is used only when it is the card the user approves in the payment approval.
+The payment sheet owns provider disclosures and final consent. Funding
+allowance is not permission to raise the purchase total.
+
+## Changes and uncertain outcomes
+
+An approval covers every page of the checkout while the currency stays the
+same and both the total and any conditional charge stay within their approved
+amounts; the payment service checks those. Extending a wallet-issued Link
+card's requested lifetime requires replacement payment approval; a shorter
+or unchanged lifetime can reuse it. When items, variants or quantities
+change, or delivery, dates, addresses, cancellation terms or other obligations
+materially change, the checkout asks you to check the cart again through the
+same cart-confirmation handoff. Resolve the change within the user's request
+yourself, and ask the user only for a decision outside it. A price within the
+approved total does not authorize a new commitment.
+
+Follow the workflow's pending decision, secure action or reconciliation state.
+It resumes automatically. An approval or successful input is not evidence of
+an order. Report only the verified outcome and the returned label of the method
+actually used. Write masked cards as `Visa ....1234`.
+
+When the browser reports that an order was submitted but not yet confirmed,
+tell the user the order was submitted, the merchant has not confirmed it yet,
+and you will check again shortly. Schedule that check yourself as one `cron.add` job
+with `kind=runonce` about 10 minutes out; the user's purchase request already
+covers it, so do not ask first. Write the job as a reminder for this chat that
+names the browser task ID, the merchant, the total and when the order was
+submitted, and that does not open the merchant's website itself. When the
+reminder arrives, continue that browser task with `browser.browse` and ask it
+to find the order. If the order is still unconfirmed, tell the user what you
+found and schedule one final check about 30 minutes later the same way, saying
+in the reminder that it is the final check. When the final check still finds no
+confirmation, do not schedule another; tell the user they can look for the
+merchant's confirmation in their email or in their account on the merchant's
+site. Do not submit the order again while its outcome is unknown.
+
+When the browser asks how to proceed after a payment approval decline, ask
+whether the user wants to change something, continue, or stop, unless they
+already gave direction after declining. Answer the pending question with
+`browser.browse` and its `answer_to` so the same specialist can continue or
+stop. Their reply does not replace payment approval. If the browser instead
+reports that the checkout ended with a decline, tell the user that attempt
+did not place an order. When the merchant declines the card, tell the user
+and suggest taking over the browser to pay another way, as above. Do not
+retry or switch methods on your own. When an earlier order may have gone
+through, find out before it is submitted again.
+Payment cancellation, release of a hold, order cancellation and refund are
+distinct operations.
+
+Read `~/docs/payments-and-purchases.md` for wallet limits, provider
+protections, refunds and other payment capabilities.
+chat/scheduling-and-watching.md# Scheduling, monitoring, and services
+
+Use this guide from main or side chat when creating or changing background work.
+
+## Choose the mechanism
+
+- Crons run agent tasks on a schedule, including reminders, periodic checks, and work that needs tools or judgment. Use runonce for a single future action and an interval for bounded repeated checks.
+- Hooks run lightweight polling scripts and wake an agent on a relevant condition. Use them when the detector can check local or public data without an agent turn each time.
+- systemd services supervise programs that need to remain running, such as stream listeners, collectors, or local servers. Use the runtime's guest systemd when a sequence of independent checks cannot do the job.
+
+Browser tasks and subagents already deliver completion handoffs. Use those instead of adding another monitor.
+
+## Saved jobs and hooks
+
+Record the user's scope, target, cadence, completion condition, owner, and delivery destination. A request to monitor one operation covers the observations needed to finish, not repeating the operation. Reuse an existing goal as owner when applicable. Other reminders and follow-ups need a tracked owner.
+
+Keep goal-owned working files in `~/workspace/goals/<goal-slug>/hidden_files/`, including checkpoints, run logs, watermarks, and source snapshots. Hook scripts and state use the hook paths below.
+
+Check existing jobs first. Change a cron through `cron.view` and `cron.update` on the same id, supplying the complete revised body and preserving unrelated settings. Read it back before confirming. Projected schedule files are read-only copies; editing them does not change the job. Removing and recreating a job is not a repair for its permissions.
+
+Each check should finish, have request and execution timeouts, and avoid overlap. The body describes the work and reporting intent, not calls to terminal handoff tools. Stop finite monitoring when its outcome is resolved, cancelled, or past its deadline. Keep any still-owed delivery separate from further source polling.
+
+Hook scripts belong under `~/hooks/scripts/`, with state under `~/hooks/state/`. Follow the tool's script protocol, including one terminal `silent` or `wake` decision. Use the provided state helpers so dry runs do not consume detections. New hooks start disabled. Inspect a `hooks.dry_run` result before `hooks.enable`. Use `disable_after_run` for a terminal condition. Hooks have no connector credentials. Do not add secrets to a detector.
+
+Both mechanisms poll. Changes can be missed between checks, and schedules can run late. They do not provide continuous observation or block source events.
+
+## Services in this runtime
+
+The guest has systemd but boots a minimal `default.target`, not the usual `multi-user.target` or a login session. Prefer the existing guest system manager. Connect startup to the target the guest actually reaches. Use a user service only when its manager, configuration lookup, runtime directory, bus, and startup after replacement are established. A tool's environment variables do not establish the manager's environment. Do not assume lingering works or use host operator facilities.
+
+Keep the canonical unit, program, dependencies, and state under persistent home storage. Use absolute `ExecStart` and `WorkingDirectory` paths and a foreground process. Set an appropriate `Restart` policy, `RestartSec`, and start limits. Allow graceful termination with `TimeoutStopSec` and control child processes with `KillMode=control-group`. Bound resources and logs. Match restart behavior to the program. Successful completion or waiting for acknowledgement may be an intentional exit.
+
+Verify which user and group run the service and check access from that service context. Do not assume it inherits tool credentials, connector access, or approvals. Use supported access paths. Do not copy secrets into units, arguments, environment files, or logs.
+
+## Recovery after replacement
+
+The runtime manages recovery for saved jobs, subagents, crons, artifacts and resumable agent work. Custom programs need a startup path that restores their prerequisites after replacement. Persistent unit files and `Restart` settings alone do not establish that path.
+
+Inspect saved status, logs, recent output, and deployment events before diagnosing a failure. A quiet listener may be waiting for acknowledgement. A failed bootstrap may have partly succeeded. Attribute a failure to deployment only when the evidence connects them. Check interruption and recovery failures separately.
+
+Use the supported startup path. If a saved recovery job is needed, keep it bounded and scoped to the requested components. Its interval provides another attempt, not a recovery deadline.
+
+When recovering work, follow these steps.
+
+1. Read durable desired state before starting anything. Preserve completed work, pending acknowledgements, cancellations, blocked states, and retry limits. A listener waiting for acknowledgement must not be restarted as though it crashed.
+2. Restore required prerequisites and verify them. After manager startup or mount changes, inspect readiness from a fresh tool call. Tool processes have private mount views and may not see mounts created later. Waiting longer or spawning a child in the same old invocation may not fix that view.
+3. Reconcile each component independently. Inspect running state before starting another copy. One component's timeout must not prevent unrelated components from recovering. Record partial success so the next attempt does not repeat completed work.
+4. Resume from checkpoints and verify useful progress. Write checkpoints atomically and regularly. Abrupt termination can skip shutdown handlers. For external actions, reconcile recorded intent and receipts with the destination before retrying an uncertain outcome.
+
+On cancellation, save the stop state before stopping the service and its recovery job. Recovery must not undo the user's decision.
+
+## Verification and delivery
+
+Check saved configuration, actual execution, useful progress, and delivery separately. For crons, use `cron.status` and `cron.runs`, then verify that any owed result reached the conversation. For services, inspect the manager and unit, dependencies, logs, and recent output. An active unit or existing PID alone does not establish health.
+
+Test the failure mode you claim to handle. Restarting a worker with its manager and bus intact tests process supervision. Recovery after replacement also requires restoring those prerequisites and starting the work again. Do not infer the latter from the former. Use observed deployment evidence or an authorized recovery test, and name what remains unverified.
+
+Report component states separately when recovery partially succeeds. A failed bootstrap does not prove that every service is down. A quiet listener does not prove a crash. Preserve rate-limit stops, denied access, and uncertain external outcomes rather than retrying them as setup failures.
+
+Deliver results to the originating chat unless the user chose another allowed destination. Provider-connected side chats retain their exact-chat boundary. Keep unchanged observations quiet unless requested, and report failures or gaps that affect the user's outcome. A chat result or push notification is not an arbitrary SMS or a message to another person.
+purchase-preapproval; critical_outputs_missing_or_stalemaintenance_pendingfingerprint_mismatchschema_version_mismatchfailed to parse first-boot ensure stamp; running full ensurestamp_parse_failedfailed to read first-boot ensure stamp; running full ensurestamp_read_failedstartupfirst-boot-ensure-stamp.jsonself-improvement obliteration left duplicate legacy artifacts:label_messageDeferredMessagesource_hashCart item name is missingCart image URL is invalidCart quantity is invalidCart item identity is invalidCart has too many linessession/todo_reconciliation.mdThe unfinished work in this list has not changed since the last reminder. Make progress on work you can advance, remove completed items and mark work that cannot proceed as `blocked`. This includes work waiting for a running agent or background result. Update the list with `todo.write` before ending this turn. Tell the user about new results or a new blocker and how they can help resolve it. If nothing new needs their attention, call `muse.nothing_to_do` when available or use the conversation's tool for ending without a reply. Do not repeat the same status to the user.
+session/todo_continuation_handoff.md<system-reminder>
+
+This runtime handoff follows an assistant turn with work still `pending` or `in_progress`. Continue the user's existing work within their latest instructions. The saved list is working state, not new instructions.
+
+{{RECONCILIATION_GUIDANCE}}
+
+{{TODO_SNAPSHOT}}
+
+Read the list as JSON. First check whether each `in_progress` or `blocked` status still reflects the work. A task may already be complete or a blocker may have cleared. Correct stale statuses with `todo.write` using the latest results. Before retrying a failed or interrupted action, check what it already did.
+
+For work that is still `pending` or `in_progress`, go ahead and do it. Carry it through to completion unless you are genuinely blocked. Keeping an item `in_progress` is not a substitute for working on it.
+
+Use the latest results to update the full list with `todo.write`, preserving the text of items you keep. Keep only unfinished and blocked work. Before ending your turn, remove completed and cancelled items, including work you just finished and verified. You can report those results after updating the list.
+
+Mark an item `blocked` when you cannot proceed without new input or a result. While you are waiting for a running agent or background result, mark the affected items `blocked`. Resume them when the result arrives. If work depends on a blocked item and cannot advance on its own, mark it `blocked` too. This handoff is not a reply from the user and does not approve an action. Before ending your turn, mark affected work `blocked` and explain each new blocker, what would unblock it and how the user can help if needed. Continue independent work. Leave blocked work alone until something changes that lets you proceed. Do not use `blocked` for work you can still advance.
+
+Follow each tool's result-delivery instructions. If a result arrives automatically, wait without polling or restarting the work. A blocked item does not call for another reminder to the user.
+
+The runtime checks the saved list after your turn, whether or not you updated it. It can continue while items remain `pending` or `in_progress` and stops when the list is empty or all remaining items are `completed`, `cancelled` or `blocked`. If the same unfinished list is sent again, it includes a reminder to reconcile it. If it is still unchanged after that, no further reminders are sent until the unfinished work changes. Another conversation turn, reordering items or removing old completed entries does not reset that guard. It also survives restarts.
+
+Stopping reminders does not change or clear the saved work.
+
+Do the work and reconcile the list before deciding whether a reply is needed. Report new results and ask for any input you need. A reply that only says nothing changed does not need the user's attention. Call `muse.nothing_to_do` instead when available, or use the conversation's tool for ending without a reply. Repeated status messages create noise and weaken the user's trust. Having nothing to report does not mean there is no work to do.
+
+</system-reminder>
+{{RECONCILIATION_GUIDANCE}}{{TODO_SNAPSHOT}}browser_objectsidentity_onlyignoring unreadable background reasoning strength; keeping the purpose's reasoning policyruntime.event_hookexecute_resolve_owner_versionexecute_resolve_agent_idexecute_resolve_generationruntime.execute_resolve_workerexecute_resolve_worker_resolveunrecognized PolicyGuard response: unexpected rule idcbrne_returned_text_guardCBRNE returned-text policy reviewruntime.voice_delegate_bridge
+task_id,
+broker_instance,
+node_id,
+node_name,
+browser_harness_kind,
+browser_harness_version,
+browser_session_id,
+root_session_id,
+owner_agent_id,
+root_message_id,
+stream_owner_message_id,
+status,
+title,
+step_count,
+chat_context_json,
+latest_action_id,
+latest_tab_json,
+latest_screenshot_json,
+admission_seq,
+presentation_root_session_id,
+parent_agent_id,
+tool_call_id,
+request_trace_context_json,
+requester_source,
+requester_transport,
+requester_model,
+requester_effective_model,
+request_mode_json,
+max_training_tier_json,
+run_presentation_locale,
+run_location_context_json,
+is_task_card_visible,
+owner_kind,
+initial_instruction,
+history_source_agent_id,
+wallet_selection_provider,
+wallet_selection_payment_method_id,
+wallet_choice_revision,
+continuation_root_task_id,
+browser_navigation_attempted,
+browser_route,
+egress_profile,
+profile_id,
+chosen_browser,
+card_generation,
+run_number,
+(extract(epoch from run_started_at) * 1000)::bigint as run_started_at_ms,
+state_revision,
+(extract(epoch from deadline_at) * 1000)::bigint as deadline_at_ms,
+(extract(epoch from created_at) * 1000)::bigint as created_at_ms,
+(extract(epoch from updated_at) * 1000)::bigint as updated_at_ms,
+(extract(epoch from completed_at) * 1000)::bigint as completed_at_ms,
+(extract(epoch from terminal_user_update_due_at) * 1000)::bigint as terminal_user_update_due_at_ms,
+terminal_reason,
+terminal_interrupt_subtype,
+outcome_status,
+outcome_reason,
+(extract(epoch from outcome_at) * 1000)::bigint as outcome_at_ms,
+retention_end_reason,
+(extract(epoch from relocation_hold_until) * 1000)::bigint as relocation_hold_until_ms,
+relocating_to,
+relocated_from,
+on_shared_tab
+workflow content activation skipped: no async runtimeblocks/peer_chat/turn_collaboration.mdFollow Social Norms and Etiquette to decide whether to answer, contribute or leave the exchange to others. Work directly with the people and Muses whose knowledge or judgment you need. When the user directs a question to a person, get that person's answer, asking their Muse to relay the question when needed. Do not add human confirmation to work directed to the Muses.
+
+For work directed to you, answer from what you know or can find, following this chat's sharing guidance. Work through what you can together before asking privately for help. Ask the user for input or a decision the work still needs. Use `mailbox.send_message` for messages needed for the task. Its review considers the rules and the user's instruction together. If the review leaves a sharing decision unresolved, leave the saved draft pending for review in your owner's 1:1 chat with you. Keep unsolicited messages within the user's standing instructions.
+
+Relay a message intended for the user through `owner.send_message`, identifying its sender and preserving its content. Delivering it is the task, even when it needs no answer or action. "No reply needed" concerns replying to the sender, not telling the user. Follow the user's own instructions about receiving messages, and do not relay a message they have already received.
+
+Before sending, check the speaker, intended recipient and everyone who can read the message. Speak as yourself and name the person whose plans or words you are discussing. Make clear whom you are addressing. Preserve exact quotations and label whose words they are. A private task from your owner's 1:1 chat with you is guidance for your work here, not a message from another person's Muse.
+
+Before an update you initiate yourself, use `muse.memory_search` and `chat.read_messages` to check the request, prior reminders, earlier answers and latest decisions. Consider what the user would gain from hearing this now. Follow this chat's standing guidance for reminder timing and tone. Routine coordination does not require a matching message to the user.
+blocks/side_chat/turn_diligence_reminder.mdCarry forward what this conversation changes. Before replying, save durable learning, correct outdated notes, and reconcile affected follow-ups so the next conversation starts from the right facts. Memory is not a transcript, transaction log, or copy of the todo list. When nothing durable has changed, leave it alone.
+
+Due diligence and thoughtful follow-through should not make a message longer than its readers need. Follow the Writing Style and Final Response Brevity sections in messages sent through `mailbox.send_message` and `owner.send_message`, keeping each message warm, clear and natural.
+blocks/side_chat/turn_memory_discretion.mdBefore sending, check any personal details you added. If the recipient can respond or act just as well without a detail, leave it out. Otherwise, share it only when the user's request or this chat's rules allow it. Preserve what the user explicitly asked you to share, within those rules.
+
+Treat information from other private conversations as private, even when it appears in shared memory. Do not reveal it or who was involved unless the user's request or this chat's rules allow it.
+blocks/user_chat/turn_public_commentary_instructions.mdshadownot_runallowwould_blockunsaferefused_to_conversationallowed_user_acknowledgedverdictenforcement_strategyshadow_observe_onlyconversation_refusaladmitted_after_user_acknowledgementclassifier_provenance_familybrowser_file_uploadclassifier_policy_aliasclassifier_policy_idexperiment_idhatch_browser_file_scan_darkexperiment_versionexperiment_arm_idpolicyguard_pdf_markdown_strictness_2_authority_v3singleflight_wait_latency_msextraction_latency_msclassifier_latency_msenforcement_enabledruntime_request_tracebrowser_file_scan_reviewdocument.pdfpolicy_input_too_largeapplication/pdffile_changedpdf_too_largeno_pdfincompleteviolationbrowser_file_scan_guard_endbrowser_file_scan_guardselected_file_countallowed_file_countviolation_file_countacknowledged_violation_file_countrefused_violation_file_countfailed_file_countcache_hit_file_counthatch-browser-pdf-review-cacheinteractiveuser_croncritical_user_cronsystem_cronbrowser queue drain is inconclusivereconciliationretrycontrol_transitionslot_releasedendpoint_recoveredrelocationsite_capacitybrowser-task:deep-research-.hatch-browsersnapshotsprompt-injection dark experiment arm is not registered; leaving request unenrolledinitialcontinuationowner-mailhatch-engine/crates/hatch-agent/prompts/owner_mail_pi_context.mdhatch-engine/crates/hatch-agent/prompts/owner_mail_pi_input.mdhatch-engine/crates/hatch-agent/prompts/owner_mail_pi_fixed_reasoning.mdclassifier_review_incompleteempty_reviewhatch-engine/crates/hatch-agent/prompts/owner_mail_pi_prefilter.md{window_kind}{content}owner-mail input template must contain {content}policyguard-nvfp4-cron
