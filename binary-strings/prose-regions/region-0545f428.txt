@@ -1,0 +1,11 @@
+select b.chat_id, b.provider, b.conversation_key, b.delivery_target,
+                            b.epoch, owner.body ->> 'user_id' as owner_account_id
+                     from chat_private.bindings b
+                     join chat.chats c using(chat_id)
+                     join chat_private.transport_state config
+                       on config.provider=b.provider and config.name='config'
+                     join chat_private.transport_state owner
+                       on owner.provider=b.provider and owner.name='owner'
+                     where b.chat_id=any($1) and b.provider='telegram' and not b.revoked
+                       and c.status='active' and config.body -> 'enabled' = 'true'::jsonb
+                       and owner.body ->> 'user_id' is not nullselect exists (select 1 from agent.root_turn_queue where submission_id = $1)€˜

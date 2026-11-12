@@ -31,7 +31,8 @@ an established saved address; omit it when no delivery address is needed.
 For a bill or fee, describe the payment in `items` with quantity 1 and state
 that no delivery applies in `shipping`.
 
-The card shows `intent`, the total cap, and expiry. Summarize the items, variants,
+The card shows `intent` and the total cap. A scheduled purchase's card also shows
+how long the approval lasts. Summarize the items, variants,
 quantities, delivery destination, seller restrictions, material constraints, and
 delegated choices in `intent`. Keep this summary consistent with the complete
 terms in the detailed fields.
