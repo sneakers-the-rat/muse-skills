@@ -1,0 +1,129 @@
+workspaceprompts must be an arrayaccountbrowser Poppy agent did not start with its taskpoppy.runbrowser workflow is waiting or terminalbrowser-credential-updateruntime.browser_codebrowser-codebrowser-inputbrowser task is no longer runningthe browser planner stopped this specialistruntime.browser_controlbrowser seat endedbrowser tabs after control return were unavailableadditional browser task context is unavailable
+
+---
+
+browser task history is unavailableTask history could not be loaded.browser caller assignments are unavailableCaller assignments could not be loaded. → ## Task and updates
+
+This history gives the user's goal, choices and constraints. It appears in order, with later updates refining earlier ones. Your assignment below names the company; the history also includes steps that belong to the browser planner or may already be complete. Check what the company's session already holds before deciding what remains to do, and perform only the work at this company.
+
+{task_context}
+
+## How you were called
+
+{call_chain}
+
+{caller_assignments}
+
+## Your assignment
+
+{assignment}
+## Task and updates
+
+This history gives the user's goal, choices and constraints. It appears in order, with later updates refining earlier ones. Your assignment below defines your part of the work; the history also includes steps that belong to your caller or may already be complete. Continue from the handed-off tab and its current state. Observe it before deciding what remains to do, and perform only your assignment and its unfinished prerequisites.
+
+{task_context}
+
+## How you were called
+
+{call_chain}
+
+Use caller assignments below to understand how your work fits the task. They do not assign the caller's remaining steps to you.
+
+{caller_assignments}
+
+## Your assignment
+
+{assignment}
+{task_context}{call_chain}{caller_assignments}{assignment}browser_invocation_idbrowser_task_run_numberbrowser_invocation_source_submission_idcheckout tab is missingcheckout caller provenance is missingcaptured checkout invocation is missingbrowser caller submission is unavailablebrowser invocation replay changed inputthe specialist's tab is no longer openbrowser task has no plannerThis subtask stopped during a restart and did not report a result. Its work may be partly or fully done: check what it already produced before redoing anything, then redo or redelegate only what is actually missing.Closed during restart recovery without reporting a result.failed to persist terminal state for closed checkpointed subagentfailed to persist terminal status for closed checkpointed agentclosed Spaces builder checkpoint has no parent identityclosed Spaces builder checkpoint has no storage rootfailed to load closed Spaces builder generationfailed to delete runtime restart checkpoint for closed agentpartial_recovery_descriptormissing_conversationinvalid_structural_owner_identityrecovery_identity_mismatchinvalid_recovery_descriptorinvalid_durable_owner_identityinvalid_inherited_execution_authoritymuse_mailstyle_tryonstripe-linkcontent-typeacceptx-typesafe-request-id
+SELECT json_build_object(
+         'accepted_ordinal', accepted_ordinal,
+         'state', state,
+         'checkpoint_custody', checkpoint_custody,
+         'submission_json', submission_json
+       )::text
+FROM agent.message_mailbox
+WHERE agent_id = $1
+  AND state IN ('accepted', 'attached')
+ORDER BY accepted_ordinal, submission_id
+FOR UPDATE
+SELECT payload_json FROM runtime_restart_checkpoints WHERE agent_id = $1
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = 'executing',
+    stream_owner_message_id = $3,
+    attached_at = now()
+WHERE submission_id = $1
+  AND agent_id = $2
+  AND state = 'accepted'
+  AND stream_owner_message_id IS NULL
+
+SELECT agent_id, state, stream_owner_message_id, submission_json,
+       accepted_ordinal
+FROM agent.message_mailbox
+WHERE submission_id = $1
+FOR UPDATE
+tracked mailbox successor unexpectedly lost custodymessage mailbox successor promotion cannot overtake an older priority peer
+UPDATE agent.message_mailbox
+SET state = CASE WHEN $4 THEN 'completed' ELSE 'aborted' END,
+    checkpoint_custody = coalesce(checkpoint_custody, 'executing'),
+    terminalized_at = now()
+WHERE agent_id = $1
+  AND stream_owner_message_id = $2
+  AND submission_id = ANY($3)
+  AND state = 'attached'
+
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = 'executing',
+    stream_owner_message_id = $2,
+    attached_at = coalesce(attached_at, now())
+WHERE agent_id = $1
+  AND submission_id = ANY($3)
+  AND (
+    (state = 'accepted' AND stream_owner_message_id IS NULL)
+    OR (state = 'attached' AND stream_owner_message_id = $2)
+  )
+
+UPDATE agent.message_mailbox
+SET checkpoint_custody = 'queued'
+WHERE agent_id = $1
+  AND stream_owner_message_id = $2
+  AND submission_id = ANY($3)
+  AND state = 'attached'
+
+UPDATE agent.message_mailbox
+SET state = CASE
+      WHEN state = 'attached' AND $2 THEN 'completed'
+      ELSE 'aborted'
+    END,
+    terminalized_at = now()
+WHERE agent_id = $1
+  AND state IN ('accepted', 'attached')
+
+SELECT accepted_ordinal, submission_json FROM agent.message_mailbox
+WHERE agent_id = $1 AND state = 'accepted'
+  AND accepted_ordinal < $2 AND accepted_ordinal > $3
+ORDER BY accepted_ordinal LIMIT 128
+select transcript_event_seq, submission_json from agent.message_mailbox
+                     where agent_id = $1 and submission_id = $2transcript_event_seqforeground report fallback requires its exact public submissionselect e.parent_agent_id as agent_id, e.event_seq, e.message_id, e.created_at,
+                    coalesce(f.text_value, f.scalar_value) as context_seq
+     from runtime.events e
+     left join runtime.event_payload_fields f on f.event_seq = e.event_seq
+       and f.field_path = '/metadata/context_seq'
+     where e.parent_agent_id = $1 and e.event_seq = $2
+       and e.event_name in ('message.user', 'message.internal')
+     order by e.event_seq limit 2select e.parent_agent_id as agent_id, e.event_seq, e.message_id, e.created_at,
+                    coalesce(f.text_value, f.scalar_value) as context_seq
+     from runtime.events e
+     left join runtime.event_payload_fields f on f.event_seq = e.event_seq
+       and f.field_path = '/metadata/context_seq'
+     where e.parent_agent_id = $1 and e.message_id = $2
+       and e.event_name = 'message.user' and e.role = 'user'
+     order by e.event_seq limit 2database write admission gate closedadmission_timeoutassert_table_existstable_presence.querySELECT name FROM pragma_table_info(?1)
+        SELECT COUNT(*)
+        FROM sqlite_master
+        WHERE type = 'table'
+          AND name NOT LIKE 'sqlite_%'
+          AND name != ?1
+          AND name != ?2
+        __drizzle_migrations__hatch_cloudflare_migrationsapplied_atdrizzle_journal.jsonread drizzle journalread drizzle migration

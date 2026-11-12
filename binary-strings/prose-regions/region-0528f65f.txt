@@ -1,0 +1,68 @@
+SELECT pg_advisory_xact_lock_shared(hashtextextended($1, 0))agent.volatile_context_pins.lifecycleSELECT pg_advisory_xact_lock(hashtextextended($1, 0))
+WITH owners AS MATERIALIZED (
+    SELECT DISTINCT agent_id COLLATE "C" AS agent_id
+    FROM unnest($1::text[]) AS input(agent_id)
+)
+SELECT pg_advisory_xact_lock(hashtextextended($2 || agent_id, 0))
+FROM owners ORDER BY agent_id COLLATE "C"
+agent.volatile_context_pins:SELECT agent_id FROM agent.agents WHERE agent_id = $1SELECT handoff_state_json -> $2::text AS state,
+                (extract(epoch FROM clock_timestamp()) * 1000)::bigint AS now_ms
+         FROM agent.subagent_spawns WHERE child_agent_id = $1 FOR UPDATEnow_msagent.subagent_spawns.handoff_state_jsonUPDATE agent.subagent_spawns
+         SET handoff_state_json = jsonb_set(COALESCE(handoff_state_json, '{}'::jsonb),
+                                           ARRAY[$2]::text[], $3::jsonb)
+         WHERE child_agent_id = $1insert into chat_private.publication_turns (execution_id, chat_id, disposition, phase)
+        select $1, $2, $3, $4 where pg_try_advisory_xact_lock_shared(hashtextextended($5, 0))
+        on conflict(execution_id) do nothing returning trueselect chat_id, phase, disposition from chat_private.publication_turns
+        where execution_id = $1 for updatechat_iddispositionphasepublication execution belongs to another chatJARVIS_TIERrealtime: dropped cancelled device visual capturedropped_cancelledrealtime: rejected camera capture without a live device connectionvoice_visual_capture_no_connection_rejectedimage/jpegfailed_capturerealtime: dropped stale device visual capture resultdropped_stalefailed_confidential_deliveryconfidential_delivery_failedrealtime: dropped provider image without a capture IDdropped_missing_capture_idrealtime: device visual capture failed for Cosmos image capturerealtime: device visual capture failed; speaking camera failurerealtime: confidential device image delivereddelivered_confidentialrealtime: device image delivered to the pending Companion capturedropped_no_pending_capturedelivered_companionrealtime: failed to retain device image in private voice historyfailed_retainvoice_image_retain_failedrealtime: dropped device image without its pending provider capturerealtime: dropped device image without an active Cosmos runtimedropped_no_runtimerealtime: dropped device image without a pending Cosmos image capturedropped_unfulfilledrealtime: device image fulfilled the pending Cosmos image capturedelivered_providerrealtime: failed to fulfill Cosmos image capture with device imagefailed_stagevoice_image_stage_failedvoice config loader failed; using fail-closed defaults
+INSERT INTO requests (
+  request_id, root_request_id, parent_request_id, request_origin,
+  transcript_surface, root_work_class
+)
+VALUES ($1, $2, $3, $4, $5::runtime.transcript_surface, $6)
+ON CONFLICT (request_id) DO UPDATE SET
+  root_request_id = COALESCE(requests.root_request_id, excluded.root_request_id),
+  parent_request_id = COALESCE(requests.parent_request_id, excluded.parent_request_id),
+  request_origin = CASE
+    WHEN requests.request_origin = 'internal.runtime_replay' THEN excluded.request_origin
+    ELSE requests.request_origin
+  END,
+  transcript_surface = excluded.transcript_surface,
+  root_work_class = CASE
+    WHEN requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing'
+      THEN excluded.root_work_class
+    ELSE requests.root_work_class
+  END
+WHERE (requests.root_request_id IS NULL AND excluded.root_request_id IS NOT NULL)
+   OR (requests.parent_request_id IS NULL AND excluded.parent_request_id IS NOT NULL)
+   OR (requests.request_origin = 'internal.runtime_replay'
+       AND excluded.request_origin <> 'internal.runtime_replay')
+   OR requests.transcript_surface IS DISTINCT FROM excluded.transcript_surface
+   OR (requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing')
+statusoutput
+INSERT INTO tool_outputs (event_seq, call_id, status, output_text, error_text, created_at)
+VALUES ($1, $2, $3, $4, $5, to_timestamp($6::double precision / 1000.0))
+ON CONFLICT (event_seq) DO UPDATE SET
+  call_id = excluded.call_id,
+  status = excluded.status,
+  output_text = excluded.output_text,
+  error_text = excluded.error_text
+arguments
+INSERT INTO tool_calls (event_seq, call_id, tool_name, status, arguments_json, created_at)
+VALUES ($1, $2, $3, 'started', $4, to_timestamp($5::double precision / 1000.0))
+ON CONFLICT (call_id) DO UPDATE SET
+  event_seq = excluded.event_seq,
+  tool_name = excluded.tool_name,
+  status = excluded.status,
+  arguments_json = excluded.arguments_json
+
+INSERT INTO chat_event_derived_write_backlog (event_seq, resources_json)
+VALUES ($1, $2)
+ON CONFLICT (event_seq) DO UPDATE SET
+  resources_json = excluded.resources_json,
+  updated_at = now()
+UPDATE chat_private.peer_conversations SET requester_chat_id = NULL
+         WHERE conversation_id = $1 AND requester_revision = $2
+           AND requester_chat_id = $3 AND NOT requester_unavailable
+           AND chat_id = $5
+           AND EXISTS (SELECT 1 FROM agent.agents
+                       WHERE id = $4 AND session_id = $3)peer handoff disagrees with its asking-chat claimpeer handoff requester changed before admission
