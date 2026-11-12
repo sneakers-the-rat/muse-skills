@@ -133,10 +133,17 @@ is optional; complete it only when its whole request is finished.
 ## Checkout, renewal, and cancellation
 
 After approval, continue the existing browser task for this purchase when one
-exists. A task can adopt the approval before payment setup starts. Once payment
+exists. The browser task that starts paying with the approval holds it. Other
+browser tasks then cannot pay with it, and closing them leaves it in place. A
+task can adopt the approval before payment setup starts. Once payment
 setup starts, the task keeps its payment's approval. Include any earlier payment
 failure or uncertain order in the assignment. Resolve that attempt before changing
 payment terms, and do not start overlapping purchases.
+
+A pause for user input, takeover, or the end of a chat turn preserves the purchase
+approval. Resume the same browser task without requesting approval again solely
+because it paused. The runtime checks the saved approval before payment.
+Expiry, revocation, or changed terms require fresh approval through renewal below.
 
 Browser questions include the saved approved terms and attempt state. Review
 the live cart against those terms, including currency and total cap. Approval
@@ -150,6 +157,10 @@ before requesting renewal. Install the updated execution body after approval.
 Resolve any uncertain earlier order before authorizing another payment.
 
 When the user cancels a purchase, remove its cron with `cron.remove` when present.
-Stop active purchase tasks with `browser.windows`, `action: "close"`, and the
-`task_id`. Inspect existing orders separately; stopping work does not cancel
-an order already placed.
+Close the purchase's browser task with `browser.windows`, `action: "close"`, and
+the `task_id`, including a waiting or finished task with a saved purchase approval.
+A successful close revokes that approval when that task holds it, or when no
+other open task carries it. Closing a scheduled run's browser
+task stops only that run; `cron.remove` cancels the schedule's purchase. If
+closing fails, report that cancellation is unconfirmed. Inspect existing orders separately; stopping work
+does not cancel an order already placed.

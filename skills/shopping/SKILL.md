@@ -62,7 +62,7 @@
   - A browser product search with `browser.browse` and `task_id: "new"`, briefed as below. Always run it, especially for home goods, unless the user asked only for Facebook Marketplace.
   - Facebook Marketplace with `/opt/hatch/bin/facebook-cli marketplace search` for used, local, pickup, tight-budget or deal-hunting requests, following the Facebook connector's [Marketplace guide](/opt/hatch/connectors/facebook_cli/references/marketplace.md).
 
-- Cover the brand's official store and a few established retailers, such as Walmart, Target or Best Buy in the US, plus a specialist or local shop when the item calls for one.
+- Cover the brand's official store and a few established retailers, such as Walmart, Target or Best Buy in the US, plus a specialist or local shop when the item calls for one. Leave out Amazon unless the user asks for it.
 <!-- product-search-improvements-off-only:end -->
 <!-- product-search-improvements-on-only:start -->
 ## Search strategies
@@ -89,7 +89,7 @@
 <!-- product-search-improvements-on-only:start -->
 ### Search the catalog
 
-- Use the context from `browser.search` to help write better search queries, such as executing multiple semantic queries for different product categories or searching with a preference for relevant brands and domains. Examples of potentially relevant, well-known retailers in the US are Walmart, Target and Best Buy. Avoid mentioning these example stores as you search them.
+- Use the context from `browser.search` to help write better search queries, such as executing multiple semantic queries for different product categories or searching with a preference for relevant brands and domains. Examples of potentially relevant, well-known retailers in the US are Walmart, Target and Best Buy. Avoid mentioning these example stores as you search them. Leave out Amazon unless the user asks for it.
 
 - Search the Meta Catalog first, plus Facebook Marketplace when it applies:
   - Meta Catalog, adding the flags the [Meta Catalog](/opt/hatch/connectors/meta_catalog_search/CONNECTOR.md) docs give for intent, brands, sellers, gender, prices and images. For product recommendation searches, ensure at least one semantic query is broad and doesn't include brand or seller names.
@@ -108,7 +108,7 @@
   - A browser product search with `browser.browse` and `task_id: "new"`, briefed as below. Always run it unless the user asked only for Facebook Marketplace.
   - Facebook Marketplace with `/opt/hatch/bin/facebook-cli marketplace search` for used, local, pickup, tight-budget or deal-hunting requests, following the Facebook connector's [Marketplace guide](/opt/hatch/connectors/facebook_cli/references/marketplace.md).
 
-- Cover the brand's official store and a few established retailers, such as Walmart, Target or Best Buy in the US, plus a specialist or local shop when the item calls for one. For a deal hunt, also follow "Find a deal".
+- Cover the brand's official store and a few established retailers, such as Walmart, Target or Best Buy in the US, plus a specialist or local shop when the item calls for one. Leave out Amazon unless the user asks for it. For a deal hunt, also follow "Find a deal".
 
 - Aim to show at least 5 products that meet every requirement, counting each seller's offer of a specific product separately. Search again only while it could still add matches.
 <!-- product-search-improvements-on-only:end -->
@@ -117,10 +117,12 @@
 
 - The browser task cannot see this conversation, so give it a complete, self-contained brief.
 
+- Keep the brief's "Do not search Amazon." and never name Amazon as a site to search, even as an example, unless the user asked for Amazon.
+
 ```json
 {
   "task_id": "new",
-  "task": "<what the user asked to find, in their words>. Find real purchasable products online for: <user request>. Preserve these requirements: <constraints>. Unless instructed otherwise, default to searching a maximum of 3 merchant sites and a maximum of 10 products in total - prefer to limit searching to the minimum amount necessary to provide a high-quality and seller-diverse response (e.g. if searching 2 merchant sites gives you enough high quality products, stop there). Return a concise shortlist with product name, merchant, price, availability, product URL, and why each product matches. Report every shortlisted product through browser.report.products. Ensure that each URL is a dedicated product page, not a search page. For image_url, identify the primary rendered product image; inspect its src, srcset, lazy-load attributes, or element HTML, resolve relative URLs against the product-page URL, and include only a direct absolute HTTPS image URL. Omit products whose primary image cannot be verified or resolves to a blob/data URL, placeholder, logo, or tracking pixel. Use price for the regular/list price, or the current price when there is no sale. Include sale_price only when the page explicitly shows an actual sale with a distinct discounted price. Set availability to in_stock only when the product page indicates it can be added to cart or purchased. This is product discovery only: do not purchase, enter checkout, add items to cart, or request payment/shipping details."
+  "task": "<what the user asked to find, in their words>. Find real purchasable products online for: <user request>. Preserve these requirements: <constraints>. Do not search Amazon. Unless instructed otherwise, default to searching a maximum of 3 merchant sites and a maximum of 10 products in total - prefer to limit searching to the minimum amount necessary to provide a high-quality and seller-diverse response (e.g. if searching 2 merchant sites gives you enough high quality products, stop there). Return a concise shortlist with product name, merchant, price, availability, product URL, and why each product matches. Report every shortlisted product through browser.report.products. Ensure that each URL is a dedicated product page, not a search page. For image_url, identify the primary rendered product image; inspect its src, srcset, lazy-load attributes, or element HTML, resolve relative URLs against the product-page URL, and include only a direct absolute HTTPS image URL. Omit products whose primary image cannot be verified or resolves to a blob/data URL, placeholder, logo, or tracking pixel. Use price for the regular/list price, or the current price when there is no sale. Include sale_price only when the page explicitly shows an actual sale with a distinct discounted price. Set availability to in_stock only when the product page indicates it can be added to cart or purchased. This is product discovery only: do not purchase, enter checkout, add items to cart, or request payment/shipping details."
 }
 ```
 
@@ -130,26 +132,7 @@
 - For a purchase request, follow the purchase workflow and let the checkout flow present the cart. Do not add a separate product-choice confirmation when the requested item and variant are already clear.
 
 <!-- purchase-preapproval-off-only:end -->
-- When a task completes, write its `completion_result.product_results` object verbatim to a JSON file and select products by `result_id`. Never rebuild products from the prose report or supply a missing image URL.
-
-```json
-{
-  "version": 1,
-  "kind": "browser_product_search_results",
-  "count": 1,
-  "products": [
-    {
-      "result_id": "browser:<stable URL hash>",
-      "name": "Product name",
-      "url": "https://merchant.example/product",
-      "image_url": "https://merchant.example/product.jpg",
-      "availability": "in_stock",
-      "brand": "Merchant or brand",
-      "price": "$49.00"
-    }
-  ]
-}
-```
+- When a browser task returns products, call `shopping.resolve_results`. Take the `product results path` from the browser task's handoff and put it in the `result_paths` argument. Copy each chosen product's `result id` exactly into the `selected_ids` argument.
 
 - Wait for every browser task in the request to finish. Completions arrive automatically, so never poll.
 

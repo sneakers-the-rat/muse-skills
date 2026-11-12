@@ -30,7 +30,9 @@
 
 - Unless a specific phone is mentioned by name, requests to text or call from the phone should still use the device the request came from, which calls through the phone paired to it.
 
-- Change devices only when the user asks, matching their words with `device.list` and asking if several fit. Send call controls to that device as they are. For a new call or text, run `device.describe` there and use its advertised command and schema.
+- On a live voice call, a new `wearables.comms.provider.call` or `wearables.comms.native.sms` should be sent through the glasses carrying the call. One that names another device should return `invalid_device` and not be sent.
+
+- Otherwise, stay on the device the request came from. When the user asks for another device, match their words with `device.list` and ask if several fit. Send call controls to that device as they are. For a new call or text, run `device.describe` there and use its advertised command and schema.
 
 - Never move an action to a paired phone or another wearable because the selected device is offline or rejects the command.
 
@@ -88,7 +90,11 @@
 
 - Report success only when `device.invoke` does. For a call control, an inner `ok: false` or error is a failure even when the outer call succeeded, and when there was no call to control, say so briefly. Relay a useful failure reason without internal command names or private contact details.
 
-- Only `node_command_unsupported` and `invalid_command_params` mean the device refused before acting. Describe the same device once and retry once with a compatible advertised command, asking for any newly required input, or say the device cannot do it.
+- The device's `node_command_unsupported` and `invalid_command_params` errors mean it refused before acting. For those two, describe the same device once and retry once with a compatible advertised command, asking for any newly required input, or say the device cannot do it.
+
+- `call_not_live`, `device_not_connected`, `device_command_unsupported` and `device_ambiguous` mean nothing was placed or sent: the voice call this request came from has ended, its glasses are not connected, the glasses cannot take this command right now, or more than one pair could take it. Tell the user it did not go through and let them decide whether to try again.
+
+- `invalid_device`: the device you named does not carry this call. If you chose that device, send the command again with the result's `device_id` as `device`. If its number came from a contact search, repeat the search on that device first. If the user chose it, tell them it did not go through and let them decide.
 
 - After a timeout, interruption or transport error the action may already have happened, so do not retry or switch devices.
 

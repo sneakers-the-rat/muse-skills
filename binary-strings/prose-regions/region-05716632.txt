@@ -1,0 +1,124 @@
+
+SELECT created_at
+FROM runtime.events
+WHERE transcript_surface = 'main_chat'
+  AND visibility = 'public'
+  AND role = 'user'
+  AND event_name = 'message.user'
+  AND source NOT IN (
+    'runtime.action',
+    'runtime.audio_transcript',
+    'runtime.avatar_backfill',
+    'runtime.cancellation',
+    'runtime.device_sync',
+    'runtime.device_sync_handoff',
+    'runtime.external_sync',
+    'runtime.filesystem',
+    'runtime.media_upload',
+    'runtime.monitoring',
+    'runtime.onboarding',
+    'runtime.reaction',
+    'runtime.skill_invalidation',
+    'runtime.subagent_progress',
+    'scheduler.cron',
+    'security.safety',
+    'security.sentinel'
+  )
+ORDER BY event_seq DESC
+LIMIT 1
+unknown connectioninsert into agent.connections
+                     (connection_id, provider, address, display_name, muse_id, agent_name,
+                      audience, active, rules_revision, person_paths, group_path,
+                      search_document, created_at_ms, updated_at_ms, rules_changed_at_ms)
+                     values ($1,$2,$3,$4,$5,$6,$7,$8,1,$9,$10,
+                             to_tsvector('simple', $4 || ' ' || coalesce($6, '')),$11,$11,$12)
+                     on conflict (connection_id) do nothingselect audience, active from agent.connections where connection_id=$1 for updateinsert into agent.connection_rules (connection_id,rule_id,title,summary,description,source_message_id,audience,created_at_ms,updated_at_ms) delete from agent.connection_rules where connection_id=$1update agent.connections set regular_checkins=false,
+                            checkins_revision=checkins_revision+1 where connection_id=$1update agent.connection_messages set state='cancelled',
+                            feedback='The conversation or its participants changed.', outcome_notified=false, updated_at_ms=$2
+                            where connection_id=$1 and state='queued'update agent.connections set provider=$2, address=$3, display_name=$4,
+                         muse_id=$5, agent_name=$6, audience=$7, active=$8,
+                         search_document=to_tsvector('simple', $4 || ' ' || coalesce($6, '')),
+                         updated_at_ms=$9 where connection_id=$1 and
+                         (provider, address, display_name, muse_id, agent_name, audience, active)
+                         is distinct from ($2,$3,$4,$5,$6,$7,$8)connection_id, provider, address, display_name, muse_id, agent_name, audience, active, rules_revision, regular_checkins, checkins_revision, person_paths, group_pathselect rules_revision,rules_changed_at_ms,rules_changed_source_message_id,audience from agent.connections where connection_id=$1 and active for updateselect count(*) from agent.connection_rule_sources s
+                     join unnest($2::uuid[],$3::text[]) as requested(rule_id,source_message_id)
+                       on s.rule_id=requested.rule_id and s.source_message_id=requested.source_message_id
+                     where s.connection_id=$1select rule_id,title,summary,description,source_message_id,audience from agent.connection_rules where connection_id=$1 and rule_id=any($2)A newer sharing instruction already appliesthe rules changed, read them again before editingsharing rule not founddelete from agent.connection_rules where connection_id=$1 and rule_id=any($2) on conflict(connection_id,rule_id) do update set title=excluded.title,summary=excluded.summary,description=excluded.description,source_message_id=excluded.source_message_id,audience=excluded.audience,updated_at_ms=excluded.updated_at_msupdate agent.connections set rules_changed_at_ms=greatest(rules_changed_at_ms,$2), rules_changed_source_message_id=$3 where connection_id=$1insert into agent.connection_rule_sources (connection_id,rule_id,source_message_id) connection_idthe new connection is missingthe previous connection is missingselect rules_revision,audience from agent.connections where connection_id=$1 and active for updateselect rule_id,title,summary,description,source_message_id,audience from agent.connection_rules where connection_id=$1 and rule_id=$2select w.group_state, i.input_json from agent.chat_workers w left join lateral (select g.input_json from agent.group_inputs g where g.group_id = w.group_id order by g.sequence desc limit 1) i on true where w.group_id = $1group_stateinput_jsonselect exists(select 1 from agent.chat_workers where group_id = $1 and active)group room is not activeSELECT seq, turn_developer_context FROM context_item_resume_projection WHERE agent_id = $1 AND seq = ANY($2) AND turn_developer_context IS NOT NULL ORDER BY seqINSERT INTO context_item_resume_projection (agent_id, seq, context_item_id, created_at, message_source) SELECT ci.agent_id, ci.seq, ci.context_item_id, extract(epoch from ci.created_at)::bigint, ci.message_source FROM context_items ci WHERE ci.agent_id = $1 AND ci.seq = ANY($2) ON CONFLICT (agent_id, seq) DO NOTHINGUPDATE context_item_resume_projection p SET turn_developer_context = input.text, updated_at = now() FROM unnest($2::bigint[], $3::text[]) AS input(seq, text) WHERE p.agent_id = $1 AND p.seq = input.seq AND p.turn_developer_context IS NULLSELECT seq, turn_developer_context, provenance_json FROM context_item_resume_projection WHERE agent_id = $1 AND seq = ANY($2) AND turn_developer_context IS NOT NULL ORDER BY seqSELECT kind, model, session_id FROM agents WHERE id = $1 LIMIT 1SELECT NULLIF(trim(session_id), '') AS session_id, model FROM agents WHERE kind = 'root' AND id = $1 LIMIT 1UPDATE agents SET updated_at = $1, model = $2 WHERE id = $3INSERT INTO chat_preferences (id, active_root_id) VALUES ($1, $2)SELECT "verbose", usage_mode FROM chat_preferences WHERE id = $1UPDATE chat_preferences SET "verbose" = $1, usage_mode = $2 WHERE id = $3select ancestry.descendant_id as agent_id,metadata.chat_id,
+                        metadata.thread_title as title,
+                        exists(select 1 from agent.chat_preferences prefs where prefs.active_root_id=roots.id) as is_main
+                 from agent.agent_ancestors ancestry
+                 join agent.agents roots on roots.id=ancestry.ancestor_id
+                   and roots.kind='root' and roots.parent_agent_id is null
+                 left join agent.chat_workers worker on worker.agent_id=roots.id
+                 join chat.chats metadata on metadata.chat_id=coalesce(worker.group_id,roots.session_id)
+                 where ancestry.descendant_id=any($1) and metadata.origin in ('fresh','fork','peer','group')
+                   and metadata.status <> 'deleted' DELETE FROM agent_compactions WHERE agent_id = $1
+UPDATE agent_compactions
+SET summary = $1,
+    details_json = $2,
+    has_replacement_history = $3
+WHERE id = (
+    SELECT id
+    FROM agent_compactions
+    WHERE agent_id = $4
+      AND has_replacement_history
+    ORDER BY id DESC
+    LIMIT 1
+)
+  AND agent_id = $4
+  AND checkpoint_seq = $5
+update agent.delegate_requests set state = $2
+                where request_id = $1 and state in ('pending','running','completed')SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLYidparent_idworkerdepthagent_typemodelsession_id
+SELECT items_json, revision, updated_at_ms, continuation_key,
+       continuation_generation, continuation_reminders
+FROM runtime.agent_todo_snapshots
+WHERE conversation_id = $1 AND agent_identity = $2
+
+UPDATE runtime.agent_todo_snapshots
+SET continuation_reminders = $5
+WHERE conversation_id = $1 AND agent_identity = $2
+  AND continuation_key = $3 AND continuation_generation = $4
+  AND continuation_reminders < $5
+
+INSERT INTO runtime.agent_todo_snapshots
+  (conversation_id, agent_identity, items_json, revision, updated_at_ms,
+   continuation_key, continuation_generation, continuation_reminders)
+VALUES ($1, $2, $3, 1, (extract(epoch from now()) * 1000)::bigint, $4, 1, 0)
+ON CONFLICT (conversation_id, agent_identity) DO UPDATE SET
+  items_json = excluded.items_json,
+  revision = agent_todo_snapshots.revision + 1,
+  updated_at_ms = excluded.updated_at_ms,
+  continuation_key = excluded.continuation_key,
+  continuation_generation = CASE
+    WHEN agent_todo_snapshots.continuation_key = excluded.continuation_key
+    THEN agent_todo_snapshots.continuation_generation
+    ELSE agent_todo_snapshots.continuation_generation + 1 END,
+  continuation_reminders = CASE
+    WHEN agent_todo_snapshots.continuation_key = excluded.continuation_key
+    THEN agent_todo_snapshots.continuation_reminders ELSE 0 END
+RETURNING revision
+
+UPDATE runtime.agent_todo_snapshots
+SET continuation_key = $4,
+    continuation_generation = CASE WHEN continuation_key IS DISTINCT FROM $4
+        THEN continuation_generation + 1 ELSE continuation_generation END,
+    continuation_reminders = CASE WHEN continuation_key IS DISTINCT FROM $4
+        THEN 0 ELSE continuation_reminders END
+WHERE conversation_id = $1 AND agent_identity = $2 AND revision = $3
+RETURNING continuation_key, continuation_generation, continuation_reminders
+select child_agent_id, created_at, metadata_json from subagent_spawns
+                             where agent_type in (
+                               'spaces_builder', 'spaces_builder_lite',
+                               'spaces_builder_edit', 'spaces_builder_lite_edit'
+                             )
+                               and metadata_json is not null
+                             order by created_at desc, child_agent_id desc
+                             limit $1select child_agent_id, created_at, metadata_json from subagent_spawns
+                             where agent_type in (
+                               'spaces_builder', 'spaces_builder_lite',
+                               'spaces_builder_edit', 'spaces_builder_lite_edit'
+                             )
+                               and metadata_json is not null
+                               and (created_at, child_agent_id) < ($2, $3)
+                             order by created_at desc, child_agent_id desc
+                             limit $1select * from agent.chat_worker_requests where request_id=$1select instruction = '' from agent.chat_worker_requests where chat_id=$1 and generation=$2 and worker_agent_id=$3 and state <> 'cancelled' and coalesce(result_json,'') not like $4 order by created_at_ms desc,request_id desc limit 1select agent_id,generation,active from agent.chat_workers where group_id=$1 for update
