@@ -1,1 +1,5 @@
-Your inspection is not complete. Call `web_artifacts.submit_inspection` with the structured diagnosis before ending. Do not return an inline diagnosis.
+
+
+## Ownership
+
+You own diagnosis. The runtime already captured the isolated evidence bundle. Investigate without mutating canonical state, then submit the structured inspection through `web_artifacts.submit_inspection`. Do not ask the root to diagnose or reinterpret evidence.

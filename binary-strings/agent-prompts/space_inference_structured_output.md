@@ -1,1698 +1,350 @@
-# Every model fact Jarvis routes by. hatch-inference's
-# model_registry::registry_file loads and checks it.
+# Goal-category scaffold registry — the structured source of truth.
 #
-# [defaults]        the option Auto resolves to; the default model, which
-#                   default-model routes run on an ordinary VM and a resolver
-#                   with no selection owner (tests, standalone) runs as its
-#                   static selection (a configured owner's failed read is an
-#                   error, never this option); the option confidential VMs
-#                   run; the option voice-output turns run as; the maintenance
-#                   model (artifact builds, compaction, memory flush and
-#                   forget); and each provider spelling's default option.
-# [weights.NAME]    one set of weights: knowledge cutoff, context window
-#                   ("avocado" is 350,000 tokens unless
-#                   JARVIS_AVOCADO_CONTEXT_WINDOW_TOKENS replaces it), harness
-#                   config, and its MAGI or Anthropic request facts.
-#                   `checkpoints` names the Inferware checkpoints
-#                   (`<run>/checkpoint_<step>`) MAGI prod's tiers serve them
-#                   from, so a parity check can join MAGI's map to this file;
-#                   nothing at runtime reads it.
-# [wires]           each model name Jarvis sends upstream, the weights it
-#                   reaches, and its opt-in grants. A wire several options
-#                   share names the option a lookup by the wire alone finds as
-#                   its `home`; otherwise the first option using it.
-# [[models]]        each option a selection, pin or route can name, with every
-#                   lane written out. An `ipnext/` option with
-#                   `responses_companion` also gets a generated
-#                   `ipnext_responses/` twin. Each option has the model setup
-#                   its API implies, with the deviations its `setup` table
-#                   states (a twin's are its native's `companion_setup`),
-#                   except a `kind = "system"` option, which serves only
-#                   system routes, claims no picker role and has no setup.
-#                   `retired = true` marks a former picker option: a user's
-#                   pick of it moves to Auto and a held Auto lane naming it
-#                   returns to the default route, while operator and cohort
-#                   pins still serve it. A retired option claims no role.
-# [[retired]]       ids persisted state may hold that no option serves, and the
-#                   replacement each selects.
-
-[defaults]
-auto = "ipnext/avocado-5.17-v2"
-model = "ipnext/avocado-5.17-v2"
-confidential = "ipnext/avocado-5.17-v3-sglang-tee"
-voice = "ipnext/avocado-5.16-v4"
-maintenance = "ipnext/avocado-5.16-v1"
-providers = { anthropic = "anthropic/claude-opus-4-6", ipnext = "ipnext/avocado-5.17-v2", magi = "ipnext/avocado-5.17-v2", fireworks = "fireworks/kimi-k3", ipnext_responses = "ipnext_responses/avocado-5.17-v2" }
-
-[weights."avocrono-9b"]
-knowledge_cutoff = "2026-01-04"
-context_window = 262144
-harness = "avocrono_9b"
-checkpoints = ["bs1_tpp_3200_tier4_9b_64k_gb300_b1tt9p3_engrm_wr-xn505n63/checkpoint_0000185"]
-magi.prompt_format = { alias = "msl_chat_20260330" }
-magi.reasoning = "up_to_high"
-magi.developer_role = true
-magi.commentary_in_input = false
-magi.guided_decoding = false
-magi.tool_output_error_status = true
-magi.image_only_messages = true
-magi.png_or_jpeg_images_only = false
-
-[weights."avocado-9b-voice"]
-knowledge_cutoff = "2026-01-04"
-context_window = 128000
-harness = "avocado_9b_voice"
-magi.prompt_format = "default"
-magi.reasoning = "unsupported"
-magi.developer_role = false
-magi.commentary_in_input = false
-magi.guided_decoding = true
-magi.tool_output_error_status = false
-magi.image_only_messages = false
-magi.png_or_jpeg_images_only = false
-
-[weights."avocrono-9b-hitl"]
-knowledge_cutoff = "2026-01-04"
-context_window = 262144
-harness = "avocado_9b"
-checkpoints = ["bs1_tpp_3200_tier4_9b_64k_gb300_b1tt9p3_engrm_wr-xn505n63/checkpoint_0000185"]
-magi.prompt_format = { alias = "msl_chat_20260330" }
-magi.reasoning = "up_to_xhigh"
-magi.developer_role = true
-magi.commentary_in_input = true
-magi.guided_decoding = false
-magi.tool_output_error_status = true
-magi.image_only_messages = true
-magi.png_or_jpeg_images_only = false
-
-[weights."avocrono-9b-fast-test"]
-knowledge_cutoff = "2026-01-04"
-context_window = 262144
-harness = "avocado_9b"
-checkpoints = ["tbe_prod_avo9b_rlhf6p2_s33/checkpoint_0000150"]
-magi.prompt_format = { alias = "msl_chat_20260330" }
-magi.reasoning = "up_to_high"
-magi.developer_role = true
-magi.commentary_in_input = false
-magi.guided_decoding = false
-magi.tool_output_error_status = true
-magi.image_only_messages = true
-magi.png_or_jpeg_images_only = false
-
-[weights."avocado-9"]
-knowledge_cutoff = "2026-01-04"
-context_window = "avocado"
-harness = "avocado_9"
-magi.prompt_format = { alias = "msl_chat_20260330_api" }
-magi.reasoning = "up_to_high"
-magi.developer_role = true
-magi.commentary_in_input = true
-magi.guided_decoding = false
-magi.tool_output_error_status = true
-magi.image_only_messages = true
-magi.png_or_jpeg_images_only = false
-
-[weights."watermelon-9"]
-knowledge_cutoff = "2026-02-28"
-context_window = "avocado"
-harness = "watermelon"
-checkpoints = ["5p17_9b_512k_16k_r3_aligned_20261104_0830_ctrl_auto-zdwllp69/checkpoint_0000180"]
-magi.prompt_format = { checkpoint = "avocado-5.15-agent" }
-magi.reasoning = "up_to_xhigh"
-magi.developer_role = true
-magi.commentary_in_input = true
-magi.guided_decoding = false
-magi.tool_output_error_status = true
-magi.image_only_messages = true
-magi.png_or_jpeg_images_only = false
-
-[weights."avocado-5.13"]
-knowledge_cutoff = "2026-01-04"
-context_window = "avocado"
-harness = "avocado_5_16"
-magi.prompt_format = { alias = "msl_chat_20260330" }
-magi.reasoning = "up_to_high"
-magi.developer_role = true
-magi.commentary_in_input = true
-magi.guided_decoding = false
-magi.tool_output_error_status = true
-magi.image_only_messages = true
-magi.png_or_jpeg_images_only = false
-
-[weights."avocado-5.14"]
-knowledge_cutoff = "2026-01-04"
-context_window = "avocado"
-harness = "avocado_5_16"
-magi.prompt_format = { checkpoint = "avocado-5.14-agent" }
-magi.reasoning = "up_to_xhigh"
-magi.developer_role = true
-magi.commentary_in_input = true
-magi.guided_decoding = false
-magi.tool_output_error_status = true
-magi.image_only_messages = true
-magi.png_or_jpeg_images_only = false
-
-[weights."avocado-5.17"]
-knowledge_cutoff = "2026-01-04"
-context_window = "avocado"
-harness = "avocado_5_17"
-checkpoints = [
-    "KIKI_rl_bigrun_avo_5p17_hatch_16k_restore105_train_lco-x22gltkz/checkpoint_0000280",
-    "KIKI_rl_bigrun_avo_5p17_hatch_16k_r2_init170_train_lco-kv5g0f6n/checkpoint_0000145",
-    "KIKI_rl_bigrun_avo_5p17_hatch_16k_r3_init150_train_lco-k6f9vqjd/checkpoint_0000240",
-]
-magi.prompt_format = { checkpoint = "avocado-5.15-agent" }
-magi.reasoning = "up_to_xhigh"
-magi.developer_role = true
-magi.commentary_in_input = true
-magi.guided_decoding = false
-magi.tool_output_error_status = true
-magi.image_only_messages = true
-magi.png_or_jpeg_images_only = false
-
-[weights."hatch-6.2"]
-knowledge_cutoff = "2026-02-28"
-context_window = "avocado"
-harness = "watermelon"
-checkpoints = ["KIKI_rl_bigrun_rlhf_6p2r1b-wqr1rb6x/checkpoint_0000420"]
-magi.prompt_format = { checkpoint = "avocado-5.15-agent" }
-magi.reasoning = "up_to_xhigh"
-magi.developer_role = true
-magi.commentary_in_input = true
-magi.guided_decoding = false
-magi.tool_output_error_status = true
-magi.image_only_messages = true
-magi.png_or_jpeg_images_only = false
-
-[weights."hatch-6.2-avocado-5.16-harness"]
-knowledge_cutoff = "2026-02-28"
-context_window = "avocado"
-harness = "avocado_5_16"
-checkpoints = [
-    "KIKI_rl_bigrun_rlhf_6p2r1b-wqr1rb6x/checkpoint_0000420",
-    "KIKI_rl_bigrun_rlhf_6p2r2a-s2c01p0p/checkpoint_0000120",
-]
-magi.prompt_format = { checkpoint = "avocado-5.15-agent" }
-magi.reasoning = "up_to_xhigh"
-magi.developer_role = true
-magi.commentary_in_input = true
-magi.guided_decoding = false
-magi.tool_output_error_status = true
-magi.image_only_messages = true
-magi.png_or_jpeg_images_only = false
-
-[weights."hatch-6.2-vibe"]
-knowledge_cutoff = "2026-02-28"
-context_window = "avocado"
-harness = "avocado_5_16"
-magi.prompt_format = { checkpoint = "avocado-5.15-agent" }
-magi.reasoning = "up_to_high"
-magi.developer_role = true
-magi.commentary_in_input = true
-magi.guided_decoding = false
-magi.tool_output_error_status = true
-magi.image_only_messages = true
-magi.png_or_jpeg_images_only = false
-
-[weights."avocado-5.16"]
-knowledge_cutoff = "2026-01-04"
-context_window = "avocado"
-harness = "avocado_5_16"
-checkpoints = ["rlhf_avo_42b_5p16_r7_csft_ag-t0c01z3v/checkpoint_0000120"]
-magi.prompt_format = { checkpoint = "avocado-5.15-agent" }
-magi.reasoning = "up_to_xhigh"
-magi.developer_role = true
-magi.commentary_in_input = true
-magi.guided_decoding = false
-magi.tool_output_error_status = true
-magi.image_only_messages = true
-magi.png_or_jpeg_images_only = false
-
-[weights."tba-preparedness-probe"]
-knowledge_cutoff = "2026-01-04"
-context_window = "avocado"
-harness = "tba_preparedness_probe"
-magi.prompt_format = { checkpoint = "avocado-5.15-agent" }
-magi.reasoning = "up_to_high"
-magi.developer_role = true
-magi.commentary_in_input = true
-magi.guided_decoding = false
-magi.tool_output_error_status = true
-magi.image_only_messages = true
-magi.png_or_jpeg_images_only = false
-
-# Cerebras /generate rejects every image type except PNG and JPEG.
-[weights."willow"]
-knowledge_cutoff = "2026-01-04"
-context_window = 350000
-harness = "willow"
-magi.prompt_format = { checkpoint = "avocado-5.15-agent" }
-magi.reasoning = "up_to_xhigh"
-magi.developer_role = true
-magi.commentary_in_input = true
-magi.guided_decoding = false
-magi.tool_output_error_status = true
-magi.image_only_messages = true
-magi.png_or_jpeg_images_only = true
-
-[weights."safety-classifier"]
-knowledge_cutoff = "2026-01-04"
-context_window = "avocado"
-harness = "avocado_5_16"
-magi.prompt_format = "default"
-magi.reasoning = "up_to_high"
-magi.developer_role = true
-magi.commentary_in_input = true
-magi.guided_decoding = false
-magi.tool_output_error_status = true
-magi.image_only_messages = true
-magi.png_or_jpeg_images_only = false
-
-[weights."avocado-legacy"]
-knowledge_cutoff = "2026-01-04"
-context_window = "avocado"
-harness = "avocado_5_16"
-magi.prompt_format = "default"
-magi.reasoning = "up_to_high"
-magi.developer_role = true
-magi.commentary_in_input = true
-magi.guided_decoding = false
-magi.tool_output_error_status = true
-magi.image_only_messages = true
-magi.png_or_jpeg_images_only = false
-
-[weights."cedar"]
-knowledge_cutoff = "2026-06-30"
-context_window = 1000000
-harness = "anthropic_64k"
-anthropic.adaptive_thinking = true
-anthropic.omit_thinking_display = false
-anthropic.mid_conversation_system_messages = true
-anthropic.compaction = true
-anthropic.tool_search = true
-anthropic.output_effort = "supported"
-anthropic.image_resolution = "high"
-anthropic.runtime_output_ceiling = 64000
-
-[weights."aspen"]
-knowledge_cutoff = "2026-06-30"
-context_window = 1000000
-harness = "anthropic_64k"
-anthropic.adaptive_thinking = true
-anthropic.omit_thinking_display = false
-anthropic.mid_conversation_system_messages = true
-anthropic.compaction = true
-anthropic.tool_search = true
-anthropic.output_effort = "supported"
-anthropic.image_resolution = "high"
-anthropic.runtime_output_ceiling = 128000
-
-[weights."claude-opus-5"]
-knowledge_cutoff = "2026-01-04"
-context_window = 200000
-harness = "anthropic"
-anthropic.adaptive_thinking = true
-anthropic.mid_conversation_system_messages = true
-anthropic.output_effort = "supported"
-anthropic.image_resolution = "high"
-
-[weights."claude-opus-4.8"]
-knowledge_cutoff = "2026-01-04"
-context_window = 200000
-harness = "anthropic"
-anthropic.adaptive_thinking = true
-anthropic.mid_conversation_system_messages = true
-anthropic.output_effort = "supported"
-anthropic.image_resolution = "high"
-
-[weights."claude-opus-4.7"]
-knowledge_cutoff = "2026-01-04"
-context_window = 200000
-harness = "anthropic"
-anthropic.adaptive_thinking = false
-anthropic.output_effort = "supported"
-anthropic.image_resolution = "high"
-
-[weights."claude-opus-4.6"]
-knowledge_cutoff = "2026-01-04"
-context_window = 200000
-harness = "anthropic"
-anthropic.adaptive_thinking = true
-anthropic.output_effort = "xhigh_as_max"
-anthropic.image_resolution = "standard"
-
-[weights."claude-sonnet-4.6"]
-knowledge_cutoff = "2026-01-04"
-context_window = 200000
-harness = "anthropic"
-anthropic.adaptive_thinking = true
-anthropic.output_effort = "supported"
-anthropic.image_resolution = "standard"
-anthropic.beta = "context-1m-2025-08-07"
-
-[weights."claude-haiku-4.5"]
-knowledge_cutoff = "2026-01-04"
-context_window = 200000
-harness = "anthropic"
-anthropic.adaptive_thinking = false
-anthropic.output_effort = "unsupported"
-anthropic.image_resolution = "standard"
-
-[weights."gemma-prompt-language"]
-knowledge_cutoff = "2026-01-04"
-context_window = 131072
-harness = "gemma_monitor"
-
-[weights."gemma-4-e4b-hatch-monitor"]
-knowledge_cutoff = "2026-01-04"
-context_window = 131072
-harness = "gemma_monitor"
-
-[weights."gpt-5.6-sol"]
-knowledge_cutoff = "2026-01-04"
-context_window = 350000
-harness = "external"
-
-[weights."maple"]
-knowledge_cutoff = "2026-01-04"
-context_window = 350000
-harness = "external"
-
-[weights."birch"]
-knowledge_cutoff = "2026-01-04"
-context_window = 350000
-harness = "external"
-
-[weights."kangaroo"]
-knowledge_cutoff = "2026-01-04"
-context_window = 200000
-harness = "external"
-
-[weights."gpt-5.6-sol-memory-flush"]
-knowledge_cutoff = "2026-01-04"
-context_window = 350000
-harness = "azure_memory_flush"
-
-[weights."kimi-k3"]
-knowledge_cutoff = "2026-01-04"
-context_window = 200000
-harness = "external"
-
-[weights."willow-legacy"]
-knowledge_cutoff = "2026-01-04"
-context_window = 350000
-harness = "external"
-
-[weights."hybrid-selector"]
-knowledge_cutoff = "2026-01-04"
-context_window = 350000
-harness = "hybrid_selector"
-
-[wires]
-"avocrono-9b" = { weights = "avocrono-9b", local_inference = true }
-"avocado-9b-voice" = { weights = "avocado-9b-voice", local_inference = true }
-"avocado-9b-voice-staging" = { weights = "avocado-9b-voice" }
-"avcrono-9b-fast" = { weights = "avocrono-9b-hitl", telemetry_name = "avocrono-9b-fast" }
-"avocrono-fast-test" = { weights = "avocrono-9b-fast-test" }
-"avocado-9-v1" = { weights = "avocado-9" }
-"avocrono-9-v1" = { weights = "avocado-9", home = "ipnext/avocrono-9-v1" }
-"avocado-9-v2" = { weights = "avocado-9" }
-"avocrono-9-v2" = { weights = "avocado-9", home = "ipnext/avocrono-9-v2" }
-"avocado-9-v3" = { weights = "avocado-9" }
-"avocrono-9-v3" = { weights = "avocado-9", home = "ipnext/avocrono-9-v3" }
-"avocado-9-v4" = { weights = "avocado-9" }
-"avocrono-9-v4" = { weights = "avocado-9", home = "ipnext/avocrono-9-v4" }
-"avocado-9-v5" = { weights = "avocado-9" }
-"avocrono-9-v5" = { weights = "avocado-9", home = "ipnext/avocrono-9-v5" }
-"avocado-9-v6" = { weights = "avocado-9" }
-"avocrono-9-v6" = { weights = "avocado-9", home = "ipnext/avocrono-9-v6" }
-"avocado-9-v7" = { weights = "avocado-9" }
-"avocrono-9-v7" = { weights = "avocado-9", home = "ipnext/avocrono-9-v7" }
-"avocado-9-v8" = { weights = "avocado-9" }
-"avocrono-9-v8" = { weights = "avocado-9", home = "ipnext/avocrono-9-v8" }
-"avocado-9-v9" = { weights = "avocado-9" }
-"avocrono-9-v9" = { weights = "avocado-9", home = "ipnext/avocrono-9-v9" }
-"avocado-9-v10" = { weights = "avocado-9" }
-"avocrono-9-v10" = { weights = "avocado-9", home = "ipnext/avocrono-9-v10" }
-"watermelon-chat-9-v1" = { weights = "watermelon-9" }
-"watermelon-browser-9-v1" = { weights = "watermelon-9" }
-"watermelon-cron-9-v1" = { weights = "watermelon-9" }
-"watermelon-chat-9-v2" = { weights = "watermelon-9" }
-"watermelon-browser-9-v2" = { weights = "watermelon-9" }
-"watermelon-cron-9-v2" = { weights = "watermelon-9" }
-"watermelon-chat-9-v3" = { weights = "watermelon-9" }
-"watermelon-browser-9-v3" = { weights = "watermelon-9" }
-"watermelon-cron-9-v3" = { weights = "watermelon-9" }
-"watermelon-chat-9-v4" = { weights = "watermelon-9" }
-"watermelon-browser-9-v4" = { weights = "watermelon-9" }
-"watermelon-cron-9-v4" = { weights = "watermelon-9" }
-"watermelon-chat-9-v5" = { weights = "watermelon-9" }
-"watermelon-browser-9-v5" = { weights = "watermelon-9" }
-"watermelon-cron-9-v5" = { weights = "watermelon-9" }
-"watermelon-chat-9-v6" = { weights = "watermelon-9" }
-"watermelon-browser-9-v6" = { weights = "watermelon-9" }
-"watermelon-cron-9-v6" = { weights = "watermelon-9" }
-"watermelon-chat-9-v7" = { weights = "watermelon-9" }
-"watermelon-browser-9-v7" = { weights = "watermelon-9" }
-"watermelon-cron-9-v7" = { weights = "watermelon-9" }
-"watermelon-chat-9-v8" = { weights = "watermelon-9" }
-"watermelon-browser-9-v8" = { weights = "watermelon-9" }
-"watermelon-cron-9-v8" = { weights = "watermelon-9" }
-"watermelon-chat-9-v9" = { weights = "watermelon-9" }
-"watermelon-browser-9-v9" = { weights = "watermelon-9" }
-"watermelon-cron-9-v9" = { weights = "watermelon-9" }
-"watermelon-chat-9-v10" = { weights = "watermelon-9" }
-"watermelon-browser-9-v10" = { weights = "watermelon-9" }
-"watermelon-cron-9-v10" = { weights = "watermelon-9" }
-"avocado-5.13" = { weights = "avocado-5.13", local_inference = true }
-"avocrono-5.13" = { weights = "avocado-5.13", local_inference = true }
-"avocrono-5.13-load-test" = { weights = "avocado-5.13", local_inference = true }
-"avocado-5.14" = { weights = "avocado-5.14", local_inference = true }
-"avocrono-5.14" = { weights = "avocado-5.14", local_inference = true }
-"avocado-5.14-load-test" = { weights = "avocado-5.14", local_inference = true }
-"avocrono-5.14-load-test" = { weights = "avocado-5.14", local_inference = true }
-# MAGI serves the 5.16 v0 names from 5.17 weights.
-"avocado-5.16-v0" = { weights = "avocado-5.17", local_inference = true }
-"avocrono-5.16-v0" = { weights = "avocado-5.17", local_inference = true }
-"avocado-5.16-browser-v0" = { weights = "avocado-5.17" }
-"avocado-5.16-v1" = { weights = "hatch-6.2", local_inference = true }
-"avocrono-5.16-v1" = { weights = "hatch-6.2", local_inference = true }
-"watermelon-v0" = { weights = "hatch-6.2" }
-"watermelon-cron-v0" = { weights = "hatch-6.2" }
-"watermelon-v1" = { weights = "hatch-6.2" }
-"watermelon-cron-v1" = { weights = "hatch-6.2" }
-"watermelon-v2" = { weights = "hatch-6.2" }
-"watermelon-cron-v2" = { weights = "hatch-6.2" }
-"watermelon-fast-v0" = { weights = "hatch-6.2" }
-# MAGI serves the 5.16 v2 names from 5.17 weights.
-"avocado-5.16-v2" = { weights = "avocado-5.17", local_inference = true }
-"avocrono-5.16-v2" = { weights = "avocado-5.17", local_inference = true }
-# MAGI prod serves avocado-5.16-v3 from 5.17 weights, but its Swarm and test
-# runs reach Hatch 6.2 weights on MAGI's RC map.
-"avocado-5.16-v3" = { weights = "hatch-6.2-avocado-5.16-harness", local_inference = true }
-"avocrono-5.16-v3" = { weights = "hatch-6.2-avocado-5.16-harness", local_inference = true }
-"avocado-5-16-vibe" = { weights = "hatch-6.2-vibe" }
-# MAGI prod serves avocado-5.16-v4 and avocrono-5.16-v4 from 5.17 weights, but
-# confidential VMs and eval runs reach 5.16 weights under those names.
-"avocado-5.16-v4" = { weights = "avocado-5.16", local_inference = true }
-"avocado-5.17-v1" = { weights = "avocado-5.17", local_inference = true, new_user_cerebras_pin = "ipnext/willow", new_user_avocado_v4_pin = "ipnext/avocado-5.17-v4" }
-"avocrono-5.17-v1" = { weights = "avocado-5.17", local_inference = true, background_browser_cron_capacity = true }
-"avocado-5.17-browser-v1" = { weights = "avocado-5.17", local_inference = true }
-"avocado-5.17-v2" = { weights = "avocado-5.17", local_inference = true, new_user_cerebras_pin = "ipnext/willow", new_user_avocado_v4_pin = "ipnext/avocado-5.17-v4" }
-"avocrono-5.17-v2" = { weights = "avocado-5.17", local_inference = true, background_browser_cron_capacity = true }
-"avocado-5.17-browser-v2" = { weights = "avocado-5.17", local_inference = true }
-"avocado-5.17-v3" = { weights = "avocado-5.17", local_inference = true }
-"avocrono-5.17-v3" = { weights = "avocado-5.17", local_inference = true }
-"avocado-5.17-browser-v3" = { weights = "avocado-5.17", local_inference = true }
-# TEE-only wires for ipnext/avocado-5.17-v3-tee: only the MAGI TEE gateway
-# serves them, from its chat, browser and cron deployments
-# (avocado_517_v3_{chat,browser,cron}_vllm gCVM jobs). The names are MAGI's
-# canonical_model names, so they must match tee_models_{debug,rc}.
-"avocado-5.17-v3-chat-vllm" = { weights = "avocado-5.17" }
-"avocado-5.17-v3-browser-vllm" = { weights = "avocado-5.17" }
-"avocado-5.17-v3-cron-vllm" = { weights = "avocado-5.17" }
-# TEE-only wires for ipnext/avocado-5.17-v3-sglang-tee: MAGI TEE rc serves them
-# with SGLang from the same 5.17 v3 checkpoint, on the
-# inferware.serving.hatch_{chat,browser,cron}_517_tee_rc Inferware tiers. The
-# names are MAGI's canonical_model names, so they must match tee_models_rc.
-"avocado-5.17-v3-chat-inferware" = { weights = "avocado-5.17" }
-"avocado-5.17-v3-browser-inferware" = { weights = "avocado-5.17" }
-"avocado-5.17-v3-cron-inferware" = { weights = "avocado-5.17" }
-"avocado-5.17-v4" = { weights = "avocado-5.17", local_inference = true }
-"avocrono-5.17-v4" = { weights = "avocado-5.17", local_inference = true }
-"avocado-5.17-browser-v4" = { weights = "avocado-5.17", local_inference = true, home = "ipnext/avocado-5.17-v4" }
-"avocado-5.17-v5" = { weights = "avocado-5.17", local_inference = true }
-"avocrono-5.17-v5" = { weights = "avocado-5.17", local_inference = true }
-"avocado-5.17-browser-v5" = { weights = "avocado-5.17", local_inference = true }
-"avocado-5.17-v6" = { weights = "avocado-5.17", local_inference = true }
-"avocrono-5.17-v6" = { weights = "avocado-5.17", local_inference = true }
-"avocado-5.17-browser-v6" = { weights = "avocado-5.17", local_inference = true }
-"avocado-5.17-v7" = { weights = "avocado-5.17", local_inference = true }
-"avocrono-5.17-v7" = { weights = "avocado-5.17", local_inference = true }
-"avocado-5.17-browser-v7" = { weights = "avocado-5.17", local_inference = true }
-"avocado-5.17-v8" = { weights = "avocado-5.17", local_inference = true }
-"avocrono-5.17-v8" = { weights = "avocado-5.17", local_inference = true }
-"avocado-5.17-browser-v8" = { weights = "avocado-5.17", local_inference = true }
-# SGLang TEE deployments behind MAGI's llm_predictor API, on the 5.16 checkpoint.
-"avocado-5.16-v4-sglang" = { weights = "avocado-5.16" }
-"avocrono-5.16-v4-sglang" = { weights = "avocado-5.16" }
-"avocado-5.16-browser-sglang" = { weights = "avocado-5.16" }
-"tba-preparedness-probe" = { weights = "tba-preparedness-probe" }
-"avocrono-5.16-v4" = { weights = "avocado-5.16", local_inference = true }
-"avocrono-5.16-v4-fp4-mxfp8attn" = { weights = "avocado-5.17", local_inference = true }
-"avocado-5.16-browser" = { weights = "avocado-5.16", local_inference = true, home = "ipnext/avocado-5.16-v4" }
-"watermelon-browser" = { weights = "avocado-5.17" }
-"willow" = { weights = "willow" }
-"9b_safety_classifier" = { weights = "safety-classifier", kind = "safety_classifier" }
-"voice_arbitrator" = { weights = "safety-classifier" }
-"pi_3b_prefilter" = { weights = "safety-classifier", kind = "safety_classifier", classifier_roles = ["prompt_injection_prefilter"] }
-"guacamole_26b_safety" = { weights = "safety-classifier", kind = "safety_classifier" }
-"guacamole_26b_safety_cron" = { weights = "safety-classifier", kind = "safety_classifier" }
-"safetycado_2b_tbacp_mt724" = { weights = "safety-classifier", kind = "safety_classifier" }
-"safetycado_2b_tbacr_mt724" = { weights = "safety-classifier", kind = "safety_classifier" }
-"avocado_t5_actor_monitoring" = { weights = "safety-classifier", kind = "safety_classifier", classifier_roles = ["second_stage_safety_model"], cover_traffic = true }
-"policyguard-nvfp4" = { weights = "safety-classifier", kind = "safety_classifier" }
-"policyguard-nvfp4-cron" = { weights = "safety-classifier", kind = "safety_classifier" }
-"imageguard_e4b_nvfp4" = { weights = "safety-classifier", kind = "safety_classifier" }
-"jev-9b" = { weights = "safety-classifier", kind = "system_one_classifier", classifier_roles = ["safety"], cover_traffic = true }
-"avocado" = { weights = "avocado-legacy" }
-"avocado-cron" = { weights = "avocado-legacy" }
-"claude-opus-5-5" = { weights = "cedar", magi_model = "ipnext/cedar" }
-"claude-fable-5-2" = { weights = "aspen", magi_model = "ipnext/aspen" }
-"claude-opus-5" = { weights = "claude-opus-5" }
-"claude-opus-4-8" = { weights = "claude-opus-4.8" }
-"claude-opus-4-7" = { weights = "claude-opus-4.7" }
-"claude-opus-4-6" = { weights = "claude-opus-4.6" }
-"claude-sonnet-4-6" = { weights = "claude-sonnet-4.6" }
-"claude-haiku-4-5" = { weights = "claude-haiku-4.5" }
-# MAGI's alias is spelled this way.
-"gemma-prompt-language-classifer" = { weights = "gemma-prompt-language" }
-"gemma-4-e4b-hatch-monitor" = { weights = "gemma-4-e4b-hatch-monitor" }
-"muse-special" = { weights = "gpt-5.6-sol" }
-"ipnext/maple" = { weights = "maple" }
-"ipnext/birch" = { weights = "birch" }
-"kangaroo" = { weights = "kangaroo" }
-"avocado-compaction-v1" = { weights = "gpt-5.6-sol" }
-"avocado-memory-flush-v1" = { weights = "gpt-5.6-sol-memory-flush" }
-"accounts/fireworks/models/kimi-k3" = { weights = "kimi-k3" }
-"kimi-k3" = { weights = "kimi-k3" }
-# MAGI's alias for the Cerebras Chat Completions deployment.
-"ipnext/willow" = { weights = "willow-legacy" }
-# A placeholder: the hybrid selector never sends it upstream.
-"baby_willow" = { weights = "hybrid-selector" }
-
-[[models]]
-id = "ipnext/cedar"
-display_name = "Cedar (Experimental)"
-provider = "anthropic"
-category = "external"
-model = "cedar"
-lanes = "claude-opus-5-5"
-setup.default_agent_effort = "medium"
-setup.artifact_routing = "selected_main"
-setup.compaction_memory_flush_use_main = true
-setup.overrides = [
-  { purpose = "MediaDescription" },
-  { purpose = "BrowserVisualGesture" },
-]
-preview = true
-mask_explicit_selection_identity = true
-roles = ["big_boy"]
-
-[[models]]
-id = "ipnext/aspen"
-display_name = "Aspen (Experimental)"
-provider = "anthropic"
-category = "external"
-model = "aspen"
-lanes = "claude-fable-5-2"
-setup.default_agent_effort = "medium"
-setup.artifact_routing = "selected_main"
-setup.compaction_memory_flush_use_main = true
-setup.overrides = [
-  { purpose = "MediaDescription" },
-  { purpose = "BrowserVisualGesture" },
-]
-preview = true
-mask_explicit_selection_identity = true
-roles = ["big_boy"]
-
-# Eval-only ids: Anthropic receives the real model name.
-[[models]]
-id = "anthropic/claude-opus-5-evals"
-display_name = "Opus 5.0 (Experimental)"
-provider = "anthropic"
-category = "external"
-model = "claude-opus-5-evals"
-lanes = "claude-opus-5"
-eval_targets = ["jarvis_opus_5"]
-
-# Before its eval row, so a lookup by the shared wire finds this row.
-[[models]]
-id = "anthropic/claude-opus-4-8"
-display_name = "Opus 4.8 (Experimental)"
-provider = "anthropic"
-category = "external"
-model = "claude-opus-4-8"
-lanes = "claude-opus-4-8"
-
-[[models]]
-id = "anthropic/claude-opus-4-8-evals"
-display_name = "Opus 4.8 (Experimental)"
-provider = "anthropic"
-category = "external"
-model = "claude-opus-4-8-evals"
-lanes = "claude-opus-4-8"
-
-[[models]]
-id = "anthropic/claude-opus-4-7"
-display_name = "Opus 4.7 (Experimental)"
-provider = "anthropic"
-category = "external"
-model = "claude-opus-4-7"
-lanes = "claude-opus-4-7"
-
-[[models]]
-id = "anthropic/claude-opus-4-6"
-display_name = "Opus 4.6 (Experimental)"
-provider = "anthropic"
-category = "external"
-model = "claude-opus-4-6"
-lanes = "claude-opus-4-6"
-
-[[models]]
-id = "anthropic/claude-sonnet-4-6"
-display_name = "Sonnet 4.6"
-provider = "anthropic"
-category = "external"
-model = "claude-sonnet-4-6"
-lanes = "claude-sonnet-4-6"
-
-[[models]]
-id = "anthropic/claude-haiku-4-5"
-display_name = "Haiku 4.5"
-provider = "anthropic"
-category = "external"
-model = "claude-haiku-4-5"
-lanes = "claude-haiku-4-5"
-
-[[models]]
-id = "ipnext/avocado"
-display_name = "Avocado"
-provider = "ipnext"
-category = "internal"
-model = "avocado"
-lanes = { main = "avocado", browser = "avocado", cron = "avocado-cron", voice = "avocado-9b-voice" }
-confidential_vm = "selectable"
-
-[[models]]
-id = "ipnext/avocado-5.13"
-display_name = "Avocado 5.13"
-provider = "ipnext"
-category = "internal"
-model = "avocado-5.13"
-lanes = { main = "avocado-5.13", browser = "avocado-5.13", cron = "avocrono-5.13", voice = "avocado-9b-voice" }
-confidential_vm = "selectable"
-responses_companion = true
-clear_context_on_switch = true
-eval_targets = ["jarvis_avocado-5.13"]
-
-[[models]]
-id = "ipnext/avocado-5.16-v0"
-display_name = "Avocado 5.16 v0"
-provider = "ipnext"
-category = "internal"
-model = "avocado-5.16-v0"
-lanes = { main = "avocado-5.16-v0", browser = "avocado-5.16-browser-v0", cron = "avocrono-5.16-v0", voice = "avocado-9b-voice" }
-confidential_vm = "serves_inference"
-responses_companion = true
-retired = true
-eval_targets = ["jarvis_avocado-5.16-v0"]
-
-# Hatch 6.2 weights drive the browser too slowly, so the browser lane runs
-# the 5.16 browser weights.
-[[models]]
-id = "ipnext/avocado-5.16-v1"
-display_name = "Avocado 5.16 v1"
-provider = "ipnext"
-category = "internal"
-model = "avocado-5.16-v1"
-lanes = { main = "avocado-5.16-v1", browser = "avocado-5.16-browser", cron = "avocrono-5.16-v1", voice = "avocado-9b-voice" }
-confidential_vm = "serves_inference"
-responses_companion = true
-preview = true
-roles = ["big_boy"]
-eval_targets = ["jarvis_avocado-5.16-v1"]
-setup = { artifact_routing = "selected_main", compaction_memory_flush_use_main = true }
-companion_setup = { compaction_memory_flush_use_main = true }
-
-# The subscriber routes. Their browser lane runs separate weights, because
-# Hatch 6.2 weights drive the browser too slowly, and their setups send
-# BrowserMain and BrowserVisualGesture to that Browser-tier wire too. They run
-# a browser task's CronWorker turns on the default model.
-[[models]]
-id = "ipnext/watermelon-v0"
-display_name = "Watermelon v0"
-provider = "ipnext"
-category = "internal"
-model = "watermelon-v0"
-lanes = { main = "watermelon-v0", browser = "watermelon-browser", cron = "watermelon-cron-v0", voice = "avocado-9b-voice" }
-roles = ["subscriber"]
-setup.artifact_routing = "selected_main"
-setup.compaction_memory_flush_use_main = true
-setup.cron_browser_uses_default = true
-setup.overrides = [
-  { purpose = "BrowserMain", tier = "browser" },
-  { purpose = "BrowserVisualGesture", tier = "browser" },
-]
-
-[[models]]
-id = "ipnext/watermelon-v1"
-display_name = "Watermelon v1"
-provider = "ipnext"
-category = "internal"
-model = "watermelon-v1"
-lanes = { main = "watermelon-v1", browser = "watermelon-browser", cron = "watermelon-cron-v1", voice = "avocado-9b-voice" }
-roles = ["subscriber"]
-setup.artifact_routing = "selected_main"
-setup.compaction_memory_flush_use_main = true
-setup.cron_browser_uses_default = true
-setup.overrides = [
-  { purpose = "BrowserMain", tier = "browser" },
-  { purpose = "BrowserVisualGesture", tier = "browser" },
-]
-
-[[models]]
-id = "ipnext/watermelon-v2"
-display_name = "Watermelon v2"
-provider = "ipnext"
-category = "internal"
-model = "watermelon-v2"
-lanes = { main = "watermelon-v2", browser = "watermelon-browser", cron = "watermelon-cron-v2", voice = "avocado-9b-voice" }
-roles = ["subscriber"]
-eval_targets = ["jarvis_watermelon-v2"]
-setup.artifact_routing = "selected_main"
-setup.compaction_memory_flush_use_main = true
-setup.cron_browser_uses_default = true
-setup.overrides = [
-  { purpose = "BrowserMain", tier = "browser" },
-  { purpose = "BrowserVisualGesture", tier = "browser" },
-]
-
-[[models]]
-id = "ipnext/subs-fast"
-display_name = "subs-fast"
-provider = "ipnext"
-category = "internal"
-model = "subs-fast"
-lanes = { main = "watermelon-fast-v0", browser = "avocado-5.17-v4", cron = "watermelon-cron-v0", voice = "avocado-9b-voice" }
-preview = true
-mask_explicit_selection_identity = true
-roles = ["big_boy"]
-setup.base = "ipnext/watermelon-v0"
-setup.artifact_routing = "selected_main"
-setup.compaction_memory_flush_use_main = true
-setup.cron_browser_uses_default = true
-setup.overrides = [
-  { purpose = "MainChat" },
-  { purpose = "BrowserAgent" },
-  { purpose = "BrowserMain", tier = "browser" },
-  { purpose = "BrowserVisualGesture", tier = "browser" },
-]
-
-[[models]]
-id = "ipnext/avocado-5.16-v2"
-display_name = "Avocado 5.16 v2"
-provider = "ipnext"
-category = "internal"
-model = "avocado-5.16-v2"
-lanes = { main = "avocado-5.16-v2", browser = "avocado-5.16-v2", cron = "avocrono-5.16-v2", voice = "avocado-9b-voice" }
-confidential_vm = "serves_inference"
-responses_companion = true
-preview = true
-retired = true
-eval_targets = ["jarvis_avocado-5.16-v2"]
-setup = { artifact_routing = "selected_main", compaction_memory_flush_use_main = true }
-
-[[models]]
-id = "ipnext/avocado-5.16-v3"
-display_name = "Avocado 5.16 v3"
-provider = "ipnext"
-category = "internal"
-model = "avocado-5.16-v3"
-lanes = { main = "avocado-5.16-v3", browser = "avocado-5.16-v3", cron = "avocrono-5.16-v3", voice = "avocado-9b-voice" }
-confidential_vm = "serves_inference"
-responses_companion = true
-preview = true
-retired = true
-eval_targets = ["jarvis_avocado-5.16-v3"]
-setup = { artifact_routing = "selected_main", compaction_memory_flush_use_main = true }
-companion_setup = { artifact_routing = "selected_main", compaction_memory_flush_use_main = true }
-
-[[models]]
-id = "ipnext/avocado-5.16-v4"
-display_name = "Avocado 5.16"
-provider = "ipnext"
-category = "internal"
-model = "avocado-5.16-v4"
-lanes = { main = "avocado-5.16-v4", browser = "avocado-5.16-browser", cron = "avocrono-5.16-v4", voice = "avocado-9b-voice" }
-confidential_vm = "selectable"
-responses_companion = true
-retired = true
-eval_targets = ["jarvis_avocado-5.16-v4"]
-
-[[models]]
-id = "ipnext/avocado-5.17-v1"
-display_name = "Avocado 5.17 v1"
-provider = "ipnext"
-category = "internal"
-model = "avocado-5.17-v1"
-lanes = { main = "avocado-5.17-v1", browser = "avocado-5.17-browser-v1", cron = "avocrono-5.17-v1", voice = "avocado-9b-voice" }
-responses_companion = true
-preview = true
-roles = ["big_boy"]
-eval_targets = ["jarvis_avocado-5.17-v1"]
-
-[[models]]
-id = "ipnext/avocado-5.17-v2"
-display_name = "Avocado 5.17 v2"
-provider = "ipnext"
-category = "internal"
-model = "avocado-5.17-v2"
-lanes = { main = "avocado-5.17-v2", browser = "avocado-5.17-browser-v2", cron = "avocrono-5.17-v2", voice = "avocado-9b-voice" }
-responses_companion = true
-preview = true
-roles = ["big_boy"]
-eval_targets = ["jarvis_avocado-5.17-v2"]
-
-[[models]]
-id = "ipnext/avocado-5.17-v3"
-display_name = "Avocado 5.17 v3"
-provider = "ipnext"
-category = "internal"
-model = "avocado-5.17-v3"
-lanes = { main = "avocado-5.17-v3", browser = "avocado-5.17-browser-v3", cron = "avocrono-5.17-v3", voice = "avocado-9b-voice" }
-responses_companion = true
-preview = true
-roles = ["big_boy"]
-eval_targets = ["jarvis_avocado-5.17-v3"]
-
-[[models]]
-id = "ipnext/avocado-5.17-v3-tee"
-display_name = "Avocado 5.17 v3 TEE"
-provider = "ipnext"
-category = "internal"
-model = "avocado-5.17-v3-chat-vllm"
-lanes = { main = "avocado-5.17-v3-chat-vllm", browser = "avocado-5.17-v3-browser-vllm", cron = "avocado-5.17-v3-cron-vllm", voice = "avocado-9b-voice" }
-confidential_vm = "selectable"
-retired = true
-
-[[models]]
-id = "ipnext/avocado-5.17-v3-sglang-tee"
-display_name = "Avocado 5.17 v3 SGLang TEE"
-provider = "ipnext"
-category = "internal"
-model = "avocado-5.17-v3-chat-inferware"
-lanes = { main = "avocado-5.17-v3-chat-inferware", browser = "avocado-5.17-v3-browser-inferware", cron = "avocado-5.17-v3-cron-inferware", voice = "avocado-9b-voice" }
-confidential_vm = "confidential_only"
-roles = ["internal_users"]
-
-[[models]]
-id = "ipnext/avocado-5.17-v4"
-display_name = "Avocado 5.17 v4"
-provider = "ipnext"
-category = "internal"
-model = "avocado-5.17-v4"
-lanes = { main = "avocado-5.17-v4", browser = "avocado-5.17-browser-v4", cron = "avocrono-5.17-v4", voice = "avocado-9b-voice" }
-responses_companion = true
-preview = true
-roles = ["big_boy"]
-eval_targets = ["jarvis_avocado-5.17-v4"]
-
-[[models]]
-id = "ipnext/avocado-5.17-v5"
-display_name = "Avocado 5.17 v5"
-provider = "ipnext"
-category = "internal"
-model = "avocado-5.17-v5"
-lanes = { main = "avocado-5.17-v5", browser = "avocado-5.17-browser-v5", cron = "avocrono-5.17-v5", voice = "avocado-9b-voice" }
-responses_companion = true
-preview = true
-roles = ["big_boy"]
-eval_targets = ["jarvis_avocado-5.17-v5"]
-
-[[models]]
-id = "ipnext/avocado-5.17-v6"
-display_name = "Avocado 5.17 v6"
-provider = "ipnext"
-category = "internal"
-model = "avocado-5.17-v6"
-lanes = { main = "avocado-5.17-v6", browser = "avocado-5.17-browser-v6", cron = "avocrono-5.17-v6", voice = "avocado-9b-voice" }
-responses_companion = true
-preview = true
-roles = ["big_boy"]
-eval_targets = ["jarvis_avocado-5.17-v6"]
-
-[[models]]
-id = "ipnext/avocado-5.17-v7"
-display_name = "Avocado 5.17 v7"
-provider = "ipnext"
-category = "internal"
-model = "avocado-5.17-v7"
-lanes = { main = "avocado-5.17-v7", browser = "avocado-5.17-browser-v7", cron = "avocrono-5.17-v7", voice = "avocado-9b-voice" }
-responses_companion = true
-preview = true
-roles = ["big_boy"]
-eval_targets = ["jarvis_avocado-5.17-v7"]
-
-[[models]]
-id = "ipnext/avocado-5.17-v8"
-display_name = "Avocado 5.17 v8"
-provider = "ipnext"
-category = "internal"
-model = "avocado-5.17-v8"
-lanes = { main = "avocado-5.17-v8", browser = "avocado-5.17-browser-v8", cron = "avocrono-5.17-v8", voice = "avocado-9b-voice" }
-responses_companion = true
-preview = true
-roles = ["big_boy"]
-eval_targets = ["jarvis_avocado-5.17-v8"]
-
-# The browser routing experiment's model (no picker role). Every lane but voice
-# names avocado-5.17-browser-v4, which MAGI prod serves from the 5.17 TPU tier,
-# so BrowserAgent and BrowserVisualGesture (Browser tier), BrowserMain and relay
-# turns (Main tier) and a browser task's CronWorker turns (Cron tier) all reach
-# it with their usual tier and workload class.
-[[models]]
-id = "ipnext/browser-fast-v1"
-display_name = "Browser Fast v1"
-provider = "ipnext"
-category = "internal"
-model = "avocado-5.17-browser-v4"
-lanes = { main = "avocado-5.17-browser-v4", browser = "avocado-5.17-browser-v4", cron = "avocado-5.17-browser-v4", voice = "avocado-9b-voice" }
-
-[[models]]
-id = "ipnext/avocado-5.16-v4-sglang-tee"
-display_name = "Avocado 5.16 SGLang TEE"
-provider = "ipnext"
-category = "internal"
-model = "avocado-5.16-v4-sglang"
-lanes = { main = "avocado-5.16-v4-sglang", browser = "avocado-5.16-browser-sglang", cron = "avocrono-5.16-v4-sglang", voice = "avocado-9b-voice" }
-confidential_vm = "selectable"
-responses_companion = true
-preview = true
-retired = true
-
-[[models]]
-id = "ipnext/avcrono-9b-fast"
-display_name = "Avocrono 9B Fast (System)"
-provider = "ipnext"
-category = "internal"
-model = "avcrono-9b-fast"
-lanes = "avcrono-9b-fast"
-kind = "system"
-
-[[models]]
-id = "ipnext/voice_arbitrator"
-display_name = "VoiceArbitrator (System)"
-provider = "ipnext"
-category = "internal"
-model = "voice_arbitrator"
-lanes = "voice_arbitrator"
-kind = "system"
-
-[[models]]
-id = "gemma_chat_completions/gemma-prompt-language-classifer"
-display_name = "Gemma Prompt Language Classifier (System)"
-provider = "gemma_chat_completions"
-category = "internal"
-model = "gemma-prompt-language-classifer"
-lanes = "gemma-prompt-language-classifer"
-kind = "system"
-
-[[models]]
-id = "gemma_chat_completions/gemma-4-e4b-hatch-monitor"
-display_name = "Gemma 4 E4B Hatch Monitor (System)"
-provider = "gemma_chat_completions"
-category = "internal"
-model = "gemma-4-e4b-hatch-monitor"
-lanes = "gemma-4-e4b-hatch-monitor"
-kind = "system"
-
-# D127524274 registers these independently retargetable MAGI aliases for QEs.
-[[models]]
-id = "ipnext/avocado-9-v1"
-display_name = "Avocado 9 V1"
-provider = "ipnext"
-category = "internal"
-model = "avocado-9-v1"
-lanes = { main = "avocado-9-v1", browser = "avocado-9-v1", cron = "avocrono-9-v1", voice = "avocado-9b-voice" }
-
-[[models]]
-id = "ipnext/avocrono-9-v1"
-display_name = "Avocrono 9 V1"
-provider = "ipnext"
-category = "internal"
-model = "avocrono-9-v1"
-lanes = { main = "avocrono-9-v1", browser = "avocrono-9-v1", cron = "avocrono-9-v1", voice = "avocado-9b-voice" }
-
-[[models]]
-id = "ipnext/avocado-9-v2"
-display_name = "Avocado 9 V2"
-provider = "ipnext"
-category = "internal"
-model = "avocado-9-v2"
-lanes = { main = "avocado-9-v2", browser = "avocado-9-v2", cron = "avocrono-9-v2", voice = "avocado-9b-voice" }
-
-[[models]]
-id = "ipnext/avocrono-9-v2"
-display_name = "Avocrono 9 V2"
-provider = "ipnext"
-category = "internal"
-model = "avocrono-9-v2"
-lanes = { main = "avocrono-9-v2", browser = "avocrono-9-v2", cron = "avocrono-9-v2", voice = "avocado-9b-voice" }
-
-[[models]]
-id = "ipnext/avocado-9-v3"
-display_name = "Avocado 9 V3"
-provider = "ipnext"
-category = "internal"
-model = "avocado-9-v3"
-lanes = { main = "avocado-9-v3", browser = "avocado-9-v3", cron = "avocrono-9-v3", voice = "avocado-9b-voice" }
-
-[[models]]
-id = "ipnext/avocrono-9-v3"
-display_name = "Avocrono 9 V3"
-provider = "ipnext"
-category = "internal"
-model = "avocrono-9-v3"
-lanes = { main = "avocrono-9-v3", browser = "avocrono-9-v3", cron = "avocrono-9-v3", voice = "avocado-9b-voice" }
-
-[[models]]
-id = "ipnext/avocado-9-v4"
-display_name = "Avocado 9 V4"
-provider = "ipnext"
-category = "internal"
-model = "avocado-9-v4"
-lanes = { main = "avocado-9-v4", browser = "avocado-9-v4", cron = "avocrono-9-v4", voice = "avocado-9b-voice" }
-
-[[models]]
-id = "ipnext/avocrono-9-v4"
-display_name = "Avocrono 9 V4"
-provider = "ipnext"
-category = "internal"
-model = "avocrono-9-v4"
-lanes = { main = "avocrono-9-v4", browser = "avocrono-9-v4", cron = "avocrono-9-v4", voice = "avocado-9b-voice" }
-
-[[models]]
-id = "ipnext/avocado-9-v5"
-display_name = "Avocado 9 V5"
-provider = "ipnext"
-category = "internal"
-model = "avocado-9-v5"
-lanes = { main = "avocado-9-v5", browser = "avocado-9-v5", cron = "avocrono-9-v5", voice = "avocado-9b-voice" }
-
-[[models]]
-id = "ipnext/avocrono-9-v5"
-display_name = "Avocrono 9 V5"
-provider = "ipnext"
-category = "internal"
-model = "avocrono-9-v5"
-lanes = { main = "avocrono-9-v5", browser = "avocrono-9-v5", cron = "avocrono-9-v5", voice = "avocado-9b-voice" }
-
-[[models]]
-id = "ipnext/avocado-9-v6"
-display_name = "Avocado 9 V6"
-provider = "ipnext"
-category = "internal"
-model = "avocado-9-v6"
-lanes = { main = "avocado-9-v6", browser = "avocado-9-v6", cron = "avocrono-9-v6", voice = "avocado-9b-voice" }
-
-[[models]]
-id = "ipnext/avocrono-9-v6"
-display_name = "Avocrono 9 V6"
-provider = "ipnext"
-category = "internal"
-model = "avocrono-9-v6"
-lanes = { main = "avocrono-9-v6", browser = "avocrono-9-v6", cron = "avocrono-9-v6", voice = "avocado-9b-voice" }
-
-[[models]]
-id = "ipnext/avocado-9-v7"
-display_name = "Avocado 9 V7"
-provider = "ipnext"
-category = "internal"
-model = "avocado-9-v7"
-lanes = { main = "avocado-9-v7", browser = "avocado-9-v7", cron = "avocrono-9-v7", voice = "avocado-9b-voice" }
-
-[[models]]
-id = "ipnext/avocrono-9-v7"
-display_name = "Avocrono 9 V7"
-provider = "ipnext"
-category = "internal"
-model = "avocrono-9-v7"
-lanes = { main = "avocrono-9-v7", browser = "avocrono-9-v7", cron = "avocrono-9-v7", voice = "avocado-9b-voice" }
-
-[[models]]
-id = "ipnext/avocado-9-v8"
-display_name = "Avocado 9 V8"
-provider = "ipnext"
-category = "internal"
-model = "avocado-9-v8"
-lanes = { main = "avocado-9-v8", browser = "avocado-9-v8", cron = "avocrono-9-v8", voice = "avocado-9b-voice" }
-
-[[models]]
-id = "ipnext/avocrono-9-v8"
-display_name = "Avocrono 9 V8"
-provider = "ipnext"
-category = "internal"
-model = "avocrono-9-v8"
-lanes = { main = "avocrono-9-v8", browser = "avocrono-9-v8", cron = "avocrono-9-v8", voice = "avocado-9b-voice" }
-
-[[models]]
-id = "ipnext/avocado-9-v9"
-display_name = "Avocado 9 V9"
-provider = "ipnext"
-category = "internal"
-model = "avocado-9-v9"
-lanes = { main = "avocado-9-v9", browser = "avocado-9-v9", cron = "avocrono-9-v9", voice = "avocado-9b-voice" }
-
-[[models]]
-id = "ipnext/avocrono-9-v9"
-display_name = "Avocrono 9 V9"
-provider = "ipnext"
-category = "internal"
-model = "avocrono-9-v9"
-lanes = { main = "avocrono-9-v9", browser = "avocrono-9-v9", cron = "avocrono-9-v9", voice = "avocado-9b-voice" }
-
-[[models]]
-id = "ipnext/avocado-9-v10"
-display_name = "Avocado 9 V10"
-provider = "ipnext"
-category = "internal"
-model = "avocado-9-v10"
-lanes = { main = "avocado-9-v10", browser = "avocado-9-v10", cron = "avocrono-9-v10", voice = "avocado-9b-voice" }
-
-[[models]]
-id = "ipnext/avocrono-9-v10"
-display_name = "Avocrono 9 V10"
-provider = "ipnext"
-category = "internal"
-model = "avocrono-9-v10"
-lanes = { main = "avocrono-9-v10", browser = "avocrono-9-v10", cron = "avocrono-9-v10", voice = "avocado-9b-voice" }
-
-# D130311415 registers these independently retargetable MAGI aliases for QEs.
-[[models]]
-id = "ipnext/watermelon-9-v1"
-display_name = "Watermelon 9 V1"
-provider = "ipnext"
-category = "internal"
-model = "watermelon-9-v1"
-lanes = { main = "watermelon-chat-9-v1", browser = "watermelon-browser-9-v1", cron = "watermelon-cron-9-v1", voice = "avocado-9b-voice" }
-
-[[models]]
-id = "ipnext/watermelon-9-v2"
-display_name = "Watermelon 9 V2"
-provider = "ipnext"
-category = "internal"
-model = "watermelon-9-v2"
-lanes = { main = "watermelon-chat-9-v2", browser = "watermelon-browser-9-v2", cron = "watermelon-cron-9-v2", voice = "avocado-9b-voice" }
-
-[[models]]
-id = "ipnext/watermelon-9-v3"
-display_name = "Watermelon 9 V3"
-provider = "ipnext"
-category = "internal"
-model = "watermelon-9-v3"
-lanes = { main = "watermelon-chat-9-v3", browser = "watermelon-browser-9-v3", cron = "watermelon-cron-9-v3", voice = "avocado-9b-voice" }
-
-[[models]]
-id = "ipnext/watermelon-9-v4"
-display_name = "Watermelon 9 V4"
-provider = "ipnext"
-category = "internal"
-model = "watermelon-9-v4"
-lanes = { main = "watermelon-chat-9-v4", browser = "watermelon-browser-9-v4", cron = "watermelon-cron-9-v4", voice = "avocado-9b-voice" }
-
-[[models]]
-id = "ipnext/watermelon-9-v5"
-display_name = "Watermelon 9 V5"
-provider = "ipnext"
-category = "internal"
-model = "watermelon-9-v5"
-lanes = { main = "watermelon-chat-9-v5", browser = "watermelon-browser-9-v5", cron = "watermelon-cron-9-v5", voice = "avocado-9b-voice" }
-
-[[models]]
-id = "ipnext/watermelon-9-v6"
-display_name = "Watermelon 9 V6"
-provider = "ipnext"
-category = "internal"
-model = "watermelon-9-v6"
-lanes = { main = "watermelon-chat-9-v6", browser = "watermelon-browser-9-v6", cron = "watermelon-cron-9-v6", voice = "avocado-9b-voice" }
-
-[[models]]
-id = "ipnext/watermelon-9-v7"
-display_name = "Watermelon 9 V7"
-provider = "ipnext"
-category = "internal"
-model = "watermelon-9-v7"
-lanes = { main = "watermelon-chat-9-v7", browser = "watermelon-browser-9-v7", cron = "watermelon-cron-9-v7", voice = "avocado-9b-voice" }
-
-[[models]]
-id = "ipnext/watermelon-9-v8"
-display_name = "Watermelon 9 V8"
-provider = "ipnext"
-category = "internal"
-model = "watermelon-9-v8"
-lanes = { main = "watermelon-chat-9-v8", browser = "watermelon-browser-9-v8", cron = "watermelon-cron-9-v8", voice = "avocado-9b-voice" }
-
-[[models]]
-id = "ipnext/watermelon-9-v9"
-display_name = "Watermelon 9 V9"
-provider = "ipnext"
-category = "internal"
-model = "watermelon-9-v9"
-lanes = { main = "watermelon-chat-9-v9", browser = "watermelon-browser-9-v9", cron = "watermelon-cron-9-v9", voice = "avocado-9b-voice" }
-
-[[models]]
-id = "ipnext/watermelon-9-v10"
-display_name = "Watermelon 9 V10"
-provider = "ipnext"
-category = "internal"
-model = "watermelon-9-v10"
-lanes = { main = "watermelon-chat-9-v10", browser = "watermelon-browser-9-v10", cron = "watermelon-cron-9-v10", voice = "avocado-9b-voice" }
-
-[[models]]
-id = "ipnext/avocrono-fast-test"
-display_name = "Avocrono Fast Test"
-provider = "ipnext"
-category = "internal"
-model = "avocrono-fast-test"
-lanes = "avocrono-fast-test"
-
-[[models]]
-id = "ipnext/avocado-5-16-vibe"
-display_name = "Avocado 5.16 Vibe"
-provider = "ipnext"
-category = "internal"
-model = "avocado-5-16-vibe"
-lanes = { main = "avocado-5-16-vibe", browser = "avocado-5.16-browser", cron = "avocrono-5.16-v4", voice = "avocado-9b-voice" }
-confidential_vm = "serves_inference"
-responses_companion = true
-preview = true
-retired = true
-
-# Reachable only through JARVIS_MODEL_ID_OVERRIDE. Its harness runs on every
-# lane, the borrowed browser and cron wires too.
-[[models]]
-id = "ipnext/tba-preparedness-probe"
-display_name = "TBA Preparedness Probe"
-provider = "ipnext"
-category = "internal"
-model = "tba-preparedness-probe"
-lanes = { main = "tba-preparedness-probe", browser = "avocado-5.16-browser", cron = "avocrono-5.16-v4", voice = "avocado-9b-voice" }
-harness = "tba_preparedness_probe"
-confidential_vm = "selectable"
-responses_companion = true
-
-# The cron-model QE arm: 5.16 v4 on every lane but cron. It follows 5.16 v4,
-# so a lookup by a shared wire finds 5.16 v4.
-[[models]]
-id = "ipnext/avocado-5.16-v4-cron-fp4-mxfp8attn"
-display_name = "Avocado 5.16"
-provider = "ipnext"
-category = "internal"
-model = "avocado-5.16-v4"
-lanes = { main = "avocado-5.16-v4", browser = "avocado-5.16-browser", cron = "avocrono-5.16-v4-fp4-mxfp8attn", voice = "avocado-9b-voice" }
-responses_companion = true
-
-[[models]]
-id = "ipnext_responses/avocado-5.16-v0"
-display_name = "Avocado 5.16 v0 Responses (Experimental)"
-provider = "ipnext_responses"
-category = "internal"
-model = "avocado-5.16-v0"
-lanes = { main = "avocado-5.16-v0", browser = "avocado-5.16-browser-v0", cron = "avocrono-5.16-v0", voice = "avocado-5.16-v0" }
-preview = true
-retired = true
-
-[[models]]
-id = "ipnext/avocado-9b-voice-staging"
-display_name = "Avocado 9B Voice Staging"
-provider = "ipnext"
-category = "internal"
-model = "avocado-9b-voice-staging"
-lanes = "avocado-9b-voice-staging"
-
-[[models]]
-id = "azure/muse-special"
-display_name = "muse-special"
-provider = "azure"
-category = "external"
-model = "muse-special"
-lanes = "muse-special"
-preview = true
-clear_context_on_switch = true
-served_by_sol = true
-
-[[models]]
-id = "ipnext/maple"
-display_name = "Maple"
-provider = "azure"
-category = "external"
-model = "maple"
-lanes = "ipnext/maple"
-preview = true
-clear_context_on_switch = true
-roles = ["big_boy"]
-
-[[models]]
-id = "ipnext/birch"
-display_name = "Birch"
-provider = "azure"
-category = "external"
-model = "birch"
-lanes = "ipnext/birch"
-preview = true
-clear_context_on_switch = true
-retired = true
-
-[[models]]
-id = "ipnext/kangaroo"
-display_name = "Kangaroo"
-provider = "kimi_chat_completions"
-category = "external"
-model = "kangaroo"
-lanes = "kangaroo"
-slow_first_token = true
-preview = true
-roles = ["big_boy"]
-
-[[models]]
-id = "azure/avocado-compaction-v1"
-display_name = "Compaction"
-provider = "azure"
-category = "external"
-model = "avocado-compaction-v1"
-lanes = "avocado-compaction-v1"
-kind = "system"
-clear_context_on_switch = true
-served_by_sol = true
-
-[[models]]
-id = "azure/avocado-memory-flush-v1"
-display_name = "Memory flush"
-provider = "azure"
-category = "external"
-model = "avocado-memory-flush-v1"
-lanes = "avocado-memory-flush-v1"
-kind = "system"
-clear_context_on_switch = true
-served_by_sol = true
-forget_model = "azure/muse-special"
-
-[[models]]
-id = "fireworks/kimi-k3"
-display_name = "Kimi K3"
-provider = "fireworks"
-category = "external"
-model = "kimi-k3"
-lanes = "accounts/fireworks/models/kimi-k3"
-slow_first_token = true
-preview = true
-
-[[models]]
-id = "kimi_chat_completions/kimi-k3"
-display_name = "Kimi K3"
-provider = "kimi_chat_completions"
-category = "external"
-model = "kimi-k3"
-lanes = "kimi-k3"
-slow_first_token = true
-preview = true
-retired = true
-
-# Cerebras serves interactive work only, so the Willow rows hand background
-# work to the default model.
-[[models]]
-id = "ipnext/willow"
-display_name = "Willow"
-provider = "ipnext"
-category = "external"
-model = "willow"
-lanes = "willow"
-preview = true
-clear_context_on_switch = true
-roles = ["cerebras"]
-setup.template = "general_purpose"
-setup.artifact_routing = "selected_main"
-setup.background_work_uses_default = true
-setup.default_model_purposes = [
-  "CronWorker",
-  "SelfImprovementStep",
-  "BackgroundWorker",
-  "FeedWorkflowStep",
-  "FeedEditor",
-  "FeedPulsePick",
-  "FeedWireTasteCheck",
-  "MediaDescription",
-  "AvatarPromptBuilder",
-  "SpaceAction",
-]
-
-[[models]]
-id = "ipnext/willow-legacy"
-display_name = "Willow (legacy)"
-provider = "cerebras"
-category = "external"
-model = "willow-legacy"
-lanes = "ipnext/willow"
-preview = true
-clear_context_on_switch = true
-retired = true
-setup.artifact_routing = "selected_main"
-setup.background_work_uses_default = true
-setup.default_model_purposes = [
-  "CronWorker",
-  "SelfImprovementStep",
-  "BackgroundWorker",
-  "FeedWorkflowStep",
-  "FeedEditor",
-  "FeedPulsePick",
-  "FeedWireTasteCheck",
-  "MediaDescription",
-  "AvatarPromptBuilder",
-  "SpaceAction",
-]
-
-[[models]]
-id = "ipnext/baby_willow"
-display_name = "baby_willow"
-provider = "hybrid"
-category = "internal"
-model = "baby_willow"
-lanes = "baby_willow"
-preview = true
-roles = ["cerebras"]
-setup.base = "ipnext/avocado-5.16-v4"
-setup.background_work_uses_default = true
-setup.overrides = [
-  { purpose = "BrowserAgent", model = "ipnext/willow" },
-  { purpose = "BrowserMain", model = "ipnext/willow" },
-]
-
-[[retired]]
-id = "codex/gpt-5.5"
-
-[[retired]]
-id = "codex/gpt-5.5-codex"
-replacement = "codex/gpt-5.5"
-
-[[retired]]
-id = "openai/gpt-5-5-genai-responses"
-replacement = "codex/gpt-5.5"
-
-[[retired]]
-id = "codex/gpt-5.6-sol"
-
-[[retired]]
-id = "azure/gpt-5.6-sol"
-replacement = "azure/muse-special"
-
-[[retired]]
-id = "azure/gpt5.6-sol"
-replacement = "azure/muse-special"
-
-[[retired]]
-id = "ipnext/kimi-k3"
-replacement = "fireworks/kimi-k3"
-
-[[retired]]
-id = "anthropic/claude-queso-eap"
-replacement = "anthropic/claude-opus-4-6"
-
-# Also an option row, for direct lookups; persisted state naming it
-# canonicalizes to the replacement.
-[[retired]]
-id = "ipnext/avocado"
-replacement = "ipnext/avocado-5.14"
-
-[[retired]]
-id = "ipnext/avocado-5.11"
-
-[[retired]]
-id = "ipnext/avocado-5.12"
-replacement = "ipnext/avocado-5.14"
-
-[[retired]]
-id = "ipnext/avocado-5.13b"
-replacement = "ipnext/avocado-5.14"
-
-[[retired]]
-id = "ipnext/avocado-5.14"
-
-[[retired]]
-id = "ipnext/avocado-5.14-load-test"
-
-[[retired]]
-id = "ipnext/avocado-5.14-sglang"
-replacement = "ipnext/avocado-5.14"
-
-[[retired]]
-id = "ipnext/avocado-5.15"
-replacement = "ipnext/avocado-5.14"
-
-[[retired]]
-id = "ipnext/avocado-pro-max"
-
-[[retired]]
-id = "ipnext_responses/avocado-5.11"
-
-[[retired]]
-id = "ipnext_responses/avocado-5.14-load-test"
-
-[[retired]]
-id = "ipnext_responses/avocado-5.14"
-
-[[retired]]
-id = "ipnext_responses/avocado-pro-max"
-
-[[retired]]
-id = "ipnext/avocado-5.14.1.v1"
-replacement = "ipnext/avocado-5.14"
-
-[[retired]]
-id = "ipnext/avocado-5.14.1.v2"
-replacement = "ipnext/avocado-5.14"
-
-[[retired]]
-id = "ipnext/avocado-5.14.1.v3"
-replacement = "ipnext/avocado-5.14"
-
-[[retired]]
-id = "ipnext/avocado-5.14.1.cm1"
-replacement = "ipnext/avocado-5.14"
-
-[[retired]]
-id = "ipnext/avocado-5.14.1.cm2"
-replacement = "ipnext/avocado-5.14"
-
-[[retired]]
-id = "ipnext/avocado-5.14.2"
-replacement = "ipnext/avocado-5.14"
-
-[[retired]]
-id = "ipnext/avocado-5.14.3.b"
-replacement = "ipnext/avocado-5.14"
-
-[[retired]]
-id = "ipnext/glm-5.2"
-replacement = "ipnext/avocado-5.14"
-
-[[retired]]
-id = "ipnext/avocado-9b-voice"
-replacement = "ipnext/avocado-5.14"
-
-[[retired]]
-id = "hybrid/girafarig"
-
-[[retired]]
-id = "cerebras/msl-muse-spark-1.2"
-replacement = "ipnext/willow"
-
-# Eval targets that do not hang off a model row: other providers, the
-# stable alias, and targets carrying per-target daemon env.
-
-[[eval_targets]]
-name = "jarvis"
-target = "jarvis"
-provider = "anthropic"
-model = "claude-opus-4-6"
-
-[[eval_targets]]
-name = "jarvis_opus"
-target = "jarvis"
-provider = "anthropic"
-model = "claude-opus-4-6"
-
-[[eval_targets]]
-name = "jarvis_opus_4_8"
-target = "jarvis"
-provider = "anthropic"
-model = "claude-opus-4-8-evals"
-
-[[eval_targets]]
-name = "jarvis_opus_4_8_max"
-target = "jarvis"
-provider = "anthropic"
-model = "claude-opus-4-8-evals"
-reasoning_effort = "max"
-
-[[eval_targets]]
-name = "jarvis_gpt"
-target = "jarvis"
-provider = "openai"
-model = "gpt-5"
-
-[[eval_targets]]
-name = "jarvis_gpt54"
-target = "jarvis"
-provider = "openai"
-model = "gpt-5.4"
-
-[[eval_targets]]
-name = "jarvis_kimi"
-target = "jarvis"
-provider = "fireworks"
-model = "kimi-k2p5"
-
-[[eval_targets]]
-name = "jarvis_fireworks_kimi-k3"
-target = "jarvis"
-provider = "fireworks"
-model = "kimi-k3"
-
-[[eval_targets]]
-name = "jarvis_kimi-chat-completions-k3"
-target = "jarvis"
-provider = "kimi_chat_completions"
-model = "kimi-k3"
-
-[[eval_targets]]
-name = "jarvis_meta-openclaw-test"
-target = "jarvis"
-provider = "llama"
-model = "meta-openclaw-test"
-
-[[eval_targets]]
-# The stable alias CI defaults resolve through. It runs the product default,
-# defaults.confidential on a confidential VM and defaults.auto on any other,
-# so a product-default move carries the eval default with it.
-name = "jarvis_avocado"
-target = "jarvis"
-follows_product_default = true
-
-[[eval_targets]]
-name = "jarvis_avocado-5.16-v0-responses"
-target = "jarvis"
-provider = "ipnext_responses"
-model = "avocado-5.16-v0"
-
-[[eval_targets]]
-name = "openclaw"
-target = "openclaw"
-provider = "anthropic"
-model = "claude-opus-4-6"
-
-[[eval_targets]]
-# Voice-tier bypass: run the full model on voice turns instead of the 9B
-# voice tier, so a voice eval measures the named model.
-name = "jarvis_avocado_513_voice"
-target = "jarvis"
-provider = "ipnext"
-model = "avocado-5.13"
-env = { JARVIS_VOICE_TIER_BYPASS = "1" }
-
-[[eval_targets]]
-name = "jarvis_avocado_9b"
-target = "jarvis"
-provider = "ipnext"
-model = "avocado-9b-voice"
+# This bundled YAML data asset is owned by `hatch-goals` and loaded through the
+# typed Rust loader in `src/scaffold/`. It is NOT a runtime skill, NOT a Python
+# renderer, and NOT a skill-dir contract. This file is the single human-readable
+# source of the registry, validated by `scaffold/validation.rs`.
+#
+# Validation enforces, at load time:
+#   - strength caps by `source_type` (heuristic stays limited/context_dependent;
+#     practitioner/expert_reviewed cap at moderate unless cited empirical
+#     evidence backs them; official_guidance/systematic_review/primary_study may
+#     reach strong);
+#   - non-heuristic tactics carry a real DOI or PMID citation handle;
+#   - `expert_reviewed` tactics carry reviewer metadata;
+#   - no field contains the banned literal "scientifically proven".
+
+version: 1
+
+# The agent may write plainly, but must never upgrade a tactic beyond its
+# registry strength. Strength is capped by source type.
+strength_caps:
+  heuristic: [limited, context_dependent]
+  practitioner: [limited, context_dependent, moderate]
+  expert_reviewed: [limited, context_dependent, moderate]
+  official_guidance: [limited, context_dependent, moderate, strong]
+  systematic_review: [limited, context_dependent, moderate, strong]
+  primary_study: [limited, context_dependent, moderate, strong]
+
+# Cross-cutting research basis behind the registry's evidence labels.
+research_basis:
+  - prefix: "Goal-setting and feedback"
+    link_label: "Locke and Latham 2002"
+    url: "https://doi.org/10.1037/0003-066X.57.9.705"
+  - prefix: "Implementation intentions"
+    link_label: "Gollwitzer and Sheeran 2006"
+    url: "https://doi.org/10.1016/S0065-2601(06)38002-1"
+  - prefix: "Self-concordance"
+    link_label: "Sheldon and Elliot 1999"
+    url: "https://doi.org/10.1037/0022-3514.76.3.482"
+  - prefix: "Progress monitoring"
+    link_label: "Harkin et al. 2016"
+    url: "https://doi.org/10.1037/bul0000025"
+  - prefix: "Learning-style matching rejection"
+    link_label: "Pashler et al. 2009"
+    url: "https://doi.org/10.1111/j.1539-6053.2009.01038.x"
+
+categories:
+  - id: career
+    summary: "Career scaffolds support planning, skill growth, job-search structure, and reflection; they do not guarantee employment outcomes or provide legal/employment-rights advice."
+    category_safety_floor:
+      - "Do not recommend deception, contract breach, discrimination, harassment, retaliation, or unsafe workplace action."
+      - "For immigration, legal, medical leave, harassment, discrimination, or termination issues, route to qualified professionals or trusted institutional channels."
+    tactics:
+      - id: structured-job-search
+        description: "Turn a career goal into a structured job-search loop with target roles, weekly behaviors, feedback, and adjustment."
+        source_type: systematic_review
+        evidence_strength: strong
+        population_scope: "Job-search behavior and employment outcomes across adult samples; labor-market and personal constraints moderate effects."
+        safety_boundary: "Do not pressure indiscriminate applications; preserve fit, constraints, and current-employment risk."
+        citations:
+          - label: "Kanfer, Wanberg, and Kantrowitz job-search meta-analysis"
+            url: "https://doi.org/10.1037/0033-2909.127.5.837"
+            handle: "DOI:10.1037/0033-2909.127.5.837"
+        forbidden_overreach:
+          - "Do not promise interviews or offers."
+          - "Do not ignore burnout, caregiving, visa, or confidentiality constraints."
+      - id: deliberate-practice-career-skill
+        description: "For career skill goals, choose focused practice tasks with feedback rather than passive content consumption."
+        source_type: primary_study
+        evidence_strength: moderate
+        population_scope: "Expert-performance literature; transfer to workplace skill depends on feedback quality, domain structure, and time available."
+        safety_boundary: "Keep practice load sustainable and tied to a real target skill; avoid credential inflation or unpaid-work exploitation."
+        citations:
+          - label: "Ericsson, Krampe, and Tesch-Romer deliberate practice"
+            url: "https://doi.org/10.1037/0033-295X.100.3.363"
+            handle: "DOI:10.1037/0033-295X.100.3.363"
+        forbidden_overreach:
+          - "Do not suggest endless practice without opportunity or feedback."
+          - "Do not imply all career gaps are solved by individual effort."
+      - id: values-and-constraints-fit
+        description: "Compare role options against values, constraints, energy, compensation, growth, and relationship trade-offs before optimizing one metric."
+        source_type: heuristic
+        evidence_strength: context_dependent
+        population_scope: "General career planning outside legal or crisis situations."
+        safety_boundary: "Make trade-offs explicit without overriding the user's stated priorities."
+        citations:
+          - label: "heuristic"
+            url: ""
+            handle: "no external citation"
+        forbidden_overreach:
+          - "Do not treat prestige or compensation as the only rational objective."
+          - "Do not prescribe major resignation or relocation from thin evidence."
+
+  - id: health
+    summary: "Health scaffolds support general wellness planning and research; they do not diagnose, prescribe treatment, or replace clinicians."
+    category_safety_floor:
+      - "For medical concerns, recommend contacting a qualified medical professional."
+      - "Keep plans gradual and preference-compatible; do not set aggressive weight-loss, supplement, medication, or rehabilitation protocols."
+    tactics:
+      - id: progressive-load-baseline
+        description: "Increase training load gradually from the user's current baseline and match modality to the concrete goal."
+        source_type: official_guidance
+        evidence_strength: strong
+        population_scope: "Healthy adults in resistance-training contexts; adapt conservatively for beginners, older adults, disability, injury, pregnancy, and chronic conditions."
+        safety_boundary: "Do not prescribe injury rehabilitation, disease treatment, or maximal loading when pain, illness, pregnancy, or clinician constraints are present."
+        citations:
+          - label: "ACSM progression models in resistance training"
+            url: "https://pubmed.ncbi.nlm.nih.gov/19204579/"
+            handle: "PMID:19204579"
+        forbidden_overreach:
+          - "Do not claim one progression model is optimal for every user."
+          - "Do not convert general training guidance into medical treatment."
+      - id: monitor-behavior-and-barriers
+        description: "Track concrete behavior and barriers because progress monitoring improves goal attainment."
+        source_type: systematic_review
+        evidence_strength: strong
+        population_scope: "Adult goal pursuit across domains; health uses should be adapted to sensitivity, burden, and clinical context."
+        safety_boundary: "Tracking must reduce ambiguity, not create shame, obsessive checking, or punitive escalation."
+        citations:
+          - label: "Harkin et al. progress monitoring meta-analysis"
+            url: "https://doi.org/10.1037/bul0000025"
+            handle: "DOI:10.1037/bul0000025"
+        forbidden_overreach:
+          - "Do not treat tracker absence as failure."
+          - "Do not infer medical status from sparse behavior logs."
+      - id: if-then-health-plan
+        description: "Convert a chosen health action into an if-then plan tied to a real cue."
+        source_type: systematic_review
+        evidence_strength: strong
+        population_scope: "Broad self-regulation literature; effect depends on commitment, cue quality, and realistic action selection."
+        safety_boundary: "If-then plans must be easy enough for the user's current capacity and must include a recovery path after misses."
+        citations:
+          - label: "Gollwitzer and Sheeran implementation-intention meta-analysis"
+            url: "https://doi.org/10.1016/S0065-2601(06)38002-1"
+            handle: "DOI:10.1016/S0065-2601(06)38002-1"
+        forbidden_overreach:
+          - "Do not use if-then planning as a substitute for medical care."
+          - "Do not stack many plans at once for a fragile routine."
+
+  - id: interests
+    summary: "Interest scaffolds support learning, hobbies, exploration, taste-building, and creative projects; they do not make medical, legal, or financial claims."
+    category_safety_floor:
+      - "Keep exploration reversible and low-risk until the user shows sustained interest."
+    tactics:
+      - id: develop-interest-through-phases
+        description: "Treat interests as developing over phases, from triggered curiosity to maintained personal interest."
+        source_type: primary_study
+        evidence_strength: moderate
+        population_scope: "Education and motivation contexts; personal adult hobbies need adaptation to time, cost, and social context."
+        safety_boundary: "Do not overinterpret one curiosity as a stable identity or long-term priority."
+        citations:
+          - label: "Hidi and Renninger four-phase model of interest development"
+            url: "https://doi.org/10.1207/s15326985ep4102_4"
+            handle: "DOI:10.1207/s15326985ep4102_4"
+        forbidden_overreach:
+          - "Do not turn a single mention into an obsessive feed."
+          - "Do not collapse curiosity into a durable goal without more evidence."
+      - id: practice-with-feedback
+        description: "For skill-building interests, choose a small project plus feedback loop instead of only collecting resources."
+        source_type: primary_study
+        evidence_strength: moderate
+        population_scope: "Skill acquisition and expert-performance literature; recreational goals may prioritize joy over optimization."
+        safety_boundary: "Keep feedback humane and proportional; do not make playful hobbies feel like performance surveillance."
+        citations:
+          - label: "Ericsson, Krampe, and Tesch-Romer deliberate practice"
+            url: "https://doi.org/10.1037/0033-295X.100.3.363"
+            handle: "DOI:10.1037/0033-295X.100.3.363"
+        forbidden_overreach:
+          - "Do not imply deliberate practice is required for every hobby."
+          - "Do not replace enjoyment with metrics unless the user wants that."
+      - id: reject-learning-styles
+        description: "Personalize learning by prior knowledge, task demands, feedback, and preference, not by matching content to fixed learning styles."
+        source_type: systematic_review
+        evidence_strength: strong
+        population_scope: "Education and learning research; applies to claims about fixed style-by-modality matching."
+        safety_boundary: "Preferences can improve comfort, but must not be presented as evidence that a fixed style causes better learning."
+        citations:
+          - label: "Pashler et al. learning styles review"
+            url: "https://doi.org/10.1111/j.1539-6053.2009.01038.x"
+            handle: "DOI:10.1111/j.1539-6053.2009.01038.x"
+        forbidden_overreach:
+          - "Do not say a user is a visual, auditory, or kinesthetic learner."
+          - "Do not judge resource quality by modality match alone."
+
+  - id: money
+    summary: "Money scaffolds provide education, organization, and decision hygiene; they do not provide personalized investment, tax, legal, insurance, or debt-settlement advice."
+    category_safety_floor:
+      - "Do not recommend specific securities, crypto trades, tax strategies, legal actions, insurance products, debt-settlement programs, or guaranteed returns."
+      - "Treat income, debt, account, employer, and household financial details as sensitive; route personalized decisions to appropriate licensed professionals."
+    tactics:
+      - id: cash-flow-first
+        description: "Start with cash-flow, debt, liquidity, and time horizon before discussing optimization."
+        source_type: systematic_review
+        evidence_strength: moderate
+        population_scope: "Financial education and behavior interventions across varied adult populations; effects vary and decay without context and follow-through."
+        safety_boundary: "Do not infer account balances or affordability from partial data; ask the minimum concrete missing numbers needed for the plan."
+        citations:
+          - label: "Fernandes, Lynch, and Netemeyer financial education meta-analysis"
+            url: "https://doi.org/10.1287/mnsc.2013.1849"
+            handle: "DOI:10.1287/mnsc.2013.1849"
+        forbidden_overreach:
+          - "Do not imply education alone reliably fixes structural financial constraints."
+          - "Do not skip debt or liquidity because investing feels more interesting."
+      - id: planning-literacy-link
+        description: "Use plain financial-literacy explanations to improve planning quality and help the user ask better professional questions."
+        source_type: systematic_review
+        evidence_strength: moderate
+        population_scope: "Household finance and retirement-planning literature; literacy correlates with planning but does not remove individual constraints."
+        safety_boundary: "Keep explanations educational and scenario-based; do not convert them into personalized product selection."
+        citations:
+          - label: "Lusardi and Mitchell financial literacy review"
+            url: "https://doi.org/10.1257/jel.52.1.5"
+            handle: "DOI:10.1257/jel.52.1.5"
+        forbidden_overreach:
+          - "Do not present a general rule as fiduciary advice."
+          - "Do not guarantee behavior change from knowledge."
+      - id: fraud-and-source-check
+        description: "Add fraud, fee, and source-verification checks before acting on financial opportunities."
+        source_type: heuristic
+        evidence_strength: limited
+        population_scope: "General financial decision hygiene when evaluating offers, subscriptions, investments, or debt products."
+        safety_boundary: "Do not investigate private accounts beyond available context; surface risk and suggest verified channels."
+        citations:
+          - label: "heuristic"
+            url: ""
+            handle: "no external citation"
+        forbidden_overreach:
+          - "Do not declare an offer safe from superficial signals."
+          - "Do not handle regulated disputes as legal advice."
+
+  - id: relationships
+    summary: "Relationship scaffolds support reflection, communication, and connection; they are not therapy, legal advice, crisis handling, or a substitute for trained support."
+    category_safety_floor: []
+    tactics:
+      - id: responsiveness-before-depth
+        description: "When the user wants a closer relationship, help them listen, understand the other person's perspective, and respond with care."
+        source_type: primary_study
+        evidence_strength: moderate
+        population_scope: "Adult close relationships studied through interaction and diary methods; cultural and relationship-type fit must be checked."
+        safety_boundary: "Do not accelerate intimacy or ask for deeply personal disclosure before the user's relationship context and safety are clear."
+        citations:
+          - label: "Laurenceau, Barrett, and Pietromonaco intimacy process study"
+            url: "https://doi.org/10.1037/0022-3514.74.5.1238"
+            handle: "DOI:10.1037/0022-3514.74.5.1238"
+        forbidden_overreach:
+          - "Do not equate more disclosure with better relationship health."
+          - "Do not infer relationship quality from one message."
+      - id: capitalization-of-good-news
+        description: "When a relationship goal involves closeness, help the user notice and respond actively to the other person's good news."
+        source_type: primary_study
+        evidence_strength: moderate
+        population_scope: "Adult close relationships; strongest fit for supportive, non-abusive contexts."
+        safety_boundary: "Use only when the relationship is wanted and safe; do not script performative praise or pressure the user to manage another adult's emotions."
+        citations:
+          - label: "Gable et al. capitalization and close relationship well-being"
+            url: "https://doi.org/10.1037/0022-3514.87.2.228"
+            handle: "DOI:10.1037/0022-3514.87.2.228"
+        forbidden_overreach:
+          - "Do not frame one supportive response as repairing major rupture."
+          - "Do not prescribe contact when the user is setting distance."
+      - id: concrete-repair-next-step
+        description: "If the user wants to repair the relationship, help them choose one practical next step."
+        source_type: heuristic
+        evidence_strength: context_dependent
+        population_scope: "General conversational planning heuristic for non-crisis relationships."
+        safety_boundary: "Never recommend repair attempts that increase danger, violate boundaries, or bypass professional/crisis support."
+        citations:
+          - label: "heuristic"
+            url: ""
+            handle: "no external citation"
+        forbidden_overreach:
+          - "Do not promise reconciliation."
+          - "Do not turn safety boundaries into communication tips."
+
+  - id: productivity
+    summary: "Productivity scaffolds support focus, prioritization, sustainable routines, and realistic workload planning; they do not treat greater output or longer hours as the default goal."
+    category_safety_floor:
+      - "Do not optimize output at the expense of sleep, health, relationships, caregiving, required breaks, or safe working limits."
+      - "Treat workplace context, calendars, tasks, email, and documents as sensitive; ask permission and use the smallest source set needed."
+    tactics:
+      - id: if-then-follow-through
+        description: "Turn a chosen action into a small if-then plan tied to a cue that already exists in the user's day."
+        source_type: systematic_review
+        evidence_strength: strong
+        population_scope: "Broad self-regulation literature; effects depend on commitment, cue quality, task fit, and realistic action size."
+        safety_boundary: "Use one manageable plan with a recovery path after misses; do not stack rigid routines or interpret misses as character failure."
+        citations:
+          - label: "Gollwitzer and Sheeran implementation-intention meta-analysis"
+            url: "https://doi.org/10.1016/S0065-2601(06)38002-1"
+            handle: "DOI:10.1016/S0065-2601(06)38002-1"
+        forbidden_overreach:
+          - "Do not claim an if-then plan will overcome an impossible workload."
+          - "Do not add many simultaneous routines to manufacture compliance."
+      - id: monitor-workload-and-progress
+        description: "Use lightweight progress and workload review to expose drift, blockers, and plans that exceed actual capacity."
+        source_type: systematic_review
+        evidence_strength: strong
+        population_scope: "Adult goal pursuit across domains; workplace and personal-productivity uses require adaptation to privacy, job control, and workload constraints."
+        safety_boundary: "Tracking should support reflection and adjustment, not surveillance, shame, or pressure to work beyond capacity."
+        citations:
+          - label: "Harkin et al. progress monitoring meta-analysis"
+            url: "https://doi.org/10.1037/bul0000025"
+            handle: "DOI:10.1037/bul0000025"
+        forbidden_overreach:
+          - "Do not treat every unfinished item as a motivation failure."
+          - "Do not infer performance or well-being from sparse activity data."
+      - id: prioritize-under-constraints
+        description: "Choose a small set of priorities by making capacity, trade-offs, non-negotiable commitments, and stopping points explicit."
+        source_type: heuristic
+        evidence_strength: context_dependent
+        population_scope: "General planning hygiene for personal, study, household, creative, and non-crisis work contexts."
+        safety_boundary: "Reduce or renegotiate scope when demand exceeds capacity; do not turn every responsibility into an optimization target."
+        citations:
+          - label: "heuristic"
+            url: ""
+            handle: "no external citation"
+        forbidden_overreach:
+          - "Do not equate busyness with importance."
+          - "Do not recommend sacrificing protected rest or personal boundaries."
+
+  - id: something_else
+    summary: "The fallback scaffold helps classify ambiguous goals and pick the closest concrete scaffold before making strong domain claims."
+    category_safety_floor: []
+    tactics:
+      - id: specific-goal-feedback
+        description: "Prefer specific goals with feedback over vague aspiration when the user is ready to act."
+        source_type: systematic_review
+        evidence_strength: strong
+        population_scope: "Goal-setting and task-motivation literature; works best when ability, commitment, and feedback are present."
+        safety_boundary: "Do not force specificity when the user's real task is exploration, grief, uncertainty, or identity work."
+        citations:
+          - label: "Locke and Latham goal-setting theory review"
+            url: "https://doi.org/10.1037/0003-066X.57.9.705"
+            handle: "DOI:10.1037/0003-066X.57.9.705"
+        forbidden_overreach:
+          - "Do not treat harder goals as always better."
+          - "Do not optimize agent metrics over user-owned priorities."
+      - id: self-concordant-framing
+        description: "Preserve the user's own reasons and values so goals stay self-concordant."
+        source_type: primary_study
+        evidence_strength: moderate
+        population_scope: "Personal-goal pursuit research; values and motives require longitudinal evidence and user language."
+        safety_boundary: "Do not overwrite the user's stated values with agent-inferred ones."
+        citations:
+          - label: "Sheldon and Elliot self-concordance model"
+            url: "https://doi.org/10.1037/0022-3514.76.3.482"
+            handle: "DOI:10.1037/0022-3514.76.3.482"
+        forbidden_overreach:
+          - "Do not infer a complete life model from one facet."
+          - "Do not turn support into value policing."

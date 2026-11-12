@@ -1,0 +1,61 @@
+activation_iderrorsuccesswrite_admissionwritepostgres write completed slowlypostgres write failedretrying idempotent postgres writeone-shot postgres write invoked more than once
+with carrier_fields as (
+  select e.message_id,
+         f.field_path,
+         f.scalar_type,
+         f.scalar_value,
+         coalesce(f.text_value, f.scalar_value) as field_value
+  from runtime.events e
+  join runtime.event_payload_fields f on f.event_seq = e.event_seq
+  where e.message_id = any($1)
+    and e.event_name = 'message.user'
+    and (
+      f.field_path = '/reply_to_target/activation_mode'
+      or f.field_path = '/reply_to_target/selected_item_ids'
+      or f.field_path ~ '^/reply_to_target/selected_item_ids/[0-9]+$'
+    )
+)
+select message_id,
+       max(field_value) filter (
+         where field_path = '/reply_to_target/activation_mode'
+       ) as stored_activation_mode,
+       coalesce(
+         array_agg(field_value order by
+           substring(field_path from '([0-9]+)$')::integer
+         ) filter (
+           where field_path ~ '^/reply_to_target/selected_item_ids/[0-9]+$'
+             and nullif(btrim(field_value), '') is not null
+         ),
+         '{}'::text[]
+       ) as selected_item_ids,
+       coalesce(bool_or(
+         field_path = '/reply_to_target/selected_item_ids'
+         and scalar_type = 'array'
+         and scalar_value = '[]'
+       ), false) as explicit_empty_selection
+from carrier_fields
+group by message_id
+message_idstored_activation_modeselected_item_idsexplicit_empty_selection
+select state, count(*)::bigint as delivery_count
+from chat_private.deliveries
+where created_at_utc >= $1
+  and created_at_utc <= $2
+  and delivery_kind in ('background_reply', 'scheduler_cron')
+  and payload_json::jsonb ->> 'kind' = 'reply'
+  and payload_json::jsonb #>> '{request_trace,product_activation_id}' = $3
+group by state
+statedelivery_countselect title, summary, build_summary, install_markdown from ideas.ideas where idea_id = $1select idea_item_id, title, summary, instructions, build_plan_markdown from ideas.idea_items where idea_id = $1 and idea_item_id = any($2) order by position asc, idea_item_id asctitlesummarybuild_summaryselect job_id, source_path, schedule_expr, last_status, created_at::text as created_at from scheduler.jobs where created_at >= $1 and created_at <= $2 order by created_at desc limit $3select space_slug, display_name, construction_status, coalesce(created_at_text, created_at::text) as created_at from spaces.spaces where source = 'local' and created_at >= $1 and created_at <= $2 order by created_at desc limit $3job_idsource_pathschedule_exprlast_statuscreated_at(none)select slug, title, audio_path, created_at from podcasts.episodes where created_at::timestamptz >= $1 and created_at::timestamptz <= $2 order by created_at desc limit $3space_slugdisplay_nameconstruction_statusaudio_pathselect 1::bigint from runtime.idea_execution_pending where reconciled_at is null limit 1select pending.activation_id, pending.root_submission_message_id, pending.session_id, pending.idea_card_id, pending.idea_card_kind, accepted.metadata->>'activation_mode' as accepted_activation_mode, case when jsonb_typeof(accepted.metadata->'selected_item_ids') = 'array' then array( select jsonb_array_elements_text( accepted.metadata->'selected_item_ids' ) ) end as accepted_selected_item_ids, coalesce(accepted.metadata->>'authoring_request_id', accepted_run.request_id, source.metadata_json->>'authoring_request_id', source_run.request_id) as authoring_request_id, coalesce(accepted.metadata->>'run_id', source.metadata_json->>'run_id') as authoring_run_id, pending.dispatched_at from runtime.idea_execution_pending pending left join lateral ( select metadata from ideas.idea_events where idea_events.idea_id = pending.idea_card_id and idea_events.event_type = 'decision' and idea_events.metadata->>'decision' = 'accepted' and idea_events.metadata->>$1 = $2 and idea_events.metadata->>'activation_id' = pending.activation_id order by created_at desc, event_id desc limit 1 ) accepted on true left join self_improvement.runs accepted_run on accepted_run.run_id = accepted.metadata->>'run_id' left join lateral ( select metadata_json from ideas.idea_sources where idea_sources.idea_id = pending.idea_card_id and not (source_namespace = 'ideas' and source_kind = 'atlas_icon') order by (source_namespace = 'self_improvement.ideas' and source_kind = 'generated_card') desc, position asc nulls last, source_namespace asc, source_kind asc, source_id asc limit 1 ) source on true left join self_improvement.runs source_run on source_run.run_id = source.metadata_json->>'run_id' where pending.reconciled_at is null order by pending.dispatched_at asc limit $3insert into runtime.idea_execution_pending (activation_id, root_submission_message_id, session_id, idea_card_id, idea_card_kind) values ($1, $2, $3, $4, $5) on conflict (activation_id) do nothingupdate runtime.idea_execution_pending set reconciled_at = now() where activation_id = $1 and reconciled_at is nulldelete from runtime.idea_execution_pending where activation_id in ( select activation_id from runtime.idea_execution_pending where reconciled_at is not null and reconciled_at < now() - make_interval(secs => $1::double precision) limit $2)insert into runtime.maintenance_markers (marker_key, detail_json) values ($1, $2) on conflict (marker_key) do nothing returning marker_keyselect root_submission_message_id from runtime.idea_execution_pending where dispatched_at >= $1select dispatched_at, root_submission_message_id from runtime.idea_execution_pending where session_id = $1 order by dispatched_at asc
+select coalesce(activation.text_value, activation.scalar_value) as activation_id,
+       coalesce(evidence.text_value, evidence.scalar_value) as evidence_json
+from runtime.events events
+join runtime.event_payload_fields activation
+  on activation.event_seq = events.event_seq
+ and activation.field_path = '/metadata/activation_id'
+join runtime.event_payload_fields evidence
+  on evidence.event_seq = events.event_seq
+ and evidence.field_path = '/metadata/evidence_json'
+where events.event_name = 'message.internal'
+  and events.source = $1
+  and coalesce(activation.text_value, activation.scalar_value) = any($2::text[])
+order by events.event_seq asc
+runtime.idea_execution_evidenceevidence_jsonignoring mismatched durable idea execution evidenceignoring malformed durable idea execution evidenceselect pending.root_submission_message_id, accepted.metadata->>'activation_mode' as activation_mode, array( select jsonb_array_elements_text( accepted.metadata->'selected_item_ids' ) ) as selected_item_ids from runtime.idea_execution_pending pending join lateral ( select metadata from ideas.idea_events where idea_events.idea_id = pending.idea_card_id and idea_events.event_type = 'decision' and idea_events.metadata->>'decision' = 'accepted' and idea_events.metadata->>$4 = $5 and idea_events.metadata->>'activation_id' = pending.activation_id and idea_events.metadata->>'activation_mode' is not null and jsonb_typeof(idea_events.metadata->'selected_item_ids') = 'array' order by created_at desc, event_id desc limit 1 ) accepted on true where pending.session_id = $1 and pending.idea_card_id = $2 and pending.dispatched_at > $3 order by pending.dispatched_at descidea_execution_pending.activation_scopes_by_carrieridea_execution_doctor.provider_delivery_summaryidea_execution_doctor.idea_groundingidea_execution_doctor.artifact_candidatesidea_execution_pending.has_pendingactivation_scope_snapshot_authorityserver_execution_v1idea_execution_pending.undone_batchidea_execution_pending.enqueueidea_execution_pending.mark_reconciledidea_execution_pending.pruneidea_execution_pending.claim_markeridea_execution_pending.carrier_ids_sinceidea_execution_pending.session_dispatch_timesidea_execution_pending.execution_evidenceidea_execution_pending.recent_session_card_activation_scopesdatabase write admission gate closedadmission_timeoutcalled `Result::unwrap()` on an `Err` valueaccepted_activation_modeaccepted_selected_item_idsfull_cardlegacy_unknownselected_itemsroot_submission_message_idsession_ididea_card_ididea_card_kindauthoring_request_iddispatched_aturlmedia_urlsigned_urlurievent hatch-engine/crates/hatch-db-ideas/src/idea_execution_reconcile.rs:212hatch_db_ideas::idea_execution_reconcilemessagehatch-engine/crates/hatch-db-ideas/src/idea_execution_reconcile.rsevent hatch-engine/crates/hatch-db-ideas/src/idea_execution_reconcile.rs:219payload_activation_idstruct IdeaExecutionEvidenceSnapshotConfigurationInvalidArgumentIoTlsRowNotFoundTypeNotFoundtype_nameColumnIndexOutOfBoundsindexlenColumnNotFoundColumnDecodesourceEncodeDecodeAnyDriverErrorPoolTimedOutPoolClosedWorkerCrashedMigrateInvalidSavePointStatementBeginFailed

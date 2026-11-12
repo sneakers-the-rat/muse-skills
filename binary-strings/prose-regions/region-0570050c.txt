@@ -1,0 +1,61 @@
+ group by work_class, maintenance_kind, state, phase, subphase
+         order by blocker_count desc,
+                  work_class asc,
+                  maintenance_kind asc nulls last,
+                  state asc,
+                  phase asc nulls last,
+                  subphase asc nulls last and not (work_id = any())with recursive pending_reconciler_classes(work_class) as (
+           select unnest(::text[])
+         ), stale_supervisor_classes(work_class) as (
+           select unnest(::text[])
+         ), candidate_ids as (
+           (select work_items.work_id
+            from runtime.work_items
+            join pending_reconciler_classes using (work_class)
+            where work_items.terminalized_at is null
+              and (
+                work_items.state = 'terminalizing'
+                or (
+                  work_items.work_class = 'subagent'
+                  and work_items.state in (
+                    'completed',
+                    'failed',
+                    'cancelled',
+                    'interrupted',
+                    'timed_out',
+                    'preempted',
+                    'merged'
+                  )
+                )
+              )
+            order by work_items.updated_at asc
+            limit )
+           union
+           (select work_items.work_id
+            from runtime.work_items
+            join stale_supervisor_classes using (work_class)
+            where work_items.terminalized_at is null
+              and work_items.deadline_at is not null
+              and work_items.deadline_at <= now()
+            order by work_items.deadline_at asc, work_items.created_at asc
+            limit )
+           union
+           (select work_items.work_id
+            from runtime.work_items
+            join stale_supervisor_classes using (work_class)
+            where work_items.terminalized_at is null
+              and work_items.heartbeat_at <= ::timestamptz
+              and work_items.heartbeat_at <= case
+                    when work_items.phase = 'tool_dispatch'
+                      or work_items.subphase = 'compaction_decision'
+                      then ::timestamptz
+                    when work_items.phase = 'before_inference'
+                     and work_items.subphase = 'provider_request_ready'
+                      then ::timestamptz
+                    else ::timestamptz
+                  end
+            order by work_items.heartbeat_at asc, work_items.created_at asc
+            limit work_itemscandidatesselect work_id, work_class, root_session_id, agent_id, root_message_id, stream_owner_message_id
+         from runtime.work_items
+         where terminalized_at is null
+           and state = 'waiting_for_user_confirmation'€Î
