@@ -22,10 +22,10 @@ platform locations are in `~/docs/client-surfaces.md`.
   tell them where Invite is. Invite is the only way to get a link
   others can open: an uploaded or exported page downloads as a file instead of
   opening.
-{{ARTIFACT_PUBLISHING}}companion_outbound_bridge_contextoperation_interruptedmailbox.read_messagesThe available tool set has been modified. Do not attempt to use or call any tools that appear in the system prompt but do not appear in this developer message.
+{{ARTIFACT_PUBLISHING}}companion_outbound_bridge_contextoperation_interruptedEarlier compacted context was removed after a group message was deleted.The available tool set has been modified. Do not attempt to use or call any tools that appear in the system prompt but do not appear in this developer message.
 
 No tools available.
-initialized by trim_to_budgetlogintranscript_timezone%b %-d, %Y at %-I.%M %p %Z%B %-d, %Y, %-I:%M %papp.dbyield_elapsedsentinel_evaluation_holdexplicit_backgroundget_connection_statusget_user_infolist_payment_methodsadd_payment_methodconfigure_balancelist_shipping_addresseshandoff-marker.slot0handoff-marker.slot1handoff-marker.selectorsource_policyalready_ran_this_cycleempty_sliceread_only_workspaceno_active_turnperiodic_flush_coveredmemory_flush_source_policy_overriddenpersistence_unconfirmedpersistedwrite_rejectedpreparationcompaction_message_idcompaction_conversation_epochcompaction_failure_reasonpersistenceconfigask_for_information# Spaces and the sidebar
+initialized by trim_to_budgetapp.dbyield_elapsedsentinel_evaluation_holdexplicit_backgroundget_connection_statusget_user_infolist_payment_methodsadd_payment_methodconfigure_balancelist_shipping_addressespersisteddiscardedassistant_item_idcheckpoint_reusedcheckpoint_reused_after_joinsync_compactedcheckpoint_superseded_syncinference_overflow_recoveryinference_retry_decisionwill_retrybackoff_msretry_not_before_utc_msdurable_inference_recovery_mergeduser_message_mergedask_for_informationsystem-update# Spaces and the sidebar
 
 Space is the new name for a web artifact, a web page or app you build for
 the user. `~/docs/artifacts.md` and the tool names still say web artifact.
@@ -149,7 +149,7 @@ user asks, use a `ui.sidebar` move with the exact `saved_space:`
 artifact_ref and `space_id` from the same `artifact.list` entry. A saved share
 whose entry has no `space_id` cannot be moved. In tab order, a saved share
 moves like any other tab.
-spaces.mdrewrote home.yaml without its retired keysfailed to rewrite home.yaml without retired keysfailed to parse home.yaml for normalizationconnection settings await the offline chat migrationfailed to read home.yaml for normalizationSUBAGENTS_MONITORING.md.subagents_monitoring_prompt_refreshed_20260317.subagents_monitoring_prompt_refreshed_20260728.subagents_monitoring_prompt_refreshed_20260824ACTIVITY_LOG.mdfailed to remove retired root filefailed to inspect retired root file# Goals
+spaces.mdconnection settings await the offline chat migrationrewrote home.yaml without its retired keysfailed to rewrite home.yaml without retired keysfailed to parse home.yaml for normalizationfailed to read home.yaml for normalizationSUBAGENTS_MONITORING.md.subagents_monitoring_prompt_refreshed_20260317.subagents_monitoring_prompt_refreshed_20260728.subagents_monitoring_prompt_refreshed_20260824ACTIVITY_LOG.mdfailed to remove retired root filefailed to inspect retired root file# Goals
 
 Personal goals are enduring outcomes the user is working toward; help them
 make real progress.

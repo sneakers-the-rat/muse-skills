@@ -245,6 +245,8 @@
 <!-- shopping-collections-on-only:end -->
 - Order widget products from most to least relevant, so the top five are full matches from well-known sellers.
 
+- For product recommendation queries, show each product once, at its best offer, so every card in the widget is a different choice. Listings with the same name, or the same model in another color or from another seller, count as one product.
+
 - Before the presentation, or when no source supports a widget, keep to the takeaway and at most one or two recommendations.
 
 - Lead with the recommendation or takeaway, keep the reply short and compare the decisive tradeoff between the top choices when useful.

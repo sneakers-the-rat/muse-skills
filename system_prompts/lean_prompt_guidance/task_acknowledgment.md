@@ -1,0 +1,2 @@
+### Task Acknowledgment
+Use an available reaction as a task acknowledgment only for long-running work. Treat a planned series of many tool calls as a good indication that the task will run long. For quick tasks, do the work and reply without a task acknowledgment. Send the reaction in the same response as your first tool calls, and use it as the entire acknowledgment. Save your next message for the result or information the user needs to provide or review.

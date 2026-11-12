@@ -1,0 +1,108 @@
+background exec result was not admittedexec obligation unavailableexecutor completion claim unavailableexec completion accounting failedbrowser route eligibility unavailablebrowser route eligibility timed outvoice_automatic_genderbrowser interaction service unavailablebrowser submission is no longer activebrowser stop was not confirmedspecialist submission requiredspecialist invocation requiredSELECT activity_thread_id, action_index FROM activity_monitor_thread_actions WHERE action_id = $1 LIMIT 1
+SELECT status, finish_status
+FROM activity_monitor_threads
+WHERE activity_thread_id = $1
+LIMIT 1
+FOR UPDATE
+
+SELECT a.activity_thread_id
+FROM activity_monitor_agent_threads a
+JOIN activity_monitor_threads g ON g.activity_thread_id = a.activity_thread_id
+WHERE a.agent_id = $1
+  AND g.status = $2
+LIMIT 1
+FOR UPDATE OF g
+
+UPDATE activity_monitor_threads
+SET status = $2,
+    finished_at = NULL,
+    finish_message = NULL,
+    finish_status = NULL,
+    finish_status_reason = NULL
+WHERE activity_thread_id = $1
+
+SELECT COALESCE(MAX(action_index), 0) + 1
+FROM activity_monitor_thread_actions
+WHERE activity_thread_id = $1
+activity_thread_id is required when no current activity_thread is set
+INSERT INTO activity_monitor_thread_actions (
+    action_id, activity_thread_id, action_index, agent_id, agent_depth, icon, title, subtitle, report, status, created_at
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+ON CONFLICT(action_id) DO UPDATE SET
+    activity_thread_id = excluded.activity_thread_id,
+    action_index = excluded.action_index,
+    agent_id = excluded.agent_id,
+    agent_depth = COALESCE(excluded.agent_depth, activity_monitor_thread_actions.agent_depth),
+    icon = excluded.icon,
+    title = excluded.title,
+    subtitle = excluded.subtitle,
+    report = excluded.report,
+    status = excluded.status,
+    created_at = LEAST(activity_monitor_thread_actions.created_at, excluded.created_at)
+RETURNING action_index, action_seq, action_id, activity_thread_id, agent_id, agent_depth, icon, title, subtitle, report, status, created_at, nextval(pg_get_serial_sequence('activity.activity_monitor_thread_actions', 'action_seq'))::bigint AS write_ordinal
+action_seqwrite_ordinal
+SELECT action_index, action_seq, action_id, activity_thread_id, agent_id, agent_depth, icon, title, subtitle, report, status, created_at
+FROM activity_monitor_thread_actions
+WHERE activity_thread_id = $1
+ORDER BY action_index ASC, action_seq ASC
+
+SELECT action_index, action_id, activity_thread_id, agent_id, agent_depth, icon, title, subtitle, report, status, created_at
+FROM activity_monitor_thread_actions
+WHERE action_id = $1
+LIMIT 1
+
+SELECT action_index, action_id, activity_thread_id, agent_id, agent_depth, icon, title, subtitle, report, status, created_at
+FROM (
+    SELECT
+        action_index,
+        action_id,
+        activity_thread_id,
+        agent_id,
+        agent_depth,
+        icon,
+        title,
+        subtitle,
+        report,
+        status,
+        created_at,
+        action_seq AS insertion_order
+    FROM activity_monitor_thread_actions
+    WHERE activity_thread_id = $1
+    ORDER BY action_index DESC, insertion_order DESC
+    LIMIT $2
+)
+ORDER BY action_index ASC, insertion_order ASC
+
+SELECT user_message_id
+FROM activity_monitor_carrier_user_messages
+WHERE carrier_message_id = $1
+  AND ($2::text IS NULL OR root_agent_id IS NULL OR root_agent_id = $2)
+ORDER BY link_seq ASC
+
+SELECT b.activity_thread_id
+FROM activity_monitor_message_threads b
+WHERE b.message_id = $1
+
+SELECT b.activity_thread_id
+FROM activity_monitor_message_threads b
+JOIN activity_monitor_threads g ON g.activity_thread_id = b.activity_thread_id
+WHERE b.message_id = $1
+  AND g.status = $2
+
+SELECT activity_thread_id, name, subtitle, icon, emoji, status, created_at, finished_at, finish_message,
+       finish_status, finish_status_reason, activity_thread_kind, space_slug, status_title,
+       expected_finish_description
+FROM activity_monitor_threads
+WHERE activity_thread_id = $1
+
+SELECT activity_thread_id
+FROM activity_monitor_threads
+WHERE status = $1
+ORDER BY created_at DESC, activity_thread_id DESC
+
+INSERT INTO activity_monitor_threads (
+    activity_thread_id, name, subtitle, status_title, icon, emoji, activity_thread_kind, space_slug,
+    expected_finish_description, status, created_at, finished_at, finish_message
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NULL, NULL)
+accepted dance has no avatar statebrowser input publication did not retain its reserved identitycontext_store.initializehatch-runtimetask compaction storage is unavailableartifact_icon_snapshotinference-proxy returned an invalid model selection routeFormer goal connections must be an arrayruntime.browser_tasks.max_training_tier_jsonruntime.browser_tasks.chat_context_jsonflight file object is invalidlist row file path could not be resolvedlist row JSON pointer does not existflight stop count exceeds supported rangeAgentControl requires HatchStorage for runtime work DB access[This subagent was cancelled before it finished, so it has no result of its own. Treat this subtask as incomplete, not an empty or "nothing found" answer.]
+recovery owner validator is not configuredmail validator unavailableartifact metadata owner is missingartifact_icon_predecessorartifact metadata is missingartifact storage is unavailablecanonical artifact icon is missing after bootstrapforget work was refused because the main conversation was clearedCompanion requires a public text rootfailed to load parent message source map for spawn inheritancefailed to load parent client context for spawn inheritancefailed to load parent reply prefixes for spawn inheritancefailed to load parent transcript provenance for spawn inheritancebrowser task presence coordinator dropped settlementsafety quarantine could not finish copied-context cleanupbrowser storage unavailablebrowser invocation missingruntime DB unavailable for space constructionphone scheduling storage is unavailable/self_improvement/run_idexecution has no durable presentation chat owneractivity feed store requires HatchStorageactivity thread finish requires the daemon event channelactivity thread finish coordinator closedfailed to enqueue daemon-owned activity thread finishPrepare for the next caller request. Reply with one word./file_artifact_build/requestadmission_acceptance_wearable_announcement_contextappapp-audioaudio-wearablemcu-wearablemicroechat history anchor has a negative sequenceboundary_seqexplicit chat event seqclient_timezoneadmission_acceptance_hidden_chat_guidancenudgesprivate voice image persistence lock is poisonedprivate voice image persistence ended without a resultinference continuation was not persistedmaterialize_submissionprompt_optionsskill_snapshottool_snapshotrequest_overlayclient_context_snapshotdevice_snapshotgoals_snapshothistory_projectionsystem_prompt_composecompaction_decisionprovider_request_readyrecovery_phase_deferredsubagent handoff requires an append identityunknown persistence failureworker storage missingbackground_workerbrowser tab is not heldbrowser invocation chain has no rootretained terminal checkpoint has no message payloadretained terminal checkpoint changed before live successor resumeretained terminal checkpoint has no durable payload fingerprintadmission_acceptance_steer_noticeadmission_acceptance_restart_drain_checkrestart drain in progress; rejecting new submissionadmission_acceptance_message_task_spawnadmission_session_acceptancecompleted startup quota rejection has no eventnegative startup quota rejection event sequencecompleted startup quota rejection event is absentadmission_agent_queue_waitadmission_agent_submission_sendMuse's browser first joined its session with this company and loaded the page through it, so nothing else was sent.Muse's browser tried to join its session with this company, which reloaded the page, so nothing else was sent.refused_before_dispatchunexpected browser responsecheckpointroot_completion_wait_for_subagentsThe follow-up no longer existsbrowser task has no pending purchase lookupbrowser.browseno eligible checkpointbackground compaction model requesteager_background_compaction_state_updateeager_background_compaction_checkpoint_persistworkflowWorkDirbrowser.request_inputsubprocess executor is draining; rejecting new subprocess startmagi encrypted reasoning: missing reserved tool-call positioncould not resolve transferred reply referencecontext_seqpeer_sendmessage.assistantproactive_reply_to_message_idrealtime voice Chat write crossed conversation clearowner_subagent_depth1owner_subagent_depth2subagent bootstrap is no longer authorizedruntime.chat_worker_mailbox_noticeimagevideoattachmentswaiting for durable self-improvement fleet phasedurable self-improvement fleet phase admittedpre_llm_runtime_preppre_llm_skill_loadpre_llm_context_assemblyturn_endedworker ended without a clean end of turnworker lost its active input owner before completionpre_llm_span_syncpre_llm_submission_resolveskipped terminal startup input before executionsystem stop hook could not build presentation trace contextpre_llm_inference_prepdurable_inference_recoveryside-chat policy host is unavailablestate_bookkeeping_endcompaction model resolution timed out before inferencecompaction limit for inferencecontext_window_setup_endmodel_compaction_triggeragent_compaction_triggermodel_context_windowcompaction_retained_tail_tokensmodel_switch_compaction_endtranscript_commit_markerrestart_phase_before_inferenceproactivityprompt_token_estimateprompt_completion_telemetrysubagent prompt rendered without any user or task input; refusing inference because the conversation state was lostprompt_payload_materializationprompt_item_countSxS primary model has no alternate pairingruntime.cron_delivery_filterpre_compaction_contextrestart_cancellation_checks_endpost_compaction_yieldrestart_phase_inference_in_flightcommentary_only_end_turncontinuation_scheduledthinking_only_end_turnretry_scheduledforeground_rootlink cards from a refused reply were not mintedfailed to prune overridden turn context itemspreserving older frozen drain image; coverage of current submission is unprovenThe assistant message above was replaced with a standard refusal string because our safety classifiers flagged its original content as a potential violation of our safety policy. You cannot see what was removed; do not try to recover or re-create it. Do not continue the specific request you were answering, whether by restating that content, rephrasing it, using a tool or helper, or answering from your own knowledge. If the user asks for it again, including in different words, concisely decline to engage with that topic and suggest another; do not agree to answer it. Requests on other subjects are evaluated independently.cbrn_response_refusalThe request above was answered with a standard refusal string because our safety classifiers flagged it as a potential violation of our safety policy. Do not answer that request, whether by rephrasing it, using a tool or helper, or answering from your own knowledge. If the user asks for it again, including in different words, concisely decline to engage with that topic and suggest another; do not agree to answer it. Requests on other subjects are evaluated independently.cbrn_prompt_refusalfailed to persist the CBRN refusal tombstoneSxS terminal binding differs from the latest announcement; dropping alternateworker provider ended with a missing tool callcontinuing after commentary-only model end turnfailed to finalize partial assistant output during hard cancel; continuing with abortmagi encrypted reasoning:tool_call_resolutionretrying inference after invalid model tool call name before visible outputprovider_stream_retryable_errorretrying inference after streamed retryable anthropic error before visible outputretry_budget_exhaustedvisible_output_emittedretrying streamed inference after decode failuredecode failure exhausted immediate retries; checking durable recoverydecode failure followed visible output; preserving partial assistant output without retryprovider_retryable_errorretrying inference after retryable provider error before visible outputsystem_cron_capacity_shedprompt poison recovery found no quarantine candidateno_quarantine_candidateprompt_poison_recoveryquarantined prompt context after inference failurecurrent_iteration_input_quarantined€•

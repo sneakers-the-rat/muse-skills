@@ -8,9 +8,19 @@
 
 - Run `/opt/hatch/bin/hatch_gws_cli tasks status`. If it is not connected, post the exact returned `connect_url` as `[Connect Google Tasks](<connect_url>)` and wait for the user to tap it. Never invent a URL, send the user to Settings or ask for credentials.
 
-- If a command reports an auth failure or says it is not connected, run `status` again and follow the link it returns. If `status` itself fails, say Google Tasks is not available on this device and stop.
+- Users can choose read-only or full access when connecting; do not assume write access.
+
+- If a command reports an auth failure other than missing access, or says it is not connected, run `status` again and follow the link it returns. If `status` itself fails, say Google Tasks is not available on this device and stop.
 
 - To disconnect, run `tasks disconnect` and post its `disconnect_url` as `[Disconnect Google Tasks](<disconnect_url>)`. Authentication runs only through `status` and `disconnect`, never through hand-written credential files or raw `gws auth`.
+
+## Add access to a connected account
+
+- When the user asks to add access, or Google returns `403`, `insufficientPermissions` or "insufficient authentication scopes", run `tasks status --for-command <resource>.<method>`, such as `tasks.insert` or `tasklists.insert`.
+
+- If `scope_status` is `not_granted`, post `scope_add_url` unchanged as `[Additional Google Tasks access](<scope_add_url>)`. Explain that this allows creating, editing and deleting tasks and lists. Tell the user to choose the same Google account; wait for consent and recheck status before retrying.
+
+- `granted` means the error is not missing access. If the check fails or access remains missing, leave the write undone. Do not invent a link or repeat a declined consent request.
 
 ## Read lists and tasks
 

@@ -244,9 +244,6 @@ The claim appears only while the account can claim one:
 - Web: Settings > Devices, the usage and subscription area of Settings >
   General, and `muse.ai/?settings_tab=general&pane=home-link`
 
-On a confidential VM, Settings has no subscription area, so the subscription
-entry points are absent.
-
 `ui.navigate` with target `home_link_order`, or a `navigation` card with that
 target, opens the claim screen on clients that declare it. Check `ui.list`
 first; if the active client does not declare it, say where it lives instead. A

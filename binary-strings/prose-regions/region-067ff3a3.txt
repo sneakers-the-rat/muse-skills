@@ -1,0 +1,227 @@
+delete from health.samples
+                 where provider = $1
+                   and node_id is not distinct from $2
+                   and start_at <= $4
+                   and coalesce(end_at, start_at) >= $3internal error: entered unreachable code: bundle-specific clear always includes a sample typedelete from health.samples
+                 where provider = $1
+                   and node_id is not distinct from $2
+                   and sample_type = $3
+                   and bundle_id is null
+                   and start_at <= $5
+                   and coalesce(end_at, start_at) >= $4delete from health.samples
+                 where provider = $1
+                   and node_id is not distinct from $2
+                   and sample_type = $3
+                   and bundle_id is not distinct from $4
+                   and start_at <= $6
+                   and coalesce(end_at, start_at) >= $5delete from health.sample_values where sample_id = any($1)insert into health.events (
+                   provider, node_id, bundle_id, timezone, event_type, event_at, event_end_at
+                 )
+                 values ($1, $2, $3, $4, $5, $6, $7)
+                 returning health_event_idinsert into health.events (
+                   provider, node_id, external_event_id, bundle_id, timezone, event_type,
+                   event_at, event_end_at
+                 )
+                 values ($1, $2, $3, $4, $5, $6, $7, $8)
+                 returning health_event_idstart_epoch_secend_epoch_secbundle_idevent_typehealth.eventsinsert into health.sample_values (
+               sample_id, value_name, unit, numeric_value, text_value
+             )  on conflict (sample_id, value_name)
+              do update set
+                unit = excluded.unit,
+                numeric_value = excluded.numeric_value,
+                text_value = excluded.text_valuesleep_awake_duration_secsleep_core_duration_secsleep_deep_duration_secsleep_rem_duration_secsleep_asleep_unspecified_duration_secinsert into health.sleep_sessions (
+               provider, node_id, external_sleep_id, bundle_id, timezone, start_at, end_at,
+               quality_score, awake_seconds, core_seconds, deep_seconds, rem_seconds,
+               asleep_unspecified_seconds, asleep_seconds, in_bed_seconds
+             )
+             values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+             returning sleep_session_idquality_scoresleep_in_bed_duration_sechealth.sleep_sessionsaggregatesinsert into health.samples (
+               provider, node_id, external_sample_id, bundle_id, timezone, sample_type,
+               start_at, end_at, unit, numeric_value, text_value
+             )  returning sample_iddelete from health.record_values where record_table = $1 and record_id = $2insert into health.record_values (
+               record_table, record_id, value_name, unit, numeric_value, text_value
+             )  on conflict (record_table, record_id, value_name)
+              do update set
+                unit = excluded.unit,
+                numeric_value = excluded.numeric_value,
+                text_value = excluded.text_valueinsert into health.workouts (
+               provider, node_id, external_workout_id, bundle_id, timezone, workout_type,
+               start_at, end_at, active_seconds, energy_kcal, distance_meters,
+               hr_max_bpm, hr_average_bpm
+             )
+             values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+             returning workout_idactive_duration_secsenergy_burned_kcaldistance_metershr_max_bpmhr_average_bpmworkout_typehealth.workoutsinsert into health.aggregates (
+               provider, node_id, timezone, aggregate_type, period_start, period_end,
+               numeric_value, unit
+             ) with ns as (
+             select tstzrange($4::timestamptz, $5::timestamptz) as s
+         ),
+         matched as (
+             delete from health.synced_ranges
+             where provider = $1
+               and node_id is not distinct from $2::text
+               and category = $3
+               and (span && (select s from ns) or span -|- (select s from ns))
+             returning lower(span) as lo, upper(span) as hi
+         ),
+         bounds as (
+             select min(lo) as lo, max(hi) as hi from matched
+         )
+         insert into health.synced_ranges (provider, node_id, category, span)
+         select $1, $2::text, $3, tstzrange(
+             least(lower(ns.s), coalesce((select lo from bounds), lower(ns.s))),
+             greatest(upper(ns.s), coalesce((select hi from bounds), upper(ns.s)))
+         )
+         from nsselect pg_advisory_xact_lock_shared(hashtext($1))health.records.writedelete from health.samples
+         where node_id = $1
+           and start_at <= $3
+           and coalesce(end_at, start_at) >= $2select distinct provider from health.synced_ranges where node_id = $1delete from health.samples
+         where provider = $1
+           and node_id is not distinct from $2
+           and sample_type = $3
+           and start_at <= $5
+           and coalesce(end_at, start_at) >= $4active reconciliation changed while its staging was lockedfenced invalid device reconciliation attempt
+    select
+        node_id,
+        coalesce(display_name, node_id) as display_name,
+        platform,
+        enabled_permissions_json,
+        commands_json,
+        data_sources_json,
+        version,
+        device_family,
+        model_id,
+        metadata_json,
+        is_wakeup_supported,
+        delivery_app,
+        invoke_protocol,
+        -- Sentinel rejects a pairing identity with a space; created_at::text has one.
+        coalesce(
+            paired_at_text,
+            to_char(created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')
+        ) as paired_at,
+        coalesce(last_seen_at_text, last_seen_at::text, created_at::text) as last_seen_at,
+        status,
+        pairing_status
+    from device.nodes
+pairing_status <> 'revoked'
+    update device.nodes
+    set health_last_received_at = $1,
+        health_last_sync_status = 'success',
+        health_last_sync_error = null
+    where node_id = $2
+    failed to prepare hook exec cgroup; continuing without cgroup attributionHATCH_HOOK_RUNTIME# shellcheck shell=bash
+
+_HATCH_HOOK_DISABLE_AFTER_RUN=false
+
+_hatch_hook_compact_json() {
+    local value="${1-}"
+    printf '%s' "$value" | jq -ce '.'
+}
+
+_hatch_hook_object_json() {
+    local value="${1-}"
+    printf '%s' "$value" | jq -ce 'select(type == "object")'
+}
+
+_hatch_hook_emit() {
+    local decision="$1"
+    local reason="${2-}"
+    local payload="${3-}"
+    local result
+
+    if [[ -n "$payload" ]]; then
+        payload="$(_hatch_hook_compact_json "$payload")" || return
+        result="$(
+            jq -cn \
+                --arg decision "$decision" \
+                --arg reason "$reason" \
+                --argjson payload "$payload" \
+                --argjson disable_after_run "$_HATCH_HOOK_DISABLE_AFTER_RUN" \
+                '{
+                    decision: $decision,
+                    reason: $reason,
+                    payload: $payload
+                } + if $disable_after_run then {disable_after_run: true} else {} end'
+        )" || return
+    else
+        result="$(
+            jq -cn \
+                --arg decision "$decision" \
+                --arg reason "$reason" \
+                --argjson disable_after_run "$_HATCH_HOOK_DISABLE_AFTER_RUN" \
+                '{
+                    decision: $decision,
+                    reason: $reason
+                } + if $disable_after_run then {disable_after_run: true} else {} end'
+        )" || return
+    fi
+
+    printf 'HATCH_HOOK_RESULT:%s\n' "$result"
+    exit 0
+}
+
+silent() {
+    _hatch_hook_emit "silent" "${1-}" "${2-}"
+}
+
+wake() {
+    _hatch_hook_emit "wake" "${1-}" "${2-}"
+}
+
+disable_after_run() {
+    _HATCH_HOOK_DISABLE_AFTER_RUN=true
+}
+
+log() {
+    local message="${1-}"
+    local fields="${2-}"
+    local entry
+
+    if [[ -z "$fields" ]]; then
+        fields='{}'
+    fi
+    fields="$(_hatch_hook_object_json "$fields")" || return
+    entry="$(
+        jq -cn \
+            --arg message "$message" \
+            --argjson fields "$fields" \
+            '$fields + {message: $message}'
+    )" || return
+    printf 'HATCH_HOOK_LOG:%s\n' "$entry" >&2
+}
+
+_hatch_hook_state_path() {
+    printf '%s/%s.json' "${HATCH_HOOK_STATE_DIR:?HATCH_HOOK_STATE_DIR is unset}" \
+        "${HATCH_HOOK_ID:?HATCH_HOOK_ID is unset}"
+}
+
+# Read this hook's persisted state object. Prints `{}` when nothing has been
+# stored yet or the stored file is unreadable/corrupt, so callers can pipe
+# straight into jq without a first-run special case.
+hook_state_get() {
+    local path
+    path="$(_hatch_hook_state_path)" || return
+    if [[ ! -f "$path" ]]; then
+        printf '{}'
+        return 0
+    fi
+    jq -ce 'select(type == "object")' <"$path" 2>/dev/null || printf '{}'
+}
+
+# Persist this hook's state object. The value is validated on every run, but
+# the write is SKIPPED on dry runs so testing a hook can never consume a
+# detection the next live poll still needs to make.
+hook_state_set() {
+    local value path temporary
+    value="$(_hatch_hook_object_json "${1-}")" || return
+    if [[ "${HATCH_HOOK_DRY_RUN-0}" == "1" ]]; then
+        return 0
+    fi
+    path="$(_hatch_hook_state_path)" || return
+    temporary="${path}.${HATCH_HOOK_INVOCATION_ID:-$$}.tmp"
+    printf '%s\n' "$value" >"$temporary" || return
+    mv -f "$temporary" "$path"
+}
+
+exec /bin/bash -- "$HATCH_HOOK_SCRIPT_PATH"standaloneroot admission cancellation signaled without a resultfailed to register space runtime egress context; falling back to runtime.unknowndelivery_modechunkedfinalization_fencedreconciliation_storage_failedfinalization_failedclaim reconciliation finalizationfinalization_ignored_staleinvalid_stream_uploadfinalization_fence_failedfence invalid reconciliation uploadinvalid_source_snapshotsettle invalid device reconciliation for retrydevice_sync_stateHealth reconciliation applied but device-sync worker wake failedfinalize device reconciliationclient rendering snapshot read failed; keeping lifts inline this turnidle_deferred_reasonqueue_claim_ownerqueue_claim_boot_ididle_gateidle_deferredidle_defer_reasonidle_deferred_lost_raceidle deferral lost queue-claim raceidle.sweepruninternal.self_improvementquiet_window_secsmin_exchange_pairsrecent_exchange_pairsrun_scopeidle_sessionidle_session_since_utcidle_session_last_user_activity_utcidle_session_until_utcidle_runs_today_beforeceiling_remaining_afterdefcon_level_3_daily_capshopping_daily_capdaily cadence read failed; admitting signal-triggered objective cyclethrottledscheduler_grace_secondsprevious_cycle_idprevious_admitted_atsignal_admitted_runssignal_admission_limithatch_inference_defcon_level_3_enabledgatekeeperdefcon_cadencedaily cadence throttled objective cycledaily cadence read failed; admitting automatic objective cycleobjectivestartfailed to stamp boot generation on inline-triggered runproactivity_context_profileretired historical backfill state before objective runfailed to retire historical backfill state; continuing objective runrestart_checkpoint_parkeddurable_owner_retainedrestart_checkpoint_parked_agent_idrestart_checkpoint_parked_atprior_diagnosticsterminal_step_error_coderecovery staging lost current queue or objective lease ownershiprecovery admission cancelled after stagingrestart recovery staging write failed; retaining lease and retryingrecovery admission cancelledobjective execution gate wait cancelledrestart recovery admission cleanup failed; retrying atomicallyqueue_drainlease_wait_reasonlease_wait_requeued_atobjective lease claim result was ambiguous; retrying the same fenced ownerrequeue_lost_racequeued self-improvement runrecovery_pending_lease_ownerbackfill_completehistorical backfill retired; pending march marked completeNo research directory is available for this mission; put the full detail in your `finish_research` summary.&Your research directory is intact at `À,` with these files from before the restart: À€“
