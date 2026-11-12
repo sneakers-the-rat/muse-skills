@@ -1,0 +1,115 @@
+reconcile orphaned approval RuntimeWork during startupfailed to terminalize orphaned approval RuntimeWork at startupapproval wait lost its exact restart checkpoint during daemon restartcomplimentary plan-name lookup failedskipping goal suggestion with missing ideacommitted goal maintenance planning failedfailed to serialize goal detail for goal.updated websocket eventfailed to load goal detail for goal.updated websocket eventfailed to serialize localized goal.updated websocket eventbroadcast goal.updated websocket eventfailed to hydrate goal Space associations from Spaces catalogslug is not a Space slugcontrol receipt not sentvoice_restart_record_readvoice_restart_record_blocking_queueresume_directory_unsetvoice call restart record reader panickedvoice_restart_offerrecord_absentoutside_windowdiscardedarmedvoice call restart record readcall_idvoice_call_restart_rejoin_armedrecord_unreadablediscarded an unreadable voice call restart recordvoice call restart record writer panickedfailed to record the live voice call for the next daemonrecorded the live voice call for a rejoin after restartvoice_call_restart_rejoin_recordedvoice end-call queued as a session stop on the call's realtime streamonepassword{bin}sh-c--enable-app-redirectOAuth authorize URL command returned a failure statusOAuth authorize URL response omitted state; returning URL without request provenanceauthd socket unavailable; returning OAuth authorize URL without request provenancereturning OAuth authorize URL without updating request provenanceauthd socket unavailable; suppressing Shop Pay authorize URLShop Pay authorize URL omitted a unique OAuth stateOAuth authorize URL command response was missing a usable URLOAuth authorize URL command returned invalid JSONOAuth authorize URL command failedShop Pay request provenance binding failed; suppressing authorize URLfailed to reconcile skills statuses with no subscribersfailed to build skills.updated payloadruntime.skillsskill command runtime context registration failedruntime.skills.paced_probeCREDENTIALS_DIRECTORYJARVIS_RUNTIME_CONTEXT_TOKENfailed to prepare hook exec cgroup; continuing without cgroup attributionHATCH_HOOK_RUNTIME# shellcheck shell=bash
+
+_HATCH_HOOK_DISABLE_AFTER_RUN=false
+
+_hatch_hook_compact_json() {
+    local value="${1-}"
+    printf '%s' "$value" | jq -ce '.'
+}
+
+_hatch_hook_object_json() {
+    local value="${1-}"
+    printf '%s' "$value" | jq -ce 'select(type == "object")'
+}
+
+_hatch_hook_emit() {
+    local decision="$1"
+    local reason="${2-}"
+    local payload="${3-}"
+    local result
+
+    if [[ -n "$payload" ]]; then
+        payload="$(_hatch_hook_compact_json "$payload")" || return
+        result="$(
+            jq -cn \
+                --arg decision "$decision" \
+                --arg reason "$reason" \
+                --argjson payload "$payload" \
+                --argjson disable_after_run "$_HATCH_HOOK_DISABLE_AFTER_RUN" \
+                '{
+                    decision: $decision,
+                    reason: $reason,
+                    payload: $payload
+                } + if $disable_after_run then {disable_after_run: true} else {} end'
+        )" || return
+    else
+        result="$(
+            jq -cn \
+                --arg decision "$decision" \
+                --arg reason "$reason" \
+                --argjson disable_after_run "$_HATCH_HOOK_DISABLE_AFTER_RUN" \
+                '{
+                    decision: $decision,
+                    reason: $reason
+                } + if $disable_after_run then {disable_after_run: true} else {} end'
+        )" || return
+    fi
+
+    printf 'HATCH_HOOK_RESULT:%s\n' "$result"
+    exit 0
+}
+
+silent() {
+    _hatch_hook_emit "silent" "${1-}" "${2-}"
+}
+
+wake() {
+    _hatch_hook_emit "wake" "${1-}" "${2-}"
+}
+
+disable_after_run() {
+    _HATCH_HOOK_DISABLE_AFTER_RUN=true
+}
+
+log() {
+    local message="${1-}"
+    local fields="${2-}"
+    local entry
+
+    if [[ -z "$fields" ]]; then
+        fields='{}'
+    fi
+    fields="$(_hatch_hook_object_json "$fields")" || return
+    entry="$(
+        jq -cn \
+            --arg message "$message" \
+            --argjson fields "$fields" \
+            '$fields + {message: $message}'
+    )" || return
+    printf 'HATCH_HOOK_LOG:%s\n' "$entry" >&2
+}
+
+_hatch_hook_state_path() {
+    printf '%s/%s.json' "${HATCH_HOOK_STATE_DIR:?HATCH_HOOK_STATE_DIR is unset}" \
+        "${HATCH_HOOK_ID:?HATCH_HOOK_ID is unset}"
+}
+
+# Read this hook's persisted state object. Prints `{}` when nothing has been
+# stored yet or the stored file is unreadable/corrupt, so callers can pipe
+# straight into jq without a first-run special case.
+hook_state_get() {
+    local path
+    path="$(_hatch_hook_state_path)" || return
+    if [[ ! -f "$path" ]]; then
+        printf '{}'
+        return 0
+    fi
+    jq -ce 'select(type == "object")' <"$path" 2>/dev/null || printf '{}'
+}
+
+# Persist this hook's state object. The value is validated on every run, but
+# the write is SKIPPED on dry runs so testing a hook can never consume a
+# detection the next live poll still needs to make.
+hook_state_set() {
+    local value path temporary
+    value="$(_hatch_hook_object_json "${1-}")" || return
+    if [[ "${HATCH_HOOK_DRY_RUN-0}" == "1" ]]; then
+        return 0
+    fi
+    path="$(_hatch_hook_state_path)" || return
+    temporary="${path}.${HATCH_HOOK_INVOCATION_ID:-$$}.tmp"
+    printf '%s\n' "$value" >"$temporary" || return
+    mv -f "$temporary" "$path"
+}
+
+exec /bin/bash -- "$HATCH_HOOK_SCRIPT_PATH"spaces.updatedConnection work is temporarily unavailablechat.sendMuse connections are temporarily unavailableload proactive worker terminal follow-up evidencebackground job has an unsupported content localeencode internal notification payload requestinternal notification payload request exceeded the allowed sizeinternal notification payload request requires a sync idnotification-payloadsfetchdecode device-data ephemeral fetch responsedevice-data returned an oversized ephemeral payloadencode internal notification payload trace context/opt/hatch/bin/device-dataspawn internal device-data privsep commandinternal device-data command timed outinternal device-data command failedactivity_monitor bumped activity epoch after direct finishactivity_monitor bumped activity epoch after finish summary updateactivity_monitor failed to repair stale non-terminal feed rowactivity_monitor repaired stale non-terminal feed rows for finished activity threadsactivity_monitor failed to read feed entry state during stale finished sweepactivity_monitor ignored finish verdict from live subtitle laneambiguous root sessions for activity thread projectionfailed to resolve root session for activity thread projectionThe activity finished when the conversation turn completed.activity_monitor finished-subtitle lane rendered finish verdictsuppressed new activity thread projection without visible rootpersisting existing activity thread projection without visible rootactivity_monitor_timing activity_thread_projection_persistedfailed to resolve public session id for agent.statusagent.statusSELECT COALESCE(sql, '') AS sql FROM sqlite_master WHERE name NOT LIKE 'sqlite\_%' ESCAPE '\' ORDER BY type, nameSELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite\_%' ESCAPE '\' AND name NOT LIKE '\_\_%' ESCAPE '\' ORDER BY name"" || '
