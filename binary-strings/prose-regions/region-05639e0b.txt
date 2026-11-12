@@ -1,0 +1,43 @@
+connector_call_reasonJARVIS_TRACE_CONTEXTJARVIS_HOMEJARVIS_VAR_LIB_DIRCREDENTIALS_DIRECTORYJARVIS_RUNTIME_CONTEXT_TOKENselect pg_advisory_xact_lock(4841544348435458)insert into context.ingest_attempts
+        (id, source_id, contributor_key, recorded_at, outcome,
+         submitted, inserted, duplicates, event_ids, error_code)
+        values ($1,$2,$3,clock_timestamp(),$4,$5,$6,$7,$8,$9)select last_append_position from context.sources where id = $1 for updateupdate context.sources set last_append_position = $2 where id = $1select id, (group_key is not distinct from $3
+            and payload_kind = $4
+            and occurred_at is not distinct from $5::timestamptz
+            and payload = $6 and content_hints = $7
+            and ttl_seconds is not distinct from $8) as matches
+         from context.events where source_id = $1 and dedupe_key = $2 for sharematchesinsert into context.events
+        (id, source_id, append_position, dedupe_key, group_key, payload_kind,
+         occurred_at, ingested_at, payload, content_hints, ttl_seconds, expires_at, group_id)
+        values ($1,$2,$3,$4,$5,$6,$7,statement_timestamp(),$8,$9,$10,
+            statement_timestamp() + $10::integer * interval '1 second',$11)delete from context.ingest_attempts where id in
+    (select id from context.ingest_attempts where recorded_at < now() - interval '7 days'
+     order by recorded_at, id limit 100)select pg_notify($1, '')hatch_context_committedinsert into context.sources
+    (id, source_domain, source_key, display_name, created_at, last_append_position)
+    values ($1, $2, $3, $4, clock_timestamp(), 0)
+    on conflict (source_domain, source_key) do nothingselect id, source_domain, source_key as key, display_name, created_at::text as created_at
+     from context.sources where source_domain = $1 and source_key = $2
+    select
+        node_id,
+        coalesce(display_name, node_id) as display_name,
+        platform,
+        enabled_permissions_json,
+        commands_json,
+        data_sources_json,
+        version,
+        device_family,
+        model_id,
+        metadata_json,
+        is_wakeup_supported,
+        delivery_app,
+        invoke_protocol,
+        -- Sentinel rejects a pairing identity with a space; created_at::text has one.
+        coalesce(
+            paired_at_text,
+            to_char(created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')
+        ) as paired_at,
+        coalesce(last_seen_at_text, last_seen_at::text, created_at::text) as last_seen_at,
+        status,
+        pairing_status
+    from device.nodes
+pairing_status <> 'revoked'feed maintenance coalesce could not read prompts; leaving the slot to its cron firemaintenance_coalescedfeed maintenance coalesce could not open the schedulerfeed maintenance coalesce could not queue the slotfeed maintenance coalesce slot did not start within the wait boundqueuedfeed maintenance coalesce slot startedfeed maintenance coalesce could not read the slot statusbackground job has an unsupported content localemeta.jsonno deployed artifact found in meta.json (missing obfuscated_id)artifact.destroy_urldestroy/hatch/share_artifact/v1/pin-reminder/currentpin-reminder.currentworkspace/podcastsID3

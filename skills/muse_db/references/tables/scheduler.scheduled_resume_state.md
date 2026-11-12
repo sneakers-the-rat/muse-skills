@@ -28,6 +28,8 @@ Current scheduled resume projection and next registered wake-up.
 
 - `next_resume_job_name` uses `text` and is nullable.
 
+- `written_at_utc` uses `bigint` and is nullable.
+
 ## Keys and relationships
 
 - PRIMARY KEY `scheduled_resume_state_pkey` covers `singleton`.

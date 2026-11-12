@@ -1,0 +1,1 @@
+On {completed_at} you moved from a {from_vm} to a {to_vm}. Earlier turns may describe the old VM; where they conflict, trust this. The move disconnected connectors: {connectors}; channels: {channels}. Check current status before saying one is connected.

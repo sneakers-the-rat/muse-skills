@@ -1,0 +1,259 @@
+delete from health.samples
+                 where provider = $1
+                   and node_id is not distinct from $2
+                   and start_at <= $4
+                   and coalesce(end_at, start_at) >= $3internal error: entered unreachable code: bundle-specific clear always includes a sample typedelete from health.samples
+                 where provider = $1
+                   and node_id is not distinct from $2
+                   and sample_type = $3
+                   and bundle_id is null
+                   and start_at <= $5
+                   and coalesce(end_at, start_at) >= $4delete from health.samples
+                 where provider = $1
+                   and node_id is not distinct from $2
+                   and sample_type = $3
+                   and bundle_id is not distinct from $4
+                   and start_at <= $6
+                   and coalesce(end_at, start_at) >= $5delete from health.sample_values where sample_id = any($1)insert into health.events (
+                   provider, node_id, bundle_id, timezone, event_type, event_at, event_end_at
+                 )
+                 values ($1, $2, $3, $4, $5, $6, $7)
+                 returning health_event_idinsert into health.events (
+                   provider, node_id, external_event_id, bundle_id, timezone, event_type,
+                   event_at, event_end_at
+                 )
+                 values ($1, $2, $3, $4, $5, $6, $7, $8)
+                 returning health_event_idstart_epoch_secend_epoch_secbundle_idevent_typehealth.eventsinsert into health.sample_values (
+               sample_id, value_name, unit, numeric_value, text_value
+             )  on conflict (sample_id, value_name)
+              do update set
+                unit = excluded.unit,
+                numeric_value = excluded.numeric_value,
+                text_value = excluded.text_valuesleep_awake_duration_secsleep_core_duration_secsleep_deep_duration_secsleep_rem_duration_secsleep_asleep_unspecified_duration_secinsert into health.sleep_sessions (
+               provider, node_id, external_sleep_id, bundle_id, timezone, start_at, end_at,
+               quality_score, awake_seconds, core_seconds, deep_seconds, rem_seconds,
+               asleep_unspecified_seconds, asleep_seconds, in_bed_seconds
+             )
+             values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+             returning sleep_session_idquality_scoresleep_in_bed_duration_sechealth.sleep_sessionsaggregatesinsert into health.samples (
+               provider, node_id, external_sample_id, bundle_id, timezone, sample_type,
+               start_at, end_at, unit, numeric_value, text_value
+             )  returning sample_iddelete from health.record_values where record_table = $1 and record_id = $2insert into health.record_values (
+               record_table, record_id, value_name, unit, numeric_value, text_value
+             )  on conflict (record_table, record_id, value_name)
+              do update set
+                unit = excluded.unit,
+                numeric_value = excluded.numeric_value,
+                text_value = excluded.text_valueinsert into health.workouts (
+               provider, node_id, external_workout_id, bundle_id, timezone, workout_type,
+               start_at, end_at, active_seconds, energy_kcal, distance_meters,
+               hr_max_bpm, hr_average_bpm
+             )
+             values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+             returning workout_idactive_duration_secsenergy_burned_kcaldistance_metershr_max_bpmhr_average_bpmworkout_typehealth.workoutsinsert into health.aggregates (
+               provider, node_id, timezone, aggregate_type, period_start, period_end,
+               numeric_value, unit
+             ) with ns as (
+             select tstzrange($4::timestamptz, $5::timestamptz) as s
+         ),
+         matched as (
+             delete from health.synced_ranges
+             where provider = $1
+               and node_id is not distinct from $2::text
+               and category = $3
+               and (span && (select s from ns) or span -|- (select s from ns))
+             returning lower(span) as lo, upper(span) as hi
+         ),
+         bounds as (
+             select min(lo) as lo, max(hi) as hi from matched
+         )
+         insert into health.synced_ranges (provider, node_id, category, span)
+         select $1, $2::text, $3, tstzrange(
+             least(lower(ns.s), coalesce((select lo from bounds), lower(ns.s))),
+             greatest(upper(ns.s), coalesce((select hi from bounds), upper(ns.s)))
+         )
+         from nsselect pg_advisory_xact_lock_shared(hashtext($1))health.records.writedelete from health.samples
+         where node_id = $1
+           and start_at <= $3
+           and coalesce(end_at, start_at) >= $2select distinct provider from health.synced_ranges where node_id = $1delete from health.samples
+         where provider = $1
+           and node_id is not distinct from $2
+           and sample_type = $3
+           and start_at <= $5
+           and coalesce(end_at, start_at) >= $4active reconciliation changed while its staging was lockedfenced invalid device reconciliation attempt
+    update device.nodes
+    set health_last_received_at = $1,
+        health_last_sync_status = 'success',
+        health_last_sync_error = null
+    where node_id = $2
+    insert into agent.chat_worker_requests (request_id,chat_id,generation,worker_agent_id,owner_chat_id,owner_agent_id,origin_json,instruction,created_at_ms,state,result_json,result_submission_id) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) on conflict(request_id) do nothingselect * from agent.chat_worker_requests where request_id=$1 for updatechat worker request identity collisionWITH requested AS (
+           SELECT * FROM unnest($1::text[], $2::bigint[]) AS r(goal_id, revision)
+         ), locked AS MATERIALIZED (
+           SELECT g.goal_id, g.connection_request_id, g.connection_revision,
+                  g.connection_follow_up_at, r.revision
+           FROM goals.goals g JOIN requested r USING (goal_id)
+           WHERE g.connection_id=$3 AND g.source='assistant_tracking'
+           ORDER BY g.goal_id FOR UPDATE OF g
+         ), claimed AS (
+           UPDATE goals.goals g
+           SET connection_follow_up_at=NULL, connection_request_id=$4,
+               connection_revision=g.connection_revision+1
+           FROM locked l WHERE g.goal_id=l.goal_id
+             AND g.status='active' AND l.connection_revision=l.revision
+             AND l.connection_follow_up_at <= now()
+             AND l.connection_request_id IS DISTINCT FROM $4
+           RETURNING g.goal_id
+         ) SELECT (SELECT count(*) FROM claimed) +
+                  (SELECT count(*) FROM locked WHERE connection_request_id=$4)A follow-up must name work from its conversationTracked work changed before the follow-up was queueddevice node_idfull_sync_idreconciliation.finalizeselect data_source, next_full_sync_at, current_full_sync_id,
+            current_full_sync_requester_root_session_id,
+            current_full_sync_requester_presentation_locale,
+            current_full_sync_expires_at, current_full_sync_range_start,
+            current_full_sync_range_end, changed_during_full_sync,
+            last_full_sync_at, last_full_sync_range_start, last_full_sync_range_end
+     from device.data_sync_stateselect pairing_status, data_sources_json
+         from device.nodes where node_id = $1 for updatepairing_statusdata_sources_jsonupdate device.data_sync_state
+         set next_full_sync_at = $4, search_trigger_pending = false,
+             current_full_sync_id = null,
+             current_full_sync_requester_root_session_id = null,
+             current_full_sync_requester_presentation_locale = null,
+             current_full_sync_expires_at = null,
+             current_full_sync_range_start = null,
+             current_full_sync_range_end = null,
+             changed_during_full_sync = false
+         where node_id = $1 and data_source = $2 and current_full_sync_id = $3update device.data_sync_state
+         set next_full_sync_at = null, last_full_sync_at = $4,
+             last_full_sync_range_start = current_full_sync_range_start,
+             last_full_sync_range_end = current_full_sync_range_end,
+             current_full_sync_id = null,
+             current_full_sync_requester_root_session_id = null,
+             current_full_sync_requester_presentation_locale = null,
+             current_full_sync_expires_at = null,
+             current_full_sync_range_start = null,
+             current_full_sync_range_end = null,
+             changed_during_full_sync = false
+         where node_id = $1 and data_source = $2 and current_full_sync_id = $3update device.data_sync_state
+         set next_full_sync_at = null, current_full_sync_id = null,
+             current_full_sync_requester_root_session_id = null,
+             current_full_sync_requester_presentation_locale = null,
+             current_full_sync_expires_at = null,
+             current_full_sync_range_start = null,
+             current_full_sync_range_end = null,
+             changed_during_full_sync = false
+         where node_id = $1 and data_source = $2 and current_full_sync_id = $3select count(*)::bigint as received_chunks,
+                max(c.chunk_index) as max_chunk_index,
+                coalesce(sum(octet_length(c.payload)), 0)::bigint as total_bytes
+         from device.upload_chunks c
+         where c.upload_session_id = $1max_chunk_indexreceived_chunkstotal_bytesselect node_id, route_kind, request_id, datatype, sync_mode,
+                chunk_count, status, updated_at_text, expires_at
+         from device.upload_sessions
+         where upload_session_id = $1
+         for updatedelete from device.upload_sessions
+         where upload_session_id = $1
+           and route_kind = 'data_source_reconciliation'conflicting reconciliation upload session identityreconciliation upload phase conflicts with finalizationreconciliation upload is missing during finalizationreconciliation upload no longer has its exact sealed chunk setdelete from device.calendar_events
+         where node_id = $1 and start_at < $3 and end_at > $2
+           and not (external_event_id = any($4::text[]))delete from device.calendar_events
+             where node_id = $1 and start_at < $2 and end_at <= $2insert into device.calendar_events as stored (
+           node_id, source_platform, external_event_id, title, start_at, end_at, is_all_day,
+           external_calendar_id, calendar_name, availability, location, notes,
+           time_zone, start_local_date, end_local_date, is_recurring, url,
+           event_status, calendar_color
+         )
+         select $1, $2, rows.* from unnest(
+           $3::text[], $4::text[], $5::timestamptz[], $6::timestamptz[],
+           $7::boolean[], $8::text[], $9::text[], $10::text[], $11::text[],
+           $12::text[], $13::text[], $14::date[], $15::date[], $16::boolean[],
+           $17::text[], $18::text[], $19::text[]
+         ) as rows
+         on conflict (node_id, external_event_id) do update set
+           source_platform = excluded.source_platform,
+           title = excluded.title, start_at = excluded.start_at,
+           end_at = excluded.end_at, is_all_day = excluded.is_all_day,
+           external_calendar_id = excluded.external_calendar_id,
+           calendar_name = excluded.calendar_name,
+           availability = excluded.availability, location = excluded.location,
+           notes = excluded.notes, time_zone = excluded.time_zone,
+           start_local_date = excluded.start_local_date,
+           end_local_date = excluded.end_local_date,
+           is_recurring = excluded.is_recurring, url = excluded.url,
+           event_status = excluded.event_status,
+           calendar_color = excluded.calendar_color
+         where row(
+           stored.source_platform,
+           stored.title,
+           stored.start_at,
+           stored.end_at,
+           stored.is_all_day,
+           stored.external_calendar_id,
+           stored.calendar_name,
+           stored.availability,
+           stored.location,
+           stored.notes,
+           stored.time_zone,
+           stored.start_local_date,
+           stored.end_local_date,
+           stored.is_recurring,
+           stored.url,
+           stored.event_status,
+           stored.calendar_color
+         ) is distinct from row(
+           excluded.source_platform,
+           excluded.title,
+           excluded.start_at,
+           excluded.end_at,
+           excluded.is_all_day,
+           excluded.external_calendar_id,
+           excluded.calendar_name,
+           excluded.availability,
+           excluded.location,
+           excluded.notes,
+           excluded.time_zone,
+           excluded.start_local_date,
+           excluded.end_local_date,
+           excluded.is_recurring,
+           excluded.url,
+           excluded.event_status,
+           excluded.calendar_color
+         )
+         returning (xmax = 0) as insertedinsert into device.contact_emails (contact_id, label, email)
+             select * from unnest($1::bigint[], $2::text[], $3::text[])insert into device.contact_phones (contact_id, label, phone_raw, phone_e164)
+             select * from unnest($1::bigint[], $2::text[], $3::text[], $4::text[])insert into device.contact_addresses (
+               contact_id, label, street, city, state, postal_code, country
+             )
+             select * from unnest(
+               $1::bigint[], $2::text[], $3::text[], $4::text[],
+               $5::text[], $6::text[], $7::text[]
+             )update device.contacts
+         set deleted_at = now(), updated_at = now()
+         where node_id = $1 and deleted_at is null
+           and not (external_contact_id = any($2::text[]))insert into device.contacts (
+           node_id, platform, external_contact_id, display_name, organization,
+           job_title, birthday_text, note, thumbnail,
+           synced_at_text, deleted_at, updated_at
+         )
+         select $1, $2, rows.*, $9, null, now()
+         from unnest(
+           $3::text[], $4::text[], $5::text[], $6::text[], $7::text[],
+           $8::text[], $10::text[]
+         ) as rows
+         on conflict (node_id, external_contact_id) do update set
+           platform = excluded.platform,
+           display_name = excluded.display_name,
+           organization = excluded.organization,
+           job_title = excluded.job_title,
+           birthday_text = excluded.birthday_text,
+           note = excluded.note,
+           thumbnail = excluded.thumbnail,
+           synced_at_text = excluded.synced_at_text,
+           deleted_at = null,
+           updated_at = excluded.updated_at
+         returning contact_id, external_contact_id, (xmax = 0) as inserteddelete from device.contact_phones where contact_id = any($1)external_contact_idcontact_iddelete from device.contact_emails where contact_id = any($1)delete from device.contact_addresses where contact_id = any($1)
+        update device.nodes
+        set platform = $1,
+            contacts_last_synced_at = $2,
+            contacts_last_received_at = $3,
+            contacts_last_sync_status = 'success',
+            contacts_last_sync_error = null,
+            contacts_contact_count = $4,
+            contacts_content_sha256 = $5
+        where node_id = $6
+        device contact countdevice node disappeared while recording contacts snapshot metadatadatabase write admission gate closedadmission_timeoutassert_table_existstable_presence.queryfinalization_fencedreconciliation_storage_failedfinalization_failedclaim reconciliation finalizationfinalization_ignored_staleinvalid_stream_uploadfinalization_fence_failedfence invalid reconciliation uploadinvalid_source_snapshotsettle invalid device reconciliation for retrydevice_sync_stateHealth reconciliation applied but device-sync worker wake failedfinalize device reconciliationphone judge logger unavailablephone judgment publication timed outphone judgment publication was not acceptedinvalid saved phone judgment resultsaved phone judgment result does not match its calldelivery_unavailableroot_follow_up_output_pendingdelivery_attempt_supersededfollow_up_abortedfollow_up_interruptedhandoff_projection_pendingchat_contexttracetranscriptphone-callPHONE CALL RESULTtranscript_widgetruntime.phone_resultphone_result_deliveryphone transcript widget unavailableroot_follow_up_terminal_proof_missingphone recovery follow-up refused for good; settling it unsentphone call vendor message settledphone outcome handoff has a different sourcefollow-up queue idle check failed; keeping the backstopmodel_declinedended_without_resultempty_visible_projectionlink_omitteddeliveredlink_unverifiablephone_transcript_deliveryoutcomedevice_reconciliation_store_unavailableEventmsgrelationships.chat_lookupmissed_windowalready_deliveredin_another_deliveryexpireddevice_reconciliation_active_list_faileddevice_reconciliation_recovery_failedfull_sync_expireddevice_reconciliation_expiry_faileddevice_reconciliation_pending_list_faileddevice_reconciliation_dispatch_task_faileddevice_reconciliation_upload_cleanup_failedwebhook_delivery_disabledwebhook_authority_unavailablephone recovery deferredstorage_or_delivery_unavailabledispositionpredicted_openingnext_follow_up_spacinginternal_delivery_retryfollow_up_queue_delivery_faileddeletedworker_turnspublic_import_exemptedpublic_import_exempt_stopped_for_callpublic_import_exempt_errordatabase_errorinput_filesinput_files_errornative_messages_deletednative_message_deletion_errorcontext_retention_failedconnection_follow_up_not_readynothing_dueconnection_follow_up_failedprepared_imagesprepared_images_errorprepared_image_gc_failedchat_connection_settings_read_failedrecoverable_trash_reap_stalledrecoverable_trash_reap_partialrecoverable_trash_reap_failedrecoverable_trash_reap_join_failedMessengercalled `Result::unwrap()` on an `Err` valueandroidiosrun_missingrun_finishedworker_silentinternal error: entered unreachable code: invalid Once statedelete_failedscan_failedregularinternal_workerurgentproactive_notifier_gatekeeper_offout_of_creditssource_chat_unavailableconnector_evidence_unavailableproducer_gate_closedrevalidation_declinedproactivity_notification_cancelledno_claimable_changesduplicate_opportunityproactivity_flow_changedrevalidation_declined_retainedinvite_upsell_disabledconfidential_vm_upsell_disabledconfidential_vm_upsell_ineligiblereferral_invites_exhaustedreferral_lookup_deferredproactivity_revalidation_deferredproactivity_delivery_deferredinternal_admission_rejecteddelivery_failedcron_workerwaiting_for_inferencewaiting_for_tool_dispatchwaiting_for_user_confirmationcheckpointedcancellingpreemptingterminalizingcancelledtimed_outpreemptedmergedpending_user_confirmationperiod_endend_atevent_end_atperiod_starthealth.aggregatesaggregate_idworkout_idhealth_event_idtarget_retiredchat_retiredconversation_resettarget_not_rootupdateconcierge_offerphone-call-questionphone-call-updatePHONE CALL QUESTIONPHONE CALL UPDATEPHONE CALL CONCIERGE OFFERwaiting_for_chunksArc counter overflowstream_upload_conflictstream_upload_too_largeÁ 

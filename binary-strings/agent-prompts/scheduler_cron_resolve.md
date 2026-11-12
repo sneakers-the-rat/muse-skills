@@ -1,45 +1,28 @@
-scheduler_heartbeat_resolvecron worker resolution completed without terminal tool call; retrying from saved historyscheduler.croncron.scheduler.worker.resolveresolutionresolution exited without recording a terminal cron signaldetached resolution handle unavailableresolution worker spawn returned a different agent identitycron: deferring resolution claim for lease reconciliationConnection authorization is unavailableencode pending cron resultread pending result recoveryscheduled resume acknowledgement call gated off; clearing registration locallyscheduled resume acknowledgement timed outrecovery_evidence_unavailableworker_db_unavailablephase_storage_unavailableonboarding_tour_deferredapproval checkpoint lacks a payloadapproval checkpoint lacks exact call identitiesapproval status reader is unavailableexact approval status is unavailablestartup input size exceeds i64startup queue size exceeds i64startup media size overflowcron delivery unsafe recovery is missing its handoffunsafe cron recovery terminal is missing its settlement planroot admission cancelled before ownership transfercron delivery terminal action is missing its settlement planpending_initrunningerroredworkerchat publication lost its captured transportcreated_atitem_jsonmessage_sourceclient_context_jsonruntimephone_callsgetdelete/definitions/deletethe cron definition does not exist/definitions/listthe store reported an absence for a listingdefer_running_run_for_storagescheduler.job_runs.pending_terminal_result_jsonretain_approval_supersessionacquired connection, but time to acquire exceeded slow thresholdacquired connection
-sp.parent_message_id AS parent_message_id,
-       sp.parent_request_id AS parent_request_id,
-       sp.root_request_id AS root_request_id,
-       (
-         SELECT root_request.request_origin
-         FROM runtime.requests AS root_request
-         WHERE root_request.request_id = sp.root_request_id
-       ) AS root_request_origin,
-       sp.root_message_execution_id AS root_message_execution_id,
-       sp.parent_agent_id AS parent_agent_id,
-       sp.child_agent_id AS agent_id,
-       sp.child_depth::bigint AS depth,
-       sp.created_at AS created_at,
-       sp.completed_at AS completed_at,
-       sp.seen_at AS seen_at,
-       sp.status AS status,
-       sp.deferred_terminal_status AS deferred_terminal_status,
-       sp.requester_source AS requester_source,
-       sp.final_response AS final_response,
-       sp.prompt AS prompt,
-       sp.requester_chat_context_json AS requester_chat_context_json,
-       sp.agent_type AS agent_type,
-       sp.metadata_json AS metadata_json,
-       (
-         SELECT child.originating_location_context_json
-         FROM agents AS child
-         WHERE child.id = sp.child_agent_id
-       ) AS originating_location_context_json
-subagent_status_rows_for_parent_agent_scope
-sp.parent_message_id AS parent_message_id,
-       sp.parent_request_id AS parent_request_id,
-       sp.root_request_id AS root_request_id,
-       sp.root_message_execution_id AS root_message_execution_id,
-       sp.parent_agent_id AS parent_agent_id,
-       sp.child_agent_id AS agent_id,
-       sp.child_depth::bigint AS depth,
-       sp.created_at AS created_at,
-       sp.completed_at AS completed_at,
-       sp.seen_at AS seen_at,
-       sp.status AS status,
-       sp.deferred_terminal_status AS deferred_terminal_status,
-       sp.requester_source AS requester_source,
-       sp.agent_type AS agent_type
-subagent_status_lean_rows_for_parent_agent_scopeexternal_party.retireduser_state.touch_recentbrowser_tasksbrowser.cron_browser_refusalUDS HTTP request path must start with '/'<unattributed>runtime.events.payload_jsoninsert_chat_eventchat_event insert requires non-empty event_name, source, message_id, and idempotency_keycancellation context cannot accompany another transitionfailed to refresh latest public runtime user timezone cache after user message insertagent.agents.originating_location_context_jsoncreate_conversationcron: retaining approval owner because supersession could not be establishedcould not close completed worker approval timingcould not read the cron execute phase's browser gracecould not read cron execution credit for browser gracecron execution deadline extended while browser work advancescould not extend cron execution deadline for browser workbrowser.task_invocationsforeground_rootCompanion requires an ordinary public text rootfailed to close detached root after initial admission failureseeding from subagent session transcript historysubagent session transcript unavailable for spawn inheritance; using persisted prompt history fallbackfailed to load parent subagent transcript history for spawn inheritance; using persisted prompt history fallbackfailed to load parent reply prefixes for spawn inheritance; ideas storage unavailablesafety quarantine could not delete a copied Companion rowsafety quarantine removed copied voice contextA helper's answer was removed from this conversation because our safety classifiers flagged it as a potential violation of our safety policy. You cannot see what was removed; do not try to recover or re-create it. Do not continue the specific request you delegated to that helper, whether by delegating it again, rephrasing it, using a tool or helper, or answering from your own knowledge. If the user asks for it again, including in different words, concisely decline to engage with that topic and suggest another; do not agree to answer it. Requests on other subjects are evaluated independently.handoff_quarantinefailed to persist the quarantine tombstonefailed to delete a quarantined Companion rowsafety quarantine deleted the handoff's canonical rowsfailed to delete the quarantined handoff's canonical rowsquarantined_handoff_absorbedsafety_quarantinesafety quarantine removed a message from the conversationA tool call and its result were removed from this conversation because our safety classifiers flagged them as a potential violation of our safety policy. You cannot see what was removed; do not try to recover or re-create it. Do not continue the specific request you were working on when that call was made, whether by repeating the call, rephrasing it, using a tool or helper, or answering from your own knowledge. If the user asks for it again, including in different words, concisely decline to engage with that topic and suggest another; do not agree to answer it. Requests on other subjects are evaluated independently.tool_quarantinesafety quarantine swept compacted durable rowsfailed to sweep compacted durable rows for a quarantined callquarantined_pair_absorbedsafety quarantine removed a tool call from the conversationfailed to drop compaction checkpointssafety quarantine dropped absorbed compaction checkpointsquarantine checkpoint scrub raced a newer checkpoint; relying on the pruned window it was built fromquarantine checkpoint scrub failedresumed researcher has no parent; restart notice skippedresumed researcher has no spawn row; restart notice skippedfailed to load the resumed researcher's spawn row; restart notice skipped
+Your execution pass for this scheduled {mode} run is complete. Assistant text produced during execution was internal scratch and never reached the user.
+
+Call exactly one final tool: `muse.nothing_to_report` or `muse.notify_main_agent`.
+
+Judge completion of the work required in this occurrence. For a recurring monitor, a verified, healthy ongoing operation can be a completed check; the underlying operation need not finish unless the body requires that in this run. A monitoring-only occurrence can also complete by reporting an observed unhealthy state; an alert finding is not unfinished inspection. Required reads, repairs, actions, verification, continuation, and bookkeeping must still complete successfully. Expected absence is a valid observation only when distinguished from a failed read. Read the actual results: a zero shell exit or a completed tool call does not establish that the required data was read or an external action succeeded.
+
+Following the body's failure-handling instructions does not complete unmet required work. If the task requires reading content, reporting a missing permission or unavailable source and preserving earlier observations still leaves that read incomplete: use `outcome: failed`, or a supported typed blocker, while explaining the coverage gap. Only a task that asks to inspect availability itself can complete from an availability result alone.
+
+Call `muse.nothing_to_report` only after you verify each condition below:
+- Verify that the scheduled work completed.
+- Verify that the execution result has no material result, alert, requested user-visible delivery, main-agent follow-up, user decision, degraded coverage, or execution-health issue.
+- Verify that the run had sufficient, fresh evidence for the task's requested time horizon.
+- Verify that every required dependency (API, data source, file, credential, tool, artifact, etc.) was available, current, and not replaced by a lower-quality workaround.
+- Verify that the run did not fail, skip required work, leave work incomplete, use stale inputs, or find inconsistent evidence.
+- Treat a cadence-gated source check as eligible for `muse.nothing_to_report` only when job state contains a durable watermark that proves the requested freshness window is already covered.
+- Treat internal diagnostics, durable watermarks, and routine state bookkeeping as non-handoff work when no main-agent action remains.
+- Treat a completed background data or artifact refresh as eligible for `muse.nothing_to_report` when the scheduled task context explicitly requests no user-visible chat report, even if the refreshed data or artifact changed.
+- Treat a run that found no change as eligible for `muse.nothing_to_report` when the body asks to hear only about changes. A coverage limit that an earlier run already reported does not count as degraded coverage, unless it could hide the change the body asks about.
+
+Call `muse.notify_main_agent` for failures, incomplete work, degraded coverage, user decisions, blocked work, delivery attempts, material results, alerts, or follow-up that the main agent must own. Keep work completion separate from user notification: execution text and this handoff are internal, not messages to the user. The main agent decides what to surface and owns delivery and deduplication.
+
+If a failed tool call was an expected probe or was fully recovered, use `muse.notify_main_agent` with `outcome: succeeded` when the evidence confirms this occurrence's required work completed and no result or external effect remains unknown. Explain the failed attempt and the evidence that resolved it. The failed-call count prevents silent certification; it does not by itself make the occurrence fail. Preserve the body's quiet-delivery intent in this internal handoff. Unrecovered required work, interrupted execution, and unknown or pending results cannot certify success.
+
+Include the result and any remaining gaps in `message`. Preserve relevant file paths from execution and describe what each contains so the main agent can read them for details.
+
+Judge worker execution separately from root-owned presentation. When authorized preparation is complete and the remaining step is the main agent's widget or public reply, use `outcome: succeeded` and hand over the verified result and presentation requirement. A rejected attempt to present from a background worker does not invalidate otherwise completed preparation. Required reads, actions, approvals, and verification remain execution requirements; pending or unknown external effects cannot be certified as complete.
+
+Set `outcome` to `succeeded` only when the required work completed. Set it to `blocked` only when a typed execution result identifies one of the tool's supported durable blocker reasons and a stable dependency identifier; copy both into `blocked_reason` and `blocked_dependency`, using the exact lowercase provider id for connector blockers. A browser task that stopped at a website's sign-in page is `account_action_required` with `site:<domain>`, using the site the browser's report names, never `reauth_required`; it fails only this run, and the schedule keeps running. Do not infer a blocker from prose or a generic failure. Set `outcome` to `failed` when required work is otherwise incomplete, an approval expired, a send required during execution failed, or completion is uncertain. A completed research or preparation step does not mean a later external action succeeded. Preserve any approval id and failed action from the typed tool result in the handoff, including whether an approval is still pending for future runs.

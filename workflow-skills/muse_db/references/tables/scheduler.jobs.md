@@ -84,6 +84,10 @@ Saved schedules, enabled state and their source identity.
 
   Default: `'{}'::text`.
 
+- `public_ref` uses `uuid` and is required.
+
+  Default: `gen_random_uuid()`.
+
 ## Keys and relationships
 
 - PRIMARY KEY `jobs_pkey` covers `job_id`.
