@@ -1,0 +1,169 @@
+AI Generated
+INSERT INTO requests (
+  request_id, root_request_id, parent_request_id, request_origin,
+  transcript_surface, root_work_class
+)
+VALUES ($1, $2, $3, $4, $5::runtime.transcript_surface, $6)
+ON CONFLICT (request_id) DO UPDATE SET
+  root_request_id = COALESCE(requests.root_request_id, excluded.root_request_id),
+  parent_request_id = COALESCE(requests.parent_request_id, excluded.parent_request_id),
+  request_origin = CASE
+    WHEN requests.request_origin = 'internal.runtime_replay' THEN excluded.request_origin
+    ELSE requests.request_origin
+  END,
+  transcript_surface = excluded.transcript_surface,
+  root_work_class = CASE
+    WHEN requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing'
+      THEN excluded.root_work_class
+    ELSE requests.root_work_class
+  END
+WHERE (requests.root_request_id IS NULL AND excluded.root_request_id IS NOT NULL)
+   OR (requests.parent_request_id IS NULL AND excluded.parent_request_id IS NOT NULL)
+   OR (requests.request_origin = 'internal.runtime_replay'
+       AND excluded.request_origin <> 'internal.runtime_replay')
+   OR requests.transcript_surface IS DISTINCT FROM excluded.transcript_surface
+   OR (requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing')
+output
+INSERT INTO tool_outputs (event_seq, call_id, status, output_text, error_text, created_at)
+VALUES ($1, $2, $3, $4, $5, to_timestamp($6::double precision / 1000.0))
+ON CONFLICT (event_seq) DO UPDATE SET
+  call_id = excluded.call_id,
+  status = excluded.status,
+  output_text = excluded.output_text,
+  error_text = excluded.error_text
+arguments
+INSERT INTO tool_calls (event_seq, call_id, tool_name, status, arguments_json, created_at)
+VALUES ($1, $2, $3, 'started', $4, to_timestamp($5::double precision / 1000.0))
+ON CONFLICT (call_id) DO UPDATE SET
+  event_seq = excluded.event_seq,
+  tool_name = excluded.tool_name,
+  status = excluded.status,
+  arguments_json = excluded.arguments_json
+
+INSERT INTO chat_event_derived_write_backlog (event_seq, resources_json)
+VALUES ($1, $2)
+ON CONFLICT (event_seq) DO UPDATE SET
+  resources_json = excluded.resources_json,
+  updated_at = now()
+UPDATE chat_private.peer_conversations SET requester_chat_id = NULL
+         WHERE conversation_id = $1 AND requester_revision = $2
+           AND requester_chat_id = $3 AND NOT requester_unavailable
+           AND chat_id = $5
+           AND EXISTS (SELECT 1 FROM agent.agents
+                       WHERE id = $4 AND session_id = $3)peer handoff disagrees with its asking-chat claimpeer handoff requester changed before admissionSELECT session_id, COALESCE(prompt_floor_seq, -1) AS prompt_floor_seq,
+                kind = 'root' AND parent_agent_id IS NULL
+                AND ephemeral IS DISTINCT FROM TRUE
+                AND status NOT IN ('shutdown', 'not_found') AS eligible
+         FROM agent.agents WHERE agent_id = $1 FOR UPDATEstartup_root_changedSELECT EXISTS(SELECT 1 FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND accepted_ordinal < $2)startup mailbox promotion cannot overtake an earlier accepted input
+SELECT accepted_ordinal, submission_json FROM agent.message_mailbox
+WHERE agent_id = $1 AND state = 'accepted'
+  AND accepted_ordinal < $2 AND accepted_ordinal > $3
+ORDER BY accepted_ordinal LIMIT 128
+
+SELECT payload_json
+FROM agent.runtime_restart_checkpoints
+WHERE agent_id = $1
+FOR UPDATE
+message mailbox attachment cannot overtake an older priority peer
+INSERT INTO agent.runtime_restart_checkpoints (
+  agent_id, mode, recovery_class, recovery_owner_id, execution_config_json,
+  payload_json, created_at, updated_at
+) SELECT $1, $2, $3, $4, $5, $6, $7, $7
+WHERE EXISTS (
+  SELECT 1
+  FROM agent.agents
+  WHERE agent_id = $1
+    AND status NOT IN ('shutdown', 'not_found')
+)
+ON CONFLICT (agent_id) DO NOTHING
+SELECT EXISTS (SELECT 1 FROM agent.agents WHERE agent_id = $1 AND status NOT IN ('shutdown', 'not_found'))conversation epoch
+INSERT INTO agent.message_mailbox (
+  submission_id, agent_id, conversation_epoch, submission_kind,
+  routing_scope, state, checkpoint_custody, stream_owner_message_id,
+  submission_json, transcript_event_seq, attached_at
+) VALUES (
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+  CASE WHEN $6 = 'attached' THEN now() ELSE NULL END
+)
+ON CONFLICT (submission_id) DO NOTHING
+RETURNING accepted_ordinal, accepted_at
+startup mailbox promotion requires its previously accepted input
+SELECT agent_id, conversation_epoch, submission_kind, routing_scope,
+       state, stream_owner_message_id, submission_json,
+       transcript_event_seq, accepted_ordinal, accepted_at
+FROM agent.message_mailbox
+WHERE submission_id = $1
+FOR UPDATE
+update chat.message_bindings set admitted_at = coalesce(admitted_at, now())
+                    where jarvis_message_id = $1 and chat_id = $2 and binding_epoch = $3 and transport = $4binding epochconversation_epochsubmission_kindrouting_scope
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = $5,
+    stream_owner_message_id = $2,
+    submission_json = $3,
+    transcript_event_seq = coalesce($4, transcript_event_seq),
+    attached_at = now()
+WHERE submission_id = $1
+  AND state = 'accepted'
+  AND stream_owner_message_id IS NULL
+mailbox stream ownerselect a.account_id from chat_private.accounts a
+             join chat_private.binding_authorizations b on b.provider = a.provider and b.account_id = a.account_id
+             where b.provider = $1 and b.binding_id = $2
+               and a.connection_id = $3 and not a.revoked for share of adirect input has no captured binding epochaccount_retiredselect connection_id, generation, transport_json, delivery_target
+             from chat_private.binding_authorizations
+             where provider = $1 and binding_id = $2 and chat_id = $3
+               and account_id = $4 and external_kind = 'direct' and participation = 'active'
+             for shareaccount_authorization_retiredtransport_jsontransport_authorization_absentconnection_idgenerationdelivery_targetselect epoch from chat_private.bindings
+         where chat_id = $1 and provider = $2 and not revoked for sharetransport_authorization_changedbinding_retiredactivity_monitor_list_thread_actionsactivity_monitor_list_recent_thread_actionsactivity_monitor_read_threaddatabase write admission gate closedadmission_timeoutassert_table_existstable_presence.queryCosmos voice profile configuration is not loadedauth status row concurrency limiter closedauth status row task failedfailed to load paired devices for healthkit skill statusUnable to load paired device permissionsconnector catalog could not resolve Privacy Jurisdiction countrylisted custom connectors for skills.statusfailed to list custom connectors for skills.status; skipping synthetic rowsskills.status: hid connectors unavailable in this channel or environmentfailed to persist skill statuses to user configstandaloneagent_status broadcast presence statuscall_id must be non-emptyYou've used all your credits for this period. Upgrade your plan or wait for your credits to refill.rtc_session_id must be non-empty when providedretained_admissionvoice start-call rejected because the Cosmos product gate denied admissionSome(CosmosS2s)Not foundvoice start-call using recent last-seen device locationvoice start-call request received<none>cachevoicevoice start-call reused completed JOIN admissionRTC Media Bridge start-call has no authenticated claimsvoice start-call adopted Cosmos RTC Media Bridge session identityrefused a JOIN for a call whose restart rejoin offer endedrestart_rejoin_endedthe call ended at a planned restart and can no longer be rejoinedvoice JOIN refused: the call ended after its retained admissionvoice start-call refused: the call is endingprepared bridge owns its call start permitfailed to publish admitted RTC Media Bridge call startRTC Media Bridge admission rollback lost its lifecycle fenceRTC Media Bridge runtime lost its admitted callvoice start-call superseded by a newer call; not installingvoice_call_startedvoice start-call reconnected to active callvoice start-call preempted prior active call; will end-call the preempted client(s) once the new call establishesruntime.voice_call_markervoice start-call broadcasting end-call to preempted clientsstart-of-call greeting suppressedcall_lifecycle_changedout_of_creditsorderequalcall_ended_at must be after call_started_atvoice end-call cancelled an early-answered admissionignoring invalid voice call video embodimentx-jarvis-client-timezonex-client-timezonex-timezonecall_admissionactive voice resolution failed during call admission; starting without onboardingvoice start-call rechecked the product gate for the callerpreempted-session end-call widget emit failedvoice call admission dropped over-length call_server_info_datavoice call catalog boundary was published without a persistence ownerSELECT payload_json FROM runtime_restart_checkpoints WHERE agent_id = $1 FOR UPDATESELECT submission_json, octet_length(submission_json)::bigint AS serialized_bytes
+         FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND submission_id <> $2startup_queue_fulldue-occurrence coalesce check failed; seeding immediate occurrence anywayrefusedresetvoice_onboarding_resethttp://localhost/hatch/rtc-edgeray-vipRTC edge lookupmissing_client_ipno_viplookup_failedtimeoutclient playback statusclient playback status not recordedshortlistrankedpersonalizedranking_failedranking_backed_offCosmos RTC Media Bridge accepted server-owned session identityCosmos RTC Media Bridge runtime setup failedCosmos RTC Media Bridge runtime ended before its handshake responseCosmos RTC Media Bridge runtime handshake timed outfailed to spawn voice companion subagentspawn_failedacceptance_onlycompanion_unavailablecompanion_spawnvoice companion setup skipped after call lifecycle changedspawnedreusedread_only_sessionthis conversation is view-onlyvoice device pairing lookup failed; requiring the requested devicerejoined_call_not_acceptedrejoinvoice call opening not acceptedunknowntimed_outvoice call opening acceptedvoice script admittedunknown voice script id or unsupported versionvoice script deniedscript_unavailablevoice script is not available for this callerinvalid_voice_selectionsend either voice_id, or saved_voice_id with profile_idinvalid_voicemaintenance_occurrencemaintenance_attemptrequest_generationgeneric_maintenancejitter_offset_secsjitter_window_secsmaintenance occurrence collided with terminalized work itemrtc_media_bridge_admission_pendingthe call's admission is still pendingSELECT event_seq, event_name, source, role::text AS role,
+                    visibility::text AS visibility, message_id, agent_id,
+                    parent_agent_id, parent_message_id, reply_to_message_id,
+                    transcript_surface::text AS transcript_surface, payload_json,
+                    request_id, root_request_id, parent_request_id,
+                    extract(epoch from created_at)::bigint AS created_at
+             FROM runtime.events WHERE idempotency_key = $1SELECT ci.item_json, ci.message_source,
+                        extract(epoch from ci.created_at)::bigint AS created_at,
+                        p.client_context_json
+                 FROM agent.context_items ci
+                 LEFT JOIN agent.context_item_resume_projection p
+                   ON p.agent_id = ci.agent_id AND p.seq = ci.seq
+                 WHERE ci.agent_id = $1 AND ci.seq = $2audio runtime stopped before readinessaudio runtime readiness timed outrealtime active-message interrupt did not finish promptlyrealtime voice turn close did not finish promptly; it continues in the backgroundcalled `Result::unwrap()` on an `Err` valueforeground_rootpeer_chat_rootgroup_chat_rootexternal_party_chat_rootcompany_conversation_rootmail_conversationdelegate_main_requestworkflow_subagentspaces_builderspaces_builder_litespaces_builder_editspaces_builder_python_editbrowser_taskdeep_researchideas_builderspace_taskself_improvement_stepflight_tracking_steppeer_sync_stepfeed_workflow_stepephemeral_agent_stepscheduler_cron_executescheduler_cron_resolveexecute_resolve_workersystem_cron_productvoice_delegaterealtime_voicecompaniondeveloperassistantinternal error: entered unreachable code: invalid Once statecreatedrenamedunarchiveddeletedpinnedgatekeeperdev_vm_operatornewwelcomepress_to_speakpress_to_speak_retryvolumeconversation_historyconversation_history_outroshortcutsshortcut_redirectcameraoutropress_to_speak_nudgeend_call_nudgevolume_nudgeconversation_history_nudgecamera_nudgewait_nudgestep_skippedworkerafter_inferenceawaiting_approvalafter_tool_dispatchuser_spoke_during_delayuser_messaged_since_call_startcall_ended_during_delaysuperseded_by_new_call/onlineneeds_approvalcompactingrespondingwaiting_for_subagentsworkingopportunisticcomplete_when_awakeobjectiveproactive_notificationflight_trackingvoice_persistencewebhook_fetchlightrecheck_passedrecheck_failedrecheck_errorno_client_ipno_active_callnot_active_callrecord_call_not_activerecord_already_claimedrecord_already_deliveredrecord_conflicting_idclaim_hitclaim_slot_absentclaim_repeatclaim_no_active_callclaim_media_unboundfilter values must not be emptygender must be F, M, or Nonboardingopen_faileddictation session ended without settlingincompletepending_initrunninginterruptederroredThis is the first time you and the user meet. Greet them by their first name, {first_name}, and tell them you're their personal agent, who can help take things off their plate, not just answer questions. Do not ask them to do anything yet.
+This is the first time you and the user meet. You do not know their name, so do not use one. Greet them and tell them you're their personal agent, who can help take things off their plate, not just answer questions. Do not ask them to do anything yet.
+The user already knows you, and you just moved into a new home. Open with an eager let's-go, then tell them you're loving your new home. Do not ask them to do anything yet.
+This begins the tour. Open by saying you'll start with a quick tour of the basics, then tell them that whenever they want to talk to you, they press and hold the button on the top right.
+The user let go of the button too soon. Encourage them to try again and hold it a little longer.
+Tell them that to end the call, they can give the button on the top right a quick press.
+Have them try changing the volume with the buttons on the top left.
+Tell them all your past chats together live at the top of the screen, and have them swipe down to see them.
+The user just opened your past chats. Tell them every chat you have together is saved here, so they can pick up where you left off anywhere they use Muse, and that if you're ever offline, messages they send will queue up here. Say it in two short sentences.
+The user just opened your past chats. Tell them it's time to explore shortcuts: have them swipe up on the screen to see their shortcuts and open the camera from there.
+The user tapped a different shortcut. Tell them they can try that one later, and have them tap the camera in their shortcuts first.
+The user just opened the camera. Tell them that with the camera you can help with things like tracking their food, translating signs, and so much more. Then have them press the button on the top right to go back home.
+This is the last step. Celebrate finishing the tour with an excited one- or two-word cheer, then tell the user that if they ever need help finding anything, they can just ask you, and that otherwise they are all set. Then ask them what they have planned this week.
+The user tried a different gesture. Encourage them to try again by pressing and holding the button on the top right.
+The user tried a different gesture. Have them give the button on the top right a quick press to end the call.
+The user tried a different gesture. Have them try the two volume buttons on the top left.
+The user tried a different gesture. Encourage them to swipe down on the screen to see your past chats.
+The user tried a different gesture. Have them give the button on the top right a quick press to go back home.
+The user tried something before you finished. In a few words, ask them to give you a moment. Do not ask them to press or swipe anything.
+The user didn't get to that one, and that's fine. Tell them it's okay to leave it for now. Do not ask them to press or swipe anything.
+The user just did what your last line asked, so open with a one- or two-word cheer.
+Internal delivery event, not something the user said: you are giving the user a short spoken tour of their new device on this call.
+
+You live in this device and speak as it, so its buttons are your buttons. The tour goes one step at a time, and the user's microphone stays off until it ends, so they cannot answer you.
+
+Say the line for this step now, in your own words and personality, in `{language}`, then stop:
+
+{step}
+
+- Keep it to one or two short sentences, no more than 35 words.
+- Say only what this step asks for. If it names no button or gesture, do not ask the user to press, swipe, or do anything.
+- When the step names a button or gesture, keep it exact: which button, where it is, and which way to swipe.
+- Ask a question only if the step asks for one.
+- Do not cheer, praise, or react to what the user just did unless the step tells you to.
+- Do not repeat lines you said earlier, and do not mention this event, other steps, the microphone, or how the tour works.
+- Do not call tools or start any other work.
+- Do not say the user's name unless this step tells you to greet them by name.
+{language}{step}{first_name}steady_phasecadence_then_splayoverdue_catchupretryimmediatevalidationserver_incoming_call.node_id is requiredspeak_audio_capCosmos did not complete the speech turn.speak_transcript_mismatchtranscriptCosmos did not speak the request text verbatim.speak_silentspeak_failedclienttransportdecodeinvalid_country_codestay_with_mecancelledunreportedapply_failedapply_timed_outpreparation_failedruntime_endedruntime_unavailablevoice_rtc_join_admission_handshakerealtime client response openedin_progressjarvis-wakeword-verification-rejecteddropping oldest committed voice input item correlationrealtime: releasing a committed caller input that will never get a transcriptrealtime client response playback cancelled before its terminalrealtime client response for trailing provider media closed before the next replydropping oldest unassigned voice input item correlationshould_smart_follow_updevice_actions: preserving legacy slot-free projectionslots{"end_session_only":true}dropping oldest unadmitted voice turn correlationdropping voice transcript assignment without a completed input itemdropping voice turn correlation without an assigned input itemchecked assigned voice item indexdropping voice turn alias without an admitted caller itemvisual context is unavailable on this voice transportvisual_context_unavailablerealtime: emitting Companion image capture client actionhatch_capture_get_imagedelta.message_donerealtime: Companion image capture served by call-bound devicerealtime: emitting provider image capture client actionrealtime: provider image capture served by call-bound devicerealtime: the peer ends the call on a session stoprealtime: ignoring an end-call stop offer for an unsupported versionrealtime: peer bound a turn interaction idrealtime: ignoring a turn interaction id bindingnot_negotiatedalready_boundvoice_turn_interaction_id_bindingrealtime: declining a per-turn interaction id offer on a connection without turn correlationrealtime: ignoring a per-turn interaction id offer that arrived after the first turn inputrealtime: ignoring a turn interaction id binding offer after per-turn ids were enabledrealtime: per-turn interaction ids are enabled for this connectionrealtime: ignoring a turn interaction id binding offer for an unsupported versionrealtime: turn interaction id bindings are enabled for this connectionrealtime: ignoring a per-turn interaction id offer for an unsupported versionpreemptible_retryablestartedinternal_wakeupdatedfull_cadence_phasetraits_missingportrait_not_readyvoice_rtc_join_commitvoice_rtc_join_agent_spawnvoice_rtc_join_cosmos_setupvoice_rtc_join_voice_gate_recheckvoice_rtc_joinvoice_rtc_join_admissionnot_animatablelive_switch_errorvoice_updatedvoice_saved_no_live_switchoutcomevoice_preference_mutation/api/voice/active-voicespeak_upstream_timeoutThe Cosmos turn exceeded the time budget.speak_cancelledThe client closed the speech request.

@@ -8,9 +8,9 @@
 
 - Connecting is optional. `status` reports the connection, and `authorize-url` returns a `connect_url` to share. Guest access stays available while setup is pending.
 
-- When you first show results, end with any `connect_offer` and the `connect_url`. Member rates appear only after they connect, so search again then rather than estimating them.
+- When you first show results, end with any `connect_offer` and the `connect_url`. Member discounts appear only after they connect, so search again then rather than estimating them.
 
-- When the user asks about Expedia itself, such as One Key, member prices, OneKeyCash or support, read [Expedia membership and support](/opt/hatch/connectors/expedia/references/membership-and-support.md).
+- When the user asks about Expedia itself, such as One Key, member discounts, OneKeyCash or support, read [Expedia membership and support](/opt/hatch/connectors/expedia/references/membership-and-support.md).
 
 - The CLI chooses guest or member access and reports it as `account_mode`. A connected account always uses member access, so fix an authentication failure instead of expecting a quiet fallback to guest access.
 

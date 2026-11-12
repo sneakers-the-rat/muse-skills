@@ -6,7 +6,7 @@
 
 - One Key is Expedia's free loyalty program. Members get instant discounts at select hotels: 10% for Members, 15% for Silver, and 20% for Gold and Platinum.
 
-- Through Muse, member prices, OneKeyCash and Trip Elements apply when the user's Expedia account is connected, as on Expedia.com.
+- Through Muse, member discounts, OneKeyCash and Trip Elements apply when the user's Expedia account is connected, as on Expedia.com.
 
 - Tiers come from Trip Elements collected in a calendar year: 5 for Silver, 15 for Gold and 30 for Platinum. Each eligible hotel night of at least US$25 before taxes and fees counts as one, and the count resets each January 1.
 

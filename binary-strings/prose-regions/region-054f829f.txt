@@ -1,0 +1,23 @@
+peer_id, muse_id, x25519_pub, key_epoch, binding, binding_expires_at_ms, fqdn, vm_id, endpoint_hints, display_name, agent_name, account_claim, relationship_generation_id, relationship_direction, relationship_started_at_ms, request_expires_at_ms, request_terminal_cause, relationship_revision, remote_confirmed_ceremony_id, remote_confirmed_at_ms, status, trust_preset, sas_confirmed_local, active_sas_ceremony_id, attested, person_slug, provenance, paired_at_ms, last_activity_ms, created_at_ms, updated_at_msselect distinct idea_id,
+                            metadata_json -> 'publication_hold' ->> 'fingerprint',
+                            metadata_json -> 'publication_hold' ->> 'reason'
+                       from ideas.idea_sources
+                      where idea_id = any($1::text[])
+                        and (source_namespace, source_kind) in (
+                          ('idea_share', 'pending_share'),
+                          ('user', 'http_create'),
+                          ('shared_www', 'shared_idea'),
+                          ('ideas', 'generalized_share_variant')
+                        )
+                        and metadata_json -> 'publication_hold' ->> 'fingerprint' is not null
+                        and metadata_json -> 'publication_hold' ->> 'reason' is not nullSELECT EXISTS(SELECT 1 FROM runtime.maintenance_markers WHERE marker_key = 'event_hook_admissions_v1')connection_id, provider, address, display_name, muse_id, agent_name, audience, active, rules_revision, regular_checkins, checkins_revision, person_paths, group_pathselect b.chat_id, b.provider, b.conversation_key, b.delivery_target,
+                            b.epoch, owner.body ->> 'user_id' as owner_account_id
+                     from chat_private.bindings b
+                     join chat.chats c using(chat_id)
+                     join chat_private.transport_state config
+                       on config.provider=b.provider and config.name='config'
+                     join chat_private.transport_state owner
+                       on owner.provider=b.provider and owner.name='owner'
+                     where b.chat_id=any($1) and b.provider='telegram' and not b.revoked
+                       and c.status='active' and config.body -> 'enabled' = 'true'::jsonb
+                       and owner.body ->> 'user_id' is not nullselect exists (select 1 from agent.root_turn_queue where submission_id = $1)€˜
