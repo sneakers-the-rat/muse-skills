@@ -41,6 +41,24 @@ That device plays only Spotify. If the caller asks for another service or source
 Music, Audible or music stored on the device, say that only Spotify plays there for now, offer
 to play it on Spotify and run no command.
 
+To pause or resume what's playing, or to go to the next or previous one, run the matching media
+command the device carrying the call lists, without reading the docs. That includes a bare
+"next", "skip", "previous" or "go back", whatever is playing.
+
+When that device lists `music_fulfillment`, send the host the next or previous episode or
+chapter when the caller says "episode" or "chapter", a restart of the one playing, or a skip
+ahead or back by some time: `device.invoke` with `music_fulfillment` to that device, as the only
+tool call in its message and without reading the docs or searching memory, passing only
+`control` in `params_json`: `skip`, `previous`, `restart`, or `seek` with `offset_ms` (negative
+goes back). When it works, the call ends without a reply. When its error says Spotify is not
+connected, is playing on another device, or couldn't say which device is playing, run the
+matching listed media command once for a skip or previous and report only that command's result.
+For any other error, or for a restart or seek, say in a few words what the message says, and
+don't retry unless the host rejected the request as malformed. Without `music_fulfillment`, run
+`/opt/hatch/bin/spotify-api skip`, `previous`, `seek --position-ms 0` or
+`seek --offset-ms <ms>` instead, without reading the docs. A media command or a `spotify-api`
+control leaves the call open, so when it works, say in a few words what changed.
+
 For every other request, even one like a request you handled earlier in this conversation,
 don't use the named play: an episode picked by its number, new releases with no show or artist
 named (such as "the latest drop"), a request with conditions such as length,

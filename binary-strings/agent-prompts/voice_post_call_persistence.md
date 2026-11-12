@@ -1,1 +1,1 @@
-This tool call was not run: it was refused by a safety policy. Do not retry it, rephrase it, or route around it with another tool. Tell the user you cannot carry this step out.
+Your Voices is full. Voice deletion is not available in chat. The current voice is unchanged. Do not retry automatically.

@@ -1,0 +1,32 @@
+capacity overflowinternal error: entered unreachable codeidea-execution reconcile: stream-owner lookup failed; deferring the row until it ages outidpromptfalseerrorsuccess/v1/webhooks/controlhatch:db:operationunknownselect b.*, a.connection_id as current_connection_id,
+                    a.revoked as account_revoked
+                from chat_private.binding_authorizations b
+                join chat_private.accounts a using(provider, account_id)
+                where b.provider = $1 and b.binding_id = $2account_revokedcurrent_connection_idSELECT c.connection_id, greatest(c.updated_at_ms,
+                   coalesce((SELECT i.received_at_ms FROM agent.group_inputs i
+                     WHERE i.group_id=w.group_id AND i.received_at_ms IS NOT NULL
+                     ORDER BY i.received_at_ms DESC,i.sequence DESC LIMIT 1),0),
+                   coalesce((SELECT max(r.shared_at_ms) FROM agent.connection_resources r
+                     WHERE r.connection_id=c.connection_id),0)) AS last_activity_at_ms
+                 FROM agent.connections c
+                 JOIN agent.chat_workers w ON w.group_id=c.connection_id::text AND w.active
+                 WHERE c.active AND c.regular_checkins AND c.provider='peer'
+                   AND ($1::uuid IS NULL OR c.connection_id>$1)
+                   AND (c.muse_id IS NULL OR EXISTS (
+                     SELECT 1 FROM peer.contacts p WHERE p.muse_id=c.muse_id AND p.status='verified'))
+                   AND (cardinality(c.person_paths)>0 OR c.group_path IS NOT NULL
+                     OR EXISTS (SELECT 1 FROM agent.connection_rules r WHERE r.connection_id=c.connection_id)
+                     OR EXISTS (SELECT 1 FROM agent.connection_resources r WHERE r.connection_id=c.connection_id)
+                     OR EXISTS (SELECT 1 FROM goals.goals g WHERE g.connection_id=c.connection_id
+                       AND g.source='assistant_tracking' AND g.status='active')
+                     OR EXISTS (SELECT 1 FROM agent.group_inputs i WHERE i.group_id=w.group_id))
+                 ORDER BY c.connection_id LIMIT 100SELECT EXISTS(SELECT 1 FROM agent.chat_worker_requests WHERE chat_id=$1 AND state IN ('pending','running','reported','completed'))select exists(select 1 from chat_private.external_party_conversations where chat_id=$1)SELECT turn_id,created_at,deadline_at,state,
+                   (context_json#>>'{connection_research,fence,connection_id}')::uuid AS connection_id,
+                   context_json#>>'{connection_research,local_date}' AS local_date,
+                   context_json#>>'{connection_research,slot}' AS slot,
+                   (context_json#>>'{connection_research,fence,checkins_revision}')::bigint AS checkins_revision,
+                   (context_json#>>'{connection_research,signal_at_ms}')::bigint AS signal_at_ms,
+                   jsonb_array_length(output_json->'items') AS item_count
+                 FROM background_workers.turns WHERE worker='connection_research' AND created_at>=$1
+                 ORDER BY created_at DESC,turn_id LIMIT 100turn_id,kind,worker,attempt,agent_id,message_id,request_id,state,
+    context_json,output_json,validated_json,input_read_bytes,failure_reason,deadline_at,created_at,updated_at

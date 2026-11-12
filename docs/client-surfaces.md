@@ -303,7 +303,8 @@ A Subscription card (usage meter, manage and upgrade) sits at the top of Setting
 - Secure credentials store (saved logins)
 - Permissions
 - Messaging channels (which channels appear depends on the account)
-- Encryption (confidential-VM sessions only)
+- Confidential VM (confidential-VM sessions only; change or reset the
+  recovery PIN in Settings > Confidential VM > Change PIN)
 - Notifications
 - Appearance
 - Data controls (AI training opt-out, import memory, download your agent data, Reset)
@@ -356,7 +357,8 @@ account"), in this order:
   screen carries a Manage permissions section with per-permission
   toggles and a three-way Location choice: Never, When using the app, or
   Always)
-- Encryption (confidential-VM sessions only; change the recovery PIN)
+- Confidential VM (confidential-VM sessions only; change or reset the
+  recovery PIN in Settings > Confidential VM > Change PIN)
 - Notifications (the row is always present; the enable toggle inside it
   needs Android 13 or later)
 - Appearance (chat theme, avatar size, light/dark mode)
@@ -499,8 +501,7 @@ Settings panes:
 - Secure credentials store (or Secure store; saved browser logins; the
   user can add a login manually with a site/username/password form, edit
   or delete one, and set each login's Agent permissions to use it
-  automatically or always ask first; on confidential VMs the recovery
-  PIN also lives here)
+  automatically or always ask first)
 - Permissions: a standalone tab holding web's permission surfaces. It
   opens on an overview with the separate Connector and Web-access
   defaults and a "Reset approvals to defaults" control. Below them,
@@ -534,8 +535,8 @@ Settings panes:
   lookups, and no per-lookup approval appears while it is on.
 - Data Controls (privacy notice, AI training opt-out, Import memory,
   Download your agent data, Reset)
-- Encryption (confidential-VM sessions only; reached from those flows,
-  not a standard rail item)
+- Confidential VM (confidential-VM sessions only; change or reset the
+  recovery PIN in Settings > Confidential VM)
 - Help & Support (help center link, a Submit feedback ticket form, and a
   Report an issue row that opens the bug-report dialog; on confidential
   VMs both can include recent logs and diagnostics, which the user can

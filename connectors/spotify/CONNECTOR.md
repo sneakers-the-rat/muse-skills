@@ -6,7 +6,7 @@
 
 ## Connect
 
-- Run `spotify-api status` before data calls. Its `status` is `connected` or `not_connected`.
+- Run `spotify-api status` before searching or reading the library. Its `status` is `connected` or `not_connected`. Playback controls and commands that act on the item playing now report `not_connected` themselves, so run them directly.
 
 - When it is not connected, run `spotify-api authorize-url` and share only the link `[Connect to Spotify](<connect_url>)`. Never paste the raw URL.
 
@@ -114,11 +114,11 @@
 /opt/hatch/bin/spotify-api add-to-queue --query "<title>" [--artist "<artist>"]
 ```
 
-- Typed requests start playback with `play`, which also takes `--uid <uid>` to start from one item in the context. Any conversation can use `pause`, `resume`, `skip`, `previous`, `seek --position-ms <ms>`, `set-playback-options --shuffle` or `--no-shuffle` with `--repeat off|one|all` on the active device, `set-volume --volume-percent <0 to 100>`, `transfer --target-device-id <id>`, `get-queue` and `add-to-queue --item-uri <uri>`. Options left out of `set-playback-options` stay as they are. `add-to-queue --query` finds a song by title and queues Spotify's top match in one step, without a separate `search`; pass `--artist` when the user names one, and name the song from `queued` in the reply.
+- Typed requests start playback with `play`, which also takes `--uid <uid>` to start from one item in the context. Any conversation can use `pause`, `resume`, `skip`, `previous`, `seek --position-ms <ms>`, `seek --offset-ms <ms>` to move from the current position (negative goes back; `no_seek_sent` means its position read failed and nothing moved), `set-playback-options --shuffle` or `--no-shuffle` with `--repeat off|one|all` on the active device, `set-volume --volume-percent <0 to 100>`, `transfer --target-device-id <id>`, `get-queue` and `add-to-queue --item-uri <uri>`. Options left out of `set-playback-options` stay as they are. `add-to-queue --query` finds a song by title and queues Spotify's top match in one step, without a separate `search`; pass `--artist` when the user names one, and name the song from `queued` in the reply.
 
 - `play` and `add-to-queue` need an active Spotify Connect device. `play`, `set-volume` and `transfer` take `--target-device-id`, so prefer passing it over relying on the active device. Run `devices` immediately before setting `--target-device-id` and use an ID from that response. If the list is empty or the named device is missing, ask the user to choose an available device instead of reusing an old ID.
 
-- After a direct playback change with `play`, `skip`, `previous` or `resume`, read `now-playing` and name the track and its creator, never just the device. New playback on a call follows Voice playback instead.
+- `skip`, `previous` and `resume` return the item playing after them, as `playback_state.item` or `now_playing`; after `play`, or when neither is present, read `now-playing`. `restarted_current_item` means `previous` started the same item over. Name the track or episode and its creator when the result gives them, not only the device. New playback on a call follows Voice playback instead.
 
 ## Recover from errors
 

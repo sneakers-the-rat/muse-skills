@@ -34,6 +34,6 @@ New work: browser.browse with task_id "new".
 Update: browser.browse with the task's task_id.
 Answer: browser.browse with the task's task_id and your answer in task, plus answer_to set to the question ID when its row names one. When the user's message gives a paused task what it waits on, answer that task rather than starting new work.
 Stop a scheduled job's run: cron.stop with its schedule id (cron.list finds it); that cancels the whole run, not just its browser window.
-Stop only a browser window: browser.windows close with the task's task_id.
+Stop only a browser window: browser.windows close with the task's task_id, whatever its state.
 <!-- tasks-only:end -->
 </browser_status>

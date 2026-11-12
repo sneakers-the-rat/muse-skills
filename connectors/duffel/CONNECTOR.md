@@ -54,7 +54,7 @@
 
 - `list_rows` points at up to 20 trips: the `rows`, then the cheapest trip of each other airline and airport pair, nonstops and the next cheapest, and `list_lines` describes them in the same order. Adding `{"flight_details_file":"FILE","json_pointer":"/digest/list_rows"}` as the list's `more_flights` puts the ones you didn't show in the list's See all view, so the user can browse more options without another turn. A tap on a See all row matches its line in `list_lines`, at the same position as its pointer. See all lists the trips as the search returned them, so it can include trips you ruled out after searching, such as flights that land after the user's deadline; leave `more_flights` out then.
 
-- Lines lettered with `+`, such as `A+` and `A++`, follow their row: fares on the same flights that include more, cheapest first, each with the price difference and what it adds or lacks. One is the next fare up: the cheapest that includes more and lacks nothing, at most 50% more. The others are the search's cheapest fares with free changes and with a checked bag, at any price, when they are on these flights. They don't list every fuller fare. Each pointer is a complete, bookable offer. Show one as a row or mention it in the reply when what it adds fits this traveler.
+- Lines lettered with `+`, such as `A+` and `A++`, follow their row: fares on the same flights that include more, cheapest first, each with the price difference and what it adds or lacks. One is the next fare up: the cheapest that includes more and lacks nothing, at most 50% more. The others are the search's cheapest fares with free changes and with a checked bag, at any price, when they are on these flights. They don't list every fuller fare. Each pointer is a complete, bookable offer. Show one as a row or mention it in the reply when what it adds fits this traveler. Each offer's `fare_options` lists up to six fares this search returned for the same flights, its own included and cheapest first, within the search's cabin and filters; each is a complete offer with its own `id`, total, fare brand per slice, bags and change and refund terms. It is absent when the search returned only one fare for those flights.
 
 - A round trip's lines are complete round trips, each with both directions, one total and each direction's stops and duration, such as "out nonstop 5h58m, back 1 stop 8h45m". Each row books as one offer.
 
@@ -77,6 +77,8 @@
 - Point each flight row at its pointer in the unchanged file, such as `/offers/0`, or `/searches/1/result/offers/0` for a parallel search. Partial results use `/partial_results/offers/INDEX`.
 
 - A tap on a native flight row selects that row's complete offer. For a trip that is still being planned, return it to the plan and stop before seats, traveler details or validation. Otherwise validate and book that same complete offer, with every leg.
+
+- When the user wants a different cabin, fare or bag allowance on flights already shown, look in that offer's `fare_options`, such as `jq '.offers[3].fare_options[]' FILE` for `/offers/3`, and book the matching option's `id` like any offer. The list holds only what this search returned, so a missing list or no match doesn't mean the airline doesn't sell that fare; search again with the requested cabin before answering.
 
 - If the original file was lost or altered, rerun the search into a new file; an offer rebuilt from truncated output or a summary can't be validated or booked.
 

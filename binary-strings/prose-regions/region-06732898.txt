@@ -1,0 +1,57 @@
+reconcile orphaned approval RuntimeWork during startupfailed to terminalize orphaned approval RuntimeWork at startupapproval wait lost its exact restart checkpoint during daemon restartcomplimentary plan-name lookup failedskipping goal suggestion with missing ideacommitted goal maintenance planning failedfailed to serialize goal detail for goal.updated websocket eventfailed to load goal detail for goal.updated websocket eventfailed to serialize localized goal.updated websocket eventbroadcast goal.updated websocket eventfailed to hydrate goal Space associations from Spaces catalogslug is not a Space slugcontrol receipt not sentvoice_restart_record_readvoice_restart_record_blocking_queueresume_directory_unsetvoice call restart record reader panickedvoice_restart_offerrecord_absentoutside_windowdiscardedarmedvoice call restart record readcall_idvoice_call_restart_rejoin_armedrecord_unreadablediscarded an unreadable voice call restart recordvoice call restart record writer panickedfailed to record the live voice call for the next daemonrecorded the live voice call for a rejoin after restartvoice_call_restart_rejoin_recordedvoice end-call queued as a session stop on the call's realtime streamonepassword{bin}sh-c--enable-app-redirectOAuth authorize URL command returned a failure statusOAuth authorize URL response omitted state; returning URL without request provenanceauthd socket unavailable; returning OAuth authorize URL without request provenancereturning OAuth authorize URL without updating request provenanceauthd socket unavailable; suppressing Shop Pay authorize URLShop Pay authorize URL omitted a unique OAuth stateOAuth authorize URL command response was missing a usable URLOAuth authorize URL command returned invalid JSONOAuth authorize URL command failedShop Pay request provenance binding failed; suppressing authorize URLfailed to reconcile skills statuses with no subscribersfailed to build skills.updated payloadruntime.skillsskill command runtime context registration failedruntime.skills.paced_probeconnector_call_reasonJARVIS_TRACE_CONTEXTJARVIS_HOMEJARVIS_VAR_LIB_DIRCREDENTIALS_DIRECTORYJARVIS_RUNTIME_CONTEXT_TOKEN
+select *
+from runtime.checkout_spend_operations
+where operation_id = $1
+for update
+
+select *
+from runtime.checkout_spend_operations
+where wallet_provider = $1
+  and wallet_request_id = $2
+
+select *
+from runtime.checkout_spend_checkpoints
+where operation_id = $1
+order by claimed_at_ms, checkpoint_key
+for update
+
+coalesce((
+    o.state = 'cancelled'
+    and o.recovery_epoch = 1
+    and o.client_task_key like 'opentable:%'
+    and o.wallet_provider = 'stripe-link'
+    and o.wallet_request_id is not null
+    and o.terminal_result @> '{"provider":"opentable","payload":{"kind":"payment_setup_cancelled","retry_allowed":true}}'::jsonb
+    and coalesce(o.terminal_result->'reference_id', 'null'::jsonb) = 'null'::jsonb
+    and coalesce(o.terminal_result->'decline_reason', 'null'::jsonb) = 'null'::jsonb
+    and exists (
+        select 1 from runtime.checkout_spend_checkpoints c
+        where c.operation_id = o.operation_id
+          and c.provider = 'opentable'
+          and c.checkpoint_key = 'merchant_cancellation'
+          and c.external_id = o.wallet_request_id
+          and c.bound_at_ms is not null
+          and c.detail = '{"status":"canceled"}'::jsonb
+    )
+    and not exists (
+        select 1 from runtime.checkout_spend_checkpoints c
+        where c.operation_id = o.operation_id
+          and (c.checkpoint_key = 'merchant_execution' or c.provider <> 'opentable')
+    )
+    or (
+        o.state = 'declined'
+        and o.recovery_epoch = 1
+        and o.client_task_key like 'opentable:%'
+        and o.wallet_provider = 'stripe-link'
+        and o.terminal_result->>'provider' = 'opentable'
+        and o.terminal_result->>'decline_reason' = 'payment_setup_failed'
+        and coalesce(o.terminal_result->'reference_id', 'null'::jsonb) = 'null'::jsonb
+        and coalesce(o.terminal_result->'cancellation_reason', 'null'::jsonb) = 'null'::jsonb
+        and not exists (
+            select 1 from runtime.checkout_spend_checkpoints c
+            where c.operation_id = o.operation_id
+        )
+    )
+), false)
+cselect o.* from runtime.checkout_spend_operations o
+         where o.client_task_key = $1 and not (À€Õ

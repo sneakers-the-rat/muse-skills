@@ -77,7 +77,7 @@
 
 - Every creation, vote and added option of one poll returns as its own message carrying the same poll, and older copies can keep earlier counts. Run `sync messages --cid 'ID'` first and describe only the newest copy, once.
 
-- A missing `vote_count` means the poll hides results from the user, and missing `voters` means it hides results or is anonymous; say so rather than reporting zero votes. `voters` is capped, so when `vote_count` is larger, name the listed voters and say how many others voted. Name the creator from `creator_id` against the thread's participants, or as the user when it matches `_cache.self_user_id`, and never show a poll or option ID.
+- A missing `vote_count` means the poll hides results from the user. Missing `voters` means voters are not listed for a poll with more than 10 options, and otherwise that the poll hides results or is anonymous; say which rather than reporting zero votes. `voters` is capped, so when `vote_count` is larger, name the listed voters and say how many others voted. Name the creator from `creator_id` against the thread's participants, or as the user when it matches `_cache.self_user_id`, and never show a poll or option ID.
 
 - When asked for a URL from a message, check both its text and its URL metadata, and return the value byte for byte, keeping scheme, host, port, path, query, fragment, case and percent-encoding. Never normalize, shorten or rebuild it from a preview, and open it only if the user asks.
 
@@ -135,17 +135,23 @@
 
 ## Group chats
 
-- `thread-create`, `participants add` and `participants remove` work on open (non-encrypted) groups; encrypted and one-to-one chats are refused. `participants remove` also refuses groups with AI bots or linked to a Facebook Group, even when the user is leaving.
+- `thread-create`, `participants`, `admins` and `poll` work on open (non-encrypted) groups and are refused in encrypted and one-to-one chats. `admins` and `participants remove` also refuse groups with AI bots or linked to a Facebook Group; for `participants remove`, that includes the user leaving.
 
-- These commands ask the user for approval themselves, so run them without Preview and send's chat preview. Ask first only when the request is ambiguous, and run it once the user picks. Pass message text with `--text-stdin`.
+- Each of these commands shows its own approval card naming the group and the change, so skip Preview and send's chat preview. Ask first only when the request is ambiguous, and run the command once the user picks. Pass message and poll question text with `--text-stdin`.
 
-- Resolve the group with `threads --search` and use its ID, skipping groups with `is_e2ee: true`. If `is_e2ee` is missing or nothing matches, run `sync threads` once and search again.
+- Resolve the group with `threads --search` and use its ID, never a guessed one, skipping groups with `is_e2ee: true`. If `is_e2ee` is missing or nothing matches, run `sync threads` once and search again.
 
-- When more than one open group matches the chat the user named, list each match as its name, Markdown-linked to `https://www.messenger.com/t/<GROUP_ID>` (the numeric part of `cid.g.<GROUP_ID>`), followed by two of its other members' names, for example `[Weekend Crew](https://www.messenger.com/t/123) (Sandra Liangstein, Mary Zuckerez)`, and ask which chat they mean. Show names, never bare URLs or IDs. If only encrypted chats match, say these commands cannot change members there.
+- When more than one open group matches the chat the user named, list each match as its name, Markdown-linked to `https://www.messenger.com/t/<GROUP_ID>` (the numeric part of `cid.g.<GROUP_ID>`), followed by two of its other members' names, for example `[Weekend Crew](https://www.messenger.com/t/123) (Sandra Liangstein, Mary Zuckerez)`, and ask which chat they mean. Show names, never bare URLs or IDs. If only encrypted chats match, say these commands cannot change them.
 
 - When a name matches more than one contact or group member, list each match by full name, linked as Resolve the recipient describes (the name itself is the link; never a bare URL or ID), and ask which one they mean.
 
-- Never retry a failed call automatically or trigger approval again; report the reason once and stop. After a failure, keep the people, group, name and message unless the user changes them.
+- To act on someone already in the group, take their `id` from that group's `participants` in `threads`, matched by name; never pass a guessed ID. If no member matches, run `sync threads` once and check that group's members again before telling the user they are not there. If the command refuses before its approval card because it cannot read the local threads or find the person among the group's members, nothing was sent: run `sync threads` once, resolve them again and call again; if they are still missing, tell the user. Report only the final outcome, not the resync or retry.
+
+- Messenger's own rules decide who may make a change (usually only admins can remove others or change admins), so leave that check to Messenger. Report a `*_NOT_ALLOWED` refusal as Messenger not allowing it, without guessing a more specific reason.
+
+- Run each command once per request. Never retry a failed call automatically or trigger approval again; report the reason once and stop. Don't work around a failure by changing the request, such as dropping a person, picking another group, or rewording the name, question or options. Any change comes from the user.
+
+- A refusal before the approval card, a denied card, or an error a section below lists as changing nothing means nothing happened; for a refusal, say what to change. Once a request has been sent, any other failure, including a timeout, an unreadable response or `outcome unknown`, means the change may have happened even if a re-read does not show it yet: say the outcome is unknown and suggest checking the group in Messenger.
 
 ### Start a group chat
 
@@ -183,13 +189,11 @@
   - `pending_approval`: invited, but not in the group until an admin approves. Say that; it is not a failure.
   - `already_member` or `already_pending`: nothing changed.
 
-- `GROUP_FULL` and `ADD_NOT_ALLOWED` mean nobody was added; for `ADD_NOT_ALLOWED`, do not guess who or why. Once the add has been sent, any other failure, including a timeout or an unreadable response, means it may have happened: say the outcome is unknown and suggest checking the group in Messenger.
+- `GROUP_FULL` and `ADD_NOT_ALLOWED` mean nobody was added.
 
 ### Remove someone or leave a group
 
-- Use `participants remove` only when the user asks to remove someone from a group they are in, or to leave it. Only admins can remove others; anyone can leave. AI bots cannot be removed.
-
-- Take the person's `id` from the group's `participants` in `threads`, matched by name. To leave, use the user's own `user_id` from `check`.
+- Use `participants remove` only when the user asks to remove someone from a group they are in, or to leave it. Only admins can remove others; anyone can leave. AI bots cannot be removed. To leave, use the user's own `user_id` from `check`.
 
 - Call once per person, so each gets its own approval card. If the user is also leaving, do that last.
 
@@ -199,15 +203,76 @@
 
 - `{"success": true}` means the person is out of the group, or the user left.
 
-- If the command refuses before the approval card because it cannot read the local threads, or you or the command cannot find the person among the group's members, nothing was sent: run `sync threads` once, resolve them again and call again; if they are still missing, tell the user. Report only the final outcome, not the retry.
-
 - These errors mean nothing changed:
   - `NOT_IN_GROUP`: the person is not in the group.
   - `ONLY_SELF_REMOVAL_ALLOWED`: the user is not an admin, so they can only leave. Ask whether they want to leave, and call again with their own ID only on an explicit yes.
   - `BOT_REMOVAL_NOT_SUPPORTED`: the person is an AI bot.
-  - `REMOVE_NOT_ALLOWED`: Messenger does not allow it; do not guess why.
+  - `REMOVE_NOT_ALLOWED`: Messenger does not allow it.
 
-- Once the removal has been sent, any other failure, including `REMOVE_FAILED`, a timeout or an unreadable response, means it may have happened: say the outcome is unknown and suggest checking the group in Messenger.
+### Change admins
+
+- Use `admins add` to make a group member an admin and `admins remove` to take away someone's admin role, only when the user asks. Someone removed as admin stays in the group. The person must already be a member; adding them is a separate `participants add` request. AI bots cannot be made admins.
+
+- The user cannot remove their own admin role. If they ask to step down, explain that leaving the group is the only way, and run `participants remove` with their own ID only if they ask to leave.
+
+- Call once per person, so each gets its own approval card:
+
+```sh
+/opt/hatch/bin/hatch_messenger_cli admins add --cid '<CONVERSATION_ID>' --user-id '<FBID>'
+/opt/hatch/bin/hatch_messenger_cli admins remove --cid '<CONVERSATION_ID>' --user-id '<FBID>'
+```
+
+- `"outcome": "promoted"` or `"removed"` means the change happened. `"already_admin"` or `"not_admin"` means nothing needed to change; tell the user.
+
+- These errors mean nothing changed:
+  - `NOT_IN_GROUP`: the person is not in the group.
+  - `BOT_PROMOTION_NOT_SUPPORTED`: the person is an AI bot.
+  - `SELF_REMOVAL_NOT_SUPPORTED`: the ID is the user's own.
+  - `PROMOTE_NOT_ALLOWED` or `DEMOTE_NOT_ALLOWED`: Messenger does not allow the user to make this change, for example because they are not an admin of the group.
+
+### Start a poll
+
+- Use `poll create` only when the user asks to start a poll in a group they are in. Use the exact question and the 2 to 10 options they give, in their order. Ask for whatever is missing; never invent a question or options. A question holds up to 200 characters and each option up to 140. New polls use Messenger's defaults: everyone can vote for several options, change their votes and add options.
+
+- Call once, with one `--option` per choice, quoted like `--thread-name`:
+
+```json
+{
+  "command": "/opt/hatch/bin/hatch_messenger_cli poll create --cid '<CONVERSATION_ID>' --option '<TEXT_1>' --option '<TEXT_2>' --text-stdin",
+  "stdin": "exact poll question"
+}
+```
+
+- Messenger does not deduplicate polls, so a second call posts a second poll. Never call `poll create` again for the same request, even after a timeout or an unknown outcome.
+
+- If the command rejects the question or options before the approval card, no poll was sent: say what to change, and take the new wording from the user.
+
+- `INVALID_POLL`, `POLL_NOT_ALLOWED`, `NOT_GROUP_THREAD`, `E2EE_THREAD_NOT_SUPPORTED`, `THREAD_NOT_FOUND`, `THREAD_NOT_ALLOWED` and `PERMISSION_DENIED` mean Messenger refused before creating anything; say no poll was sent. Any other failure after sending means the poll may already exist even if a re-read does not show it yet: say the outcome is unknown and suggest checking the group in Messenger.
+
+### Vote in a poll
+
+- Use `poll vote` only when the user asks to vote, change or remove their vote, or add options to a poll in a group they are in.
+
+- Run `sync messages --cid '<CONVERSATION_ID>'`, then read the poll message's `poll` object from `messages` for the option IDs and the user's current votes (options with `viewer_voted: true`). Never guess the message or option IDs. If the current votes still cannot be read, ask the user for the full selection they want.
+
+- The `--option-id` values replace the user's votes, so an option they voted for but you leave out loses its vote. For an additive request ("also vote for Saturday"), keep every current vote and add the new one. Change the selection only as the user asks.
+
+- Ask first when the request would drop a current vote the user did not name, or when more than one poll in the chat could be the one they mean. Once the user answers, run the command without asking again.
+
+- Pass at least one of `--option-id`, `--add-option` or `--clear`:
+  - `--add-option '<TEXT>'` adds up to 10 new options per call without voting for them, only on a poll with `allows_adding_options: true`.
+  - `--clear` removes all of the user's votes and cannot be combined with `--option-id` or `--add-option`.
+  - A poll with `allows_multiple_choices: false` takes one `--option-id`.
+
+- Always pass `--cid`; the wrapper needs it to show the poll on the approval card. Call once:
+
+```sh
+/opt/hatch/bin/hatch_messenger_cli poll vote --mid '<MESSAGE_ID>' --cid '<CONVERSATION_ID>' --option-id '<ID_1>' --option-id '<ID_2>'
+```
+
+- If the command rejects the request before the approval card, for example several options on a single-choice poll or adding options to a poll that does not allow it, nothing changed: say what to change.
+
+- `INVALID_VOTE`, `VOTE_NOT_ALLOWED`, `OPTIONS_LOCKED`, `POLL_NOT_FOUND`, `THREAD_NOT_ALLOWED` and `PERMISSION_DENIED` mean the votes did not change. Any other failure after sending may still have changed the vote even if a re-read does not show it yet: say the outcome is unknown and suggest checking the poll in Messenger.
 
 ## Marketplace messages
 

@@ -1,0 +1,72 @@
+Failed to schedule write op for insertavatar_statebackground_content_jobsregistry.list_pairednodesWITH ownership_lock AS MATERIALIZED (
+  SELECT pg_advisory_xact_lock(hashtextextended($4, $5))
+),
+updated_spawn AS (
+  UPDATE subagent_spawns
+SET completed_at = COALESCE(completed_at, $1),
+    status = $2,
+    deferred_terminal_status = NULL,
+    final_response = COALESCE(final_response, $3),
+    seen_at = CASE WHEN $2 = 'interrupted' THEN COALESCE(seen_at, $1) ELSE seen_at END
+WHERE child_agent_id = $4
+    AND EXISTS (SELECT 1 FROM ownership_lock)
+    AND (
+      NOT $6
+      OR (completed_at IS NULL AND deferred_terminal_status IS NULL)
+    )
+    AND EXISTS (
+      SELECT 1 FROM agents
+      WHERE agents.id = subagent_spawns.child_agent_id
+        AND (
+          ($6 AND agents.status IN ('pending_init', 'running'))
+          OR (NOT $6 AND agents.status NOT IN ('shutdown', 'not_found'))
+        )
+    )
+  RETURNING child_agent_id
+)
+SELECT EXISTS (SELECT 1 FROM updated_spawn)force_subagent_final_responseDELETE FROM runtime_restart_checkpoints WHERE agent_id = $1browser_tasks.managed_activenative navigation observation is unavailablenative_observationresolve_navigationcurrent_navigationavatar-state: milestone import marker read failed; retrying idempotent importavatar-state: authoritative row missing after milestone import completed; seeding without replaying the retired fileavatar-state: exhausted CAS retries persisting default visual metadataavatar-state: exhausted CAS retries importing milestone ledgeravatar-state: milestone import marker write failed; a later startup will retryavatar-state: milestone ledger moved off the onboarding state fileavatar-state: exhausted CAS retries folding legacy repair columnsavatar-state: folded legacy repair columns into the typed mapreplace_runtime_restart_checkpoint_if_exact_payloadbrowser.control_is_suspendedfailed to deserialize tracked subprocess metadatafailed to enumerate in-flight tool-owned processes during message cancellationfailed to abort in-flight tool-owned process during message cancellation
+SELECT event_seq, event_name, source, role::text AS role, visibility::text AS visibility,
+       message_id, agent_id, parent_agent_id, parent_message_id, reply_to_message_id,
+       transcript_surface::text AS transcript_surface, payload_json,
+       (extract(epoch from created_at))::bigint AS created_at
+FROM runtime.events WHERE idempotency_key = $1
+runtime.cancellation
+SELECT ci.item_json, ci.message_source,
+       (extract(epoch from ci.created_at))::bigint AS created_at,
+       projection.client_context_json
+FROM agent.context_items AS ci
+LEFT JOIN agent.context_item_resume_projection AS projection
+  ON projection.agent_id = ci.agent_id AND projection.seq = ci.seq
+WHERE ci.agent_id = $1 AND ci.seq = $2
+cancellation retry does not match its committed identity
+SELECT
+  GREATEST(
+    (SELECT COALESCE(MAX(seq), -1) FROM context_items WHERE agent_id = $1),
+    (SELECT COALESCE(MAX(seq), -1) FROM context_item_resume_projection WHERE agent_id = $1),
+    COALESCE((SELECT handoff_context_high_water_seq FROM agent.agents WHERE agent_id = $1), -1),
+    (SELECT COALESCE(MAX(root_seq), -1) FROM agent.companion_trace_imports WHERE root_agent_id = $1),
+    (SELECT COALESCE(MAX(producer_seq), -1) FROM agent.companion_trace_imports WHERE producer_agent_id = $1),
+    COALESCE((SELECT settled_seq FROM agent.companion_trace_sources WHERE producer_agent_id = $1), -1)
+  ) AS max_item_seq,
+  COALESCE((SELECT prompt_floor_seq FROM agents WHERE id = $1), -1)
+    AS prompt_floor_seq,
+  (SELECT COALESCE(MAX(checkpoint_seq), -1)
+     FROM agent_compactions
+     WHERE agent_id = $1
+       AND checkpoint_seq IS NOT NULL
+       AND has_replacement_history)
+    AS checkpoint_seq
+max_item_seqcheckpoint_seqcontext_seqlegacy completion has no verifiable batch ownerUPDATE agent.agents SET handoff_context_high_water_seq =
+                GREATEST(COALESCE(handoff_context_high_water_seq, -1), $2)
+             WHERE agent_id = $1SELECT state, submission_json, accepted_at, transcript_event_seq,
+                    stream_owner_message_id FROM agent.message_mailbox
+             WHERE agent_id = $1 AND submission_id = $2 FOR UPDATEstartup_submission_missingreply_to_targetlegacy startup cancellation changed its replyaccepted_atstartup_submission_terminalstartup_execution_ownedstartup_already_cancelledtranscript_event_seqstartup cancellation input already has execution custodystartup_submission_changedUPDATE agent.message_mailbox SET state = 'aborted', terminalized_at = now(),
+                    transcript_event_seq = $3
+             WHERE agent_id = $1 AND submission_id = $2 AND state = 'accepted'
+               AND stream_owner_message_id IS NULL AND transcript_event_seq IS NULLstartup cancellation custody changed before commitSELECT state, submission_json, accepted_at, transcript_event_seq,
+                    stream_owner_message_id, checkpoint_custody FROM agent.message_mailbox
+             WHERE agent_id = $1 AND submission_id = $2 FOR UPDATElegacy startup quota rejection changed its replypending startup input already has a transcript eventstartup_quota_rejectionUPDATE agent.message_mailbox SET state = 'completed', terminalized_at = now(),
+                    transcript_event_seq = $3
+             WHERE agent_id = $1 AND submission_id = $2 AND state = 'accepted'
+               AND stream_owner_message_id IS NULL AND checkpoint_custody IS NULL
+               AND transcript_event_seq IS NULLstartup quota rejection custody changed before commitbrowser.inputbrowser.withdraw_inputbrowser.interrupt_questionbrowser.begin_callinvalid browser continuationbrowser.complete_callchat worker provenance unavailablescheduled job's side chat unavailablescheduled job's side chat access unavailablegroupfailed to persist interrupted Space construction statusfailed to touch recent Space after interrupted builder recoveryrestart_checkpointsno poisoned restart checkpoints found"restart checkpoint repair failed: Á 

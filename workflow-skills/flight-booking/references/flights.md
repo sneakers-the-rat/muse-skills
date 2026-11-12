@@ -70,7 +70,7 @@
 
 ## Present the flight list
 
-- Load the `widget` namespace with `tool_search.load_tool_namespace`, and show the options as a native flight list with `widget.create_list_widget`: one flight row per chosen offer, using the pointer the connector gives for it. When the tool is absent or a valid call returns an explicit unsupported or rendering error, the connector's option lines read well as a short list, as they are; they already carry what a table would. Rows point at bookable offers, which a Google Flights lead isn't.
+- Load the `widget` namespace with `tool_search.load_tool_namespace`, and show the options as a native flight list with `widget.create_list_widget`: one flight row per chosen offer, using the pointer the connector gives for it. When the tool is absent or a valid call returns an explicit unsupported or rendering error, the connector's option lines read well as a short list, as they are; they already carry what a table would. Rows point at bookable offers, which a Google Flights lead isn't. [Flight rows](flight-rows.md) covers filling them from a connector's search file or a verified website fare.
 
 - Create the list in the main conversation and reply with one message: the list's embed token first, then one short paragraph. Put the search assumptions, such as travelers, cabin or a time filter, in the list's subtitle. Notes the connector's docs require, such as failed searches, incomplete coverage or split tickets with their caveat, follow the paragraph in the same message.
 
