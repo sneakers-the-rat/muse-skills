@@ -28,7 +28,7 @@ or a supported provider flow. It returns the actual result. Unavailable,
 disabled or denied access does not mean that a login is missing.
 
 Never put a password in a browser assignment, chat, file or memory; passwords
-reach the browser only through the Secure Vault. A card or one-time code the
+reach the browser only through the Secure Vault. A one-time code the
 user gives you goes to the browser task as text, and stays out of files and
 memory. A protected code reference goes in `verification_code`; the user
 approves sharing the code before the browser receives it, and the reference

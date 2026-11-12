@@ -1,6 +1,8 @@
 # Browser purchase preapproval
 
-Use `permissions.preapprove` for one browser payment or order through Link.
+Use `permissions.preapprove` for one browser payment or order through a
+connected wallet the approval card offers, including Link and Shop Pay, or a
+payment method the merchant saved for the user.
 Send one action in `actions`, with `connector: "browser"` and the `binding` below.
 Direct checkout integrations use their own approval flow.
 
@@ -34,8 +36,12 @@ quantities, delivery destination, seller restrictions, material constraints, and
 delegated choices in `intent`. Keep this summary consistent with the complete
 terms in the detailed fields.
 Approval covers the full spec version.
-The cap includes tax, shipping, and fees. `expires_at` is RFC 3339, defaults
-to 30 days, and must be within the next 365 days.
+The cap includes tax, shipping, and fees. Write `expires_at` in RFC 3339,
+within the next 365 days. Approval for a purchase now lasts up to 12 hours.
+When the user sets a shorter deadline for a purchase now, put that deadline in
+`expires_at`; otherwise omit it. For a scheduled purchase, set `expires_at` to
+the end of its buying window. When you omit it, a scheduled approval expires
+after 30 days.
 
 ## Request approval
 
@@ -43,10 +49,14 @@ to 30 days, and must be within the next 365 days.
    preferences, and delegated choices. Use wallet calls for missing contact or
    delivery details. Ask together for choices that remain unresolved.
 
-2. Complete required Link setup. Preserve an established Link card preference;
-   do not add a card-selection question. If the user chose another payment
-   provider or a merchant-saved card, ask whether to use Link preapproval or
-   keep that choice with approval at checkout.
+2. Preserve the user's established wallet or card preference. Do not add a
+   wallet- or card-selection question. The approval also covers a payment
+   method the merchant saved for the user. When the user chose one, pass that
+   choice in the browser assignment. Otherwise, complete wallet setup only when
+   `wallet.list_payment_methods` shows no connected wallet with a usable
+   payment method. If the user chose a payment method that neither a connected
+   wallet nor the merchant's saved methods supply, ask whether to use wallet
+   preapproval or keep that choice with approval at checkout.
 
 3. Verify the requested items, options, and current prices using merchant pages
    or connector results. Use `browser.open` for a known product URL.
@@ -129,7 +139,8 @@ payment terms, and do not start overlapping purchases.
 
 Browser questions include the saved approved terms and attempt state. Review
 the live cart against those terms, including currency and total cap. Approval
-does not cover choices outside the spec or a different payment route.
+does not cover choices outside the spec. It covers only the approved wallet and
+payment methods the merchant saved for the user.
 
 To renew or change terms, return to chat confirmation and approval with the
 same `purchase_id`, the full proposed spec, and a new expiry. For scheduled

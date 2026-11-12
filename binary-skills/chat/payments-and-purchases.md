@@ -10,10 +10,20 @@ workflow owns cart review, payment choice, approval, submission and verification
 
 For browser purchase preapproval, follow
 `~/docs/chat/browser-purchase-preapproval.md` before preparing checkout.
-It requires chat confirmation followed by an approval card and covers Link
-only. During checkout, use the saved approved terms in browser questions.
 The wallet defaults and provider changes below do not expand that approval.
 <!-- purchase-preapproval-only:end -->
+
+## Wallet readiness
+
+Use `wallet.list_payment_methods` to check readiness; a connection alone does
+not prove a usable payment method. Follow the Wallet tool's instructions to
+choose and present one secure setup action. Keep shopping and retain details
+the user supplies while setup is pending.
+
+After setup, list the methods again. Continue the same browser task, answering
+its waiting question with `answer_to` when present. Include the details supplied
+while waiting. Pass `wallet` only for an explicit provider or method preference,
+as below. For direct checkout, resume through its connector's instructions.
 
 ## Assign the purchase
 
@@ -85,17 +95,15 @@ When the user chose a particular payment method, include its exact `payment_meth
 from `wallet.list_payment_methods` in `wallet` and name its returned label in
 `task`. Do not reproduce the payment sheet as another chat approval.
 When the user prefers a method saved by the merchant, include that preference
-in the task and leave `wallet` unset. The checkout records
-`payment_route: merchant_saved`.
-For payment through Muse Wallet (Link or Shop Pay), the checkout uses
-`payment_route: wallet`.
-Without an explicit provider choice, the runtime preserves an approved choice,
-then prefers sufficient Link balance when eligible, native Shop Pay when eligible,
-and otherwise chooses among wallets eligible for the current checkout.
-It handles any required payment
-approval, where the user can choose another offered method. When the user requests a method the runtime cannot
-supply, such as PayPal, preserve that choice in the task. The browser uses
-takeover and returns the prepared checkout for the user to complete.
+in the task. For a new task, leave `wallet` unset; to change an existing payment
+choice, use `wallet: null`. Without an explicit wallet preference, omit `wallet`;
+the browser can use a connected wallet and handles payment approval.
+When the user requests a method Wallet cannot supply, such as PayPal, Apple Pay
+or Google Pay, offer Wallet first: the usable connected wallet, or one secure
+setup action. Assign takeover only after the user declines Wallet or the browser
+reports that Wallet cannot pay this checkout. When you assign takeover, preserve
+the requested method in the task. The browser prepares checkout and returns the
+remaining steps for the user to complete.
 
 The result's `card_picked` names the payment method approved in that interface,
 including when funding failed. Use that identity when explaining a failure;
@@ -111,25 +119,9 @@ user choice; do not silently replace it with a default. When the workflow
 reports missing information, provide already established values together or
 present its remaining secure action.
 
-When a browser checkout needs wallet setup, call `wallet.list_payment_methods`
-for that provider. For connection or reauthentication, explain which purchase
-is waiting, show the returned `next_action.markdown` unchanged, and end the
-message. If the connected wallet has no usable payment method, use
-`wallet.add_payment_method` and present its secure action the same way.
-If the user supplies other requested details first, retain them and keep the
-wallet setup request open.
-
-After setup, list the methods again and continue the same browser task.
-Answer its waiting question with `answer_to`, name the connected wallet and
-include the details supplied while waiting in `task`. If the user explicitly
-chose a provider, pass it in `wallet`, including a payment-method ID only when they
-chose a particular method. Otherwise leave it unset so the runtime selects the
-provider and handles any required payment approval. The reply returns to
-the waiting checkout with its cart intact. If no question is waiting, continue
-the task with that context.
-
-Suggest another way to pay only after the wallet connection fails or does not
-go through, the wallet refuses the payment or is over its spend limit, the
+Send a Wallet setup offer on its own, without another way to pay. Suggest
+another way to pay only after the user declines setup, the wallet
+connection fails, the wallet refuses payment or is over its spend limit, the
 wallet integration does not support this checkout, the merchant declines the
 card, or the checkout takes no card entry. When wallet payment has definitively failed or cannot pay this checkout,
 ask the user about another wallet or offer browser takeover. The checkout uses
@@ -146,17 +138,10 @@ forward credit card numbers they send there. The user can securely give Muse
 access to their credit card through Wallet. Wallet-issued payment credentials
 returned by the payment runtime stay within the checkout workflow.
 
-A staged card form, whose card number, expiry and security code fields appear
-only after an earlier step such as the name on the card, is a standard card
-form. So is a card form that adds the card to the merchant account; that does
-not authorize saving the card or changing the default payment method beyond
-what the checkout requires. The checkout workflow may fill only the cardholder
-name to reveal those fields, so do not tell the browser to avoid typing in the
-card form.
-
 A wallet connection, method selection, cart review, completed login or return
 of browser control does not itself authorize spending. A merchant-saved card
-is used only when it is the card the user approves in the payment approval.
+is used only when the user approves it in the payment approval, or when the
+user chose it for a preapproved purchase.
 The payment sheet owns provider disclosures and final consent. Funding
 allowance is not permission to raise the purchase total.
 

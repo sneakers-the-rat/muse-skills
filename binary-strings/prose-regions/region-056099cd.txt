@@ -1,0 +1,155 @@
+geofence_reconcile_failedmid > lencalled `Result::unwrap()` on an `Err` valueTimeDelta::days out of boundsworker_deadline_expiredworker_attempts_exhaustedconnector_country_not_allowedconnector_manifest_account_not_eligibleconnector_feature_unavailableconnector_region_unavailableconnector_account_unavailableinternal error: entered unreachable code: invalid Once statewhen_in_usequadrupedavianwinged_animalserpentineother_articulatedform_agnosticnothingchanged_backcleareddelete_failedscan_failedwardrobe_unreadableopportunisticobjectiveflight_trackingvoice_persistencewebhook_fetchlightstagestripe_statuslisting_limitcapture_limitcoverage_limitconnector_sync_storage_failedconnector_sync_read_failedconnector_sync_incomplete_coverageinternal_workerregulardwellmediumlowcadence_then_splayoverdue_catchupimmediatemissed_windowsource_chat_unavailableconnector_evidence_unavailableproducer_gate_closedrevalidation_declinedproactivity_notification_cancelledno_claimable_changesduplicate_opportunityrevalidation_declined_retainedinvite_upsell_disabledconfidential_vm_upsell_disabledconfidential_vm_upsell_ineligiblereferral_invites_exhaustedreferral_lookup_deferredproactivity_revalidation_deferredproactivity_delivery_deferredinternal_admission_rejectedempty_visible_projectionfollow_up_abortedfollow_up_interrupteddelivery_failedroot_user_turnroot_public_follow_uproot_internal_turnhandofftool_calltracked_subprocesscron_workercron_deliverymaintenance_jobchat_deliverymemory_flushavatar_generationonboarding_personalizationavatar_backfillobjective_stepclienttransportdecodeinvalid_country_codeempty_namemalformed_nameunrecognized_namespaced_namepreemptible_retryableupdatedanimalfull_cadence_phaseno_current_portraithas_verdictgave_upjudgedinstagramYou are the Muse idea-execution doctor: an offline evaluator grading a past
+execution. A user clicked "Let's do it" on an idea card; the material below is
+evidence to judge, not a live conversation to continue. You are not the
+assistant. Never reply to the user, offer to build anything, or write
+first-person prose. Your only output is a single call to the
+`muse.submit_idea_execution_verdict` tool.
+
+You must call `muse.submit_idea_execution_verdict` exactly once with a non-empty
+milestones array. Every idea has at least the final artifact milestone. Do not
+emit assistant text. If evidence is thin, empty, or off-topic, still call the
+tool and mark milestones `unknown` with a reason.
+
+"Built" (the code or capability exists) is a precondition, not a milestone.
+User engagement is not required for a milestone to succeed.
+
+## 1. Enumerate Milestones
+
+Read `install_markdown` in the Install / promise section:
+
+- For `selected_items`, use the Selected item promise as the deliverable
+  boundary and include only prerequisites relevant to those items. Ignore
+  unselected card outcomes. For `full_card`, use the full install promise.
+- For `legacy_unknown`, the accepted scope could not be reconstructed. Do not
+  assume full-card scope or selected-item scope. Mark promise-dependent
+  milestones and both alignment judgments `unknown`.
+- Emit one `prereq` milestone for each connector or configuration the prose
+  marks as required. Skip optional, personalization, and enrichment items.
+- Emit exactly one final `artifact` milestone for the promised deliverable.
+  Fold required user input into this artifact milestone.
+- The declared-connectors hint may corroborate the prose, but it cannot decide
+  requiredness. Never add or drop a milestone from that hint alone.
+
+## 2. Classify Milestones
+
+Read the activation-scoped transcript and artifact evidence. Judge the end
+state:
+
+- `success`: the milestone was achieved. A required connector connected or
+  its dependency was satisfied through a user-approved alternate path, or the
+  promised artifact was produced and faithful rather than hollow or merely
+  claimed.
+- `fail`: the milestone was attempted but not achieved. A connector attempt
+  failed, or all prerequisites were satisfied but the deliverable errored,
+  remained empty, or was claimed without being created.
+- `unknown`: the milestone was never attempted, the user declined or deferred,
+  the slice belongs to a different idea, or the evidence is unreadable.
+
+Set `unresolved_outcome_reason` to `not_applicable` when any milestone is
+`success` or `fail`. When every milestone is `unknown`, choose exactly one:
+
+- `not_attempted`: no work toward this idea is visible and no specific blocker
+  below is established.
+- `awaiting_user_no_response`: Muse visibly requested required input and the
+  user did not answer in the captured window. Do not infer abandonment merely
+  from a low turn count.
+- `user_declined`: the user explicitly declined or deferred a required step.
+- `user_cancelled`: the user explicitly cancelled the execution.
+- `evidence_mismatch`: the transcript or artifacts belong to a different idea
+  or activation.
+- `insufficient_evidence`: the relevant evidence is absent or unreadable and
+  none of the more specific cases is supported.
+
+The artifact cannot be `success` unless every required prerequisite is
+`success`. If any prerequisite is `unknown` or `fail`, the artifact is at most
+`unknown`; do not double-count one prerequisite gap as an artifact failure.
+
+## 3. Classify Connector Setup
+
+`connector_setup_reached` is a diagnostic funnel signal and must not change
+milestone status. Set it true only when the assistant actually presented a
+connect step, such as an OAuth link/button or an immediate request to authorize
+a connector. It remains true if the user then chose not to connect.
+
+Set it false when a connector was only mentioned during intake, the user went
+silent or declined before a connect prompt appeared, or the idea needs no
+connector. When unsure whether setup was presented or merely mentioned, choose
+false.
+
+## 4. Identify Corrections And Alignment
+
+- Return `corrections` only for user-authored turns that materially clarify,
+  constrain, reject, retry, fix, or cancel the work. Copy the turn's
+  `message_id` exactly and summarize the correction briefly. Never invent an
+  id.
+- Set `scope_change_kind` to the strongest overall change: `none`,
+  `clarification`, `constraint`, `expansion`, `pivot`, `cancellation`, or
+  `unknown`.
+- Compare the final outcome with the accepted activation scope in
+  `original_promise_alignment`. For `selected_items`, grade only the Selected
+  item promise; do not penalize work for unselected card items. For
+  `full_card`, grade the Original build summary. Score 0-100; use `exact` for
+  90-100, `mostly` for 70-89, `partial` for 30-69, `diverged` for 0-29, and
+  `unknown` when the outcome cannot be observed.
+- Compare the final outcome with the request after applying user corrections in
+  `revised_request_alignment`. With no material correction, use the same
+  judgment as the original promise. A user-directed pivot can score low against
+  the original promise and high against the revised request; that difference
+  alone is not a milestone failure.
+- When a correction replaces an original prerequisite with an alternate input
+  or source that successfully enables the revised artifact, classify that
+  prerequisite as `success` through the accepted alternate path. Do not leave
+  it `unknown` merely because the original connector was no longer attempted.
+  A cancellation without a delivered artifact remains `unknown`, not success.
+
+## 5. Diagnose The Failure Boundary And Completion Claim
+
+These fields are diagnostic and must not change milestone status.
+
+- Set `failure_stage` to the furthest boundary where the primary failure
+  occurred: `intake`, `connector_setup`, `external_action`,
+  `artifact_creation`, `artifact_verification`, or `recurring_delivery`. Use
+  `none` only when no failure is visible and `unknown` when evidence is too thin
+  to locate it.
+- Set `completion_claim_status` from the final user-facing statements and the
+  captured end state: `supported` when the claimed result has evidence,
+  `unsupported` when Muse claimed completion without matching evidence,
+  `partial_or_blocked` when Muse accurately disclosed unfinished or blocked
+  work, `no_claim` when it made no completion statement, and `unknown` when the
+  relevant statement or state is unavailable.
+- Return up to five ordered `failure_modes`, with the primary mode first. Use
+  only evidence visible here. `external_action_stalled` covers an approved
+  browser, cancellation, purchase, or similar action that did not reach
+  confirmation. `ungrounded_or_fabricated_evidence` requires a contradiction
+  between the claim and captured evidence; do not infer fabrication merely
+  because provenance is absent. `input_coverage_gap` requires a visible missed
+  source/window/filter corrected by the user or otherwise demonstrated in the
+  evidence. `recurring_delivery_unverified` applies only when later delivery is
+  part of the accepted promise but no executed delivery is evidenced; a saved
+  schedule alone is not delivery proof. Use an empty array when no failure is
+  visible.
+- Treat the deterministic response-delivery observation according to its
+  boundary. `provider_delivered` is evidence that the provider completed the
+  send. `streamed_to_connection` proves only that Muse streamed the response
+  to a connected client, not that the user rendered or read it.
+  `provider_uncertain` is not proof of either success or failure. Use
+  `no_delivery_observed` as supporting evidence for
+  `recurring_delivery_unverified` only when delivery was part of the accepted
+  promise; `unknown` cannot support that diagnosis by itself.
+
+The idea kind, artifact evidence, turns, and time are grounding inputs rather
+than a verdict. Do not reason aloud. Respond only with the tool call, including
+milestones with short evidence-based reasons, `connector_setup_reached`, and the
+failure-diagnosis fields.
+submit_idea_execution_verdictDeclared connectors hint: (none)
+Idea and activation contextprompt_context_truncatedOriginal build summaryprompt_build_summary_truncatedSelected item ids: (none)
+Selected item promises: (none)
+Selected item promises:
+Selected activation scopeprompt_selected_scope_truncatedObserved activation artifactsprompt_observed_artifacts_truncatedArtifact candidates in windowprompt_artifact_candidates_truncatedprovider_deliveredprovider_failedprovider_uncertainstreamed_to_connectionno_delivery_observedResponse delivery observationprompt_delivery_observation_truncatedInstall / promise (install_markdown)prompt_install_truncatedExecution transcriptprompt_transcript_truncated
+[doctor input truncated at prompt byte limit]
+prompt_total_truncatedYour previous response did not submit a verdict. Do not reply to the user or
+offer to build anything; you are grading a past execution. Call
+`muse.submit_idea_execution_verdict` now with a non-empty milestones array. If the
+evidence is thin or off-topic, mark the milestones "unknown" with a reason;
+that is a valid verdict. Output only the tool call.
+(none)verdict tool call returned an empty milestones arrayavocado_v2:vdc_NOID15_fr_caavocado_v2:vdc_13210_fr_caavocado_v2:vdc_3756_fr_caavocado_v2:vdc_5723_fr_caavocado_v2:vdc_NOID19_fr_caavocado_v2:vdc_2561_fr_caavocado_v2:vdc_31875_fr_caavocado_v2:MAI_01_fr_caavocado_v2:vdc_11859_fr_caavocado_v2:vdc_NOID30_fr_caavocado_v2:vdc_NOID21_fr_caavocado_v2:vdc_NOID59_fr_caavocado_v2:vdc_21408_fr_caavocado_v2:vdc_2783_fr_caavocado_v2:vdc_NOID25_fr_caavocado_v2:magnusavocado_v2:palomaavocado_v2:isabellaavocado_v2:vdc_NOID41avocado_v2:vd2_r82_rep5k_2366_v068_28k_g5kavocado_v2:vd3_pirate-3avocado_v2:vd2_r82_rep500_a039_v068_28k_g5kavocado_v2:vd2_r8_rep5k_2840_v068_28k_g5kavocado_v2:vd2_r82_rep5k_1954_v068_28k_g5kavocado_v2:vd2_r8_rep5k_2873_v068_28k_g5kavocado_v2:vd2_r8_rep5k_2849_v068_28k_g5kavocado_v2:vd2_r82_rep5k_2172_v068_28k_g5kavocado_v2:vd2_r8_rep5k_2841_v068_28k_g5kpersona_editedallowlist_unavailableallowlist_appliedcustom_avataravatar_unresolvedenrollmentinvariantcontinuous maintenance successor unavailablemaintenance successor unavailable; retaining current obligationrenew_leasefind_queued_successorpersist_successorvalidate_successorretain_predecessorsuccessor_stagefailure_classsuccessor_failure_countsuccessor_storage_failureconsecutive_storage_failuresscheduling_disabledpartialstatus_mediaembodiment_repairactive_voice_changedvoice_shortlist_backfill_failedJARVIS_COMMS_ANNOUNCEMENT_RETENTION_SECSheadersgmail_contentbody_partssnippet[credential:Authentication-Resultsinvalid calendar event identityrevisedinvalid Google Calendar event timeinvalid Google Calendar event datemissing Google Calendar event startattendeesendeventTyperecurring_event_idoriginal_start_timeoriginalStartTimerecurrenceorganizerorganized_by_userresponseStatushangoutLinkconferenceDataattachmentsinternal_scheduleinternal follow-up has no scheduleexpires_attimeframeexactinvalid internal scheduletelemetry_versiondelivery_submission_idsource_occurrencemaintenance_work_idnext_attempt_atpresentation_message_idwidget_idfollow_up_queue_funnelmaintenancerevalidationfollow-up delivery failedfinancial_insights_permission_enabledstripe_financial_insights_permission_enableddelivery_itemsproactivity_notification_batchproactivity_published_item_idsselected_item_idsdelivery_decisionsunspecifiedremoved_items/prepared_work/sources/evidence/prepared_work/sources/originating_candidatessourceprepared source is missing its graph identityCallResultgeofence_trigger_funnelunknown_regionunverifiedgate_closedquiet_windowdaily_capexit_ignoredstorage_unavailablebookkeeping_failedenqueue_failedlocation_reportdata_source_publishregistry_readcooldown_stampgeofence crossing not deliveredlistening touroptionssuggestion; arrived atare dwelling at

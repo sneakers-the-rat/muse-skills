@@ -53,7 +53,7 @@
 
 ## Refresh before claiming freshness
 
-- Read commands use retained data, so refresh before claiming a result is current or complete. `sync both` is the normal refresh. It is incremental and fills gaps, and `--since-days N` reaches farther back.
+- Read commands use retained data, so refresh before claiming a result is current or complete. `sync both` is the normal refresh. It is incremental and fills gaps, and `--since-days N` reaches farther back. Only the last 30 days are supported.
 
 - If `_cache.gaps` overlaps the question, repeat `sync both` until those gaps clear. If the period predates `_cache.oldest_cached_ts`, extend it with `sync both --since-days N`. For one thread, use `sync messages --cid 'ID' --older 100` instead.
 

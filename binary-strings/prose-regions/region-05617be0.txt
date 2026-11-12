@@ -1,0 +1,70 @@
+cannot access a task-local storage value without setting it firstinternal error: entered unreachable codecontext_subscriber_registration_failedcontext subscriber registration failedPeerRequesterHandoffconversation_idpeer_chat_idrequester_chat_idno_appealunder_reviewgranteddeniedprereqexactmostlypartialunknownreasonclarificationconstraintexpansionpivotcancellationfix_requestrejectionretrysuccessUserCorrectionmessage_idsummaryMilestonestatusoccurred_atingested_atttl_secondscontent_hintssource_domainsource_idsource_atexpires_atpayloaddevice_idsuppressedregularurgentclassificationappliedqueuedrun_idstateInternalMessageidfiltersdeveloper_messageurgencysend_aftersend_beforesend_timeframechangesnext_cursorInternalMessageChangemessagecancelledInternalMessageUrgencyempty_visible_projectionended_without_resultsubmission_idretry_submission_idOtaManifestdevice_typelatestOtaLatestversionurlCursorwatermarkwatermark_idsCatchUpremainingpage_tokennewestnewest_idsDeletionRecordmessage_refdeleted_atdelete_messages_beforeDeletionKindmessage_revokedmessage_deleted_for_mechat_clearedchat_deletedoversizedpass_budgetrow_timeoutdatabase_errorRemainingBodiesbytesscannedinline_bytes_seenmigrated_bytesskippedstarted_at_mscompleted_at_msBackfillCheckpointcursorsweeplast_completed_sweepshared_allocated_bytesavailable_bytesvariant index 0 <= i < 6string or mapullrueunclassifiednot_foundhttp://localhost/hatch/meta-ai/conversations/existshttp://localhost/hatch/meta-ai/conversations/messagesall branches are disabled and there is no else branchevaluation timed outerrorgave up waiting for a socket-activated service to answerstill waiting for a socket-activated service to answersocket-activated service answered after waitingbackground task failedwrite_admissionwritepostgres write completed slowlypostgres write failedretrying idempotent postgres writehatch:db:operationobjective lease lost during heartbeat renewalembed_permit_closedembed_timeoutembed_errorembed_task_joincontext worker cancellation exceeded its cleanup deadlineunlocked_observationappeal_http_failureappeal_transport_failuresuperseded_or_unchangedappeal_unlock_unconfirmedsweep_finishedone-shot postgres write invoked more than onceinvalid_appeal_responseadmission_errorcapacity_errorpage_errorinvalid evaluation responseMeta AI purged-before watermark is out of rangerequest_idselect exists(select 1 from runtime.private_client_uploads
+                    where state = 'writing' or state in ('staged', 'publishing'))authd unavailableVM owner unavailableSELECT generation, consent_version, consent_granted_at, phase, connected_at, enrollment_generation, enrollment_confirmed_at, activity_since_ms, synced_through_at, last_sync_attempt_at, last_sync_success_at, last_error_code, retry_not_before, paused_since, paused_reason, applied_deletion_seq, applied_purged_before_ms, reconcile_pending, reconcile_reason, reconcile_cursor, reconcile_started_seq, last_reconcile_at, partial_listing_since, backfill_cursor, backfill_started_at, backfill_floor_ms, backfill_reached_ms, backfill_completed_at, backfill_exists_cursor, last_pruned_at, updated_at FROM meta_ai.sync_state WHERE singletonUPDATE meta_ai.sync_state SET updated_at = now() WHERE singleton AND generation = SELECT count(*), coalesce(sum(message_count), 0)::bigint, coalesce(sum(text_bytes), 0)::bigint FROM meta_ai.conversations WHERE generation = $1SELECT conversation_id, change_token_ms FROM meta_ai.conversations WHERE generation = $1 AND conversation_id = ANY($2)SELECT conversation_id, change_token_ms FROM meta_ai.conversations WHERE generation = $1 AND needs_refetch_until > $2 ORDER BY needs_refetch_until, conversation_id LIMIT $3SELECT conversation_id, deletion_seq, deleted_at_ms, first_checked_at, last_checked_at, last_state FROM meta_ai.deletion_checks WHERE generation = $1 ORDER BY last_checked_at, conversation_id LIMIT $2SELECT conversation_id, change_token_ms FROM meta_ai.conversations WHERE generation = $1 AND ($2::text IS NULL OR conversation_id > $2) ORDER BY conversation_id LIMIT $3SELECT count(*) FROM meta_ai.deletion_checks WHERE generation = $1SELECT conversation_id, message_count, text_bytes FROM meta_ai.conversations WHERE generation = $1 ORDER BY last_activity_at, conversation_id LIMIT $2WITH doomed AS ( SELECT conversation_id FROM meta_ai.tombstones WHERE recorded_at < $1 ORDER BY recorded_at, conversation_id LIMIT $2 ) DELETE FROM meta_ai.tombstones t USING doomed d WHERE t.conversation_id = d.conversation_idUPDATE meta_ai.sync_state SET applied_purged_before_ms = $1, updated_at = now() WHERE singletonDELETE FROM meta_ai.deletion_checks WHERE conversation_id = ANY($1)
+INSERT INTO meta_ai.tombstones (conversation_id, generation, deleted_at_ms, reason)
+SELECT t.conversation_id, $1, t.deleted_at_ms, t.reason
+FROM unnest($2::text[], $3::bigint[], $4::text[]) AS t(conversation_id, deleted_at_ms, reason)
+ON CONFLICT (conversation_id) DO NOTHING
+DELETE FROM meta_ai.deletion_checks d USING unnest($1::text[], $2::bigint[]) AS c(conversation_id, deletion_seq) WHERE d.conversation_id = c.conversation_id AND d.deletion_seq <= c.deletion_seq
+INSERT INTO meta_ai.deletion_checks AS d (
+  conversation_id, generation, deletion_seq, deleted_at_ms, first_checked_at, last_checked_at,
+  last_state
+)
+SELECT c.conversation_id, $1, c.deletion_seq, c.deleted_at_ms, c.first_checked_at,
+       c.last_checked_at, c.last_state
+FROM unnest($2::text[], $3::bigint[], $4::bigint[], $5::timestamptz[], $6::timestamptz[],
+            $7::text[])
+  AS c(conversation_id, deletion_seq, deleted_at_ms, first_checked_at, last_checked_at,
+       last_state)
+ON CONFLICT (conversation_id) DO UPDATE SET
+  generation = excluded.generation,
+  deletion_seq = greatest(d.deletion_seq, excluded.deletion_seq),
+  deleted_at_ms = CASE WHEN excluded.deletion_seq >= d.deletion_seq
+                       THEN coalesce(excluded.deleted_at_ms, d.deleted_at_ms)
+                       ELSE d.deleted_at_ms END,
+  first_checked_at = CASE WHEN excluded.deletion_seq > d.deletion_seq
+                            THEN excluded.first_checked_at
+                          WHEN excluded.deletion_seq = d.deletion_seq
+                            THEN least(d.first_checked_at, excluded.first_checked_at)
+                          ELSE d.first_checked_at END,
+  last_checked_at = CASE WHEN excluded.deletion_seq >= d.deletion_seq
+                         THEN excluded.last_checked_at
+                         ELSE d.last_checked_at END,
+  last_state = CASE WHEN excluded.deletion_seq >= d.deletion_seq
+                    THEN excluded.last_state
+                    ELSE d.last_state END
+SELECT message_id FROM meta_ai.messages WHERE conversation_id = $1DELETE FROM meta_ai.messages WHERE conversation_id = $1 AND message_id = ANY($2)update feed.run_steps
+     set status = $5,
+         output_json = case when $5 = 'succeeded' then $6 else output_json end,
+         error = $7,
+         finished_at_ms = $8,
+         updated_at_ms = $8
+     where run_id = $1 and step_id = $2 and attempt = $3
+       and agent_id is not distinct from $4
+       and status = 'running'i.idea_id, i.kind, i.title, i.summary, i.build_summary, i.rationale, i.category_label, i.date_label, i.audience, i.lane, i.prerequisite_notes, i.install_markdown, i.domain, i.dedup_key, i.expires_at::text as expires_at, i.generator, i.created_at::text as created_at, i.updated_at::text as updated_atSELECT c.*, w.generation,
+                   (SELECT i.input_json FROM agent.group_inputs i
+                    WHERE i.group_id=w.group_id AND i.received_at_ms IS NOT NULL
+                    ORDER BY i.received_at_ms DESC,i.sequence DESC LIMIT 1) AS latest_input
+                 FROM agent.connections c
+                 JOIN agent.chat_workers w ON w.group_id=c.connection_id::text AND w.active
+                 WHERE c.connection_id=$1 AND c.active
+                   AND (c.provider<>'peer' OR c.muse_id IS NULL OR EXISTS (
+                     SELECT 1 FROM peer.contacts p WHERE p.muse_id=c.muse_id AND p.status='verified'))SELECT p.* FROM agent.connection_participants p
+                 JOIN agent.connections c USING(connection_id)
+                 WHERE p.connection_id=ANY($1) AND c.active AND p.audience=c.audience
+                 ORDER BY p.connection_id,p.participant_idSELECT c.connection_id,q.request_id,q.owner_chat_id,q.delivered_at_ms,q.result_json,q.origin_json
+                 FROM agent.connections c
+                 JOIN agent.chat_workers w ON w.group_id=c.connection_id::text AND w.active
+                 JOIN agent.chat_worker_requests q ON q.chat_id=w.group_id
+                   AND q.generation=w.generation AND q.worker_agent_id=w.agent_id
+                 JOIN chat.chats owner ON owner.chat_id=q.owner_chat_id AND owner.status<>'deleted'
+                 WHERE c.connection_id=ANY($1) AND c.active AND q.state='delivered'
+                   AND q.delivered_at_ms>$2 AND q.delivered_at_ms<=$3
+                   AND q.result_json IS NOT NULL AND ($4::text IS NULL OR q.request_id>$4)
+                 ORDER BY q.request_id LIMIT 500origin_jsonreview_messageconnection_idowner_chat_iddelivered_at_msresult_jsonc.active AND (
+    r.host_muse <> 'self' OR r.kind NOT IN ('space', 'goal')
+    OR (r.kind = 'space' AND EXISTS (
+        SELECT 1 FROM spaces.spaces live_space
+        WHERE live_space.space_id::text = r.resource_id AND live_space.space_slug = r.reference))
+    OR (r.kind = 'goal' AND EXISTS (
+        SELECT 1 FROM goals.goals live_goal WHERE live_goal.goal_id = r.resource_id))
+)€Ÿ
