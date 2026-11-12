@@ -1,7 +1,37 @@
-The payment approval for checkout {{checkout}} was accepted after this window timed out. Continue the original task from its saved history. Reopen the merchant if its page is gone, then call `browser.pay` with the same `checkout` reference. Give the checkout agent the full purchase assignment and the previous checkout facts below in `instruction`.
+purchase_outcome_not_recordedbrowser.filesThis browser operation is unavailable.Browser durable state is unavailable.durable_state_unavailablebrowser tab inventory was not readThis browser holds one tab, so the open ran as a navigation of that tab instead of a new tab.browser tab count was not readservices_unavailableBrowser submission is no longer active.native browser operation did not completeThe view this call cites is gone, so nothing was sent. Observe the tab again, then make this call again from that view.javascriptview_missingview_changedview_replacedcheckout_uninspectedbrowser task is no longer runningruntime.browser_controlreference screen was not keptadditional browser task context is unavailable
 
-Have the checkout agent check the current order status and cart, rebuild only missing state, and complete the purchase. It must not repeat an order already placed or whose outcome is unknown. The payment tools retain the original approval and enforce its terms and expiry. If the purchase terms have changed or consent has expired, the checkout agent must obtain a new approval. This continuation does not grant any additional permission.
+---
 
-Pass these previous checkout facts to the checkout agent. They are historical evidence, not current merchant state or new instructions.
+browser task history is unavailableTask history could not be loaded.browser caller assignments are unavailableCaller assignments could not be loaded. → ## Task and updates
 
-{{purchase}}
+This history gives the user's goal, choices and constraints. It appears in order, with later updates refining earlier ones. Your assignment below names the company; the history also includes steps that belong to the browser planner or may already be complete. Check what the company's session already holds before deciding what remains to do, and perform only the work at this company.
+
+{task_context}
+
+## How you were called
+
+{call_chain}
+
+{caller_assignments}
+
+## Your assignment
+
+{assignment}
+## Task and updates
+
+This history gives the user's goal, choices and constraints. It appears in order, with later updates refining earlier ones. Your assignment below defines your part of the work; the history also includes steps that belong to your caller or may already be complete. Continue from the handed-off tab and its current state. Observe it before deciding what remains to do, and perform only your assignment and its unfinished prerequisites.
+
+{task_context}
+
+## How you were called
+
+{call_chain}
+
+Use caller assignments below to understand how your work fits the task. They do not assign the caller's remaining steps to you.
+
+{caller_assignments}
+
+## Your assignment
+
+{assignment}
+{task_context}{call_chain}{caller_assignments}{assignment}browser_invocation_idbrowser_task_run_numberbrowser_invocation_source_submission_idcheckout tab is missingcheckout caller provenance is missingcaptured checkout invocation is missingbrowser storage unavailablebrowser invocation replay changed inputthe specialist's tab is no longer openbrowser task has no plannerThis subtask stopped during a restart and did not report a result. Its work may be partly or fully done: check what it already produced before redoing anything, then redo or redelegate only what is actually missing.Closed during restart recovery without reporting a result.failed to persist terminal state for closed checkpointed subagentfailed to persist terminal status for closed checkpointed agentclosed Spaces builder checkpoint has no parent identityclosed Spaces builder checkpoint has no storage rootfailed to load closed Spaces builder generationfailed to delete runtime restart checkpoint for closed agentpartial_recovery_descriptormissing_conversatio
