@@ -17,9 +17,11 @@ import json
 import os
 import re
 import shutil
+import signal
 import socket
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.parse
 import uuid
@@ -473,6 +475,55 @@ def write_cover_artifact_id(cover_path, cover_artifact_id):
 
 
 IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
+COVER_REQUEST_TIMEOUT_SECS = 60
+COVER_GENERATION_TIMEOUT_SECS = 65
+COVER_CLEANUP_TIMEOUT_SECS = 1
+
+
+def cover_generation_available():
+    """Generate art only when both boot signals identify an ordinary VM."""
+    try:
+        cmdline = Path("/proc/cmdline").read_text()
+        if "jarvis_cvm=true" in cmdline.split():
+            return False
+        try:
+            os.stat("/sys/devices/virtual/misc/sev-guest")
+        except FileNotFoundError:
+            return True
+    except OSError:
+        pass
+    return False
+
+
+def default_cover_image():
+    fallback = skills_dir() / "default-cover.jpg"
+    return str(fallback) if fallback.is_file() else None
+
+
+def run_cover_command(cmd):
+    process = subprocess.Popen(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+        start_new_session=True,
+    )
+    try:
+        stdout, stderr = process.communicate(timeout=COVER_GENERATION_TIMEOUT_SECS)
+        return subprocess.CompletedProcess(cmd, process.returncode, stdout, stderr)
+    except BaseException:
+        # A descendant can inherit the pipes after its parent exits. Kill the
+        # whole command group and never wait indefinitely for those pipes.
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        try:
+            process.communicate(timeout=COVER_CLEANUP_TIMEOUT_SECS)
+        except subprocess.TimeoutExpired:
+            pass
+        process.poll()
+        raise
+    finally:
+        process.stdout.close()
+        process.stderr.close()
 
 
 def generate_cover_image(prompt, output_dir, output_name):
@@ -483,9 +534,23 @@ def generate_cover_image(prompt, output_dir, output_name):
     is None when the handle can't be determined (e.g. the path was recovered
     from the on-disk file diff rather than the JSON summary).
     """
-    out = Path(output_dir)
-    out.mkdir(parents=True, exist_ok=True)
+    if not cover_generation_available():
+        return None, None
 
+    root = Path(output_dir)
+    root.mkdir(parents=True, exist_ok=True)
+    out = Path(tempfile.mkdtemp(prefix="cover-", dir=root))
+    try:
+        cover, artifact_id = _generate_cover_image_attempt(prompt, out, output_name)
+    except BaseException:
+        shutil.rmtree(out, ignore_errors=True)
+        raise
+    if not cover:
+        shutil.rmtree(out, ignore_errors=True)
+    return cover, artifact_id
+
+
+def _generate_cover_image_attempt(prompt, out, output_name):
     before = _image_files_in(out)
 
     cover_prompt = (
@@ -510,13 +575,16 @@ def generate_cover_image(prompt, output_dir, output_name):
         "--orientation", "square",
         "--output-dir", str(out),
         "--output-name", output_name,
-        "--timeout-secs", "60",
+        "--timeout-secs", str(COVER_REQUEST_TIMEOUT_SECS),
     ]
     user_id = os.environ.get("JARVIS_USER_ID")
     if user_id:
         cmd.extend(["--user-id", user_id])
 
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    try:
+        result = run_cover_command(cmd)
+    except (OSError, subprocess.TimeoutExpired):
+        return None, None
     if result.returncode != 0:
         return None, None
 
@@ -535,7 +603,8 @@ def generate_cover_image(prompt, output_dir, output_name):
         media_paths = output.get("media_paths")
         if isinstance(media_paths, list):
             for candidate in media_paths:
-                if isinstance(candidate, str) and os.path.isfile(candidate):
+                if (isinstance(candidate, str) and os.path.isfile(candidate)
+                        and Path(candidate).resolve().is_relative_to(out.resolve())):
                     return candidate, artifact_id
 
     # Fall back to the newly created image file (diff before/after). The handle
@@ -568,12 +637,16 @@ def resolve_episode_cover(args, slug, episode_dir):
     generated earlier); it is None for an explicit or fallback cover, which
     carry no provenance.
 
-    Priority:
+    On CVMs (or unreadable VM signals), use only the bundled default.
+    Otherwise the priority is:
     1. Explicit --cover-image path
     2. Series cover (shared across episodes with same --series-id)
     3. Generated from --cover-prompt
-    4. Existing fallbacks (avatar, default)
+    4. Bundled default after a failed render, or avatar/default without a prompt
     """
+    if not cover_generation_available():
+        return default_cover_image(), None
+
     # 1. Explicit path (user-supplied; not a trusted artifact)
     if args.cover_image and os.path.isfile(args.cover_image):
         return args.cover_image, None
@@ -603,7 +676,9 @@ def resolve_episode_cover(args, slug, episode_dir):
         if cover:
             return cover, artifact_id
 
-    # 4. Existing fallbacks (avatar, default) — no trusted handle
+    # Failed optional art must not keep a completed audio render waiting.
+    if args.cover_prompt:
+        return default_cover_image(), None
     return resolve_cover_image(None), None
 
 
@@ -613,9 +688,13 @@ def find_series_cover(series_id):
     if not cdir.is_dir():
         return None
     prefix = f"series-{series_id}"
-    for f in sorted(cdir.iterdir()):
-        if f.is_file() and f.suffix.lstrip(".").lower() in IMAGE_EXTENSIONS and prefix in f.name:
-            return str(f)
+    directories = [cdir, *(p for p in sorted(cdir.iterdir())
+                           if p.is_dir() and p.name.startswith("cover-"))]
+    for directory in directories:
+        for f in sorted(directory.iterdir()):
+            if (f.is_file() and f.suffix.lstrip(".").lower() in IMAGE_EXTENSIONS
+                    and prefix in f.name and read_cover_artifact_id(str(f))):
+                return str(f)
     return None
 
 
@@ -800,6 +879,10 @@ def _generate(args, telemetry):
         output["tts_diagnostics"] = result.stderr.strip()
     if cover_path:
         output["cover"] = cover_path
+        output["cover_source"] = (
+            "default" if cover_path == default_cover_image()
+            else "generated" if cover_artifact_id else "existing"
+        )
 
     if args.publish:
         retry_pending_legacy_deletes()
@@ -846,6 +929,14 @@ def cmd_update_cover(args):
     episode this diverges only that episode; the shared series cover and the
     other episodes keep pointing at the previous file.
     """
+    if not cover_generation_available():
+        print(json.dumps({
+            "ok": False, "blocked": True, "retryable": False,
+            "error": "cover regeneration is unavailable on this VM; "
+                     "leaving the current cover unchanged",
+        }, separators=(",", ":")))
+        sys.exit(1)
+
     catalog = read_manifest()
     episode = next(
         (e for e in catalog.get("episodes", []) if e.get("slug") == args.slug),
@@ -1430,13 +1521,19 @@ def do_publish(
         and bool(episode_cover)
         and os.path.isfile(episode_cover)
         and episode_cover != stored_cover
-        and (Path(stored_cover).parent == covers_dir() or episode_cover_edited(slug))
+        and (Path(stored_cover).parent == covers_dir()
+             or (Path(stored_cover).parent.parent == covers_dir()
+                 and Path(stored_cover).parent.name.startswith("cover-"))
+             or episode_cover_edited(slug) or episode_cover == default_cover)
     )
     if explicit_cover:
         cmd.extend(["--cover-image", explicit_cover])
         feed_cover = explicit_cover
     elif keep_show_cover:
         feed_cover = stored_cover
+    elif episode_cover == default_cover and os.path.isfile(default_cover):
+        cmd.append("--default-cover")
+        feed_cover = default_cover
     elif cover_artifact_id:
         cmd.extend(["--cover-artifact", cover_artifact_id])
         if episode_cover and os.path.isfile(episode_cover):

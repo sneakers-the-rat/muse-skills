@@ -1,0 +1,573 @@
+aftershipversion: 1
+metadata:
+  visible_in_settings: false
+auth: none
+connector: aftership
+display_name: AfterShip
+icon: aftership
+description: Track packages through Hatch's managed AfterShip integration. AfterShip credentials never live on the VM.
+actions:
+  read:
+    default: allow
+    label: Read shipment tracking data
+    response_guard: verification_codes
+    methods:
+      broker.verify:
+        label: Verify AfterShip availability
+      courier.detect:
+        label: Detect a shipment courier
+      tracking.read:
+        label: Read shipment tracking
+  write:
+    default: ask
+    label: Manage shipment tracking records
+    response_guard: verification_codes
+    methods:
+      tracking.register:
+        label: Register a shipment for tracking
+cli_subcommands:
+  - status
+  - detect-courier
+  - tracking
+  - register
+version: 1
+gating:
+  allowed_countries: [US]
+metadata:
+  visible_in_settings: true
+auth:
+  provider: lugg
+  required: true
+  mcp:
+    unauthenticated:
+      endpoint: https://api.lugg.com/mcp
+    tool_names:
+      bookings.read:
+      - get_booking_session
+      - get_availability
+      drafts.manage:
+      - create_estimates
+      - create_booking_session
+      - update_booking_session
+      bookings.cancel:
+      - cancel_booking
+connector: lugg
+display_name: Lugg
+icon: lugg
+description: Get US moving quotes and prepare or cancel Lugg bookings.
+cli:
+  binary: lugg
+  skill: lugg
+  service: lugg
+declarable_scopes: []
+actions:
+  read:
+    default: ask
+    label: Read Lugg
+    response_guard: verification_codes
+    methods:
+      bookings.read:
+        label: Read booking drafts and availability
+        approval_phrase: read booking drafts and availability on Lugg
+  write:
+    default: ask
+    label: Manage Lugg drafts and bookings
+    response_guard: verification_codes
+    methods:
+      drafts.manage:
+        label: Get quotes and prepare booking drafts
+        approval_phrase: get quotes or prepare a Lugg booking draft
+      bookings.cancel:
+        label: Cancel a Lugg booking
+        approval_phrase: cancel this Lugg booking
+        # Cancellation sends notifications and can issue refunds; require fresh consent.
+        approval_policy: fresh_consent_only
+consent_screen:
+  bullets:
+    - icon: data_types
+      title: "Level up with Lugg"
+      text: "Muse will access things like moving details, contact information, quotes and booking information."
+    - icon: info
+      title: "You choose what Muse can do"
+      text: "By default, Muse will ask before taking actions it thinks need review. Disconnect at any time in Settings."
+    - icon: caution
+      title: "Keep an eye on things"
+      text: "Muse may take unexpected actions. Monitor it carefully."
+  footer_paragraphs:
+    - "The info used for your tasks is part of your interactions with Muse, which we may use to improve AI at Meta. You can manage this in Settings. [Learn more](https://muse.ai/privacy)"
+    - "Muse will exchange info with Lugg. To learn more, view their [terms](https://lugg.com/terms) and [privacy policy](https://lugg.com/privacy)."
+zocdocversion: 1
+metadata:
+  visible_in_settings: true
+auth:
+  provider: zocdoc
+  required: true
+connector: zocdoc
+category: health
+display_name: Zocdoc
+icon: zocdoc
+description: Search healthcare providers and appointment availability on Zocdoc
+request_quota:
+  mode: shadow
+  workers: [zocdoc]
+  queries_per_minute: 50
+  burst: 10
+cli:
+  binary: zocdoc
+  skill: zocdoc
+  service: zocdoc
+declarable_scopes: []
+actions:
+  read:
+    default: allow
+    label: Search Zocdoc
+    response_guard: verification_codes
+    methods:
+      catalog.read:
+        label: Inspect reviewed Zocdoc capabilities
+        approval_phrase: inspect reviewed Zocdoc capabilities
+      providers.read:
+        label: Search providers and care options
+        approval_phrase: search providers and care options on Zocdoc
+      appointments.read:
+        label: Check appointment availability
+        approval_phrase: check appointment availability on Zocdoc
+      insurance.read:
+        label: Search insurance plans and carriers
+        approval_phrase: search insurance plans and carriers on Zocdoc
+commands:
+  status: null
+  disconnect: null
+  list-tools: catalog.read
+  # Each reviewed provider tool selects its own method at runtime.
+  call-tool: null
+consent_screen:
+  bullets:
+    - icon: data_types
+      title: "Find care with Zocdoc"
+      text: "Muse can search providers, locations, insurance plans, and appointment availability."
+    - icon: info
+      title: "Booking stays with Zocdoc"
+      text: "Muse can share a Zocdoc booking link, but it cannot book or cancel an appointment through this connector."
+    - icon: caution
+      title: "Confirm important details"
+      text: "Provider participation and appointment availability can change. Confirm insurance coverage and visit details before booking."
+  footer_paragraphs:
+    - "The info used for your tasks is part of your interactions with Muse, which we may use to improve AI at Meta. You can manage this in Settings. [Learn more](https://muse.ai/privacy)"
+    - "Muse will exchange info with Zocdoc. To learn more, view their [terms](https://www.zocdoc.com/about/terms/) and [privacy policy](https://www.zocdoc.com/about/privacy/)."
+agodaversion: 1
+gating:
+  allowed_countries:
+    default: [JP, SG]
+    exempt_vm_channels: [prod, quail, canary]
+metadata:
+  visible_in_settings: false
+auth: none
+connector: agoda
+display_name: Agoda
+icon: agoda
+description: Search Agoda for stays, flights, and activities
+request_quota:
+  mode: shadow
+  workers: [agoda]
+  queries_per_minute: 20
+  burst: 5
+cli:
+  binary: agoda
+  skill: agoda
+  service: agoda
+declarable_scopes: []
+actions:
+  read:
+    default: allow
+    label: Read permissions
+    response_guard: verification_codes
+    methods:
+      travel.search:
+        label: Search stays, flights, and activities
+        approval_phrase: search stays, flights, and activities on Agoda
+commands:
+  status: null
+  search: travel.search
+consent_screen:
+  bullets:
+    - icon: data_types
+      title: "Plan trips with Agoda"
+      text: "Muse can search Agoda for places to stay, flights, and activities, and compare prices and reviews."
+    - icon: info
+      title: "Booking stays with Agoda"
+      text: "Muse shares the trip details you ask about, such as destination, dates, travellers, and budget, with Agoda. Muse can share an Agoda link, but it cannot book or pay through this connector."
+    - icon: caution
+      title: "Check before you book"
+      text: "Prices and availability can change. Confirm the details on Agoda before booking."
+  footer_paragraphs:
+    - "The info used for your tasks is part of your interactions with Muse, which we may use to improve AI at Meta. You can manage this in Settings. [Learn more](https://muse.ai/privacy)"
+    - "Muse will exchange info with Agoda. To learn more, view their [terms](https://www.agoda.com/info/termsofuse.html) and [privacy policy](https://www.agoda.com/info/privacy.html)."
+walmartversion: 1
+metadata:
+  visible_in_settings: true
+connector: walmart
+display_name: Walmart
+icon: walmart
+description: Search Walmart, ask Sparky, build a Walmart cart and place orders you approve
+shopping:
+  website: https://www.walmart.com
+  product_details: true
+  cart: true
+  checkout: agentic
+request_quota:
+  mode: shadow
+  workers: [walmart]
+  # Walmart allows 30 requests per minute per MCP session.
+  queries_per_minute: 30
+  burst: 10
+cli:
+  binary: walmart
+  skill: walmart
+auth:
+  provider: walmart
+  required: true
+  mcp:
+    endpoint: https://sparky-mcp.walmart.com
+    protocol_version: "2025-06-18"
+    # The cart and Sparky's conversation live on the MCP session, so each user
+    # keeps one.
+    persistent_session: true
+    headers:
+      # Walmart's beta discloses search_products only to clients that send
+      # this, until it issues Muse a pre-registered client.
+      ENABLE_SEARCH_PRODUCTS: "true"
+    oauth:
+      type: oauth
+      authorization_url: https://sparky-mcp.walmart.com/oauth/authorize
+      token_url: https://sparky-mcp.walmart.com/oauth/token
+      registration_url: https://sparky-mcp.walmart.com/oauth/register
+      resource: https://sparky-mcp.walmart.com
+      scope: email offline_access
+      token_endpoint_auth_method: none
+    tool_names:
+      shopping.read:
+        - search_products
+        - get_product_details
+        - get_cart
+        - get_mandate
+      cart.prepare:
+        - update_cart
+        - remove_item_from_cart
+      # Not read-only: each call can replace Walmart's cached slots and its
+      # pending quote, but none charges the user.
+      checkout.prepare:
+        - get_fulfillment_methods
+        - get_fulfillment_slots
+        - request_checkout
+      # Places Walmart's pending quote; the card shows the last quote
+      # request_checkout returned (hatch-mcp-connector/src/checkout.rs).
+      order.place:
+        - complete_checkout
+      # Sparky is Walmart's own agent: a message can do anything Sparky can,
+      # including changing the user's walmart.com cart, so it is a write and
+      # runs alone.
+      agent.message:
+        - ask_sparky
+surrogation:
+  name: walmart
+  schema: oauth
+  mode: direct_oauth
+  privsep: true
+  hosts:
+    - sparky-mcp.walmart.com
+  token_proxy:
+    - field: credentials.access_token
+      placement: bearer_header
+  stripped:
+    - credentials.refresh_token
+  token_refresh:
+    - path: /oauth/token
+actions:
+  read:
+    default: allow
+    label: Read permissions
+    response_guard: verification_codes
+    methods:
+      shopping.read:
+        label: Search products and view your cart
+        approval_phrase: search Walmart and view your cart
+  write:
+    default: ask
+    label: Write permissions
+    response_guard: verification_codes
+    methods:
+      cart.prepare:
+        default: allow
+        label: Edit your Walmart cart
+        approval_phrase: edit your Walmart cart
+        approval_buttons:
+          allow_once: "Update cart"
+          deny: "Don't update"
+          deny.task: "Don't update"
+      checkout.prepare:
+        default: allow
+        label: Get delivery options and checkout quotes without placing orders
+        approval_phrase: get Walmart delivery options or a checkout quote without placing an order
+      order.place:
+        approval_policy: fresh_consent_only
+        label: Place Walmart orders
+        approval_phrase: place the Walmart order below, charging the total shown
+      # Ask until Walmart confirms Sparky cannot place an order.
+      agent.message:
+        default: ask
+        label: Talk to Sparky, Walmart's AI agent, which can act on your cart and account
+        approval_phrase: send a message to Sparky, Walmart's AI agent, which can act on your Walmart cart and account
+consent_screen:
+  bullets:
+    - icon: data_types
+      title: "Shop with Walmart"
+      text: "Muse can search Walmart, compare products, build a cart and get a checkout quote for you."
+    - icon: info
+      title: "You approve every order"
+      text: "Muse shows you the items, total and delivery details, and places an order only after you approve it each time."
+    - icon: caution
+      title: "Check before you buy"
+      text: "Prices and availability can change. Check them on Walmart before you buy."
+  footer_paragraphs:
+    - "The info used for your tasks is part of your interactions with Muse, which we may use to improve AI at Meta. You can manage this in Settings. [Learn more](https://muse.ai/privacy)"
+    - "Muse will exchange info with Walmart. To learn more, view their [terms](https://www.walmart.com/help/article/walmart-com-terms-of-use/3b75080af40340d6bbd596f116fae5a0) and [privacy policy](https://corporate.walmart.com/privacy-security/walmart-privacy-notice)."
+debenhamsversion: 1
+gating:
+  allowed_countries:
+    default: [GB]
+    exempt_vm_channels: [prod, quail, canary]
+metadata:
+  visible_in_settings: true
+connector: debenhams
+display_name: Debenhams
+icon: debenhams
+description: Shop Debenhams, build a basket and check out on Debenhams
+request_quota:
+  mode: shadow
+  workers: [debenhams]
+  queries_per_minute: 30
+  burst: 10
+cli:
+  binary: debenhams
+  skill: debenhams
+auth:
+  provider: debenhams
+  required: true
+  mcp:
+    protocol_version: "2025-11-25"
+    cagi:
+      # The server is stateless: the agent carries the basket ID, so no MCP
+      # session is kept.
+      path: /v1/debenhams/mcp
+      # CAGI binds each basket to the user who created it and requires that
+      # capability on every call naming the basket.
+      resource_argument: basketId
+    tool_names:
+      shopping.read:
+        - search_products
+        - get_product
+        - get_similar_products
+        - get_basket
+        - get_delivery_options
+      basket.manage:
+        - add_to_basket
+        - update_basket_item
+        - remove_from_basket
+        - apply_promo_code
+        - remove_promo_code
+      # Returns a single-use link that opens this basket on debenhams.com,
+      # where the browser completes the purchase.
+      checkout.create:
+        - checkout
+actions:
+  read:
+    default: allow
+    label: Read permissions
+    response_guard: verification_codes
+    methods:
+      shopping.read:
+        label: Search products and view your basket and delivery options
+        approval_phrase: search Debenhams and view your basket
+  write:
+    default: ask
+    label: Write permissions
+    response_guard: verification_codes
+    methods:
+      basket.manage:
+        # A guest basket holds no stock and moves no money.
+        default: allow
+        label: Edit your Debenhams basket and promo codes
+        approval_phrase: edit your Debenhams basket
+        approval_buttons:
+          allow_once: "Update basket"
+          deny: "Don't update"
+          deny.task: "Don't update"
+      checkout.create:
+        label: Start checkout on Debenhams
+        approval_phrase: start checkout for your Debenhams basket
+        approval_buttons:
+          allow_once: "Start checkout"
+          deny: "Not yet"
+          deny.task: "Not yet"
+consent_screen:
+  bullets:
+    - icon: data_types
+      title: "Shop with Debenhams"
+      text: "Muse can search Debenhams, compare products and build a basket for you."
+    - icon: info
+      title: "Checkout happens on Debenhams"
+      text: "Muse asks before starting checkout, and you approve the payment on debenhams.com."
+    - icon: caution
+      title: "Check before you buy"
+      text: "Prices, stock and offers can change. Check them on Debenhams before you buy."
+  footer_paragraphs:
+    - "The info used for your tasks is part of your interactions with Muse, which we may use to improve AI at Meta. You can manage this in Settings. [Learn more](https://muse.ai/privacy)"
+    - "Muse will exchange info with Debenhams. To learn more, view their [terms](https://www.debenhams.com/terms-and-conditions) and [privacy policy](https://www.debenhams.com/privacy-notice)."
+version: 1
+metadata:
+  visible_in_settings: true
+auth: none
+connector: browser
+display_name: Browser
+description: >-
+  This is a built-in connector that allows Muse to search the web and open
+  websites.
+icon: browser
+# Browser exposes the user-configurable permission methods below; page.submit
+# is kept only as the purchase pre-approval key.
+# Other browser behavior is governed by its dedicated safety checks, where
+# applicable, and does not participate in connector-method policy.
+# Checkout detection remains a targeted fresh-consent contract outside this
+# manifest and never creates reusable Browser connector policy.
+actions:
+  read:
+    default: ask
+    label: Read permissions
+    # Authenticated foreground and trusted product-context HTTP(S) goto use the
+    # screened runtime Ask replacement. Other origins retain the connector
+    # prompt.
+    methods:
+      page.goto:
+        label: Visit websites
+        approval_phrase: open this website using Browser
+  write:
+    default: ask
+    label: Write and delete permissions
+    methods:
+      page.download:
+        label: Download files
+        approval_phrase: download this file using Browser
+      page.submit:
+        # A task pre-approval of one order answers the checkout's payment
+        # approval, checked against the verified quote; ordinary submits carry
+        # no binding and never consume it.
+        preapproval: purchase
+        # No form submit consults this method, so Settings omits it and it
+        # always reads as Allow (connector_method_hidden_from_settings,
+        # T293981145). Checkout detection independently uses mandatory fresh
+        # consent outside this user-configurable manifest.
+        default: allow
+        label: Submit a form or POST request
+      page.upload:
+        # Every upload asks. The card offers Allow once and Deny, plus "Always
+        # allow this site" in the owner's chat and scheduled tasks. That
+        # option saves an exact-origin (scheme, host, port) grant for uploads
+        # only; Settings stays Ask/Deny and there is no method-wide or global
+        # Allow. Only browser page.upload may declare this policy
+        # (hatch-sentinel/docs/approvals.md).
+        approval_policy: fresh_consent_or_site_allow
+        label: Upload files
+        approval_phrase: upload this file using Browser
+      page.credential_fill:
+        label: Fill saved credentials
+wearablesversion: 1
+metadata:
+  visible_in_settings: true
+auth: none
+connector: wearables
+display_name: Glasses
+description: >-
+  This is a built-in connector that governs consequential actions Muse takes
+  through a paired device on your behalf, such as placing a call or sending a
+  message when you ask from your glasses.
+# Reviewed capabilities Hatch asks about, not the device's command catalog.
+# See docs/hatch-security-architecture.md §5.3.10.
+actions:
+  write:
+    default: ask
+    label: Calls and messages
+    methods:
+      call.place:
+        approval_policy: fresh_consent_or_task_allow
+        label: Place phone calls
+        approval_phrase: place this call
+      # Renaming a method also requires updating `GATED_DEVICE_COMMANDS`
+      # (hatch-sentinel-config/src/device_commands.rs).
+      message.send:
+        consent_policy: [eu_approve_each_send]
+        approval_policy: fresh_consent_or_task_allow
+        label: Send messages
+        approval_phrase: send this message
+version: 1
+metadata:
+  visible_in_settings: true
+auth:
+  client_id: "FqYjowyWjOb7WzUl9zY_0o08lylgn6hqmn9F-8kqUiM"
+  provider: calendly
+  required: true
+cli:
+  binary: calendly
+  skill: calendly
+connector: calendly
+category: productivity
+display_name: Calendly
+description: View and manage calendar events and scheduling
+icon: calendly
+request_quota:
+  mode: enforce
+  workers:
+    - calendly
+  queries_per_minute: 300
+  burst: 50
+actions:
+  read:
+    default: allow
+    label: Read permissions
+    methods:
+      access.read:
+        label: Read access
+        approval_phrase: have read access to Calendly
+  write:
+    default: ask
+    label: Write and delete permissions
+    methods:
+      api.write:
+        label: Manage scheduling or account data
+        approval_phrase: manage scheduling or account data in Calendly
+commands:
+  status: null
+  disconnect: null
+  authorize-url: null
+  exchange-code: null
+  # access.read instead for `--method GET`.
+  request: api.write
+  me: access.read
+  list-events: access.read
+  event-types: access.read
+
+consent_screen:
+  bullets:
+    - icon: data_types
+      title: "Level up with Calendly"
+      text: "Muse will access things like calendars and events."
+    - icon: info
+      title: "You choose what Muse can do"
+      text: "By default, Muse will ask before taking actions it thinks need review. Disconnect at any time in Settings."
+    - icon: caution
+      title: "Keep an eye on things"
+      text: "Muse may take unexpected actions. Monitor it carefully."
+  footer_paragraphs:
+    - "The info used for your tasks is part of your interactions with Muse, which we may use to improve AI at Meta. You can manage this in Settings. [Learn more](https://muse.ai/privacy)"
+    - "Muse will exchange info with Calendly. To learn more, view their [terms](https://calendly.com/terms) and [privacy policy](https://calendly.com/legal/privacy-notice)."
+canva

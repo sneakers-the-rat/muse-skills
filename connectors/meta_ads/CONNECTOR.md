@@ -101,7 +101,7 @@
 
 - A `_more_rows` note means more rows exist. Fetch the next page only for rows the answer will show, and to rank, re-query with `sort` and `limit` instead of paging.
 
-- Successful results can carry `_ads_entity_finalization` and `_ads_analysis_finalization` ahead of the data. Follow both before answering.
+- Successful analytical results can carry `_ads_analysis_finalization` ahead of the data. Follow it before answering.
 
 - A `rate_limited` error means Meta refused a call for too many requests, and the CLI then refuses every Meta Ads call for about 60 seconds. Wait the stated time before any further call.
 

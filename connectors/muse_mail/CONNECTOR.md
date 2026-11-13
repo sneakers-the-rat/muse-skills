@@ -10,7 +10,7 @@
 
 - Run `mailbox get` and act on its result:
   - A mailbox: reuse it and report its `email_address`.
-  - `MAILBOX_NOT_FOUND`: run `mail.setup_card`, and use `mailbox create` below only when its result says this chat can't show the card.
+  - `MAILBOX_NOT_FOUND`: run `mail.setup_card`, passing a handle the user chose as `handle`, and use `mailbox check` and `mailbox create` below only when its result says this chat can't show the card.
   - `MAILBOX_TAKEN_DOWN`: the mailbox was disabled for a policy violation. Skip `mail.setup_card` and use `mailbox create` below, which replaces it.
   - Any other error: report it as it is, never as a missing mailbox, because a lookup error does not authorize creation.
 
@@ -18,7 +18,7 @@
 
 - Find the user's preferred name in the conversation, then `~/USER.md`, then `muse.memory_search`, and ask only when it is still missing or ambiguous. Ask for a handle when the main agent's name gives no usable one.
 
-- Handles use 3 to 32 lowercase letters, digits or hyphens, and start and end with a letter or digit.
+- Handles use 3 to 32 lowercase letters, digits or hyphens, and start and end with a letter or digit. `mailbox check --handle <handle>` reports whether handles are available, so do not run `mailbox create` to find out.
 
 - Propose the full address `<handle>@muse.ai` with the display name in a short approval question, and wait for the user's yes before creating anything. A request to set up an email address is not approval of the address you propose, so skip the proposal only when the user already approved this exact address and name.
 
@@ -28,7 +28,7 @@
 /opt/hatch/bin/muse-mail mailbox create --handle <confirmed-handle> --name '<confirmed-name>'
 ```
 
-- Pass only the local part as `--handle`, and report the address the command returns. After a conflict or an unclear result, run `mailbox get` again, and ask the user before trying another handle.
+- Run `mailbox create` once, for the address the user approved. Pass only the local part as `--handle`, and report the address the command returns. After a conflict or an unclear result, run `mailbox get` again, and ask the user before trying another handle.
 
 - Trust only the address, name, handle, owner alias and thread Reply-To aliases the CLI returns.
 

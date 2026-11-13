@@ -73,7 +73,7 @@
 
 - To rank the user's followers by their follower counts, as in "my top followers" or "my most popular followers", run `followers --sort-by follower_count` and follow its cursor as the next bullets describe. The server ranks them, so no profile lookups are needed.
 
-- `--sort-by follower_count` ranks up to 10,000 followers per call, newest first, and returns the top `--count` of them (default 50, maximum 1,000) in `users[]`, highest `follower_count` first. Later calls do not return the rows below an earlier call's cutoff, so set `--count` to at least the number of top followers you need. `followers_ranked` is how many followers that call ranked.
+- `--sort-by follower_count` ranks up to 10,000 followers per call, newest first, and returns the top `--count` of them (default 50, maximum 200) in `users[]`, highest `follower_count` first. Later calls do not return the rows below an earlier call's cutoff, so set `--count` to at least the number of top followers you need. `followers_ranked` is how many followers that call ranked.
 
 - When a ranked call returns `has_more: true`, older followers are not ranked yet. Run the same command with `--after <next_max_id>` until `has_more` is false, then merge every batch by `follower_count` before you answer. If you stop early, say how many followers you ranked.
 

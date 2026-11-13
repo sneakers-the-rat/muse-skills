@@ -1,0 +1,92 @@
+ š	yžš	‰£š	s£š	yžš	internal error: entered unreachable codeadditionalPropertiespropertiesscheduler history purge could not read when history falls past retentionidactionCronExecutionInputCronScheduleInputateveryflexible_timedowdommonthCronRetryInputon_failuremax_retriesCronDeliveryTargetInputchat_idconnection_idownerexecutiontitlepredicted_connector_permissionsenabledreasonrunretrylimittimeout_secstarget_root_session_idsubmission_message_idrequest_tracepresentation_localechanneldelivery_targetchat_contexthandoffinference_componentturn_directivespublic_streamtransportstring or mapserialize_value called before serialize_key}unclassifiednot_founderrorsuccesswrite_admissionwritepostgres write completed slowlypostgres write failedretrying idempotent postgres writehatch:db:operationone-shot postgres write invoked more than oncerun_idjob_idlast_started_at_msnext_allowed_at_msrefused_at_mssubmission_idhandoff_idsourcehandoff_message_idsubmission_sourceselect exists(select 1 from chat_private.external_party_conversations where chat_id=$1)select run_id, job_id, last_started_at_ms, next_allowed_at_ms, refused_at_ms
+                     from runtime.cron_browser_refusals where run_id = $1invocation_id, task_id, planner_agent_id, parent_invocation_id, caller_agent_id, caller_submission_id, call_id, agent_id, submission_id, runtime_work_id, input_digest, kind, state, input_json, context_json, result_json, wait_call_id, ordinal, tab_id, (extract(epoch from created_at) * 1000)::bigint as created_at_ms, (extract(epoch from stop_requested_at) * 1000)::bigint as stop_requested_at_ms, terminal_reason, handoff_state, (extract(epoch from finished_at) * 1000)::bigint as finished_at_ms
+SELECT metadata_json FROM subagent_spawns WHERE child_agent_id = $1
+completion_resultcompletion_result_context_seqagent.subagent_spawns.metadata_json
+UPDATE subagent_spawns
+SET metadata_json = $1
+WHERE child_agent_id = $2
+  AND EXISTS (
+    SELECT 1 FROM agents
+    WHERE agents.id = subagent_spawns.child_agent_id
+      AND agents.status NOT IN ('shutdown', 'not_found')
+  )
+
+UPDATE agents
+SET updated_at = $1,
+    status = $2
+WHERE id = $3
+  AND status NOT IN ('shutdown', 'not_found')
+eventsdelivery_outboxterminal_runsGatekeeper response omitted requested gate; using defaultcron run has no worker leaseconnector_not_connectedreauth_requiredaccount_action_requiredsite_challengedevice_offlineReportStatuscompletedneeds_inputblockedServiceStatusauthenticatedchallengeneeds_user_controlcredentials_rejectedaccount_restrictedunrecognized_formaccount_selection_requiredcredentials_availablecredential_input_mismatchcredentials_updatednot_authorizedconsent_timed_outconsent_policy_deniedconsent_failedcredentials_unavailablecredential_provider_unsupportedinput_recordedinput_not_startedcode_declinedcode_expiredcode_answeredcode_wait_interruptedcode_enteredcode_entry_unresolvedwaitingattempt_allowedrecovery_unconfirmedrecovery_unavailablerecovery_attemptedpurchasedpending_reconciliationpayment_optionscart_capturedreadyincompletenot_recordedpayment_input_appliedpayment_input_incompletecard_providedsubmittednot_submittedconfirmednot_groundedother/completion_result/needs_user_reasonbrowser_task_idread authoritative cron definitionretire authoritative cron definitionscheduled_for_utcscheduled_for_localstatusencode pending cron resultread pending result recoveryruntimephone_callsingestdata_source_eventsdevicemedia_upload_eventsmedia_upload_batchesgetdelete/definitions/deletethe cron definition does not existuser_state.touch_recent<unattributed>
+sp.parent_message_id AS parent_message_id,
+       sp.parent_request_id AS parent_request_id,
+       sp.root_request_id AS root_request_id,
+       (
+         SELECT root_request.request_origin
+         FROM runtime.requests AS root_request
+         WHERE root_request.request_id = sp.root_request_id
+       ) AS root_request_origin,
+       sp.root_message_execution_id AS root_message_execution_id,
+       sp.parent_agent_id AS parent_agent_id,
+       sp.child_agent_id AS agent_id,
+       sp.child_depth::bigint AS depth,
+       sp.created_at AS created_at,
+       sp.completed_at AS completed_at,
+       sp.seen_at AS seen_at,
+       sp.status AS status,
+       sp.deferred_terminal_status AS deferred_terminal_status,
+       sp.requester_source AS requester_source,
+       sp.final_response AS final_response,
+       sp.prompt AS prompt,
+       sp.requester_chat_context_json AS requester_chat_context_json,
+       sp.agent_type AS agent_type,
+       sp.metadata_json AS metadata_json,
+       (
+         SELECT child.originating_location_context_json
+         FROM agents AS child
+         WHERE child.id = sp.child_agent_id
+       ) AS originating_location_context_json
+subagent_status_rows_for_parent_agent_scopeexternal_party.retiredbrowser_tasksbrowser.cron_browser_refusalacquired connection, but time to acquire exceeded slow thresholdacquired connectionUDS HTTP request path must start with '/'browser.task_invocationsbrowser task input cannot carry prompt or tool-prefill overridesbrowser task input must carry browser gateway admissionbrowser tasks do not accept generic follow-up inputruntime.browser_inputschedulerWITH ownership_lock AS MATERIALIZED (
+  SELECT pg_advisory_xact_lock(hashtextextended($4, $5))
+),
+updated_spawn AS (
+  UPDATE subagent_spawns
+SET completed_at = COALESCE(completed_at, $1),
+    status = $2,
+    deferred_terminal_status = NULL,
+    final_response = COALESCE(final_response, $3),
+    seen_at = CASE WHEN $2 = 'interrupted' THEN COALESCE(seen_at, $1) ELSE seen_at END
+WHERE child_agent_id = $4
+    AND EXISTS (SELECT 1 FROM ownership_lock)
+    AND (
+      NOT $6
+      OR (completed_at IS NULL AND deferred_terminal_status IS NULL)
+    )
+    AND EXISTS (
+      SELECT 1 FROM agents
+      WHERE agents.id = subagent_spawns.child_agent_id
+        AND (
+          ($6 AND agents.status IN ('pending_init', 'running'))
+          OR (NOT $6 AND agents.status NOT IN ('shutdown', 'not_found'))
+        )
+    )
+  RETURNING child_agent_id
+)
+SELECT EXISTS (SELECT 1 FROM updated_spawn)force_subagent_final_responseDELETE FROM runtime_restart_checkpoints WHERE agent_id = $1all branches are disabled and there is no else branchtransaction_timeoutquery_cancelledlock_timeouthttp://localhost/hatch/check_gatekeepersGatekeeper response was invalid; using defaultGatekeeper check failed; using defaultfailed to persist interrupted Space construction statusfailed to touch recent Space after interrupted builder recoverycredentials/v1/auth-file/getx-hatch-gk-assignment-confirmedcron typed blocker evidence checked/status/service/statuscron typed blocker evidence unreadable; blocker standsselect exists(select 1 from spaces.user_state
+         where sharing_state is null or accessed_at_ms is not null
+           or last_opened_at_ms is not null or frequency_score is not null
+           or favorite_order is not null)insert into spaces.user_state (space_slug, favorite_order, is_favorite) values library on conflict (space_slug) do update set
+            favorite_order = excluded.favorite_order, is_favorite = true
+          where spaces.user_state.sharing_state is not null
+            and spaces.user_state.accessed_at_ms is null
+            and spaces.user_state.last_opened_at_ms is null
+            and spaces.user_state.frequency_score is null
+            and spaces.user_state.favorite_order is null, (, true)skipped cron definition retirement while host authority is unavailableauthoritative cron definition changed before retirement; preserving replacementfailed to retire authoritative cron definitiona browser specialist result carries an unexpected handoff payloada browser specialist result has no handoffa browser specialist result cannot carry another source or an overridea browser specialist result arrives only as its follow-upThis subtask stopped during a restart and did not report a result. Its work may be partly or fully done: check what it already produced before redoing anything, then redo or redelegate only what is actually missing.Closed during restart recovery without reporting a result.failed to persist terminal state for closed checkpointed subagentfailed to persist terminal status for closed checkpointed agentclosed Spaces builder checkpoint has no parent identityclosed Spaces builder checkpoint has no storage rootfailed to load closed Spaces builder generationfailed to delete runtime restart checkpoint for closed agentopen scheduler PostgreSQL rootmalformed scheduled approval checkpointsuperseded approval checkpoint owner changedsuperseded approval worker is still executingScheduled occurrence superseded while awaiting approvalfailed to retire superseded approval checkpoint
+UPDATE agent.message_mailbox
+SET state = CASE
+      WHEN state = 'attached' AND $2 THEN 'completed'
+      ELSE 'aborted'
+    END,
+    terminalized_at = now()
+WHERE agent_id = $1
+  AND state IN ('accepted', 'attached')
+database write admission gate closedadmission_timeoutassert_table_existstable_presence.queryload scheduler run infocron: failed to retain notification outcomecron: retaining timeout until its worker report can be checkedcron: retaining supersession until approval cleanup completesfailed to record pending delivery authentication blockfailed to clear pending delivery authentication blockcron validation admission unavailable; retaining resolved runcron worker: retaining successful run for delivery persistence replaycron worker: terminalizing run after a permanent delivery failurecron worker: failed to persist failure deliverycron worker: failed to persist blocker deliverycron worker: failed to persist timeout-resolution deliverycron worker: failed to persist cancellation deliverycron: job block unreadable; keeping fixed probe intervalsapproval_wait_supersededcancelledsucceededdelivery_repair_pendingfailedstale_delivery_chat_pausedtimeoutcron: browser interval refusal unreadable; failure stays genericcron.scheduler.worker.handoffserialize durable cron delivery follow-uppersist cron delivery outboxcron delivery authority changed while delivering; re-driving the saved resultfailed to refresh latest public runtime user timezone cachecron user stop: run info unavailable; stopping without a chat noticecron user stop: source unavailable; stopping without a chat noticerunningcron user stop: retained result unreadable; reporting the run as finishingcron user stop: worker lease unreadable; leaving teardown to stale-work supervisioncron user stop: failed to cancel the worker agent subtreecron user stop: failed to hard-cut the worker's active messagecalled `Result::unwrap()` on an `Err` valueworker_reported_incomplete_duffel_connector_not_connectedworker_reported_incomplete_duffel_reauth_requiredworker_reported_incomplete_unverified_account_action_requiredworker_reported_incomplete_unverified_site_challengeworker_reported_incomplete_browser_intervalworker_reported_incompletedirect_action_not_retriedscheduler loop: checkpoint-parked registry lock poisoned; waking for terminal hintscheduler loop: failed to retain checkpoint-parked run because registry lock is poisonedscheduler loop: checkpoint-parked run registry lock poisonedscheduler loop: recovery-evidence retry registry lock poisoned while computing wakescheduler loop: failed to retain recovery-evidence retry because registry lock is poisonedscheduler loop: recovery-evidence retry registry lock poisonedpending_initinterruptederrored; scheduler history purge pass finishedscheduler history purge window finisheduser_requested_stopemptyworker_blocked_connector_not_connectedworker_blocked_reauth_requiredworker_blocked_account_action_requiredworker_blocked_browser_capacityworker_blocked_site_challengeworker_blocked_device_offlinesource "$HATCH_HOOK_RUNTIME"disable_after_runprompthooks currently support exactly one delivery chatdelivery must contain exactly one chat targetThis hook has never produced a wake, in a dry run or live, across its recorded invocation history. You have verified that it can stay silent, not that it can fire. If you have not traced the wake case by hand, check that some value the script reads actually changes when the event you care about happens.wake_notemanagepoll_interval_secsScheduler-wide counts of enabled jobs, queued runs, and running runs. Scope to one schedule by `id` for that job's scheduler state: enabled, schedule, last run time and status, queued/running runs, and next run time.List schedule summaries with lifecycle owners.View one schedule's details by id.Add a new scheduled cron job. Definition file paths are chosen automatically from the job id and schedule; never provide them. Before adding, list existing jobs and reuse or update one instead of creating overlapping schedules.€ù

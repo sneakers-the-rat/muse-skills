@@ -262,8 +262,11 @@ dragging from the edge); on web it is a dialog from the menu icon at
 the bottom of the left rail (see the web section).
 
 Typically present: Messaging channels (which ones appear depends on the
-account: `~/docs/chat-connections.md`; on confidential VMs this section
-is absent on every platform), Connectors, Help/Legal, Log out, and a data
+account: `~/docs/chat-connections.md`; on confidential VMs only WhatsApp
+can appear there, not Telegram or Messenger. A WhatsApp link stays with the
+VM it was created on, so after switching VMs, the user needs to re-link
+their WhatsApp; the steps are in `~/docs/chat-connections/whatsapp.md`),
+Connectors, Help/Legal, Log out, and a data
 pane with the agent-data download (labeled "Download your agent data" on
 every platform). "Export your information" is inside
 Meta Accounts Center. iOS, Android, and web
@@ -455,7 +458,7 @@ Settings panes:
   messages you write later are authored in that language on every
   device. Content that already exists is not translated.
 - Messaging Channels (only visible when a channel is enabled for the
-  account, and never on confidential VMs)
+  account; on confidential VMs only WhatsApp)
 - Devices: paired-device rows with status and a detail view (device,
   last seen, OS; the current device also shows a read-only list of what
   it grants). Web has no control to remove, rename, or pair a device.

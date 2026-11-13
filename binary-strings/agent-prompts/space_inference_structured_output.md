@@ -555,6 +555,9 @@ harness = "hybrid_selector"
 "policyguard-nvfp4-cron" = { weights = "safety-classifier", kind = "safety_classifier" }
 "imageguard_e4b_nvfp4" = { weights = "safety-classifier", kind = "safety_classifier" }
 "jev-9b" = { weights = "safety-classifier", kind = "system_one_classifier", classifier_roles = ["safety"], cover_traffic = true }
+# The Decision-9B v3 candidate on the Hatch shadow deployment. Only the dark PI
+# arm `decision_9b_v3_pi` reads its role, and no cover traffic reaches it.
+"decision-9b-v3" = { weights = "safety-classifier", kind = "system_one_classifier", classifier_roles = ["prompt_injection_v3_candidate"] }
 "avocado" = { weights = "avocado-legacy" }
 "avocado-cron" = { weights = "avocado-legacy" }
 "claude-opus-5-5" = { weights = "cedar", magi_model = "ipnext/cedar" }

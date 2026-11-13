@@ -1,0 +1,141 @@
+DELETE FROM peer.circle_resource_requests WHERE expires_at_ms < $1INSERT INTO peer.circle_resource_requests (requester_muse, request_id, expires_at_ms)
+                 VALUES ($1,$2,$3) ON CONFLICT (requester_muse,request_id) DO NOTHINGpeer_id, muse_id, x25519_pub, key_epoch, binding, binding_expires_at_ms, fqdn, vm_id, endpoint_hints, display_name, agent_name, account_claim, relationship_generation_id, relationship_direction, relationship_started_at_ms, request_expires_at_ms, request_terminal_cause, relationship_revision, remote_confirmed_ceremony_id, remote_confirmed_at_ms, status, trust_preset, sas_confirmed_local, active_sas_ceremony_id, attested, person_slug, provenance, paired_at_ms, last_activity_ms, created_at_ms, updated_at_mshandoff event sequence
+SELECT e.event_seq, e.event_name, coalesce(e.message_id, '') AS message_id,
+       e.payload_json
+FROM events e
+WHERE e.idempotency_key = $1
+  AND e.payload_json IS NOT NULL
+context event identity already belongs to another writerSELECT event_seq FROM events WHERE idempotency_key = $1runtime_events_main_public_root_message_uidxSELECT request_id, root_request_id, parent_request_id,
+                                        event_name, visibility::text, role::text, source,
+                                        transcript_surface::text, message_id, reply_to_message_id,
+                                        agent_id, parent_agent_id, parent_message_id
+                                 FROM events WHERE event_seq = $1delta.presentationruntime.messages.body
+INSERT INTO messages (message_id, event_seq, role, body, created_at)
+VALUES ($1, $2, $3::runtime.message_role, $4, to_timestamp($5::double precision / 1000.0))
+ON CONFLICT (message_id) DO NOTHING
+
+SELECT event_seq AS seq, event_name, role::text AS role
+FROM events
+WHERE message_id = $1
+  AND transcript_surface = 'main_chat'
+  AND visibility = 'public'
+  AND event_name IN ('message.user', 'message.assistant')
+  AND (parent_message_id IS NULL OR TRIM(parent_message_id) = '')
+LIMIT 1
+root_request_idparent_request_idDELETE FROM chat.event_transports WHERE event_seq = $1INSERT INTO chat.event_transports (event_seq, provider) VALUES  ON CONFLICT (provider, event_seq) DO NOTHING, ()select agent_id,generation,active from agent.chat_workers where group_id=$1 for updateselect q.instruction from chat_private.company_conversations c join agent.chat_worker_requests q on q.request_id=c.approved_request_id where c.chat_id=$1 and c.phase='active' for update of ccompany worker changedowner input changed before message reviewmessage_id, connection_id, worker_id, worker_generation, producer_id, audience, rules_revision, text_content, payload_sha256, request_json, publication_id, state, approval_id, feedback, message_revision, review_operation_id, reviewer_agent_id, reviewer_submission_id, reviewed_payload_sha256, owner_authorization_json, rule_review_complete, owner_review_requiredset transaction isolation level repeatable read, read onlyselect actor_muse,request_sha256,result_json from goals.shared_mutations where goal_id=$1 and mutation_id=$2the mutation ID belongs to a different editSELECT connection_id FROM goals.goals WHERE goal_id=$1insert into goals.shared_tasks (goal_id,task_id,title,assigned_to,completed,updated_by,updated_at_ms) values ($1,$2,$3,$4,$5,$6,$7)
+                        on conflict(goal_id,task_id) do update set title=excluded.title,assigned_to=excluded.assigned_to,completed=excluded.completed,updated_by=excluded.updated_by,updated_at_ms=excluded.updated_at_ms
+                        where (shared_tasks.title,shared_tasks.assigned_to,shared_tasks.completed)
+                            is distinct from (excluded.title,excluded.assigned_to,excluded.completed)a shared goal supports at most 200 tasksdelete from goals.shared_tasks where goal_id=$1 and task_id=$2update goals.goals set title=coalesce($2,title),summary=coalesce($3,summary),description=coalesce($4,description),status=coalesce($5,status),
+                completed_at=case when $5='completed' then coalesce(completed_at,$6) when $5 is not null then null else completed_at end,
+                completed_at_ts=case when $5='completed' then coalesce(completed_at_ts,$7) when $5 is not null then null else completed_at_ts end,
+                escalation=case when $5='completed' then null else escalation end,
+                escalation_due_at=case when $5='completed' then null else escalation_due_at end,
+                updated_at=$6, updated_at_ts=$7 where goal_id=$1Goal pausedGoal retiredGoal completedinsert into goals.shared_mutations (goal_id,mutation_id,actor_muse,request_sha256,result_json,created_at_ms) values ($1,$2,$3,$4,$5,$6)INSERT INTO runtime.maintenance_markers (marker_key, detail_json) VALUES ('event_hook_admissions_v1', '{}') ON CONFLICT (marker_key) DO NOTHINGINSERT INTO runtime.event_hook_admissions (hook_id, revision, definition_sha256, script_sha256, enabled)  ON CONFLICT (hook_id) DO NOTHINGselect input_revision,input_request_id,review_revision,review_request_id,
+                            cleared_request_id,review_phase,review_reason,review_owner_submission,
+                            per_message_review
+                     from chat_private.company_conversations where chat_id=$1input_revisionreview_revisionreview_request_idcleared_request_idreview_phasereview_reasonreview_owner_submissionper_message_reviewupdate chat_private.company_conversations
+                         set input_revision=input_revision+1
+                         where chat_id=$1 and input_revision=$2 and input_request_id is not nullselect submission_id from agent.message_mailbox
+                     where agent_id=$1 and submission_kind='user'
+                     order by accepted_ordinal desc limit 1update chat_private.company_conversations
+                         set review_phase=$3,review_reason=$4,
+                             cleared_request_id=case when $3='allowed' then review_request_id
+                               else cleared_request_id end,
+                             per_message_review=per_message_review or $3<>'allowed'
+                         where chat_id=$1 and review_revision=$2 and review_phase='pending'update runtime.browser_tasks set last_progress_at = now()
+                    where task_id = $1 and status = 'running'SELECT activity_thread_id, action_index FROM activity_monitor_thread_actions WHERE action_id = $1 LIMIT 1
+SELECT status, finish_status
+FROM activity_monitor_threads
+WHERE activity_thread_id = $1
+LIMIT 1
+FOR UPDATE
+
+SELECT a.activity_thread_id
+FROM activity_monitor_agent_threads a
+JOIN activity_monitor_threads g ON g.activity_thread_id = a.activity_thread_id
+WHERE a.agent_id = $1
+  AND g.status = $2
+LIMIT 1
+FOR UPDATE OF g
+
+UPDATE activity_monitor_threads
+SET status = $2,
+    finished_at = NULL,
+    finish_message = NULL,
+    finish_status = NULL,
+    finish_status_reason = NULL
+WHERE activity_thread_id = $1
+
+SELECT COALESCE(MAX(action_index), 0) + 1
+FROM activity_monitor_thread_actions
+WHERE activity_thread_id = $1
+activity_thread_id is required when no current activity_thread is set
+INSERT INTO activity_monitor_thread_actions (
+    action_id, activity_thread_id, action_index, agent_id, agent_depth, icon, title, subtitle, report, status, created_at
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+ON CONFLICT(action_id) DO UPDATE SET
+    activity_thread_id = excluded.activity_thread_id,
+    action_index = excluded.action_index,
+    agent_id = excluded.agent_id,
+    agent_depth = COALESCE(excluded.agent_depth, activity_monitor_thread_actions.agent_depth),
+    icon = excluded.icon,
+    title = excluded.title,
+    subtitle = excluded.subtitle,
+    report = excluded.report,
+    status = excluded.status,
+    created_at = LEAST(activity_monitor_thread_actions.created_at, excluded.created_at)
+RETURNING action_index, action_seq, action_id, activity_thread_id, agent_id, agent_depth, icon, title, subtitle, report, status, created_at, nextval(pg_get_serial_sequence('activity.activity_monitor_thread_actions', 'action_seq'))::bigint AS write_ordinal
+write_ordinal
+SELECT action_index, action_seq, action_id, activity_thread_id, agent_id, agent_depth, icon, title, subtitle, report, status, created_at
+FROM activity_monitor_thread_actions
+WHERE activity_thread_id = $1
+ORDER BY action_index ASC, action_seq ASC
+
+SELECT action_index, action_id, activity_thread_id, agent_id, agent_depth, icon, title, subtitle, report, status, created_at
+FROM activity_monitor_thread_actions
+WHERE action_id = $1
+LIMIT 1
+
+SELECT action_index, action_id, activity_thread_id, agent_id, agent_depth, icon, title, subtitle, report, status, created_at
+FROM (
+    SELECT
+        action_index,
+        action_id,
+        activity_thread_id,
+        agent_id,
+        agent_depth,
+        icon,
+        title,
+        subtitle,
+        report,
+        status,
+        created_at,
+        action_seq AS insertion_order
+    FROM activity_monitor_thread_actions
+    WHERE activity_thread_id = $1
+    ORDER BY action_index DESC, insertion_order DESC
+    LIMIT $2
+)
+ORDER BY action_index ASC, insertion_order ASC
+
+SELECT b.activity_thread_id
+FROM activity_monitor_message_threads b
+WHERE b.message_id = $1
+
+SELECT b.activity_thread_id
+FROM activity_monitor_message_threads b
+JOIN activity_monitor_threads g ON g.activity_thread_id = b.activity_thread_id
+WHERE b.message_id = $1
+  AND g.status = $2
+
+SELECT activity_thread_id, name, subtitle, icon, emoji, status, created_at, finished_at, finish_message,
+       finish_status, finish_status_reason, activity_thread_kind, space_slug, status_title,
+       expected_finish_description
+FROM activity_monitor_threads
+WHERE activity_thread_id = $1
+
+SELECT status, finish_status
+FROM activity_monitor_threads
+WHERE activity_thread_id = $1
+LIMIT 1
+peer_plane_disabledpeer profile photos are unavailablecontent-typeimage/jpegcache-controlprivate, no-storex-content-type-optionsnosniffprivate preview length changedpath not foundresolve pathpath escapes mount rootpath already existsalready_existscreate parent directoryinference-proxy returned an invalid model selection routepeerd mirror status read timed out/mirror/status
