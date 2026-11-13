@@ -1,0 +1,121 @@
+peer_id, muse_id, x25519_pub, key_epoch, binding, binding_expires_at_ms, fqdn, vm_id, endpoint_hints, display_name, agent_name, account_claim, relationship_generation_id, relationship_direction, relationship_started_at_ms, request_expires_at_ms, request_terminal_cause, relationship_revision, remote_confirmed_ceremony_id, remote_confirmed_at_ms, status, trust_preset, sas_confirmed_local, active_sas_ceremony_id, attested, person_slug, provenance, paired_at_ms, last_activity_ms, created_at_ms, updated_at_msselect space_slug as shortcode, sharing_state as state,
+                            sharing_revision as revision,
+                            sharing_saved_shortcode as saved_shortcode,
+                            sharing_updated_at_ms as updated_at_ms
+                     from spaces.user_state
+                     where space_slug = $1 and sharing_state is not null for updateupdate spaces.user_state
+                     set sharing_state = $2, sharing_revision = $3,
+                         sharing_saved_shortcode = $4, sharing_updated_at_ms = $5
+                     where space_slug = $1
+                     returning space_slug as shortcode, sharing_state as state,
+                               sharing_revision as revision,
+                               sharing_saved_shortcode as saved_shortcode,
+                               sharing_updated_at_ms as updated_at_msParticipation changed; reload before retryingwidget data must be an objectUPDATE runtime.widgets SET data_json = $2, display_text = $3, updated_at_ms = $4 WHERE widget_id = $1 AND data_json::jsonb = $5::jsonbruntime.widgets.data_jsonSELECT event_seq FROM runtime.events WHERE idempotency_key = $1 AND message_id = $2 AND event_name = 'delta.presentation' AND visibility = 'public' AND payload_json::jsonb ->> 'id' = $3 FOR UPDATEwidget changed during presentation replacementhandoff event sequence
+SELECT e.event_seq, e.event_name, coalesce(e.message_id, '') AS message_id,
+       e.payload_json
+FROM events e
+WHERE e.idempotency_key = $1
+  AND e.payload_json IS NOT NULL
+context event identity already belongs to another writerSELECT event_seq FROM events WHERE idempotency_key = $1runtime_events_main_public_root_message_uidxSELECT request_id, root_request_id, parent_request_id,
+                                        event_name, visibility::text, role::text, source,
+                                        transcript_surface::text, message_id, reply_to_message_id,
+                                        agent_id, parent_agent_id, parent_message_id
+                                 FROM events WHERE event_seq = $1runtime.messages.body
+INSERT INTO messages (message_id, event_seq, role, body, created_at)
+VALUES ($1, $2, $3::runtime.message_role, $4, to_timestamp($5::double precision / 1000.0))
+ON CONFLICT (message_id) DO NOTHING
+
+SELECT event_seq AS seq, event_name, role::text AS role
+FROM events
+WHERE message_id = $1
+  AND transcript_surface = 'main_chat'
+  AND visibility = 'public'
+  AND event_name IN ('message.user', 'message.assistant')
+  AND (parent_message_id IS NULL OR TRIM(parent_message_id) = '')
+LIMIT 1
+seqrequest_idroot_request_idparent_request_idvisibilitytranscript_surfacereply_to_message_idparent_message_idDELETE FROM chat.event_transports WHERE event_seq = $1INSERT INTO chat.event_transports (event_seq, provider) VALUES  ON CONFLICT (provider, event_seq) DO NOTHING, (
+SELECT e.event_seq, e.payload_json
+FROM events e
+WHERE e.idempotency_key = $1
+LIMIT 1
+FOR UPDATE OF e
+
+SELECT event_seq, payload_json
+FROM events
+WHERE idempotency_key = $1
+LIMIT 1
+FOR UPDATE
+
+UPDATE events
+SET display_text_ready = $2,
+    reply_target_message_id = $3,
+    payload_json = $4
+WHERE event_seq = $1
+RETURNING payload_json, event_name, parent_agent_id, agent_id
+
+INSERT INTO messages (message_id, event_seq, role, body, created_at)
+SELECT e.message_id, e.event_seq, e.role, $2, e.created_at
+FROM events e
+WHERE e.event_seq = $1
+  AND e.message_id IS NOT NULL
+  AND e.role IS NOT NULL
+ON CONFLICT (message_id) DO UPDATE SET
+  body = excluded.body
+select a.id from agents a
+    join chat.chats c on c.chat_id = a.session_id
+    where a.kind = 'root' and a.parent_agent_id is null and a.session_id = $1
+      and a.ephemeral is distinct from true and c.origin in ('fresh', 'fork')
+      and c.status <> 'deleted'
+    order by a.created_at desc, a.id desc limit 1INSERT INTO agents (agent_id, id, session_id, kind, parent_id, parent_agent_id, root_session_id, depth, created_at, updated_at, model, status, last_assistant_message, ephemeral, agent_type, presentation_root_session_id, spawn_metadata_json, originating_location_context_json)
+             VALUES ($1, $1, $2, $3, $4, $4, $5, $6, $7, $8, $9, $10, NULL, $11, $12, $13, $14, $15)
+INSERT INTO agent_ancestors (descendant_id, ancestor_id, distance)
+VALUES ($1, $1, 0)
+ON CONFLICT (descendant_id, ancestor_id) DO NOTHING
+
+INSERT INTO agent_ancestors (descendant_id, ancestor_id, distance)
+SELECT $1, ancestor_id, distance + 1
+FROM agent_ancestors
+WHERE descendant_id = $2
+ON CONFLICT (descendant_id, ancestor_id) DO NOTHING
+
+INSERT INTO agent_ancestors (descendant_id, ancestor_id, distance)
+VALUES ($1, $2, 1)
+ON CONFLICT (descendant_id, ancestor_id) DO NOTHING
+freshSELECT EXISTS(SELECT 1 FROM agent.chat_worker_requests q
+                 LEFT JOIN agent.message_mailbox task ON task.submission_id=q.request_id AND task.agent_id=q.worker_agent_id
+                 WHERE q.chat_id=$1 AND q.generation=$2 AND q.worker_agent_id=$3
+                   AND q.instruction<>'' AND q.state<>'cancelled'
+                   AND (q.state='pending' OR task.accepted_ordinal > (
+                     SELECT accepted_ordinal FROM agent.message_mailbox WHERE agent_id=$3 AND submission_id=$4)))set transaction isolation level repeatable read, read onlyselect group_id from agent.chat_workers where group_id=$1 for updateselect e.phase,e.last_delivery_key,e.approved_request_id,q.instruction,q.state as request_state,
+                        w.agent_id,w.generation,w.active
+                 from chat_private.company_conversations e
+                 join agent.chat_worker_requests q on q.request_id=e.approved_request_id
+                 join agent.chat_workers w on w.group_id=e.chat_id
+                 where e.chat_id=$1 for update of eselect state,result_json,last_error from chat_private.deliveries
+                 where delivery_key=$1 and chat_id=$2 and surface=$3
+                   and dispatch_boot_generation=$4 and attempt_count=$5 for updatestateresult_jsonlast_errorinstructionapproved_request_idlast_delivery_keyphaserequest_statecancelledupdate chat_private.deliveries set state=$6,next_attempt_at_utc=$7,
+                    last_error=$8,terminal_at_utc=case when $6='failed' then $9 else null end,updated_at_utc=$9
+                where delivery_key=$1 and chat_id=$2 and surface=$3
+                  and dispatch_boot_generation=$4 and attempt_count=$5 and state='dispatching'company delivery owner retired before retrycompany_metadata_unavailable_before_sendupdate chat_private.company_conversations set phase=$2,
+                        exchange_count=greatest(exchange_count-1,0),state_version=state_version+1,updated_at_ms=$3
+                    where chat_id=$1 and phase='sending' and last_delivery_key=$4select provider_state from chat_private.company_conversations where chat_id=$1select c.approved_request_id,c.phase,q.instruction,q.chat_id,
+                       q.owner_agent_id,q.owner_chat_id,q.worker_agent_id,q.generation,
+                       q.state as request_state,w.agent_id,w.generation as worker_generation,w.active
+                     from chat_private.company_conversations c
+                     join agent.chat_worker_requests q on q.request_id=c.approved_request_id
+                     join agent.chat_workers w on w.group_id=c.chat_id
+                     where c.chat_id=$1chat_idowner_agent_idowner_chat_idworker_agent_idworker_generationselect group_id,submission_id,delivery_key,request_trace_json
+                     from agent.group_replies where group_id=$1
+                       and (submission_id=$2 or delivery_key=$3)
+                     order by submission_id limit 2company send owner changed before trace lookupsubmission_iddelivery_keyrequest_trace_jsoncompany reply does not match the requested sendcompany reply identities conflictselect count(*) from agent.chat_worker_requests where chat_id=$1 and instruction=$2select d.sequence,d.delivery_key,d.payload_json
+                     from chat_private.deliveries d
+                     join chat_private.company_conversations c on c.chat_id=d.chat_id
+                     join agent.chat_worker_requests q on q.request_id=c.approved_request_id
+                     join agent.chat_workers w on w.group_id=c.chat_id
+                     where d.chat_id=$1 and d.surface=$2 and d.state='failed'
+                       and d.last_error=$3 and d.dispatch_boot_generation is null
+                       and c.approved_request_id=$4 and c.phase in ('active','reported','paused','sending')
+                       and q.owner_agent_id=$5 and q.owner_chat_id=$6
+                       and q.worker_agent_id=$7 and q.generation=$8 and q.state<>'cancelled'
+                       and w.agent_id=$7 and w.generation=$8 and w.active
+                       and d.sequence>$9 order by d.sequence limit 64company owner source changed or is unavailable before dispatchsteer_id, invocation_id, task_id, sender_agent_id, sender_submission_id, call_id, body, request_trace_context_json, (extract(epoch from created_at) * 1000)::bigint as created_at_ms, (extract(epoch from delivered_at) * 1000)::bigint as delivered_at_ms, (extract(epoch from undeliverable_at) * 1000)::bigint as undeliverable_at_ms

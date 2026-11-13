@@ -1,0 +1,27 @@
+
+                 join runtime.events h on h.message_id=metadata.handoff_message_id
+                   and h.parent_agent_id=e.parent_agent_id
+                   and h.parent_message_id=e.parent_message_id
+                   and h.source=metadata.handoff_source
+                 where e.parent_agent_id=$1 and e.parent_message_id=$2
+                   and e.event_name='message.internal' and e.source='runtime'
+                   and metadata.kind='follow_up_settlement'
+                   and metadata.action in ('completed','nothing_to_do','aborted')
+                   and metadata.submission_source='runtime'
+                   and h.source in ('runtime.subagent_progress','runtime.subagent_monitor')
+                   and h.event_name='message.internal'
+                   and exists (
+                     select 1 from runtime.event_payload_fields f
+                     join agent.subagent_spawns s
+                       on s.child_agent_id=coalesce(f.text_value,f.scalar_value)
+                     where f.event_seq=h.event_seq
+                       and f.field_path like '/metadata/subagent_completion_child_agent_ids/%'
+                       and s.parent_agent_id=$1 and s.parent_message_id=$2)
+                   and not exists (
+                     select 1 from runtime.event_payload_fields f
+                     where f.event_seq=h.event_seq
+                       and f.field_path like '/metadata/subagent_completion_child_agent_ids/%'
+                       and not exists (select 1 from agent.subagent_spawns s
+                         where s.child_agent_id=coalesce(f.text_value,f.scalar_value)
+                           and s.parent_agent_id=$1 and s.parent_message_id=$2))
+                 order by e.event_seq desc limit 129

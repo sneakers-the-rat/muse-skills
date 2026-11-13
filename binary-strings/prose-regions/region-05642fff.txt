@@ -1,0 +1,68 @@
+supportedunsupportedpartial_or_blockedunknownintake_stalledconnector_stalledexternal_action_stalledartifact_missing_or_emptyartifact_unusableunsupported_completion_claimungrounded_or_fabricated_evidenceinput_coverage_gaprecurring_delivery_unverifiedothernot_applicablenot_attemptedawaiting_user_no_responseuser_declineduser_cancelledevidence_mismatchinsufficient_evidenceintakeconnector_setupexternal_actionartifact_creationartifact_verificationrecurring_deliverystatusresultsempty_visible_projectionended_without_resultsubmission_idretry_submission_idstarts_atWindowCursortrackedlisting_idtitlepriceconditionlisted_atCursorversioninitializeddigestSessionStatusstateaccountaccount_idSyncStatusinitialized_atprocessed_throughretry_windowRetryWindowscan_afterscan_beforeinitialattemptStatusDataconnectedregisteredsessionSendTimeframemorningafternooneveningnightrandomfirst_availableexpires_attimeframeexactdescriptionaction_urlis_sharedPlannedSplitkeychat_idstring or map}falsesubagent handoff retry changed its committed identitylegacy handoff payload is unavailableruntime.subagent_progresssystempayload checked above/metadata/context_seq/metadata/subagent_completion_identitycommitted handoff context identity changedsubagent handoff event belongs to another identitycommitted handoff payload was replacedunsupported_provideraccount_changedrunningpending_initpending_user_confirmationbackground task failederrorsuccessall branches are disabled and there is no else branchevaluation timed outgave up waiting for a socket-activated service to answerstill waiting for a socket-activated service to answersocket-activated service answered after waitingcompile JSON schema/v1/webhooks/controlwrite_admissionwritepostgres write completed slowlypostgres write failedretrying idempotent postgres writehatch:db:operationbrowser planner id is invalidbrowser handoff id is invalidappthread--account-id--thread-fbid--first25Instagram Direct messages exceeded the paging limitcommitted handoff has no context sequencenegative handoff event sequenceone-shot postgres write invoked more than onceunknown validation errormessage_idinvalid evaluation responseevent_seqpayload_jsonevent_namepermissions_unavailableselect b.*, a.connection_id as current_connection_id,
+                    a.revoked as account_revoked
+                from chat_private.binding_authorizations b
+                join chat_private.accounts a using(provider, account_id)
+                where b.provider = $1 and b.binding_id = $2account_revokedcurrent_connection_idupdate chat_private.message_deletions
+                     set cleanup_after_ms = greatest($5, requested_at_ms)
+                     where chat_id = $1 and binding_epoch = $2 and transport = $3
+                       and external_message_id = $4 and deleted_at_ms is null and sender_id = $6select chat_id, binding_epoch, transport,
+                        external_message_id, requested_at_ms, sender_id
+                     from chat_private.message_deletions
+                     where deleted_at_ms is null and cleanup_after_ms <= $1
+                     order by cleanup_after_ms, chat_id, binding_epoch,
+                        transport, external_message_id limit 100select exists(select 1 from chat_private.message_deletions
+                     where chat_id = $1 and binding_epoch = $2 and transport = $3
+                       and external_message_id = $4 and sender_id = $5
+                       and deleted_at_ms is null)select id from runtime.webhook_custody_lock where id=1 for updateselect exists(select 1 from runtime.webhook_custody c join runtime.webhook_events e on e.logical_id=c.logical_id where c.subscription_id=$1 and c.generation=$2 and c.delivery_id=$3 and c.event_sha256=$4 and c.binding_json=$5 and c.logical_id=$6 and c.expires_at_ms=$7 and c.expires_at_ms>$8 and c.processing_status='held' and e.subscription_id=c.subscription_id and e.generation=c.generation and e.first_delivery_id=c.delivery_id and e.processing_status='held' and e.facts_json=$9)update runtime.webhook_events set processing_status='handled',facts_json='' where logical_id=$1update runtime.webhook_custody set processing_status='handled' where subscription_id=$1 and generation=$2 and delivery_id=$3delete from blob.objects where obj_id in (
+                         select o.obj_id from blob.objects o
+                         where o.deleted_at <= now() - $1::bigint * interval '1 second'
+                         and o.state in (2, 3) and not exists (
+                             select 1 from blob.paths p
+                             where p.logical_path = o.logical_path and p.obj_id = o.obj_id
+                         )
+                         order by o.deleted_at, o.obj_id limit 128 for update of o skip locked
+                     )select p.logical_path from blob.paths p where p.obj_id is null
+                         and not exists (
+                             select 1 from blob.objects o where o.logical_path = p.logical_path
+                         )
+                         order by p.logical_path limit 128 for update of p skip lockeddelete from blob.paths p where p.logical_path = any($1) and p.obj_id is null
+                         and not exists (
+                             select 1 from blob.objects o where o.logical_path = p.logical_path
+                         )select exists (select 1 from agent.root_turn_queue where submission_id = $1)select exists(select 1
+                from agent.chat_workers where group_id = $1 and agent_id = $2
+                and generation = $3)group deletion owner changedupdate agent.group_inputs set input_json = $3, disposition = 'cancelled'
+                where group_id = $1 and external_message_id = $2select event_seq from runtime.events
+                where parent_agent_id = $1 and message_id = $2
+                  and visibility = 'internal' and event_name = 'message.internal'
+                  and source = $3runtime.group_chatupdate chat_private.reactions set state = 'retired', work_json = null
+                    where chat_id = $1 and target_event_seq = any($2::bigint[])select exists(select 1 from agent.message_mailbox
+                where agent_id = $1 and submission_id = $2 and state in ('accepted', 'attached'))select exists(select 1 from chat_private.external_party_conversations where chat_id=$1)SELECT EXISTS(SELECT 1 FROM runtime.maintenance_markers WHERE marker_key = 'event_hook_admissions_v1')invocation_id, task_id, planner_agent_id, parent_invocation_id, caller_agent_id, caller_submission_id, call_id, agent_id, submission_id, runtime_work_id, input_digest, kind, state, input_json, context_json, result_json, wait_call_id, ordinal, tab_id, (extract(epoch from created_at) * 1000)::bigint as created_at_ms, (extract(epoch from stop_requested_at) * 1000)::bigint as stop_requested_at_ms, terminal_reason, handoff_state, (extract(epoch from finished_at) * 1000)::bigint as finished_at_mshandoff event sequence
+SELECT e.event_seq, e.event_name, coalesce(e.message_id, '') AS message_id,
+       e.payload_json
+FROM events e
+WHERE e.idempotency_key = $1
+  AND e.payload_json IS NOT NULL
+context event identity already belongs to another writerSELECT event_seq FROM events WHERE idempotency_key = $1runtime_events_main_public_root_message_uidxSELECT request_id, root_request_id, parent_request_id,
+                                        event_name, visibility::text, role::text, source,
+                                        transcript_surface::text, message_id, reply_to_message_id,
+                                        agent_id, parent_agent_id, parent_message_id
+                                 FROM events WHERE event_seq = $1delta.presentationruntime.messages.body
+INSERT INTO messages (message_id, event_seq, role, body, created_at)
+VALUES ($1, $2, $3::runtime.message_role, $4, to_timestamp($5::double precision / 1000.0))
+ON CONFLICT (message_id) DO NOTHING
+
+SELECT event_seq AS seq, event_name, role::text AS role
+FROM events
+WHERE message_id = $1
+  AND transcript_surface = 'main_chat'
+  AND visibility = 'public'
+  AND event_name IN ('message.user', 'message.assistant')
+  AND (parent_message_id IS NULL OR TRIM(parent_message_id) = '')
+LIMIT 1
+seqrequest_idroot_request_idparent_request_idvisibilitysourcetranscript_surfacereply_to_message_idparent_agent_idparent_message_idDELETE FROM chat.event_transports WHERE event_seq = $1INSERT INTO chat.event_transports (event_seq, provider) VALUES  ON CONFLICT (provider, event_seq) DO NOTHING, ()
+SELECT e.event_seq, e.payload_json
+FROM events e
+WHERE e.idempotency_key = $1
+LIMIT 1
+FOR UPDATE OF e
+steer_id, invocation_id, task_id, sender_agent_id, sender_submission_id, call_id, body, request_trace_context_json, (extract(epoch from created_at) * 1000)::bigint as created_at_ms, (extract(epoch from delivered_at) * 1000)::bigint as delivered_at_ms, (extract(epoch from undeliverable_at) * 1000)::bigint as undeliverable_at_ms

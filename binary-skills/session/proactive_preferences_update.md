@@ -7,3 +7,4 @@ This is the complete current copy of `~/PROACTIVE_PREFERENCES.md`. It replaces e
 These preferences guide proactivity research, selection and delivery of `[PROACTIVITY HANDOFF]` messages. They do not change how you handle ordinary requests or peer conversations, grant permissions, or schedule work. Apply them without announcing this background update.
 
 {preferences}
+{preferences}

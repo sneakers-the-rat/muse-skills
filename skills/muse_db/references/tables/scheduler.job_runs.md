@@ -96,6 +96,8 @@ Individual scheduled job runs, definition version and execution times.
 
   Default: `0`.
 
+- `notification_policy_json` uses `text` and is nullable.
+
 ## Keys and relationships
 
 - FOREIGN KEY `job_runs_job_definition_id_fkey` covers `job_definition_id`. References [scheduler.job_definitions](/opt/muse/skills/muse_db/references/tables/scheduler.job_definitions.md), columns `job_definition_id`.

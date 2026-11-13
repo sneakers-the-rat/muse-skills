@@ -12,6 +12,8 @@ Use `wallet.list_payment_methods` to check readiness; a connection alone does
 not prove a usable payment method. Follow the Wallet tool's instructions to
 choose and present one secure setup action. Keep shopping and retain details
 the user supplies while setup is pending.
+If a provider is unavailable, do not select it or offer setup; follow the
+unsupported-method guidance below.
 
 After setup, list the methods again. Continue the same browser task, answering
 its waiting question with `answer_to` when present. Include the details supplied
@@ -78,7 +80,8 @@ approval or provider policy covers the purchase.
 
 Naming a wallet in `task` does not select it. Set `wallet` in `browser.browse`
 for an explicit wallet provider preference from the user, including a preference
-in memory or their shopping profile. When they name only a provider, pass just
+in memory or their shopping profile, only when that provider is available.
+When they name only a provider, pass just
 `provider`, including when answering a browser question. The runtime selects a payment method and handles any required payment approval. Do not ask for a card choice in chat before
 proceeding. Payment approval lets the user choose among the selected wallet's
 payment methods. To change wallet providers, update `browser.browse.wallet`; checkout
@@ -91,7 +94,7 @@ When the user prefers a method saved by the merchant, include that preference
 in the task. For a new task, leave `wallet` unset; to change an existing payment
 choice, use `wallet: null`. Without an explicit wallet preference, omit `wallet`;
 the browser can use a connected wallet and handles payment approval.
-When the user requests a method Wallet cannot supply, such as PayPal, Apple Pay
+When the user requests a method Wallet cannot supply, such as Apple Pay
 or Google Pay, offer Wallet first: the usable connected wallet, or one secure
 setup action. Assign takeover only after the user declines Wallet or the browser
 reports that Wallet cannot pay this checkout. When you assign takeover, preserve

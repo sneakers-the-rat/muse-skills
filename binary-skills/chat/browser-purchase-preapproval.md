@@ -1,8 +1,9 @@
 # Browser purchase preapproval
 
 Use `permissions.preapprove` for one browser payment or order through a
-connected wallet the approval card offers, including Link and Shop Pay, or a
-payment method the merchant saved for the user.
+connected wallet the approval card offers and that `wallet.list_payment_methods`
+marks `purchase_preapproval_eligible: true`, including Link and Shop Pay,
+or a payment method the merchant saved for the user.
 Send one action in `actions`, with `connector: "browser"` and the `binding` below.
 Direct checkout integrations use their own approval flow.
 
@@ -54,10 +55,11 @@ after 30 days.
    wallet- or card-selection question. The approval also covers a payment
    method the merchant saved for the user. When the user chose one, pass that
    choice in the browser assignment. Otherwise, complete wallet setup only when
-   `wallet.list_payment_methods` shows no connected wallet with a usable
-   payment method. If the user chose a payment method that neither a connected
-   wallet nor the merchant's saved methods supply, ask whether to use wallet
-   preapproval or keep that choice with approval at checkout.
+   `wallet.list_payment_methods` shows no connected wallet with
+   `purchase_preapproval_eligible: true` and a usable payment method. If the user
+   chose a payment method that neither such a wallet nor the merchant's saved
+   methods supply, ask whether to use wallet preapproval or keep that choice
+   with approval at checkout.
 
 3. Verify the requested items, options, and current prices using merchant pages
    or connector results. Use `browser.open` for a known product URL.

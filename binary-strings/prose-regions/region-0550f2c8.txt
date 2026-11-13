@@ -1,0 +1,417 @@
+(function() {
+  var initialHydratedStateJson = __HATCH_INITIAL_WIDGET_STATE_JSON__;
+  var selector = "input, textarea, select, [data-hatch-state-key][aria-pressed]";
+  var formStateKey = "__hatch_form_state";
+  var ignoredInputTypes = {
+    button: true,
+    file: true,
+    hidden: true,
+    image: true,
+    password: true,
+    reset: true,
+    submit: true
+  };
+  var widgetRootSelector = "[data-widget-root], [data-share-widget-root], .hatch-widget";
+  var currentScript = document.currentScript;
+
+  function isWidgetRoot(el) {
+    return el && el.matches && el.matches(widgetRootSelector);
+  }
+
+  function findWidgetRoot() {
+    var candidate = currentScript ? currentScript.parentElement : null;
+    while (candidate && candidate !== document.documentElement) {
+      if (isWidgetRoot(candidate)) {
+        return candidate;
+      }
+      candidate = candidate.parentElement;
+    }
+
+    candidate = currentScript ? currentScript.previousElementSibling : null;
+    while (candidate) {
+      if (isWidgetRoot(candidate)) {
+        return candidate;
+      }
+      candidate = candidate.previousElementSibling;
+    }
+
+    return document.getElementById("root") || document;
+  }
+
+  var widgetRoot = findWidgetRoot();
+
+  function rootElement() {
+    return widgetRoot;
+  }
+
+  function containsTarget(el) {
+    var root = rootElement();
+    return root === document || root === el || (root.contains && root.contains(el));
+  }
+
+  function inputType(el) {
+    return String(el.getAttribute("type") || el.type || "text").toLowerCase();
+  }
+
+  function isAriaPressedControl(el) {
+    return (
+      el &&
+      el.hasAttribute &&
+      el.hasAttribute("data-hatch-state-key") &&
+      el.hasAttribute("aria-pressed")
+    );
+  }
+
+  function isPersistable(el) {
+    if (!el || !el.tagName) {
+      return false;
+    }
+    if (isAriaPressedControl(el)) {
+      return true;
+    }
+    var tag = String(el.tagName).toLowerCase();
+    if (tag === "input") {
+      return !ignoredInputTypes[inputType(el)];
+    }
+    return tag === "textarea" || tag === "select";
+  }
+
+  function controls() {
+    return Array.prototype.slice
+      .call(rootElement().querySelectorAll(selector))
+      .filter(isPersistable);
+  }
+
+  function controlKey(el, index) {
+    var explicit =
+      el.getAttribute("data-hatch-state-key") ||
+      el.getAttribute("data-state-key") ||
+      el.id;
+    if (explicit) {
+      return explicit;
+    }
+    var tag = String(el.tagName || "").toLowerCase();
+    if (tag === "input") {
+      var type = inputType(el);
+      var name = el.getAttribute("name") || "";
+      var value = el.getAttribute("value") || "";
+      if (type === "radio" && name) {
+        return "radio:" + name + ":" + (value || index);
+      }
+      if (type === "checkbox" && name) {
+        return "checkbox:" + name + ":" + (value || "on") + ":" + index;
+      }
+    }
+    var fallbackName = el.getAttribute("name");
+    return fallbackName || tag + ":" + index;
+  }
+
+  function normalizeState(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return {};
+    }
+    return value;
+  }
+
+  function copyState(value) {
+    try {
+      return normalizeState(JSON.parse(JSON.stringify(normalizeState(value))));
+    } catch (_) {
+      return {};
+    }
+  }
+
+  function hasStateFields(value) {
+    return Object.keys(normalizeState(value)).length > 0;
+  }
+
+  function currentBridgeState() {
+    return window.hatchWidget && typeof window.hatchWidget.getState === "function"
+      ? normalizeState(window.hatchWidget.getState())
+      : {};
+  }
+
+  function initialHydratedState() {
+    if (typeof initialHydratedStateJson !== "string") {
+      return null;
+    }
+    try {
+      return normalizeState(JSON.parse(initialHydratedStateJson));
+    } catch (_) {
+      return {};
+    }
+  }
+
+  function valueFor(el) {
+    if (isAriaPressedControl(el)) {
+      return { pressed: el.getAttribute("aria-pressed") === "true" };
+    }
+    var tag = String(el.tagName || "").toLowerCase();
+    if (tag === "input") {
+      var type = inputType(el);
+      if (type === "checkbox" || type === "radio") {
+        return { checked: el.checked === true };
+      }
+    }
+    if (tag === "select" && el.multiple) {
+      return {
+        value: Array.prototype.slice
+          .call(el.options || [])
+          .filter(function(option) {
+            return option.selected;
+          })
+          .map(function(option) {
+            return option.value;
+          })
+      };
+    }
+    return { value: String(el.value || "") };
+  }
+
+  function applyValue(el, saved) {
+    if (!saved || typeof saved !== "object") {
+      return;
+    }
+    if (isAriaPressedControl(el)) {
+      el.setAttribute("aria-pressed", saved.pressed === true ? "true" : "false");
+      return;
+    }
+    var tag = String(el.tagName || "").toLowerCase();
+    if (tag === "input") {
+      var type = inputType(el);
+      if (type === "checkbox" || type === "radio") {
+        el.checked = saved.checked === true;
+        return;
+      }
+    }
+    if (tag === "select" && el.multiple && Array.isArray(saved.value)) {
+      var selected = {};
+      saved.value.forEach(function(value) {
+        selected[String(value)] = true;
+      });
+      Array.prototype.slice.call(el.options || []).forEach(function(option) {
+        option.selected = selected[String(option.value)] === true;
+      });
+      return;
+    }
+    if (typeof saved.value === "string" && "value" in el) {
+      el.value = saved.value;
+    }
+  }
+
+  function formState(state) {
+    var nested = normalizeState(state[formStateKey]);
+    return Object.keys(nested).length > 0 || state[formStateKey]
+      ? nested
+      : state;
+  }
+
+  function restore(state) {
+    var savedControls = formState(normalizeState(state));
+    controls().forEach(function(el, index) {
+      applyValue(el, savedControls[controlKey(el, index)]);
+    });
+  }
+
+  function postState(state) {
+    if (
+      !window.hatchWidget ||
+      typeof window.hatchWidget.setState !== "function"
+    ) {
+      return;
+    }
+    window.hatchWidget.setState(state);
+  }
+
+  function save() {
+    var savedControls = {};
+    controls().forEach(function(el, index) {
+      savedControls[controlKey(el, index)] = valueFor(el);
+    });
+    var bridgeState = currentBridgeState();
+    if (hasStateFields(bridgeState)) {
+      lastKnownState = copyState(bridgeState);
+    }
+    var state = copyState(lastKnownState);
+    state[formStateKey] = savedControls;
+    lastKnownState = copyState(state);
+    postState(state);
+  }
+
+  function persistableTarget(target) {
+    if (!target || !target.matches) {
+      return null;
+    }
+    if (!containsTarget(target)) {
+      return null;
+    }
+    if (target.matches(selector) && isPersistable(target)) {
+      return target;
+    }
+    if (target.closest) {
+      var closest = target.closest(selector);
+      if (closest && containsTarget(closest) && isPersistable(closest)) {
+        return closest;
+      }
+    }
+    return null;
+  }
+
+  function onControlChange(event) {
+    if (persistableTarget(event.target)) {
+      save();
+    }
+  }
+
+  function onWidgetState(event) {
+    var detail = event && event.detail;
+    var incomingState = normalizeState(detail && detail.state);
+    if (
+      hasStateFields(incomingState) ||
+      !rejectNextEmptyHostState ||
+      !hasStateFields(lastKnownState)
+    ) {
+      lastKnownState = copyState(incomingState);
+    }
+    rejectNextEmptyHostState = false;
+    restore(lastKnownState);
+  }
+
+  var previous = window.__hatchWidgetStatePersistence;
+  if (previous && typeof previous.destroy === "function") {
+    previous.destroy();
+  }
+
+  var initialState = initialHydratedState();
+  var bridgeInitialState = currentBridgeState();
+  var lastKnownState = hasStateFields(bridgeInitialState)
+    ? copyState(bridgeInitialState)
+    : copyState(initialState || bridgeInitialState);
+  var rejectNextEmptyHostState = hasStateFields(lastKnownState);
+
+  var eventRoot = rootElement();
+  eventRoot.addEventListener("input", onControlChange, true);
+  eventRoot.addEventListener("change", onControlChange, true);
+  eventRoot.addEventListener("click", onControlChange, false);
+  window.addEventListener("hatch-widget-state", onWidgetState);
+  window.__hatchWidgetStatePersistence = {
+    destroy: function() {
+      eventRoot.removeEventListener("input", onControlChange, true);
+      eventRoot.removeEventListener("change", onControlChange, true);
+      eventRoot.removeEventListener("click", onControlChange, false);
+      window.removeEventListener("hatch-widget-state", onWidgetState);
+    }
+  };
+
+  restore(lastKnownState);
+})();__HATCH_INITIAL_WIDGET_STATE_JSON__(function() {
+  var initialHydratedStateJson = __HATCH_INITIAL_WIDGET_STATE_JSON__;
+
+  function normalizeState(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return {};
+    }
+    return value;
+  }
+
+  function copyState(value) {
+    try {
+      return normalizeState(JSON.parse(JSON.stringify(normalizeState(value))));
+    } catch (_) {
+      return {};
+    }
+  }
+
+  var hydratedState = {};
+  if (typeof initialHydratedStateJson === "string") {
+    try {
+      hydratedState = normalizeState(JSON.parse(initialHydratedStateJson));
+    } catch (_) {}
+  }
+
+  var previous = window.__hatchWidgetStateHydration;
+  if (previous && typeof previous.destroy === "function") {
+    previous.destroy();
+  }
+
+  if (typeof initialHydratedStateJson !== "string") {
+    delete window.__hatchWidgetStateHydration;
+    return;
+  }
+
+  var bridge = window.hatchWidget;
+  var originalGetState =
+    bridge && typeof bridge.getState === "function"
+      ? bridge.getState
+      : null;
+  var seeding = false;
+
+  if (bridge && originalGetState) {
+    bridge.getState = function() {
+      return copyState(hydratedState);
+    };
+  }
+
+  function restoreGetState() {
+    if (bridge && originalGetState && bridge.getState !== originalGetState) {
+      bridge.getState = originalGetState;
+    }
+  }
+
+  function dispatchHydratedState() {
+    seeding = true;
+    try {
+      window.dispatchEvent(
+        new CustomEvent("hatch-widget-state", {
+          detail: { state: copyState(hydratedState) }
+        })
+      );
+    } finally {
+      seeding = false;
+    }
+  }
+
+  function onWidgetState(event) {
+    if (seeding) {
+      return;
+    }
+    restoreGetState();
+    window.removeEventListener("hatch-widget-state", onWidgetState);
+
+    var incomingState = normalizeState(
+      event && event.detail && event.detail.state
+    );
+    if (
+      Object.keys(incomingState).length === 0 &&
+      Object.keys(hydratedState).length > 0
+    ) {
+      if (event && typeof event.stopImmediatePropagation === "function") {
+        event.stopImmediatePropagation();
+      }
+      dispatchHydratedState();
+    }
+    delete window.__hatchWidgetStateHydration;
+  }
+
+  window.addEventListener("hatch-widget-state", onWidgetState);
+  window.__hatchWidgetStateHydration = {
+    dispatch: dispatchHydratedState,
+    destroy: function() {
+      restoreGetState();
+      window.removeEventListener("hatch-widget-state", onWidgetState);
+    }
+  };
+})();(function() {
+  var hydration = window.__hatchWidgetStateHydration;
+  if (hydration && typeof hydration.dispatch === "function") {
+    hydration.dispatch();
+  }
+})();runtime.side_threadruntime.merge_noticeruntime.injected_context_changemeal_idrun_idmetadata.jsondeterministic-doctorbuild profile-image definitionbuild feed-pulse definitionscanonicalize deterministic-doctor definitionspace-content-share-v6-legacy-metaspace-content-share-v1-legacy-six-socialcontent_share_refusedaudio_wearablemcu_wearabledisplay_glassesdisplayless_glasseshatch-websubagents methods require a non-empty agent_idThe user approved this conversation with the company at {domain}. This brief is the immutable original admission: its `goal` and `constraints` guide your work, its `permitted_actions` bound what you may do, and its `facts` are the only user facts approved for disclosure at admission. You have no ambient memory, files, profile, other conversations or general-purpose tools. Later private tasks are instructions for your work, not amendments to this brief; new disclosures or commitments require separately verified authenticated owner inputs and outgoing review.
+
+<brief>
+{brief}
+</brief>
+
+Send a short opening message now with `mailbox.send_message`.
+{brief}company worker seat holds a tool outside the per-instruction allowlist; reviewing each senddiscretion_clearance_expired\\\|\`incomplete_device_catalogdevice_catalog_below_capability_floorui_control_commands_over_limitdevice.discoversubagent-handoff-submissionNo return action is expected. Complete the task below and finish with a brief assistant message summarizing the outcome. Do not call `artifact.invoke_action` to deliver results unless the task body explicitly names an action to invoke.
+

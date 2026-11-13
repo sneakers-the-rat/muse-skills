@@ -1,0 +1,91 @@
+
+JOIN LATERAL (
+  SELECT MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/kind') AS kind,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/action') AS action,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/handoff_message_id') AS handoff_message_id,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/handoff_source') AS handoff_source,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/submission_message_id') AS submission_message_id,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/submission_source') AS submission_source,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/assistant_message_id') AS assistant_message_id
+  FROM runtime.event_payload_fields AS f
+  WHERE f.event_seq = e.event_seq AND f.field_path IN (
+    '/metadata/kind', '/metadata/action', '/metadata/handoff_message_id',
+    '/metadata/handoff_source', '/metadata/submission_message_id', '/metadata/submission_source',
+    '/metadata/assistant_message_id'
+  )
+) AS metadata ON true
+follow_up_settlementnothing_to_doaborted
+SELECT e.event_seq,
+       e.payload_json,
+       message.body AS display_text
+FROM runtime.events AS e
+JOIN runtime.messages AS message ON message.event_seq = e.event_seq
+WHERE e.parent_agent_id = $1
+  AND e.reply_to_message_id = $2
+  AND e.payload_json IS NOT NULL
+  AND (
+    (e.event_name = 'message.assistant' AND e.role = 'assistant' AND e.source = 'runtime')
+    OR (e.event_name = 'message.internal' AND e.source = ANY($3::text[]))
+  )
+ORDER BY e.event_seq DESC
+LIMIT 1
+FOR UPDATE OF e
+display_textroot follow-up assistant payload is not an objectstatusupdate feed.units
+                     set discuss_count = discuss_count + 1,
+                         updated_at_ms = $2
+                     where unit_id = $1select q.instruction from chat_private.company_conversations c join agent.chat_worker_requests q on q.request_id=c.approved_request_id where c.chat_id=$1 and c.phase='active' for update of ccompany worker changedowner input changed before message reviewmessage_id, connection_id, worker_id, worker_generation, producer_id, audience, rules_revision, text_content, payload_sha256, request_json, publication_id, state, approval_id, feedback, message_revision, review_operation_id, reviewer_agent_id, reviewer_submission_id, reviewed_payload_sha256, owner_authorization_json, rule_review_complete, owner_review_requiredselect pg_advisory_xact_lock(hashtextextended('notification-push-budget', 0))
+insert into scheduler.notification_groups
+    (group_id, source, source_id, allowance, created_at, push_decision, push_decided_at)
+values ($1, $2, $3, $4, $5,
+    case when case $4::jsonb->>'kind'
+        when 'ordinary' then (
+            select count(*) < $7 from scheduler.notification_groups
+            where push_decision='send' and push_decided_at>$6
+              and allowance->>'kind' in ('ordinary','urgent'))
+        when 'reserved' then not exists (
+            select 1 from scheduler.notification_groups
+            where push_decision='send' and push_decided_at>$6
+              and allowance->>'kind'='reserved' and allowance->>'slot'=$4::jsonb->>'slot')
+        else true
+    end then 'send' else 'budget' end, $5)
+on conflict (group_id) do update
+    set allowance=excluded.allowance, push_decision=excluded.push_decision,
+        push_decided_at=excluded.push_decided_at
+    where notification_groups.push_decision is null
+returning push_decisionunknown notification push decisionselect g.group_id, g.source, g.source_id, g.allowance
+                 from scheduler.notification_submissions s
+                 join scheduler.notification_groups g on g.group_id=s.group_id
+                 where s.agent_id=$1 and s.submission_id=$2
+                   and not exists(select 1 from agent.message_mailbox u
+                     where u.agent_id=$1 and u.submission_kind='user' and u.stream_owner_message_id=$2)select g.group_id from agent.message_mailbox m
+                 join scheduler.notification_submissions s
+                   on s.agent_id=m.agent_id and s.submission_id=m.submission_id
+                 join scheduler.notification_groups g on g.group_id=s.group_id
+                 where m.submission_id=$1
+                   and not exists(select 1 from agent.message_mailbox u
+                     join agent.agents a on a.agent_id=u.agent_id and a.parent_agent_id is null
+                     where u.agent_id=m.agent_id and u.submission_kind='user'
+                       and u.stream_owner_message_id=coalesce(m.stream_owner_message_id,m.submission_id))
+                 for share of ginsert into scheduler.notification_submissions (agent_id, submission_id, group_id)
+                     values ($1,$2,$3) on conflict (agent_id, submission_id) do nothingupdate scheduler.notification_groups
+                 set last_published_at=greatest(last_published_at,$2) where group_id=$1t.task_id, t.root_session_id, t.owner_agent_id as planner_agent_idupdate runtime.browser_calls set checkout_wait_state=case
+                      when checkout_wait_state='awaiting_card' then 'waiting'
+                      else 'withdraw_pending' end
+                     where task_id=$1
+                       and checkout_wait_state in ('awaiting_card', 'withdraw_on_arrival')update runtime.browser_calls set checkout_approval_id=$3,
+                    checkout_wait_state=case
+                      when checkout_wait_state='awaiting_card' then 'waiting'
+                      when checkout_wait_state='withdraw_on_arrival' then 'withdraw_pending'
+                      else checkout_wait_state end
+                where operation_id=$1 and checkout_wait_json=$2
+                  and checkout_wait_state in ('waiting', 'withdraw_pending', 'awaiting_card', 'withdraw_on_arrival')
+                  and (checkout_approval_id is null or checkout_approval_id=$3)operation_id, task_id, agent_id, checkout_wait_json,
+    checkout_approval_id, checkout_resume_agent_id,
+    (checkout_wait_state in ('withdraw_pending', 'withdraw_on_arrival')) as withdrawal_pending

@@ -1,0 +1,30 @@
+SELECT goal_id, title, summary, description, updated_at,
+                            provenance->'proactive_follow_up' AS origin
+                     FROM goals.goals WHERE source='assistant_tracking' AND status='active'
+                     AND provenance ? 'proactive_follow_up'
+                     AND connection_id IS NULL
+                     ORDER BY updated_at_ts DESC, goal_id LIMIT $1with recent_groups as (
+                         select group_id from scheduler.notification_groups
+                          where source='cron' and created_at >= $1
+                         union
+                         select group_id from scheduler.notification_groups
+                          where source='cron' and last_published_at >= $1
+                     )
+                     select s.agent_id, s.submission_id
+                     from recent_groups g
+                     join scheduler.notification_submissions s on s.group_id=g.group_id
+                     join agent.agents a on a.agent_id=s.agent_id
+                     where a.kind='root' and a.parent_agent_id is null
+                       and a.ephemeral is distinct from true
+                       and not exists (select 1 from agent.message_mailbox u
+                         where u.agent_id=s.agent_id and u.submission_kind='user'
+                           and u.stream_owner_message_id=s.submission_id)
+                     order by s.agent_id, s.submission_idselect i.invocation_id, i.kind, i.sign_in_site
+    from runtime.browser_invocations i
+    join runtime.browser_tasks t on t.task_id = i.task_id
+    where i.task_id = $1 and i.result_json is null
+      and i.planner_agent_id = t.owner_agent_id
+    order by i.ordinalupdate runtime.browser_calls
+                set checkout_wait_state='resumed', checkout_resume_agent_id=$5
+                where operation_id=$1 and task_id=$2 and checkout_wait_json=$3
+                  and checkout_approval_id=$4 and checkout_wait_state='waiting'relocation_hold_until = null, relocating_to = nullrelocated_from = null€}

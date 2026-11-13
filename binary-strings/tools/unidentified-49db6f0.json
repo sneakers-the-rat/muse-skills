@@ -1,0 +1,125 @@
+{
+  "name": null,
+  "description": "",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "task": {
+        "type": "string",
+        "minLength": 1,
+        "description": "New work: a self-contained assignment. An existing window: only what changed or comes next, since it already holds its assignment and history. With answer_to: the answer."
+      },
+      "task_id": {
+        "type": "string",
+        "description": "new for new work, or an existing window's task_id to continue its work."
+      },
+      "profile": {
+        "type": "string",
+        "minLength": 1,
+        "description": "Only with new, to use a named profile: its ID from `browser.windows`. Omit it for the default profile."
+      },
+      "tab": {
+        "type": "string",
+        "minLength": 1,
+        "description": "Only with an existing window: a tab ID from `browser.windows` to work in."
+      },
+      "url": {
+        "type": "string",
+        "minLength": 1,
+        "format": "uri",
+        "pattern": "^https?://",
+        "description": "Only an address the user gave, one from a tool result such as a search result, or a well-known site whose address you are sure of. Never build one from a business or product name; omit it and name the business and its location in task."
+      },
+      "files": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "file": {
+              "type": "string",
+              "minLength": 1,
+              "description": "A workspace file for the browser to upload to a site. The browser receives the file, never its path, and cannot open or read it."
+            },
+            "purpose": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Where on the site the browser should upload this file. Data the browser must check or enter, such as IDs to skip, goes in task instead."
+            }
+          },
+          "required": [
+            "file",
+            "purpose"
+          ],
+          "additionalProperties": false
+        },
+        "minItems": 0
+      },
+      "verification_code": {
+        "type": "object",
+        "description": "A one-time code reference for a sign-in, from a protected read. The user approves sharing the code before the browser receives it. With answer_to it reaches only the step that asked; without it, it goes to the sign-in on its site.",
+        "properties": {
+          "credential_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The UUID from the protected read's credential marker, never the code itself."
+          },
+          "origin": {
+            "type": "string",
+            "pattern": "^https://",
+            "description": "The exact HTTPS origin of the active sign-in challenge."
+          }
+        },
+        "required": [
+          "credential_id",
+          "origin"
+        ],
+        "additionalProperties": false
+      },
+      "user_code": {
+        "type": "string",
+        "description": "Only with answer_to: a one-time code the user typed to you, exactly as they gave it, for the browser question that asked for it. A protected code reference goes in verification_code instead."
+      },
+      "account_hint": {
+        "type": "string",
+        "minLength": 1,
+        "description": "The account to sign in with: the one the user named, or the email or phone number their memory or files give for that site. With answer_to it reaches only the step that asked; without it, the window's sign-ins use it."
+      },
+      "answer_to": {
+        "type": "string",
+        "pattern": "^question_[0-9a-f]{16}$",
+        "description": "Only to answer a browser question of an existing window: the question_id from that question. A call without answer_to is an update for the browser planner."
+      },
+      "wallet": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "description": "Set when the user chose a wallet provider, including a preference in memory or their shopping profile. Pass provider alone when no particular payment method was chosen; the runtime selects a method and handles any required payment approval. Include payment_method_id only for a payment method the user chose. On an existing task, omission preserves its choice; null clears it. Put a preference for a merchant-saved card in task and leave wallet unset.",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "enum": [
+              "stripe-link",
+              "shop-pay",
+              "paypal"
+            ]
+          },
+          "payment_method_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Only when the user chose a particular payment method: its exact ID from wallet.list_payment_methods, every character preserved."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "provider"
+        ]
+      }
+    },
+    "required": [
+      "task_id",
+      "task"
+    ],
+    "additionalProperties": false
+  }
+}

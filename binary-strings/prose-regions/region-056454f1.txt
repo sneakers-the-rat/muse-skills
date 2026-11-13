@@ -1,0 +1,18 @@
+update runtime.browser_specialist_steers set delivered_at = now()
+                     where steer_id = $1 and delivered_at is null and undeliverable_at is nullupdate runtime.browser_seat_inputs set shown_at = now()
+                     where source_id = $1 and shown_at is null and revision is not null
+                       and invocation_id = (select invocation_id
+                         from runtime.browser_specialist_steers where steer_id = $1)update runtime.browser_specialist_steers set undeliverable_at = now()
+                     where steer_id = $1 and delivered_at is null and undeliverable_at is nullselect g.group_id from scheduler.notification_groups g
+                 where g.source<>'approval' and g.created_at<$1
+                   and (g.last_published_at is null or g.last_published_at<$1)
+                   and (g.push_decided_at is null or g.push_decided_at<$1)
+                   and not exists (select 1 from scheduler.delivery_outbox d
+                     where g.source='cron' and d.run_id=g.source_id
+                       and d.state in ('pending','dispatching','admitted'))
+                   and not exists (select 1 from self_improvement.follow_up_queue q
+                     where g.source='research' and q.follow_up_id=g.source_id
+                       and q.state in ('pending','delivering'))
+                 order by g.created_at limit 128 for update of g skip lockeddelete from scheduler.notification_submissions where group_id=any($1)delete from scheduler.notification_groups where group_id=any($1)operation_id, task_id, agent_id, checkout_wait_json,
+    checkout_approval_id, checkout_resume_agent_id,
+    (checkout_wait_state in ('withdraw_pending', 'withdraw_on_arrival')) as withdrawal_pending
