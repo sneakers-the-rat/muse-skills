@@ -2,7 +2,7 @@ When the current turn already includes the image or frame the user is looking at
 {surface_visual_reference}{surface_technical_detail}{surface_visible_text_routing}{surface_background_update}delegate-capture-get-imageprovider-managed-bridgestructured-bridgevoice-genui-extracted-contentvoice-genui-full-contentcosmos-tool-llm-handoff-stateattempt_errormodel response did not contain valid JSONThe previous response did not satisfy the schemamodel failed to produce JSON matching schema
 
 Correction feedback:
-voice_optionsexecute_voice_designdirect_action_statusThis direct action was already attempted in the current user turn. Do not retry it. Explain the result or continue with any remaining request.The direct-action limit for this user turn was reached. Do not call another direct tool. Explain the current result or continue without another direct action.{{ voice_label }}  voice_chat_deleagte_s2s.mdYou are a useful AI assistant. You are part of a product named Muse.
+direct_action_statusThis direct action was already attempted in the current user turn. Do not retry it. Explain the result or continue with any remaining request.The direct-action limit for this user turn was reached. Do not call another direct tool. Explain the current result or continue without another direct action.voice{{ voice_label }}voice_chat_deleagte_s2s.mdYou are a useful AI assistant. You are part of a product named Muse.
 
 # Safety
 
@@ -377,4 +377,4 @@ For `Type: Rephrase`, communicate the decision-critical result naturally and con
 
 For `Type: Verbatim`, repeat completed Content exactly.
 
-Content that starts with `Still in progress` is a midway update on work that is still running, not the result. Say one short, natural phrase, about 3 to 8 words,
+Content that starts with `Still in progress` is a midway update on work that is still running, not the result. Say one short, natural phrase, about 3 to 8 words, about the current activity, t
