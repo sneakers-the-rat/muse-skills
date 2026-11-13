@@ -1,0 +1,623 @@
+errorsuccess
+select exists (
+  select 1
+  from runtime.workflow_legacy_launch_occurrence_blocks
+  where launch_occurrence_agent_id = $1
+    and launch_occurrence_message_id = $2
+    and launch_occurrence_tool_call_id = $3
+)
+workflow launch occurrence belongs to an ambiguous historical run; refusing duplicate admissionwrite_admissionwritepostgres write completed slowlypostgres write failedretrying idempotent postgres writeone-shot postgres write invoked more than once
+select *
+from runtime.workflow_phase_runs
+where run_id = $1
+order by ordinal asc, phase_run_id asc
+
+insert into runtime.workflow_phase_runs (
+  phase_run_id,
+  run_id,
+  phase_name,
+  ordinal,
+  status,
+  agent_total,
+  agent_completed,
+  input_tokens,
+  output_tokens,
+  error
+) values (
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+)
+on conflict (phase_run_id) do update set
+  status = excluded.status,
+  agent_total = excluded.agent_total,
+  agent_completed = excluded.agent_completed,
+  input_tokens = excluded.input_tokens,
+  output_tokens = excluded.output_tokens,
+  error = excluded.error,
+  started_at = case
+    when excluded.status in ('running', 'paused', 'completed', 'failed', 'skipped', 'stopped')
+      then coalesce(runtime.workflow_phase_runs.started_at, now())
+    else runtime.workflow_phase_runs.started_at
+  end,
+  completed_at = case
+    when excluded.status in ('completed', 'failed', 'skipped', 'stopped')
+      then coalesce(runtime.workflow_phase_runs.completed_at, now())
+    else runtime.workflow_phase_runs.completed_at
+  end,
+  updated_at = now()
+returning *
+
+select *
+from runtime.workflow_agent_calls
+where run_id = $1
+order by call_ordinal asc, call_id asc
+
+insert into runtime.workflow_agent_calls (
+  call_id, run_id, phase_run_id, replay_key, cache_key, call_ordinal,
+  prompt, options_json, child_agent_id, child_message_id, status,
+  cached_from_call_id, final_response, input_tokens, output_tokens,
+  tool_call_count, duration_ms, error
+) values (
+  $1, $2, $3, $4, $5, $6, $7, $8, $9,
+  $10, $11, $12, $13, $14, $15, $16, $17, $18
+)
+on conflict (run_id, replay_key) do nothing
+returning *
+select * from runtime.workflow_agent_calls where run_id = $1 and replay_key = $2cached workflow call lost insert race to a different lifecycle owner
+update runtime.workflow_agent_calls
+set status = 'pending',
+    child_agent_id = null,
+    child_message_id = null,
+    cached_from_call_id = null,
+    final_response = null,
+    input_tokens = 0,
+    output_tokens = 0,
+    tool_call_count = 0,
+    duration_ms = null,
+    error = null,
+    created_at = now(),
+    started_at = null,
+    completed_at = null,
+    updated_at = now()
+where call_id = $1
+  and run_id = $2
+  and replay_key = $3
+  and status = 'blocked'
+  and child_agent_id is not distinct from $4
+  and child_message_id is not distinct from $5
+returning *
+
+select *
+from runtime.workflow_agent_calls
+where run_id = $1
+  and cache_key = $2
+order by call_ordinal asc, call_id asc
+limit 1
+
+select *
+from runtime.workflow_agent_calls
+where run_id = $1
+  and replay_key = $2
+
+update runtime.workflow_runs
+set status = $3,
+    launching_agent_id = coalesce($6, launching_agent_id),
+    launching_message_id = coalesce($7, launching_message_id),
+    launching_tool_call_id = coalesce($8, launching_tool_call_id),
+    executor_id = case
+      when $3 in ('stopped', 'completed', 'failed', 'syntax_error')
+        then null
+      else executor_id
+    end,
+    lease_expires_at = case
+      when $3 in ('stopped', 'completed', 'failed', 'syntax_error')
+        then null
+      else lease_expires_at
+    end,
+    error = $4,
+    final_result = $5,
+    started_at = case
+      when $3 in ('running', 'stopping', 'stopped', 'completed', 'failed')
+        then coalesce(started_at, now())
+      else started_at
+    end,
+    completed_at = case
+      when $3 in ('stopped', 'completed', 'failed', 'syntax_error')
+        then coalesce(completed_at, now())
+      else completed_at
+    end,
+    updated_at = now()
+where run_id = $1
+  and ($2::text is null or status = $2)
+returning *
+
+select *
+from runtime.workflow_runs
+where status in ('queued', 'running', 'stopping')
+order by updated_at asc, run_id asc
+limit $1
+
+update runtime.workflow_runs
+set heartbeat_at = now(),
+    lease_expires_at = $3,
+    updated_at = now()
+where run_id = $1
+  and executor_id = $2
+  and status in ('running', 'paused')
+
+update runtime.workflow_runs
+set status = 'paused',
+    executor_id = null,
+    lease_expires_at = null,
+    error = $3,
+    final_result = $4,
+    updated_at = now()
+where run_id = $1
+  and executor_id = $2
+  and status = 'running'
+returning *
+
+update runtime.workflow_runs
+set status = $3,
+    executor_id = null,
+    lease_expires_at = null,
+    error = $4,
+    final_result = $5,
+    completed_at = coalesce(completed_at, now()),
+    updated_at = now()
+where run_id = $1
+  and executor_id = $2
+  and status = 'running'
+returning *
+
+update runtime.workflow_runs
+set status = 'queued',
+    executor_id = null,
+    lease_expires_at = null,
+    recovery_count = recovery_count + case when $4 then 1 else 0 end,
+    last_recovery_reason = case when $4 then $3 else last_recovery_reason end,
+    last_recovered_at = case when $4 then now() else last_recovered_at end,
+    updated_at = now()
+where run_id = $1
+  and executor_id = $2
+  and status = 'running'
+returning *
+
+update runtime.workflow_runs
+set status = 'running',
+    executor_id = $2,
+    execution_attempt = execution_attempt + 1,
+    heartbeat_at = now(),
+    lease_expires_at = $3,
+    error = null,
+    final_result = null,
+    started_at = coalesce(started_at, now()),
+    completed_at = null,
+    updated_at = now()
+where run_id = $1
+  and status = 'queued'
+returning *
+
+with candidates as (
+  select run_id
+  from runtime.workflow_runs
+  where status = 'running'
+    and ($1::timestamptz is null or lease_expires_at is null or lease_expires_at <= $1)
+  order by updated_at asc, run_id asc
+  limit $3
+  for update skip locked
+)
+update runtime.workflow_runs runs
+set status = 'queued',
+    executor_id = null,
+    lease_expires_at = null,
+    recovery_count = recovery_count + 1,
+    last_recovery_reason = $2,
+    last_recovered_at = now(),
+    updated_at = now()
+from candidates
+where runs.run_id = candidates.run_id
+returning runs.*
+
+update runtime.workflow_runs
+set status = $2,
+    error = null,
+    final_result = null,
+    sync_wait_deadline_at = $9,
+    launching_agent_id = coalesce($3, launching_agent_id),
+    launching_message_id = coalesce($4, launching_message_id),
+    launching_tool_call_id = coalesce($5, launching_tool_call_id),
+    terminal_handoff_message_id = case
+      when launch_mode = 'async' then null
+      else terminal_handoff_message_id
+    end,
+    terminal_handoff_generation = terminal_handoff_generation
+      + case when launch_mode = 'async' then 1 else 0 end,
+    terminal_handoff_delivered_at = case
+      when launch_mode = 'async' then null
+      else terminal_handoff_delivered_at
+    end,
+    terminal_handoff_disposition = case
+      when launch_mode = 'async' then null
+      else terminal_handoff_disposition
+    end,
+    terminal_handoff_attempt_count = case
+      when launch_mode = 'async' then 0
+      else terminal_handoff_attempt_count
+    end,
+    terminal_handoff_last_attempt_at = case
+      when launch_mode = 'async' then null
+      else terminal_handoff_last_attempt_at
+    end,
+    terminal_handoff_next_attempt_at = case
+      when launch_mode = 'async' then null
+      else terminal_handoff_next_attempt_at
+    end,
+    terminal_handoff_last_error = case
+      when launch_mode = 'async' then null
+      else terminal_handoff_last_error
+    end,
+    terminal_handoff_transport = case
+      when launch_mode = 'async' then $6
+      else terminal_handoff_transport
+    end,
+    terminal_handoff_delivery_target = case
+      when launch_mode = 'async' then $7
+      else terminal_handoff_delivery_target
+    end,
+    terminal_handoff_chat_context_json = case
+      when launch_mode = 'async' then $8
+      else terminal_handoff_chat_context_json
+    end,
+    started_at = case
+      when $2 = 'running' then coalesce(started_at, now())
+      else started_at
+    end,
+    updated_at = now()
+where run_id = $1
+  and status = 'paused'
+  and $2 in ('queued', 'running')
+returning *
+
+update runtime.workflow_runs
+set terminal_handoff_message_id = coalesce(terminal_handoff_message_id, $2),
+    terminal_handoff_disposition = 'abandoned',
+    terminal_handoff_last_error = $4,
+    terminal_handoff_next_attempt_at = null
+where run_id = $1
+  and launch_mode = 'async'
+  and terminal_handoff_generation = $3
+  and terminal_handoff_delivered_at is null
+  and terminal_handoff_disposition is null
+  and (terminal_handoff_message_id is null or terminal_handoff_message_id = $2)
+  and (
+    status in ('completed', 'failed', 'syntax_error', 'stopped')
+    or (
+      status = 'paused'
+      and final_result like '%"status":"blocked"%'
+    )
+  )
+returning *
+
+update runtime.workflow_runs
+set terminal_handoff_message_id = coalesce(terminal_handoff_message_id, $2),
+    terminal_handoff_delivered_at = coalesce(terminal_handoff_delivered_at, now()),
+    terminal_handoff_disposition = 'delivered',
+    terminal_handoff_last_error = null,
+    terminal_handoff_next_attempt_at = null
+where run_id = $1
+  and launch_mode = 'async'
+  and terminal_handoff_generation = $3
+  and terminal_handoff_delivered_at is null
+  and terminal_handoff_disposition is null
+  and terminal_handoff_message_id = $2
+  and (
+    status in ('completed', 'failed', 'syntax_error', 'stopped')
+    or (
+      status = 'paused'
+      and final_result like '%"status":"blocked"%'
+    )
+  )
+returning *
+
+update runtime.workflow_runs
+set terminal_handoff_message_id = coalesce(terminal_handoff_message_id, $2),
+    terminal_handoff_attempt_count = terminal_handoff_attempt_count + 1,
+    terminal_handoff_last_attempt_at = now(),
+    terminal_handoff_next_attempt_at = now() + interval '5 seconds'
+where run_id = $1
+  and launch_mode = 'async'
+  and terminal_handoff_generation = $3
+  and terminal_handoff_delivered_at is null
+  and terminal_handoff_disposition is null
+  and (terminal_handoff_message_id is null or terminal_handoff_message_id = $2)
+  and (
+    status in ('completed', 'failed', 'syntax_error', 'stopped')
+    or (
+      status = 'paused'
+      and final_result like '%"status":"blocked"%'
+    )
+  )
+returning *
+
+update runtime.workflow_runs
+set terminal_handoff_message_id = coalesce(terminal_handoff_message_id, $2),
+    terminal_handoff_disposition = 'suppressed',
+    terminal_handoff_last_error = 'suppressed: source message cancelled',
+    terminal_handoff_next_attempt_at = null
+where run_id = $1
+  and launch_mode = 'async'
+  and terminal_handoff_generation = $3
+  and terminal_handoff_delivered_at is null
+  and terminal_handoff_disposition is null
+  and (terminal_handoff_message_id is null or terminal_handoff_message_id = $2)
+  and launching_message_id is not distinct from $4
+  and parent_message_id is not distinct from $5
+  and (
+    status in ('completed', 'failed', 'syntax_error', 'stopped')
+    or (
+      status = 'paused'
+      and final_result like '%"status":"blocked"%'
+    )
+  )
+returning *
+
+select *
+from runtime.workflow_runs
+where launch_mode = 'async'
+  and terminal_handoff_delivered_at is null
+  and terminal_handoff_disposition is null
+  and (
+    terminal_handoff_next_attempt_at is null
+    or terminal_handoff_next_attempt_at <= now()
+  )
+  and (
+    status in ('completed', 'failed', 'syntax_error', 'stopped')
+    or (
+      status = 'paused'
+      and final_result like '%"status":"blocked"%'
+    )
+  )
+order by
+  terminal_handoff_next_attempt_at asc nulls first,
+  updated_at asc,
+  run_id asc
+limit 1
+
+update runtime.workflow_runs
+set terminal_handoff_message_id = coalesce(
+      terminal_handoff_message_id,
+      'workflow-terminal:' || run_id ||
+        case
+          when terminal_handoff_generation > 0
+            then ':resume:' || terminal_handoff_generation::text
+          else ''
+        end
+    ),
+    terminal_handoff_disposition = 'suppressed',
+    terminal_handoff_last_error = 'suppressed: source message cancelled',
+    terminal_handoff_next_attempt_at = null
+where launch_mode = 'async'
+  and terminal_handoff_delivered_at is null
+  and terminal_handoff_disposition is null
+  and (
+    launching_message_id = $1
+    or parent_message_id = $1
+  )
+
+insert into runtime.workflow_agent_calls (
+  call_id, run_id, phase_run_id, replay_key, cache_key, call_ordinal,
+  prompt, options_json, child_agent_id, child_message_id, status,
+  cached_from_call_id, final_response, input_tokens, output_tokens,
+  tool_call_count, duration_ms, error
+) values (
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
+  $13, $14, $15, $16, $17, $18
+)
+on conflict (run_id, replay_key) do nothing
+returning *
+select *
+                     from runtime.workflow_agent_calls
+                     where run_id = $1 and replay_key = $2
+                     for update
+update runtime.workflow_agent_calls
+set child_agent_id = $9,
+    child_message_id = $10,
+    updated_at = now()
+where call_id = $1
+  and run_id = $2
+  and replay_key = $3
+  and phase_run_id is not distinct from $4
+  and cache_key = $5
+  and call_ordinal = $6
+  and prompt = $7
+  and options_json = $8
+  and status = 'pending'
+  and child_agent_id is null
+  and child_message_id is null
+returning *
+legacy workflow child owner adoption lost its exact CAS
+update runtime.workflow_agent_calls
+set status = $6,
+    final_response = $7,
+    input_tokens = $8,
+    output_tokens = $9,
+    tool_call_count = $10,
+    duration_ms = $11,
+    error = $12,
+    started_at = coalesce(started_at, now()),
+    completed_at = case
+      when $6 in ('completed', 'failed', 'stopped', 'cached')
+        then coalesce(completed_at, now())
+      else completed_at
+    end,
+    updated_at = now()
+where run_id = $1
+  and replay_key = $2
+  and child_agent_id = $3
+  and child_message_id = $4
+  and status = $5
+returning *
+
+select *
+from runtime.workflow_agent_calls
+where run_id = $1 and replay_key = $2
+workflow child owner disappeared during transition
+update runtime.workflow_agent_calls
+set status = 'stopped',
+    error = $9,
+    completed_at = coalesce(completed_at, now()),
+    updated_at = now()
+where call_id = $1
+  and run_id = $2
+  and replay_key = $3
+  and phase_run_id is not distinct from $4
+  and cache_key = $5
+  and call_ordinal = $6
+  and prompt = $7
+  and options_json = $8
+  and status = 'pending'
+  and child_agent_id is null
+  and child_message_id is null
+  and cached_from_call_id is null
+  and final_response is null
+  and input_tokens = 0
+  and output_tokens = 0
+  and tool_call_count = 0
+  and duration_ms is null
+  and started_at is null
+  and completed_at is null
+  and error is null
+
+update runtime.workflow_agent_calls
+set status = 'failed',
+    final_response = null,
+    error = $7,
+    started_at = coalesce(started_at, now()),
+    completed_at = coalesce(completed_at, now()),
+    updated_at = now()
+where call_id = $1
+  and run_id = $2
+  and replay_key = $3
+  and child_agent_id = $4
+  and child_message_id = $5
+  and status = $6
+
+update runtime.workflow_agent_calls
+set status = 'running',
+    started_at = coalesce(started_at, now()),
+    updated_at = now()
+where run_id = $1
+  and replay_key = $2
+  and status = 'pending'
+  and child_agent_id = $3
+  and child_message_id = $4
+returning *
+
+select matched.*
+from (
+  select runs.*, null::text as occurrence_alias_fingerprint, 0 as occurrence_owner_kind
+  from runtime.workflow_runs as runs
+  where runs.launch_occurrence_agent_id is not null
+    and runs.launch_occurrence_message_id is not null
+    and runs.launch_occurrence_tool_call_id is not null
+    and runs.launch_occurrence_agent_id = $1
+    and runs.launch_occurrence_message_id = $2
+    and runs.launch_occurrence_tool_call_id = $3
+
+  union all
+
+  select runs.*, aliases.contract_fingerprint as occurrence_alias_fingerprint,
+         1 as occurrence_owner_kind
+  from runtime.workflow_launch_occurrence_aliases as aliases
+  join runtime.workflow_runs as runs on runs.run_id = aliases.run_id
+  where aliases.launch_occurrence_agent_id = $1
+    and aliases.launch_occurrence_message_id = $2
+    and aliases.launch_occurrence_tool_call_id = $3
+) as matched
+order by matched.occurrence_owner_kind
+limit 1
+select * from runtime.workflow_runs where run_id = $1
+select *
+from runtime.workflow_runs
+where ($1::text is null or root_agent_id = $1)
+order by updated_at desc, run_id asc
+limit $2
+
+select exists (
+  select 1
+  from runtime.workflow_runs
+  where launch_mode = 'sync'
+    and launching_agent_id is not null
+    and status in ('queued', 'running', 'paused', 'stopping')
+    and launching_agent_id = $1
+    and (
+      status in ('queued', 'running', 'stopping')
+      or (
+        status = 'paused'
+        and nullif(btrim(executor_id), '') is not null
+        and lease_expires_at > now()
+      )
+    )
+)
+workflows.list_phase_runsworkflows.upsert_phase_runworkflows.list_agent_callsworkflows.insert_cached_agent_callcached workflow call insert requires cached status and no child ownerworkflows.requeue_blocked_agent_callworkflows.get_agent_call_by_cache_keyworkflows.get_agent_call_by_replay_keyworkflows.update_run_statusworkflows.list_recoverable_runsworkflows.finish_run_for_executorworkflows.requeue_run_for_executorworkflows.claim_queued_run_for_executorworkflows.requeue_running_runs_for_recoveryworkflows.resume_paused_runworkflows.mark_terminal_handoff_abandonedworkflows.mark_terminal_handoff_deliveredworkflows.record_terminal_handoff_attemptworkflows.mark_terminal_handoff_suppressedworkflows.next_pending_async_terminal_handoff_runworkflows.suppress_terminal_handoffs_for_source_messageworkflows.reserve_agent_call_ownerworkflow owner reservation requires a pristine pending call and complete child identityworkflows.transition_owned_agent_callworkflows.stop_unowned_pending_agent_callownerless workflow stop requires a pristine pending callworkflows.fail_agent_call_for_recovery_ownerworkflows.mark_agent_call_running_if_pendingworkflows.active_agent_call_for_recovery_owner
+select calls.call_id, calls.run_id, calls.replay_key,
+       calls.child_agent_id, calls.child_message_id, calls.status
+from runtime.workflow_agent_calls calls
+join runtime.workflow_runs runs on runs.run_id = calls.run_id
+left join runtime.workflow_phase_runs phases on phases.phase_run_id = calls.phase_run_id
+where calls.child_agent_id = $1
+  and calls.status in ('pending', 'running')
+  and runs.status in ('queued', 'running', 'paused')
+  and (calls.phase_run_id is null or phases.status in ('pending', 'running', 'paused'))
+order by calls.updated_at desc, calls.call_id asc
+limit 2
+multiple active workflow calls name the same recovery ownerworkflows.get_run_by_launch_occurrenceworkflows.admit_run_with_initial_phasesworkflows.admit_idea_activation_run_with_initial_phasesacquired connection, but time to acquire exceeded slow thresholdacquired connectionworkflows.get_runworkflows.list_runsworkflows.has_active_sync_run_for_launching_agent
+insert into runtime.workflow_runs (
+  run_id, launch_mode, root_agent_id, parent_message_id,
+  launching_agent_id, launching_message_id, launching_tool_call_id,
+  launch_occurrence_agent_id, launch_occurrence_message_id,
+  launch_occurrence_tool_call_id, sync_wait_deadline_at, task_id,
+  resume_from_run_id, workflow_name, description, phases_json, args_json,
+  workspace_root, script_path, script_sha256, magi_workload_class, request_trace_json,
+  terminal_handoff_transport, terminal_handoff_delivery_target,
+  terminal_handoff_chat_context_json, status, error
+) values (
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
+  $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27
+)
+on conflict do nothing
+returning run_id
+workflow-idea-activationselect pg_advisory_xact_lock(hashtextextended($1, 0))
+insert into runtime.workflow_phase_runs (
+  phase_run_id, run_id, phase_name, ordinal, status, agent_total,
+  agent_completed, input_tokens, output_tokens, error
+) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+workflow-launch-occurrence
+insert into runtime.workflow_launch_occurrence_aliases (
+  launch_occurrence_agent_id,
+  launch_occurrence_message_id,
+  launch_occurrence_tool_call_id,
+  run_id,
+  contract_fingerprint
+) values ($1, $2, $3, $4, $5)
+new workflow run resolved to an occurrence alias
+select *
+from runtime.workflow_runs
+where launch_mode = 'sync'
+  and resume_from_run_id is null
+  and status in ('queued', 'running', 'paused', 'stopping', 'completed')
+  and nullif(btrim(args_json ->> 'ideaActivationId'), '') is not null
+  and root_agent_id = $1
+  and workspace_root = $2
+  and workflow_name = $3
+  and script_sha256 = $4
+  and nullif(btrim(args_json ->> 'ideaActivationId'), '') = $5
+  and hashtextextended(root_agent_id, 0) = hashtextextended($1, 0)
+  and hashtextextended(workspace_root, 0) = hashtextextended($2, 0)
+  and hashtextextended(workflow_name, 0) = hashtextextended($3, 0)
+  and hashtextextended(
+        nullif(btrim(args_json ->> 'ideaActivationId'), ''), 0
+      ) = hashtextextended($5, 0)
+order by created_at asc, run_id asc
+limit 1
+database write admission gate closedadmission_timeoutworkflow run has an incomplete launch occurrence identitymessage_idtool_call_idinteractiveuser_croncritical_user_cronsystem_cronBUG: inner connection already taken!

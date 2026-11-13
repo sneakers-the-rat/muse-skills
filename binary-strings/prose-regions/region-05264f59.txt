@@ -1,0 +1,228 @@
+server-timingsize overflows MAX_SIZE4a905e79-a9af-4631-93a7-dac5bb408320generatededitiondropped_video_in_image_slotdropped_not_an_imagedisliketranscoded### Using these figures
+These are all readers' figures, not this reader's, so they only break ties.
+- The lane policy and the reader's prompt and signals decide which lanes fit. Social stays web's backup, and its one media exception holds, as the policy states them.
+- Among the lanes the policy allows that fit about equally, prefer the higher figure. When the figures do not separate them, follow the policy's default.
+- Never pick a lane for its figure alone.
+For example, if web and schedule fit about equally and web shows 1.1x against schedule's 0.8x, pick web.
+## Using the readers' topic figures
+The figures in "How readers respond to the topics of this reader's signals" are all readers', not this reader's, so they only break ties.
+- Write from the reader's prompt and signals as always. A topic not listed is no reason to pass a story over.
+- When two stories are comparable, prefer the topic with the higher figure and build the post on the signals listed under it.
+- A figure never licenses a subject the reader ruled out.
+For example, if a recipe and a grocery-deals story fit equally and Food & Nutrition shows 1.1x against Shopping & Commerce's 0.9x, write the recipe, built on the signals listed under Food & Nutrition.
+How readers respond, by laneHow readers respond to the topics of this reader's signalsno_promptno_query_vectorexclusion_read_failedsearch_failedno_candidatesno_rankable_candidateall_near_duplicatesall_below_relevance_floorstrongest first within each groupmost recently touched first within each groupinvalid space pathspace build was not founddaemon_feedbackRecord feedback on any itemRecords one explicit verdict (`feedback_up` / `feedback_down`), and optionally the user's own words on why, against any item. `entity_type` and `entity_id` are parameters and the type list is OPEN: any lower snake_case name (<=64 chars) is accepted and lands in the cross-entity store with no code change. `idea` and `feed_unit` have dedicated handling because they own storage that predates this endpoint. An unregistered type gets NO existence check, so an id matching nothing is a durable row rather than a 404, and its rows have no cleanup owner. Entity-specific context goes in `metadata` (`surface` everywhere; `lane` and the `anchor_kind`/`anchor_id` pair additionally recognized for `idea`); unrecognized keys are stored but never interpreted. NOT idempotent: every call appends a ledger row, and the latest submission replaces the stored verdict WHOLESALE including the reason, so re-submitting without a reason clears the previous one. Disable generic POST retry middleware for this route. `idea` submissions are equivalent to `POST /api/ideas/{id}/feedback`, which remains supported and writes the same rows; a `feedback_down` there also stops the card being served. A `feed_unit` submission records the reason only — it neither sets nor clears the unit's reaction (use `POST /api/feed/units/{unit_id}/reaction`) and does not hide the post (use `DELETE /api/feed/units/{unit_id}`).videoInstagramThreadsimagestartedfeed hotlinked clip address has expired; serving the poster without itRead one prompt's feedReturns the reader's feed (omitting `prompt_id` defaults to the singular prompt, echoed back): whole edition days per page, newest first, filled until the page carries at least 24 units (or history runs out) via the opaque cursor. Edition `title` mastheads render in the request's `Accept-Language`; stored unit copy remains verbatim. Paging is bidirectional — `pagination.next_cursor` walks older, `pagination.prev_cursor` walks newer, each `null` at that end of the history; round-trip either verbatim as `cursor`, never decode or construct one. Passing `unit_id` instead of a cursor anchors the read on the day that contains that unit (the deep-link entry point), returning that day exactly like any other page. `unit_id` and `cursor` are mutually exclusive; for a promptless (ingested) unit `prompt_id` picks the feed (defaulted like a plain read), while a prompt-owned unit rejects a `prompt_id` naming a different feed. No position is returned — within-day order is renumbered by `POST /api/feed/reorder` and reset when a fresh edition publishes, so only `(feed, day, unit_id)` is stable; match by id inside the page. Within a day, manually reordered units come first; clients render server order. Promptless ingested units appear in every prompt's feed. `404` for an unknown `unit_id` or explicit `prompt_id`.daemon_feed_searchSearch feed unitsFull-text + semantic search over the precomputed unit corpus, fused by reciprocal rank; `category` filters exactly (alone or with `q`).daemon_feed_unit_detailGet one feed unitReturns one feed unit by id.edition pushed abovechecked by joins_section/feed/feed/search/feed/units/{unit_id}daemon_feed_ingestIngest a received share (removed)Removed. Always returns 410 Gone. This accepted a share id or an inline artifact and started a regeneration run from it. The payload was attacker-authorable and reached the run's prompt, so the route no longer admits anything.daemon_feed_unit_shareShare a unit (removed)Removed. Always returns 410 Gone. This published a unit's share artifact to a hosting backend and returned a link; opening that link started a feed regeneration run on the recipient's VM with no approval step, so the whole feature was removed./feed/units/{unit_id}/share/feed/ingestdaemon_feed_statusRead one prompt's generation statusWhether an edition run is generating right now (with its run id and trigger), the next scheduled edition fire while idle, and the freshest published-edition watermark for cheap staleness checks. Omitting `prompt_id` defaults to the reader's singular prompt. `prompt_enabled` is always `true` (enablement is removed; the field is retained for older clients)./feed/statusdaemon_feed_prompt_readRead the feed promptThe canonical prompt read: the reader's ONE feed prompt as an object (`prompt` is `null` only on a pre-seed instant). The prompt is a single piece of plain text, carried in `full_prompt` (and mirrored in `free_text`). Only the exact shipped default is rendered in the negotiated `Accept-Language`; custom text remains verbatim. The stored default is unchanged, and missing translations use English; the other fields are retired-compat projections (`template_id` absent, `slot_values` `{}`, `slot_alternates` absent, `enabled` always `true`).daemon_feed_prompts_listList feed prompts (deprecated)Deprecated: use GET /api/feed/prompt. Returns the reader's singular feed prompt (the array never holds more than one row). A prompt is ONE piece of text, carried in both `free_text` and `full_prompt`; only the exact shipped default is rendered in the negotiated `Accept-Language`, while custom text stays verbatim; `template_id` is always absent and `slot_values` always `{}` (templates and madlib slots are retired), and `enabled` is always `true` (the feed has no off state).daemon_feed_prompt_createCreate a feed prompt (deprecated)Deprecated: use PATCH /api/feed/prompt (an upsert). Creates (or replaces in place) the reader's singular plain-text prompt: the text comes from `full_prompt` else `free_text`, and with neither the shipped default sentence is stored. The legacy `template_id`, `slot_values`, and `enabled` fields are accepted-and-ignored (templates, slots, and enablement are retired). A create kicks the feed's first generation in the request's `Accept-Language`, on the lane the reader's activity tier prints; because this route replaces in place, a re-POST of the text already stored or of its unchanged localized default display is a no-op. The localized-display no-op applies only while the canonical default is still stored and uses this request locale. The response localizes only the shipped default.daemon_feed_prompt_deleteDelete a feed promptPermanently removes the prompt AND its published units in one transaction; promptless ingested units are untouched. Destructive — clients should confirm first. Reads of the deleted prompt_id return 404.daemon_feed_prompt_updateUpdate a feed prompt (deprecated)Deprecated: use PATCH /api/feed/prompt. Replaces the prompt's text: `full_prompt` else `free_text` is stored verbatim as the whole prompt (a prompt is one piece of text; there is no template seed or override split left to reconcile). An edit that really changes the text queues a fresh generation in the request's `Accept-Language`, on the reader's own tier lane, exactly like PATCH /api/feed/prompt; a byte-identical re-save queues nothing. While the canonical default is still stored, saving its unchanged localized display in this request locale is also a no-op. The response localizes only the shipped default. In-flight runs keep their frozen prompt snapshot and already-published units never change. The legacy `slot_values` and `enabled` fields are accepted-and-ignored: slots and enablement are retired and the feed always generates.daemon_feed_prompt_upsertReplace the feed prompt textThe canonical prompt write: `{prompt: "<full text>"}` replaces the reader's ONE feed prompt whole (an upsert: in the rare no-prompt case it creates the prompt and kicks the feed's first generation). A write that really changes the text queues a fresh generation right away, on the lane the reader's activity tier already prints (an own-research pulse, or a one-unit pull from the fleet exchange); `Accept-Language` is frozen into that generation. A byte-identical re-save changes nothing and queues nothing. While the canonical default is still stored, saving its unchanged localized display in this request locale also changes nothing and queues nothing. The response localizes only the shipped default. Already-published units never change./feed/prompt/feed/prompts/feed/prompts/{prompt_id}feed_infiniteGenerate and stream one infinite-feed batchGenerates a fresh batch of ephemeral feed units for the served prompt and streams them as NDJSON (`application/x-ndjson`): one `{"unit_key", "unit"}` line per unit as its rewrite finishes, then one `{"done": true, "units", "reason"?}` terminal line. A `{"busy": true}` line (then end) means a batch for this prompt is already generating. Units are NOT persisted: the client owns them for the session, `unit_key` is the handle interactions use, and interacting with a unit materializes it server-side. `Accept-Language` is frozen into this batch and directs its newly authored user-visible copy. Send this request only on the reader's real end-of-scroll (or as the prefetch of the next batch); a plain feed read streams no units./feed/infiniteviews: timespent_ms must not be negativeviews: seen_at_ms must be a positive epoch-ms timestampdaemon_feed_reorderMove a unit to a position within its dayMoves one unit to `position` within its day group (1 = top; past-the-end clamps to the bottom; `position < 1` and unknown units are rejected) in ONE feed's woven day view. `prompt_id` names that feed — the feed whose listing the client rendered — and omitting it defaults exactly like `GET /api/feed`; a unit outside the scoped feed's day group is rejected. The server splices the unit into that feed's day display order and renumbers the WHOLE group densely, so every unit below the insertion point shifts down — clients never compute order values. Prompt-owned units keep the order on the unit itself, while promptless (woven, shared/ingested) units are placed per feed, so arranging one feed never rearranges another. Day grouping itself never changes, and a fresh edition resets that feed's whole manual arrangement for its day, woven placements included.daemon_feed_regenerateGenerate a fresh adhoc editionAdmits an adhoc generation run appending a fresh edition to the reader's feed. `prompt_id` is an optional compatibility spelling; omitted or explicit, the singular prompt is the target. `Accept-Language` is frozen into the run and directs newly authored user-visible copy through retries and restart. Enablement is removed: the feed has no off state, and the response's `prompt_enabled` is always `true` (retained for older clients that reconcile a cached toggle from it). Idempotent per prompt and locale: a matching open run returns `already_in_progress: true`; a different-locale request queues the newer generation. One adhoc build runs at a time: while another build is open the response is `queued: true` (no `run_id`) and the run starts automatically when that build finishes. Explicit regeneration only — pull-to-refresh is a pure refetch and never calls this.daemon_feed_units_seenMark feed units seenMarks units seen, first-seen wins: each unit's seen_at_ms is set once (a compare-and-set on NULL) and never moved, so re-sends and unknown ids are no-ops. Batched by design — flush viewport crossings, don't post per card. Two forms, either or both per call (cap 200 each): `unit_ids` marks seen-only with a server timestamp; `views` (`[{unit_id, timespent_ms, seen_at_ms}]`) also carries client-observed view time — it accumulates timespent_ms and moves last_seen_at_ms on every flush while keeping first-seen fixed. Response `updated` counts unseen→seen transitions across both. Seen state feeds the units' seen_at_ms projection; deriving "all caught up" is comparing the fresh editions rendered against their seen flags.daemon_feed_unit_deleteDelete a feed unitRemoves one unit from the feed permanently. Interaction ledger rows referencing the unit survive by design (learning evidence is never erased), and the delete itself is recorded for the reader's engagement breakdown: a `deleted` ledger row beside a snapshot of what the unit was.Admit and drive one common-pool generation run for a topic.daemon_feed_unit_reactionSet or clear a unit reactionSets the unit's single reaction (`like`/`love`/`dislike`) or clears it (null), recording the interaction for preference learning. Idempotent per value.feed generation is currently disabled remotely; try again laterfeed_generation_disabled/feed/units/{unit_id}/reaction/feed/reorder/feed/pool/generatedaemon_artifacts_pinPins, unpins, or manually repositions an artifact in the global pinned section.Artifactsdaemon_artifacts_saveSave a shared artifact as a SpaceResolves an accessible shared web artifact by shortcode, saves it for the current user, defaults a new durable saved reference to Spaces, and returns its projection with publisher attribution. Repeated saves preserve existing placement and sidebar order. Moving a reference does not grant editing rights. Client metadata is not accepted. Saving a received Cloudflare share also records its participation as accepted, as participation Accept does; an already accepted record is unchanged, and no choice is reported to the owner.daemon_artifacts_slides_rebuildRebuild a slide deckRe-derives a per-slide deck's outputs from its authored source: the combined document and the deliverables at the deck's root. Write the source over the file API first, then call this. Rendering happens in a private scratch directory that is deleted when the rebuild returns, so no validation renders are published and `.src/validate/` is left alone; it belongs to the agent's own build. Answers 200 with applied=false when another rebuild is running, when the source changed mid-rebuild, or when the deck could not be built; the previous deck stays intact in every one of those cases. A failed quality gate is reported, never blocking.daemon_artifacts_queryQuery artifactsReturns a pinned-first projection across web, document, and shared artifacts. Omitted placement preserves the complete catalog across Library and Spaces. placement=library and placement=spaces explicitly select disjoint sets. Collection and pagination apply after placement filtering. Omitted first defaults to 50; first=null returns every matching artifact.daemon_artifacts_shareShare artifact appDeploys an artifact app.daemon_artifacts_removeRemove artifact appDestroys an artifact app deployment.daemon_artifacts_fetch_urlGet artifact app URLReturns the current artifact app URL.daemon_artifacts_subscribeSubscribe to artifact changesStreams one or more ordered artifacts.snapshot chunks followed by enriched navigation.items.updated and navigation.items.removed events as NDJSON. Omitted placement subscribes across Library and Spaces, and placement moves remain upserts. placement=library and placement=spaces explicitly select disjoint sets. Moving out of an explicitly requested placement emits a removal on that stream; moving into it emits an upsert. Every reconnect starts with a fresh full snapshot.application/x-ndjson; charset=utf-8Artifact change streamevent hatch-engine/crates/hatch-daemon-http-content/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/feed/infinite.rs:125hatch_server::daemon::http_api::routes::feed::infinitehatch_daemon_http_content::daemon::http_api::routes::feed::infinitehatch-engine/crates/hatch-daemon-http-content/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/feed/infinite.rsevent hatch-engine/crates/hatch-daemon-http-content/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/spaces.rs:263hatch_server::daemon::http_api::routes::spaceshatch_daemon_http_content::daemon::http_api::routes::spaceshatch-engine/crates/hatch-daemon-http-content/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/spaces.rsevent hatch-engine/crates/hatch-daemon-http-content/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/spaces.rs:228event hatch-engine/crates/hatch-daemon-http-content/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/spaces.rs:418event hatch-engine/crates/hatch-daemon-http-content/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/spaces.rs:438event hatch-engine/crates/hatch-daemon-http-content/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/spaces.rs:427event hatch-engine/crates/hatch-daemon-http-content/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/feed/projection.rs:519hatch_daemon_http_content::daemon::http_api::routes::feed::projectionhatch-engine/crates/hatch-daemon-http-content/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/feed/projection.rsevent hatch-engine/crates/hatch-daemon-http-content/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/feed/projection.rs:607hatch_server::daemon::http_api::routes::feed::projectionevent hatch-engine/crates/hatch-daemon-http-content/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/feed/prompts.rs:76hatch_server::daemon::http_api::routes::feed::promptshatch_daemon_http_content::daemon::http_api::routes::feed::promptshatch-engine/crates/hatch-daemon-http-content/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/feed/prompts.rsevent hatch-engine/crates/hatch-daemon-http-content/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/feed/infinite.rs:106event hatch-engine/crates/hatch-daemon-http-content/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/feed/infinite.rs:122event hatch-engine/crates/hatch-daemon-http-content/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/feed/infinite.rs:114event hatch-engine/crates/hatch-daemon-http-content/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/feed/projection.rs:703no replacement; feed sharing has been removed from Hatch Always canonical (`feedback_up` / `feedback_down`), never the synonym
+ the caller sent. The ledger row this submission created, in whichever ledger its surface
+ owns. For `idea` this is the `ideas.idea_events` id, so it correlates
+ with the legacy route's response. Which kind of thing is being judged: `idea` or `feed_unit`. That item's opaque id, in whatever form its surface issues. The verdict. Canonically `feedback_up` / `feedback_down`; the synonym
+ set the Ideas route already accepts (`up`, `down`, `like`, `dislike`,
+ `not_me`, …) is accepted too. The user's own words on why, free-form and optional — what the Feed
+ dislike toast and the Ideas rejection prompt collect. Bounded at
+ `MAX_FEEDBACK_REASON_CHARS` and normalized to one line before storage,
+ because it is rendered into a generation writer's markdown assignment. Entity-specific context. `surface` is recognized everywhere; `idea` also
+ recognizes `lane` and the `anchor_kind`/`anchor_id` pair. Unrecognized
+ keys are stored verbatim and never interpreted. The prompt whose feed this unit belongs to; `null` for promptless
+ units (share ingests), which appear in every prompt's feed. Edition local date, `YYYY-MM-DD`. Voiced 2-3 word label, distinct from the category. The unit's headline. `null` on units published while titles were
+ retired (their bodies open with the old bolded lede instead). Body markdown: inline links, optional bullets; opens with a plain
+ unbolded sentence when a title is present. Emoji-prefixed, filterable category label. Label/value stat rows (`[{"label": ..., "value": ...}]`). Reader-facing, on-demand rationale: at most two sentences
+ honestly explaining why their feed ran this unit today, spent on
+ the editorial decision and never on a retelling of the unit
+ itself. Absent on units published before the field existed;
+ clients hide the affordance then. The unit's single scan-marker emoji, rendered beside the unit so
+ the reader can scan the feed by topic (primary topic, never tone).
+ Absent on units published before the field existed; clients hide
+ the affordance then. Daemon-served product icon for this unit from the same bundled palette
+ an Ideas card wears, as an absolute URL against this VM's own public origin
+ (relative only when the request carried no host header). Use it
+ verbatim as an `<img src>`; the bytes are bundled and
+ content-addressed, so the response is cacheable forever.
+
+ Additive and always populated in practice — a unit whose stored key
+ has not landed yet falls back to the deterministic keyword match on
+ its own copy, so the field is absent only if the bundled asset
+ itself cannot be loaded. The user's single reaction: `like` | `love` | `dislike`, or absent.
+ First time the user saw this unit (ms epoch), absent = unseen.
+ First-seen wins; clients derive unread affordances and "all caught
+ up" by comparing against the fresh editions they rendered. `generated` | `ingested` | `agent` | `fill`. Build affordance for an idea unit; absent on every other origin. The card's one-tap Feed action, chosen by the server; absent while
+ the picker has not labelled the card and when no action fits. One editorial unit as clients render it. Pass verbatim to `POST /api/idea-cards/{ideaCardId}/execute`. `available` — offer the action. `built` — the reader already built
+ this idea; render the control disabled rather than hiding the card. Present when the button runs the post's Feed action rather than an
+ idea (proof of concept): the action's label in the request's language,
+ for apps that show it in place of "Let's do it". The build affordance on an idea unit: the opaque idea id the client
+ executes, plus whether that idea is still buildable.
+
+ Present only on `origin = "idea"` units. `state` is resolved at READ time
+ from the idea's live build status, never baked into the published row —
+ units are immutable but an idea can be built at any time, and the button
+ has to stop offering work the reader already started. An opaque identifier from the server's closed list of actions; send it
+ back unchanged. The button text in the request's language, also the reader's chat
+ message when tapped. `available` until the first tap, then `started`. A card's Feed action (proof of concept). The server owns all three
+ fields: show `label` as-is and send `kind` back to
+ `POST /api/feed/units/{unit_id}/action`; never branch on `kind`. `image` | `video`. Served media URL: the image itself, or a `video` entry's playable
+ clip. Like `video_url`, a clip is either a VM media-route URL (1P
+ post clips, byte ranges supported) or the publisher's own absolute
+ address (open-web clips, hotlinked and never downloaded). A `video` entry's poster still — the same image `image_urls`
+ shows at this position. Absent on `image` entries (and on dev-era
+ stored clips that predate poster extraction). One typed carousel entry (additive beside the all-image `image_urls`
+ list, which old clients keep rendering unchanged). `none` | `hero_image` | `carousel` | `widget` | `social_embed`. Hero media URL: always an IMAGE tile. VM-stored media (generated
+ heroes, downloaded post and open-web media) serves as the bare
+ media-route URL (`/api/feed/units/{id}/media/{handle}?v=...` —
+ the exact shape shipped clients were built against; owner
+ ruling: clients work unchanged); the remaining hotlinked heroes
+ (a failed publish-time download) are verbatim web image URLs.
+ Dead hotlinks degrade to text client-side. A video unit's
+ POSTER rides here; `video_url` is the video signal. Carousel IMAGE URLs in order: every entry renders as a plain
+ image tile (a video item contributes its poster still here, so a
+ client without a player loses nothing). Stored items serve as
+ bare media-route URLs; legacy rows carry verbatim hotlinked web
+ image URLs. The typed per-item truth is `media_items` (which
+ also names the kind of any dev-era stored clip entry). Typed carousel entries, additive beside `image_urls`: present
+ exactly when `image_urls` is, same survivors, same order. A
+ `video` entry carries the playable clip URL (byte ranges
+ supported) plus the poster still `image_urls` shows at the same
+ position; an `image` entry mirrors its `image_urls` slot. Playable URL for a VIDEO unit's clip. Present exactly on video
+ units: the field IS the video signal, and `hero_image_url` then
+ carries the poster image — old clients render it as a normal
+ image tile. Absent everywhere else.
+
+ TWO SHAPES, and a client must not assume either. A 1P post clip is
+ stored on the VM and serves as a bare media-route URL
+ (`/api/feed/units/{id}/media/{handle}?v=...`, byte ranges
+ supported). An OPEN-WEB clip is the publisher's own absolute URL,
+ hotlinked and never downloaded, because video is the one media
+ class whose bytes are too large to keep (measured: nine open-web
+ clips held 135 MB, one of them 42 MB). So the value may be
+ relative or absolute: resolve it against the VM origin rather than
+ concatenating, and treat an unplayable address the way a dead
+ hotlinked image is treated — hide the affordance. Range support is
+ guaranteed only for the stored form; a publisher origin may refuse
+ it. Self-contained HTML widget markup. Social post URL rendered natively by the client. Server-resolved signed CDN thumbnail for a social post, rendered as an
+ `<img>` (object-contain) beside the link-out. Absent when enrichment
+ fails open or the platform/thumbnail is unsupported. Aspect ratio (`width / height`) of the unit's leading image, measured
+ server-side from the bytes at build time: `social_thumbnail_url` on a
+ social embed, or the stored hero tile / video poster / first carousel
+ tile on a media unit — so the client can reserve layout space before
+ the image loads instead of assuming 16:9. Absent whenever that image
+ is absent, hotlinked, or could not be measured. Reader-facing attribution for the extracted social post (author display
+ name or `@handle`), rendered beside the thumbnail. Absent whenever the
+ thumbnail is absent or the author is unknown. The post author's account username WITHOUT a leading `@` (render
+ `@{social_post_username}`). Companion to `social_attribution_text`,
+ which is the display name; a post with both renders the name over the
+ username. Like the byline it does not depend on the thumbnail. Absent
+ when the post never enriched or has no known account. True when Instagram confirmed this post is a carousel, including when
+ child delivery URLs are unavailable and clients must use the embed. Ordered, ephemeral image/video children for a resolved social carousel.
+ Absent for non-carousels and every fail-open case. The post's source app as a brand name (`Facebook` | `Instagram` |
+ `Threads`), derived from `social_embed_url`'s host. Rendered with
+ `social_source_icon_url` as one credit row linking out to
+ `social_embed_url`. Absent only when the post URL is not a recognized
+ app. Daemon-served single-colour glyph for `social_source_name`, as an
+ absolute URL against this VM's own public origin (relative only when
+ the request carried no host header). Always present alongside the name
+ — the bytes are compiled into the daemon — and identical for every unit
+ of that app. The unit's single attachment (at most one of the shapes is populated,
+ named by `kind`). Provenance of the run that anchors this reading moment: `morning` |
+ `midday` | `evening`, or `adhoc` / `fill` when no edition anchors it.
+ Read `title` to render; this is not the masthead. The masthead, ready to render: weekday + TIME OF DAY ("Thursday
+ afternoon"; midday reads as afternoon), anchored on the reading day.
+ Names the moment this section's units were written in. Editions of the day, newest first. Opaque cursor for the next (older) day with content; `null` when the
+ history is exhausted. Opaque cursor for the previous (newer) day with content; `null` at
+ the top of the feed. Only a page reached by deep link or a restored
+ position has anything newer, so this is `null` on a plain first
+ read. Send it back as `cursor`, exactly like `next_cursor`. The prompt whose feed this page serves (echoed for defaulted reads);
+ `null` only when no prompts exist at all. Whole edition days, newest first, filled to the page's unit
+ target (empty when the feed has no
+ content), newest day first across pages. Promptless (ingested) units
+ appear in every prompt's feed. Within a day, manually reordered
+ units come first; clients render server order and never sort. Free-text query. May be omitted when filtering by category only. Exact category filter (the category chip). The prompt whose feed to read. Omit to default to the reader's
+ singular prompt. Opaque day-keyset cursor from a previous page (already scoped to its
+ prompt). Anchor the read on the day that contains this unit — the deep-link
+ entry point. The page comes back with the unit's day exactly like any
+ other page: its units in `days`, with `next_cursor` (older day) and
+ `prev_cursor` (newer day) as its neighbours; match the unit by id
+ inside the page. Mutually exclusive with `cursor` (a cursor already
+ names a position); for a promptless (ingested) unit, `prompt_id`
+ picks which feed to open it in (defaulted like a plain read), while a
+ prompt-owned unit rejects a `prompt_id` naming a different feed. The prompt this status describes (echoed for defaulted reads);
+ `null` only when no prompt row exists at all. Always `true`: feed enablement is removed (the feed has no off
+ state); retained so older clients keep parsing. Whether an edition-generating run (scheduled or adhoc) is open for
+ this prompt right now. Ingest runs never count: they publish no
+ edition for this feed. The open run's id, while `refresh_in_progress`. The open run's trigger (`scheduled` | `adhoc_user` | `adhoc_agent` |
+ `adhoc_visit`, the background build a feed open can start), while
+ `refresh_in_progress`. When the open run started executing (its admission time while still
+ queued), while `refresh_in_progress`. The next edition fire that can actually publish for this prompt
+ (this VM's jittered anchor in the feed timezone, skipping slots the
+ day already published, so it may point at tomorrow rather than a
+ same-day fire the occurrence dedupe would reject). Present only
+ while nothing is currently generating, and never for an owner on the
+ long-term holdout, whose scheduled fires never generate. The edition kind of that next fire (`morning` | `midday` |
+ `evening`), paired with `next_scheduled_at_ms`. The newest published edition watermark visible in this prompt's feed
+ (`edition_generated_at_ms`, including woven ingested units); absent
+ while the feed is empty. Compare against the freshest edition
+ already rendered to decide whether to refetch. The prompt whose generation status to read. Omit to default to the
+ reader's singular prompt. Always absent: templates are retired; every prompt is plain text. Always `{}`: madlib slots are retired. The prompt text (same value as `full_prompt`): the shipped default
+ follows `Accept-Language`; user-edited text is returned verbatim. The prompt text, localized only for the exact shipped default. Always `true`: feed enablement is removed (the feed has no off
+ state); retained so older clients keep parsing and render their
+ toggle on. Always absent: slot suggestions retired with the madlib editor. One prompt row as clients render it. The prompt is ONE piece of text;
+ the retired-machinery fields are compat projections for shipped
+ clients: `template_id` is always absent and `slot_values` always `{}`
+ (every prompt reads as free-form, so shipped clients fall to their
+ plain-text editor), `free_text` and `full_prompt` both carry the text,
+ `enabled` is always `true`, and `slot_alternates` is always absent. The canonical singular read: the reader's one prompt, or `null` only
+ on a pre-seed instant (or a legacy VM whose reader deleted theirs). The feed prompt's new full text; it replaces the current prompt
+ whole (plain prose: what the feed should cover, the tone, anything
+ to avoid). The canonical singular write: one field, the prompt's new FULL text. Ignored: templates are retired; every prompt is plain text.
+ Retained so older clients' template creates keep parsing (they
+ store the default text, which the reader then edits). Ignored: madlib slots are retired. The prompt text. `full_prompt` wins when both are sent (they were
+ two spellings of the same thing; now they are literally the same
+ text). The prompt text (preferred spelling). Ignored: enablement is removed and the feed always generates.
+ Retained so older clients' create bodies keep parsing. Unknown fields are IGNORED, not rejected. `slot_ingredients` was removed
+ from this body with the template retirement, and a client still sending it
+ must keep creating prompts rather than take a `400` for a field the server
+ no longer has anything to do with. Ignored: madlib slots are retired; the prompt is one piece of text. The prompt's new text. `full_prompt` wins when both are sent. The prompt's new text (preferred spelling). Ignored: enablement is removed and the feed always generates.
+ Retained (accepted-and-ignored) so shipped clients' toggle PATCH
+ keeps succeeding; the response's `enabled: true` snaps their
+ toggle back on. Unknown fields are IGNORED, not rejected — see
+ [`FeedPromptCreateHttpRequest`]: retired fields from older clients ride
+ along harmlessly while any real text edit applies. The prompt whose feed to top up. Omit to default to the most
+ singular prompt, the same default a plain feed
+ read resolves. Dev scaffolding for client performance work, off by default: skip
+ the exchange receipts claim (the same records re-serve on every
+ batch instead of draining the pool) and relax the story-dedup
+ context, so repeated test batches keep producing units through
+ the REAL pipeline. Batches still journal and their units still
+ materialize on interaction; do not ship a client that sets this. PROTOTYPE, off by default: skip the wire desk's rewrite turn and
+ stream each claimed exchange record as its publisher wrote it. The
+ batch is one exchange round trip instead of one agentic turn, so it
+ lands in seconds rather than minutes — at the cost of the reader's
+ own dateline, locale, and dedup against their paper. Imagery is
+ whatever the record already carries (its `Source post:` reference);
+ nothing opens a page hunting for one. Units journal and materialize
+ exactly like a rewritten batch's. `like` | `love` | `dislike`, or null/omitted to clear the reaction. Units that crossed the client's viewport threshold since the last
+ flush, seen-only (no view time); the server stamps the timestamp.
+ Re-sends and unknown ids are no-ops (first-seen wins). Optional now
+ that `views` carries the same seen transition plus view time. Per-card view time and client-observed seen time, one entry per unit.
+ Each entry accumulates `timespent_ms` and moves the unit's last-seen;
+ the first entry for a unit also sets its first-seen (`seen_at_ms`).
+ Same 200-unit cap as `unit_ids`. What to write about. `general` (a subject area to narrow first) or `concrete` (already
+ one subject). Defaults to `concrete`. How many units this topic is worth. Advisory; the editor clamps. Angles worth considering, as a menu rather than a checklist. BCP-47 tag for the authored text. Defaults to the VM default. Which pool producer this batch belongs to, carried through to the
+ published record so a bad batch can be withdrawn as a batch. One topic handed to the common-pool lane. The unit that was on screen. Unknown ids are no-ops. On-screen view time for this flush, in milliseconds, added to the
+ unit's stored total. Negative is rejected; absurd values are clamped
+ to a 24h ceiling. Client-observed time the unit was seen, epoch milliseconds. Sets
+ first-seen on the first flush, moves last-seen on every flush. Units this call transitioned from unseen to seen. The unit to move. Target position within the unit's day (1 = top); every unit below
+ shifts down server-side. Past-the-end clamps to the bottom. The feed whose day arrangement the position addresses — the feed
+ the client listed. Omit to default exactly like `GET /api/feed`
+ (the reader's singular prompt). The renumbered day group's size (the whole group gets dense
+ positions). The day group the reorder applied to, `YYYY-MM-DD`. The prompt to regenerate for. Omit to target the reader's singular
+ prompt (the two spellings are equivalent; the explicit form is
+ retained for older clients). EVAL ONLY, and refused with `400` on any VM without
+ `JARVIS_FEED_EVAL_LANE_OVERRIDE=1`: name the pipeline this run must
+ use (`pulse`, `wire`, or `edition`) instead of taking the one the
+ reader's activity tier resolves to. Product clients omit it and get
+ the reader's own lane. The generating run: freshly admitted, or the prompt's already-open
+ run when `already_in_progress`. Absent when `queued` (no run exists
+ yet). Regeneration is idempotent per prompt and locale: `true` means a run
+ was already generating for this prompt in the negotiated locale and no
+ new run was admitted. One adhoc build runs at a time: `true` means another feed's run is
+ currently building, so this prompt was queued and its run starts
+ automatically when the open build finishes. Follow it through
+ `feed.updated` like any generation. Always `true`: feed enablement is removed (the feed has no off
+ state), and the field is retained only so older clients that
+ reconcile their cached toggle from it keep parsing.struct FeedbackHttpRequeststruct FeedPromptUpsertHttpRequeststruct FeedPromptCreateHttpRequeststruct FeedPromptUpdateHttpRequeststruct FeedPoolGenerateHttpRequeststruct FeedReactionHttpRequeststruct FeedUnitsSeenHttpRequeststruct FeedUnitViewHttpstruct FeedReorderHttpRequest`TaskLocalFuture` polled after completionConfigurationInvalidArgumentIoTlsRowNotFoundTypeNotFoundtype_nameColumnIndexOutOfBoundsindexlenColumnNotFoundColumnDecodeEncodeDecodeAnyDriverErrorPoolTimedOutPoolClosedWorkerCrashedMigrateInvalidSavePointStatementBeginFailed`NaiveDate - TimeDelta` overflowedtracing::spanCreatedDuplicateScheduledOccurrenceScheduledOccurrenceSpentOpenEditionRunExistsOpenFillRunExistsa Display implementation returned an error unexpectedlyRestartPausedFailedinfrastructureCancelledError`Ready` polled after completionBUG: inner connection already taken!Deprecated endpoint. Every request returns a 410 deprecated_endpoint error. Feed sharing has been removed and has no replacement.`DateTime - TimeDelta` overfloweddescription() is deprecated; use Display
