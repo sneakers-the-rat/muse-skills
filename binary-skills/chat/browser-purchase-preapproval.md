@@ -44,6 +44,8 @@ When the user sets a shorter deadline for a purchase now, put that deadline in
 `expires_at`; otherwise omit it. For a scheduled purchase, set `expires_at` to
 the end of its buying window. When you omit it, a scheduled approval expires
 after 30 days.
+Report the expiry from the returned `spec.expires_at_ms`, which can be earlier
+than the requested `expires_at`.
 
 ## Request approval
 

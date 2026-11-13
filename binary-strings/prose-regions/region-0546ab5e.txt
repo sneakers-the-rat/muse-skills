@@ -1,0 +1,37 @@
+SELECT pg_advisory_xact_lock_shared(hashtextextended($1, 0))agent.volatile_context_pins.lifecycleSELECT pg_advisory_xact_lock(hashtextextended($1, 0))
+WITH owners AS MATERIALIZED (
+    SELECT DISTINCT agent_id COLLATE "C" AS agent_id
+    FROM unnest($1::text[]) AS input(agent_id)
+)
+SELECT pg_advisory_xact_lock(hashtextextended($2 || agent_id, 0))
+FROM owners ORDER BY agent_id COLLATE "C"
+agent.volatile_context_pins:SELECT handoff_state_json -> $2::text AS state,
+                (extract(epoch FROM clock_timestamp()) * 1000)::bigint AS now_ms
+         FROM agent.subagent_spawns WHERE child_agent_id = $1now_msSELECT agent_id FROM agent.agents WHERE agent_id = $1SELECT handoff_state_json -> $2::text AS state,
+                (extract(epoch FROM clock_timestamp()) * 1000)::bigint AS now_ms
+         FROM agent.subagent_spawns WHERE child_agent_id = $1 FOR UPDATEagent.subagent_spawns.handoff_state_jsonUPDATE agent.subagent_spawns
+         SET handoff_state_json = jsonb_set(COALESCE(handoff_state_json, '{}'::jsonb),
+                                           ARRAY[$2]::text[], $3::jsonb)
+         WHERE child_agent_id = $1insert into chat_private.publication_turns (execution_id, chat_id, disposition, phase)
+        select $1, $2, $3, $4 where pg_try_advisory_xact_lock_shared(hashtextextended($5, 0))
+        on conflict(execution_id) do nothing returning trueselect chat_id, phase, disposition from chat_private.publication_turns
+        where execution_id = $1 for updatedispositionpublication execution belongs to another chatWITH requested AS (
+           SELECT * FROM unnest($1::text[], $2::bigint[]) AS r(goal_id, revision)
+         ), locked AS MATERIALIZED (
+           SELECT g.goal_id, g.connection_request_id, g.connection_revision,
+                  g.connection_follow_up_at, r.revision
+           FROM goals.goals g JOIN requested r USING (goal_id)
+           WHERE g.connection_id=$3 AND g.source='assistant_tracking'
+           ORDER BY g.goal_id FOR UPDATE OF g
+         ), claimed AS (
+           UPDATE goals.goals g
+           SET connection_follow_up_at=NULL, connection_request_id=$4,
+               connection_revision=g.connection_revision+1
+           FROM locked l WHERE g.goal_id=l.goal_id
+             AND g.status='active' AND l.connection_revision=l.revision
+             AND l.connection_follow_up_at <= now()
+             AND l.connection_request_id IS DISTINCT FROM $4
+           RETURNING g.goal_id
+         ) SELECT (SELECT count(*) FROM claimed) +
+                  (SELECT count(*) FROM locked WHERE connection_request_id=$4)A follow-up must name work from its conversationTracked work changed before the follow-up was queuedSELECT active FROM agent.connections WHERE connection_id=$1 FOR SHAREA follow-up needs a coordination conversationOnly tracking items can have a coordination conversationThe coordination conversation is no longer activefor sharefor updateselect task_id,title,assigned_to,completed,updated_by,updated_at_ms from goals.shared_tasks where goal_id=$1 order by task_id limit 201goal_ida shared goal supports at most 200 tasksfailed to inject main-chat side chat creation context for named chatchat grant revocation failedchat worker authority is temporarily unavailablesubagent result receipt differsgroup deletion worker unavailable after resumeunreadunread_quietThe conversation was ended before Muse finished its outcome. Review the recorded replies for confirmed outcomes.live company transcript refresh unavailablecompany reply belongs to a retired workerdeliveredThe conversation closed after Muse reported its outcome.only a reported conversation closes quietlyMuse's helper stopped before it could finish the conversation, so nothing more was sent. Review the recorded replies for any confirmed outcomes.conversation worker preview unavailablefailed company conversation turn could not be settleda company conversation's progress was not recorded on its browser taskworker result settlement is missingdispatchingcompany conversation is not admittedpeer target is missingpeer conversation is archivedpeer circle is missingpeer circle is inactivepeer contact is missingpeer relationship generation is missinginvalid persisted group request originruntime.chat_worker_mailbox_noticeYou've got a reply here that isn't ready to send yet. If someone's waiting to hear back from you, let them know you're following up. Don't share what the reply says.
+only peer messages are accepted directlyfrozen group attachments failed durable validationgroup_image_snapshot_invalidgroup_attachment_snapshot_invalidgroup_attachment_delivery_disabledgroup_image_delivery_disabledgroup_attachment_provider_unsupportedgroup delivery owner missinggroup delivery owner supersededconversation identity unavailable; leaving participants unresolvedconversation identity lookup timed out; leaving participants unresolvedconversation identity unavailable for prompt contextworker return route must be the current owner private chatworker return route is no longer currentruntime.worker_requestworker request receipt differsgroup private binding is no longer current
