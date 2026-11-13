@@ -1,0 +1,89 @@
+delete from health.samples
+                 where provider = $1
+                   and node_id is not distinct from $2
+                   and start_at <= $4
+                   and coalesce(end_at, start_at) >= $3internal error: entered unreachable code: bundle-specific clear always includes a sample typedelete from health.samples
+                 where provider = $1
+                   and node_id is not distinct from $2
+                   and sample_type = $3
+                   and bundle_id is null
+                   and start_at <= $5
+                   and coalesce(end_at, start_at) >= $4delete from health.samples
+                 where provider = $1
+                   and node_id is not distinct from $2
+                   and sample_type = $3
+                   and bundle_id is not distinct from $4
+                   and start_at <= $6
+                   and coalesce(end_at, start_at) >= $5delete from health.sample_values where sample_id = any($1)insert into health.events (
+                   provider, node_id, bundle_id, timezone, event_type, event_at, event_end_at
+                 )
+                 values ($1, $2, $3, $4, $5, $6, $7)
+                 returning health_event_idinsert into health.events (
+                   provider, node_id, external_event_id, bundle_id, timezone, event_type,
+                   event_at, event_end_at
+                 )
+                 values ($1, $2, $3, $4, $5, $6, $7, $8)
+                 returning health_event_idstart_epoch_secend_epoch_secbundle_idevent_typehealth.eventsinsert into health.sample_values (
+               sample_id, value_name, unit, numeric_value, text_value
+             )  on conflict (sample_id, value_name)
+              do update set
+                unit = excluded.unit,
+                numeric_value = excluded.numeric_value,
+                text_value = excluded.text_valuesleep_awake_duration_secsleep_core_duration_secsleep_deep_duration_secsleep_rem_duration_secsleep_asleep_unspecified_duration_secinsert into health.sleep_sessions (
+               provider, node_id, external_sleep_id, bundle_id, timezone, start_at, end_at,
+               quality_score, awake_seconds, core_seconds, deep_seconds, rem_seconds,
+               asleep_unspecified_seconds, asleep_seconds, in_bed_seconds
+             )
+             values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+             returning sleep_session_idquality_scoresleep_in_bed_duration_sechealth.sleep_sessionsaggregatesinsert into health.samples (
+               provider, node_id, external_sample_id, bundle_id, timezone, sample_type,
+               start_at, end_at, unit, numeric_value, text_value
+             )  returning sample_iddelete from health.record_values where record_table = $1 and record_id = $2insert into health.record_values (
+               record_table, record_id, value_name, unit, numeric_value, text_value
+             )  on conflict (record_table, record_id, value_name)
+              do update set
+                unit = excluded.unit,
+                numeric_value = excluded.numeric_value,
+                text_value = excluded.text_valueinsert into health.workouts (
+               provider, node_id, external_workout_id, bundle_id, timezone, workout_type,
+               start_at, end_at, active_seconds, energy_kcal, distance_meters,
+               hr_max_bpm, hr_average_bpm
+             )
+             values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+             returning workout_idactive_duration_secsenergy_burned_kcaldistance_metershr_max_bpmhr_average_bpmworkout_typehealth.workoutsinsert into health.aggregates (
+               provider, node_id, timezone, aggregate_type, period_start, period_end,
+               numeric_value, unit
+             ) with ns as (
+             select tstzrange($4::timestamptz, $5::timestamptz) as s
+         ),
+         matched as (
+             delete from health.synced_ranges
+             where provider = $1
+               and node_id is not distinct from $2::text
+               and category = $3
+               and (span && (select s from ns) or span -|- (select s from ns))
+             returning lower(span) as lo, upper(span) as hi
+         ),
+         bounds as (
+             select min(lo) as lo, max(hi) as hi from matched
+         )
+         insert into health.synced_ranges (provider, node_id, category, span)
+         select $1, $2::text, $3, tstzrange(
+             least(lower(ns.s), coalesce((select lo from bounds), lower(ns.s))),
+             greatest(upper(ns.s), coalesce((select hi from bounds), upper(ns.s)))
+         )
+         from nsselect pg_advisory_xact_lock_shared(hashtext($1))health.records.writedelete from health.samples
+         where node_id = $1
+           and start_at <= $3
+           and coalesce(end_at, start_at) >= $2select distinct provider from health.synced_ranges where node_id = $1delete from health.samples
+         where provider = $1
+           and node_id is not distinct from $2
+           and sample_type = $3
+           and start_at <= $5
+           and coalesce(end_at, start_at) >= $4active reconciliation changed while its staging was lockedfenced invalid device reconciliation attempt
+    update device.nodes
+    set health_last_received_at = $1,
+        health_last_sync_status = 'success',
+        health_last_sync_error = null
+    where node_id = $2
+    ideas_null_state_relevanceideas null-state relevanceen-UShatch-engine/crates/hatch-server/prompts/self_improvement/ideas_null_state_relevance.mdself_improvement/ideas_null_state_relevance.md{{CANDIDATE_CARDS_JSON}}ideas null-state relevance payload failed; treating all relevance as 0ideas null-state relevance attempt failed; retrying with a fresh turnideas null-state relevance declined; treating all relevance as 0failed to read idea build statuses for Ideas tab cardsexplore_defaultfailed to read idea card item selectionsidea_cards.recent_rowsfailed to hydrate idea card tag iconsbundled_new_user.null_stateidea cards feed assembling category rowspreserving pinned eval-fixture Ideas feed; skipping rematerializeskipping Ideas feed rematerialize while limited feed is activefailed to hydrate idea card item badgesfailed to hydrate idea card source metadataapi.idea_cards_materialized_fallback_tailskipping maintenance Ideas feed rematerialize while limited feed is activeIdeas feed already composed for this run; skipping rematerializeidea_cards.snapshot_publishidea cards snapshot publish skipped cards without feed-eligible backing rowsidea cards snapshot publish skipped incomplete row sectionsideas feed composer payload failed; rendering deterministic feedideas feed composer plan acceptedideas feed composer plan decode failed; rendering deterministic feedvector_count_mismatchfailed to load idea grounding facts for diversityclusteredclustered_partialexact_onlyexact_only_partialskipped_unavailableideas semantic fact clusteringdefcon_level_3_daily_capshopping_daily_capdaily cadence read failed; admitting signal-triggered objective cyclethrottledscheduler_grace_secondsprevious_cycle_idprevious_admitted_atsignal_admitted_runssignal_admission_limithatch_inference_defcon_level_3_enableddefcon_cadencedaily cadence throttled objective cycleadmissiondaily cadence read failed; admitting automatic objective cycleobjectivestartfailed to stamp boot generation on inline-triggered runproactivity_context_profileretired historical backfill state before objective runfailed to retire historical backfill state; continuing objective runrestart_checkpoint_parkeddurable_owner_retainedrestart_checkpoint_parked_agent_idrestart_checkpoint_parked_atprior_diagnosticsterminal_step_error_codeobjective execution gate wait cancelledbackfill_completehistorical backfill retired; pending march marked completerunningconnector_tryidea_builtfeed prompt text is empty; the cold-start gate abstainsfeed cold-start verdict cache read failed; reclassifyingfeed cold-start verdict cache write failed; the next fire reclassifiesneeds_interpretationfeed:cold_startthe prompt's scope depends on the reader's own signalsfeed prompt scope classification answered off-schema; the fire generatesfeed prompt scope classification failed; the fire generatesfeed prompt scope classification timed out; the fire generates; itemssubjectsourcewants_assistant_tipscold_start_subjectsfeed subject classification answered off-schema; today's bar standsfeed subject classification failed; today's bar standsfeed subject classification timed out; today's bar standsrun cancelledfeed step failure CAS lost to a concurrent settler; that settler owns the terminal eventfeed step failure CAS erroredfeed step adopted-submission settle erroredhttp://localhost/hatch/feed-engagement-populationstripe-linkinspectStripe Link connection inspection failedStripe Link connection status failedconnector_call_reasonCircle is no longer activemeta_ai_reconcileMeta AI sync attempt not recordedMeta AI enrollment refresh failed; syncing on the confirmed enrollmentmeta_ai_consentMeta AI sync skipped

@@ -1,0 +1,34 @@
+select metadata_json from self_improvement.follow_up_queue
+                         where follow_up_id=$1 and delivery_submission_id=$2
+                           and producer in ('proactive_notifier','proactivity_changes')
+                           and state='delivering'select q.metadata_json from self_improvement.follow_up_queue q
+                     where q.follow_up_id=$1 and q.delivery_submission_id=$2
+                       and q.producer in ('proactive_notifier','proactivity_changes')
+                       and q.state='delivering' and q.chat_id=$4
+                       and exists (select 1 from agent.agents root
+                         where root.id=$3 and root.session_id=q.chat_id
+                           and root.kind='root' and root.parent_agent_id is null)
+                     for update of qselect change_id from self_improvement.proactivity_changes
+                     where change_id=any($1) and claimed_follow_up_id=$2 and claimed_submission_id=$3
+                       and delivered_at is null and report_suppression_reason is null
+                       and (report_not_before is null or report_not_before <= $4)
+                     order by recorded_at,change_id for updateaction claims belong to another coordinatorupdate self_improvement.follow_up_queue set metadata_json=$3
+                    where follow_up_id=$1 and delivery_submission_id=$2select allocation, producer, priority, not_before, expires_at, disposition_reason,
+                            metadata_json->>'attention_deadline' as attention_deadline,
+                            coalesce(metadata_json->'after_main_turn' = 'true'::jsonb, false)
+                              as after_main_turn
+                     from self_improvement.follow_up_queue
+                     where state = 'pending'
+                       and expires_at > $1
+                       and ($2 or priority in ($3, $5) or producer = $6)
+                       and ($4 or producer <> 'proactive_notifier')
+                     order by not_before asc, created_at ascselect coalesce((metadata_json->>'proactivity_first_delivered_at')::timestamptz, terminal_at) as terminal_at, priority
+                     from self_improvement.follow_up_queue
+                     where (state = 'delivered' or metadata_json ? 'proactivity_first_delivered_at')
+                       and producer not in ('internal', 'proactivity_changes')
+                       and allocation = $2
+                       and coalesce((metadata_json->>'proactivity_first_delivered_at')::timestamptz, terminal_at) > $1
+                       and (not $3 or not (metadata_json ? 'proactivity_reserved_slot'))
+                     order by terminal_at ascselect max(coalesce((metadata_json->>'proactivity_first_delivered_at')::timestamptz, terminal_at))
+                     from self_improvement.follow_up_queue
+                     where state = 'delivered' or metadata_json ? 'proactivity_first_delivered_at'

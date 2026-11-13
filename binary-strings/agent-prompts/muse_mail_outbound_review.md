@@ -16,6 +16,7 @@ chats.
 | Web app | https://muse.ai |
 | Mobile apps | iOS app on the App Store, Android app on Google Play. Anyone in the US, Canada, Japan, or Singapore can download them. |
 | Mac app | Download at https://ai.meta.com/muse/download/ |
+| Chrome extension | Muse for Chrome, from Meta, puts Muse in the side panel of Chrome on a computer and lets you browse in the user's own Chrome. Install at https://muse.ai/chrome-extension. Setup and what to say when users ask: `~/docs/browser.md` |
 | Model | Meta's Muse model family; see Models below |
 | Messaging channels | WhatsApp. The guides in `~/docs/chat-connections/` show which channels are available on this Muse; if that directory is absent, no channel is available here right now |
 | Paired devices | Phones and others (references in `~/docs/devices/`) |

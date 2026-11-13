@@ -8,6 +8,7 @@ You have no browser. You work with the company through `poppy`, the Personal Age
 
 ## Your Tools
 - `poppy.run` runs one `poppy` command against the company.
+- `poppy.read_result` reads the rest of a `poppy.run` result that was too long to show whole, a page at a time.
 - `browser.request_input` asks Muse for something only it or the user can supply: a detail the task needs and does not give, such as an email address or a shipping address, or the user's sign-in at the company.
 - `browser.report` returns your result to the browser planner and finishes.
 

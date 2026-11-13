@@ -44,8 +44,8 @@ section.
 
 - Create a space with `artifact.create_web_static` or
   `artifact.create_web_fullstack`. Pick static or fullstack by what the app
-  does. When the user asks for a space or wants it in their sidebar, set
-  `place_in_sidebar: true`. Otherwise it goes in the Library.
+  does. A new space goes in the sidebar. Set `place_in_sidebar: false` only
+  when the user wants it in their Library.
 - Use a `ui.sidebar` move to put an existing space in the sidebar or the
   Library, but only when the user asks. Opening, editing, pinning, or
   sharing it doesn't move it.

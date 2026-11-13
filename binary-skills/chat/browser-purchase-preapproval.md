@@ -47,6 +47,9 @@ after 30 days.
 
 ## Request approval
 
+Use your own wording for purchase summaries, questions, and updates,
+suited to the current conversation.
+
 1. Resolve the required purchase choices from the user's request, established
    preferences, and delegated choices. Use wallet calls for missing contact or
    delivery details. Ask together for choices that remain unresolved.
@@ -54,12 +57,22 @@ after 30 days.
 2. Preserve the user's established wallet or card preference. Do not add a
    wallet- or card-selection question. The approval also covers a payment
    method the merchant saved for the user. When the user chose one, pass that
-   choice in the browser assignment. Otherwise, complete wallet setup only when
-   `wallet.list_payment_methods` shows no connected wallet with
-   `purchase_preapproval_eligible: true` and a usable payment method. If the user
-   chose a payment method that neither such a wallet nor the merchant's saved
-   methods supply, ask whether to use wallet preapproval or keep that choice
-   with approval at checkout.
+   choice in the browser assignment. A merchant-saved payment needs no connected
+   wallet. If the user's chosen payment method is unavailable from both the
+   merchant's saved methods and a connected wallet with
+   `purchase_preapproval_eligible: true`, ask whether to use wallet preapproval
+   or keep that choice with approval at checkout.
+
+   Approval also permits Secure Vault login on sites used for this purchase.
+   Before proposing the spec for a known merchant, call `credentials.list`
+   with its site in `domain`. Include the payment plan in the spec's payment
+   details and in `intent`. Unless the user prefers another payment method,
+   propose the card saved on the merchant account first, with the wallet
+   covered by the approval as the fallback when available. The saved-card
+   option is conditional on there being a saved card on file for that merchant.
+   Pass the confirmed account and payment choices in the browser assignment.
+   A missing login or unavailable lookup does not prevent requesting purchase
+   approval. Describe only what the lookup established.
 
 3. Verify the requested items, options, and current prices using merchant pages
    or connector results. Use `browser.open` for a known product URL.
@@ -78,10 +91,19 @@ after 30 days.
    steps below while the user is present; do not wait for the buying condition.
 
 For any outcome besides `approved`, stop setup and remove any purchase cron
-created for it. Report that setup did not complete. If preapproval is
-unavailable, offer approval at checkout and explain that buying needs the user
-present. Switch to alerts without buying only when the user chooses that.
-Do not retry a denied request unless the user asks.
+created for it. Explain the approval outcome and next step. After a denial,
+ask why the user declined or what they want changed unless they already explained.
+Retry preapproval when the user asks to continue or confirms a correction.
+Confirm only the changed parts of the spec before requesting a new approval
+card. A general request to try again keeps preapproval as the route. An
+unanswered or undelivered offer of approval at checkout does not select that route.
+
+Use approval at checkout when the user explicitly chooses it. Otherwise,
+offer that route only after repeated technical failures prevent completing
+preapproval or paying under it. A user denial is not a technical failure.
+Explain why checkout approval is needed and that the user must be available
+to approve payment. Switch to alerts without buying only when the user
+chooses that.
 
 Each task or cron holds one purchase approval. Approving another purchase for
 the same owner revokes its previous approval. Use a separate cron for each
@@ -164,5 +186,6 @@ the `task_id`, including a waiting or finished task with a saved purchase approv
 A successful close revokes that approval when that task holds it, or when no
 other open task carries it. Closing a scheduled run's browser
 task stops only that run; `cron.remove` cancels the schedule's purchase. If
-closing fails, report that cancellation is unconfirmed. Inspect existing orders separately; stopping work
-does not cancel an order already placed.
+closing fails, explain that you could not confirm the work was stopped.
+Inspect existing orders separately; stopping work does not cancel an order
+already placed.
