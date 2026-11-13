@@ -1,0 +1,48 @@
+forward_audiocommit_audioclear_audioprivate realtime execution cleanup task failedfailed to reset local input while suppressing caller audiorealtime provider writer exited before write completioninvalid_request_errorsession.update contains settings this endpoint cannot applyunsupported_session_updatesessionrealtime: audio-in full, dropping frameenqueue_caller_audiorealtime: dropping append with invalid base64 audiorealtime: dropping append with oversized audio payloadcommit_caller_audiovisual_context_correlation_mismatchitem.previous_item_idinvalid_visual_contextitem.contentvoice: device wake-word verification state reported by Redoxclear_caller_audiorealtime: admitted confidential image capturerealtime: ignored visual context without an active providerrealtime: staged visual context for Cosmosrealtime: failed to stage visual contextfirst_connected_callpersist_failedvoice_lifecycle
+
+realtime: normal floor request was not enqueuedrealtime: floor request queue saturated while injecting conversation itemrealtime voice request queue is fullvoice_floor_queue_fullrealtime: floor request channel closed while injecting conversation itemconfidential image was rejectedconfidential_image_invalidnot_applicablenot_observedbackground_content_jobsregistry.list_pairedlive user transcript: closing abandoned bubbleload_root_conversation_candidate_by_session_id
+SELECT event_seq, event_name, source, role::text AS role, visibility::text AS visibility,
+       message_id, agent_id, parent_agent_id, parent_message_id, reply_to_message_id,
+       transcript_surface::text AS transcript_surface, payload_json,
+       (extract(epoch from created_at))::bigint AS created_at
+FROM runtime.events WHERE idempotency_key = $1
+runtime.cancellation
+SELECT ci.item_json, ci.message_source,
+       (extract(epoch from ci.created_at))::bigint AS created_at,
+       projection.client_context_json
+FROM agent.context_items AS ci
+LEFT JOIN agent.context_item_resume_projection AS projection
+  ON projection.agent_id = ci.agent_id AND projection.seq = ci.seq
+WHERE ci.agent_id = $1 AND ci.seq = $2
+cancellation retry does not match its committed identity
+SELECT
+  GREATEST(
+    (SELECT COALESCE(MAX(seq), -1) FROM context_items WHERE agent_id = $1),
+    (SELECT COALESCE(MAX(seq), -1) FROM context_item_resume_projection WHERE agent_id = $1),
+    COALESCE((SELECT handoff_context_high_water_seq FROM agent.agents WHERE agent_id = $1), -1),
+    (SELECT COALESCE(MAX(root_seq), -1) FROM agent.companion_trace_imports WHERE root_agent_id = $1),
+    (SELECT COALESCE(MAX(producer_seq), -1) FROM agent.companion_trace_imports WHERE producer_agent_id = $1),
+    COALESCE((SELECT settled_seq FROM agent.companion_trace_sources WHERE producer_agent_id = $1), -1)
+  ) AS max_item_seq,
+  COALESCE((SELECT prompt_floor_seq FROM agents WHERE id = $1), -1)
+    AS prompt_floor_seq,
+  (SELECT COALESCE(MAX(checkpoint_seq), -1)
+     FROM agent_compactions
+     WHERE agent_id = $1
+       AND checkpoint_seq IS NOT NULL
+       AND has_replacement_history)
+    AS checkpoint_seq
+max_item_seqcheckpoint_seqcontext_seqlegacy completion has no verifiable batch ownerUPDATE agent.agents SET handoff_context_high_water_seq =
+                GREATEST(COALESCE(handoff_context_high_water_seq, -1), $2)
+             WHERE agent_id = $1SELECT state, submission_json, accepted_at, transcript_event_seq,
+                    stream_owner_message_id FROM agent.message_mailbox
+             WHERE agent_id = $1 AND submission_id = $2 FOR UPDATEstartup_submission_missingsubmission_jsonreply_to_targetlegacy startup cancellation changed its replyaccepted_atinvalidinvalid startup mailbox statestartup_submission_terminalstartup_execution_ownedstartup_already_cancelledtranscript_event_seqstartup cancellation input already has execution custodystartup_submission_changedUPDATE agent.message_mailbox SET state = 'aborted', terminalized_at = now(),
+                    transcript_event_seq = $3
+             WHERE agent_id = $1 AND submission_id = $2 AND state = 'accepted'
+               AND stream_owner_message_id IS NULL AND transcript_event_seq IS NULLstartup cancellation custody changed before commitSELECT state, submission_json, accepted_at, transcript_event_seq,
+                    stream_owner_message_id, checkpoint_custody FROM agent.message_mailbox
+             WHERE agent_id = $1 AND submission_id = $2 FOR UPDATElegacy startup quota rejection changed its replycheckpoint_custodypending startup input already has a transcript eventstartup_quota_rejectionUPDATE agent.message_mailbox SET state = 'completed', terminalized_at = now(),
+                    transcript_event_seq = $3
+             WHERE agent_id = $1 AND submission_id = $2 AND state = 'accepted'
+               AND stream_owner_message_id IS NULL AND checkpoint_custody IS NULL
+               AND transcript_event_seq IS NULLstartup quota rejection custody changed before commit

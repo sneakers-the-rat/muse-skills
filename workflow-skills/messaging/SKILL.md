@@ -68,6 +68,8 @@
 
 - [WhatsApp](/opt/hatch/connectors/whatsapp/CONNECTOR.md) for the user's personal WhatsApp chats, scheduled texts and reply follow-through.
 
+- [WhatsApp Business](/opt/hatch/connectors/whatsapp_business/CONNECTOR.md) for the same when the user linked their WhatsApp Business account instead.
+
 - [Quo](/opt/hatch/connectors/quo_mcp/CONNECTOR.md) for texts from the user's Quo business number and its call transcripts.
 
 ## Websites

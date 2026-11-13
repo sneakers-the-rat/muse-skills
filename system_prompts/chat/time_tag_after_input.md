@@ -1,1 +1,0 @@
-blocks/shared/environment/computer.md

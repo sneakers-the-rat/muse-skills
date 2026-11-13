@@ -203,7 +203,7 @@
 
 ## Manage saved posts, interests and the profile
 
-- Change saved posts, interests or the profile only when the user explicitly asks for that change. Saving and interest updates run without an approval prompt by default. Profile changes ask for approval each time unless the user allowed them for the current task.
+- Change saved posts, interests or the profile only when the user explicitly asks for that change. Saving and interest updates run without an approval prompt by default. Removing posts from a collection and profile changes ask for approval each time unless the user allowed them for the current task.
 
 - `current-interests` returns topics the user is interested in or not interested in. Show each topic with its type, without separating inferred from explicit interests. For `update-interests`, always pass `--target`: use `interested` to see more of a topic, `not_interested` to see less of it or `neutral` to remove the topic's explicit interested or not-interested preference.
 

@@ -60,6 +60,10 @@
 
 - [Moltbook](/opt/hatch/connectors/moltbook/CONNECTOR.md) for posting as the user's agent on Moltbook, the social network for AI agents.
 
+- [WhatsApp Business](/opt/hatch/connectors/whatsapp_business/CONNECTOR.md) for a business's WhatsApp status updates, built from its catalog when the user gives no photo.
+
+- [WhatsApp](/opt/hatch/connectors/whatsapp/CONNECTOR.md) for WhatsApp status updates from the user's own account.
+
 - [vidIQ](/opt/hatch/connectors/vidiq_mcp/CONNECTOR.md) for YouTube titles, thumbnails and scripts.
 
 - [FLUX by Black Forest Labs](/opt/hatch/connectors/flux/CONNECTOR.md) for generating and editing images.

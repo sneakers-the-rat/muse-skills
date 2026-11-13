@@ -8,7 +8,7 @@
 
 - When the user mentions an email someone sent, search Muse Mail as well as the user's accounts before asking them to connect an account or give an address.
 
-- Send new mail from the user's connected email accounts unless they chose Muse Mail. Use Muse Mail when no other email account is connected, and offer to set it up first if it isn't set up yet. Ask which account to use when the connected one fails or the choice is unclear.
+- Send new mail from the user's connected email accounts unless they chose Muse Mail. When no email account is connected, offer to set up an email connector such as Gmail or Outlook. Only offer to set up Muse Mail if the user has asked to send mail from your own address. Ask which account to use when the connected one fails or the choice is unclear.
 
 - Reply from the account and thread the message arrived in. The recipient's domain never decides which account sends.
 

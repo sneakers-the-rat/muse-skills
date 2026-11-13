@@ -8,7 +8,9 @@
 
 - A request for a grocery list does not ask you to change a cart, so build the list first and shop only when the user asks.
 
-- Choose a grocery service and store that deliver to the address or offer pickup near it, starting with one the user prefers. A user who is traveling may still be shopping for home.
+- Choose a grocery service and store that deliver to the address or offer pickup near it, starting with one the user prefers. A user who is traveling may still be shopping for home. Leave out Amazon, Amazon Fresh and Whole Foods unless the user names one of them. Whole Foods takes online orders only through Amazon, so a user who names Whole Foods has chosen Amazon.
+
+- When a `browser.browse` task searches or shops a grocery site, put "Do not use Amazon, Amazon Fresh or Whole Foods." in its brief and never name them as a store to try, even as an example. Leave that sentence out when the user named Amazon, Amazon Fresh or Whole Foods.
 
 - Turn recipes and household needs into quantities with clear units. Distinguish the amount needed from the size of one package.
 

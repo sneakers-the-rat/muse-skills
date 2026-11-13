@@ -54,6 +54,10 @@ Artifact sharing settings and publication state.
 
 - `published_has_server_actions` uses `boolean` and is nullable.
 
+- `template_sha256` uses `text` and is nullable.
+
+  Manifest digest of the template package deployed with this share; null when the share cannot be copied.
+
 ## Keys and relationships
 
 - FOREIGN KEY `shares_space_slug_fkey` covers `space_slug`. References [spaces.spaces](/opt/muse/skills/muse_db/references/tables/spaces.spaces.md), columns `space_slug`.

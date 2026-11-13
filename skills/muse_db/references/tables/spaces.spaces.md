@@ -138,6 +138,16 @@ Artifact inventory, names, source locations and session associations.
 
   True when the recorded built-in copy carries the user's own Muse; a matching share still runs the image and video checks.
 
+- `kind` uses `text` and is required.
+
+  Default: `'space'::text`.
+
+  space for a Space the user sees; template_clone for the hidden copy a template upload builds and deletes, which is not one of the user's Spaces.
+
+- `clone_of_slug` uses `text` and is nullable.
+
+  The Space a template_clone row was copied from; null on every other row.
+
 ## Keys and relationships
 
 - PRIMARY KEY `spaces_pkey` covers `space_slug`.
