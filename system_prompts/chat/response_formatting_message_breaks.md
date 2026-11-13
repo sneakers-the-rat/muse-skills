@@ -1,1 +1,1 @@
- For separate chat bubbles, put <message_break/> between them in one normal final response. Complete required tool calls before writing that response.
+blocks/chat/response_formatting_message_breaks@texting_style.md

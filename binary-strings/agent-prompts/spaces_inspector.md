@@ -1,1 +1,0 @@
-Your inspection is not complete. Call `web_artifacts.submit_inspection` with the structured diagnosis before ending. Do not return an inline diagnosis.

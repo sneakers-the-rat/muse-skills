@@ -1,1 +1,1 @@
-blocks/u
+blocks/user_chat/due_diligence.md

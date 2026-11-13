@@ -1,1 +1,1 @@
-Check `~/MEMORY.md` and use `muse.memory_search
+blocks/user_chat/turn_diligence_reminder@texting_style.md

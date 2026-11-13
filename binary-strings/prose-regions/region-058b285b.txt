@@ -1,0 +1,293 @@
+select min(heartbeat_at)
+                             from runtime.work_items
+                             where work_class = 'maintenance_job'
+                               and terminalized_at is null
+                               and state = 'running'
+                               and lease_owner is not null
+                               and lease_owner <> $1with upserted as (
+                       insert into runtime.context_snapshots (
+                         snapshot_kind, owner_key, version, source_watermark, fingerprint,
+                         freshness_class, state_json, stale_after
+                       ) values ($1, $2, $3, $4, $5, $6, $7, $8::timestamptz)
+                       on conflict (snapshot_kind, owner_key) do update set
+                         version = excluded.version,
+                         source_watermark = excluded.source_watermark,
+                         fingerprint = excluded.fingerprint,
+                         freshness_class = excluded.freshness_class,
+                         state_json = excluded.state_json,
+                         refreshed_at = now(),
+                         invalidated_at = null,
+                         stale_after = excluded.stale_after,
+                         last_error = null,
+                         updated_at = now()
+                       where runtime.context_snapshots.version is distinct from excluded.version
+                          or runtime.context_snapshots.source_watermark is distinct from excluded.source_watermark
+                          or runtime.context_snapshots.fingerprint is distinct from excluded.fingerprint
+                          or runtime.context_snapshots.freshness_class is distinct from excluded.freshness_class
+                          or runtime.context_snapshots.state_json is distinct from excluded.state_json
+                          or runtime.context_snapshots.stale_after is distinct from excluded.stale_after
+                          or runtime.context_snapshots.invalidated_at is not null
+                          or runtime.context_snapshots.last_error is not null
+                          or (
+                            runtime.context_snapshots.freshness_class <> 'exact'
+                            and runtime.context_snapshots.stale_after is not null
+                            and runtime.context_snapshots.stale_after <= now()
+                          )
+                       returning *
+                     )
+                     select *
+                     from upserted
+                     union all
+                     select *
+                     from runtime.context_snapshots
+                     where snapshot_kind = $1
+                       and owner_key = $2
+                       and not exists (select 1 from upserted)
+                     limit 1select distinct (metadata_json::jsonb)->>'maintenance_kind'
+                     from runtime.work_items
+                     where work_class = 'maintenance_job'
+                       and terminalized_at is null
+                       and state in ('queued', 'running')
+                       and (metadata_json::jsonb)->>'maintenance_kind' is not nullinsert into runtime.context_snapshots (
+                       snapshot_kind, owner_key, version, source_watermark, fingerprint,
+                       freshness_class, state_json, stale_after
+                     )  on conflict (snapshot_kind, owner_key) do update set
+                        version = excluded.version,
+                        source_watermark = excluded.source_watermark,
+                        fingerprint = excluded.fingerprint,
+                        freshness_class = excluded.freshness_class,
+                        state_json = excluded.state_json,
+                        refreshed_at = now(),
+                        invalidated_at = null,
+                        stale_after = excluded.stale_after,
+                        last_error = null,
+                        updated_at = now()
+                      where runtime.context_snapshots.version is distinct from excluded.version
+                         or runtime.context_snapshots.source_watermark is distinct from excluded.source_watermark
+                         or runtime.context_snapshots.fingerprint is distinct from excluded.fingerprint
+                         or runtime.context_snapshots.freshness_class is distinct from excluded.freshness_class
+                         or runtime.context_snapshots.state_json is distinct from excluded.state_json
+                         or runtime.context_snapshots.stale_after is distinct from excluded.stale_after
+                         or runtime.context_snapshots.invalidated_at is not null
+                         or runtime.context_snapshots.last_error is not null
+                         or (
+                           runtime.context_snapshots.freshness_class <> 'exact'
+                           and runtime.context_snapshots.stale_after is not null
+                           and runtime.context_snapshots.stale_after <= now()
+                         )with requested as (
+                       select unnest($1::text[]) as kind
+                     )
+                     select requested.kind as kind,
+                            coalesce(active.running, false) as running,
+                            coalesce(active.next_queued_deadline_at <= now(), false)
+                              as next_queued_due,
+                            latest_completed.terminalized_at as last_completed_at,
+                            case when latest_finished.state = 'failed'
+                                 then latest_finished.terminalized_at end as last_failed_at
+                     from requested
+                     left join lateral (
+                       select bool_or(work.state = 'running') as running,
+                              min(work.deadline_at) filter (where work.state = 'queued')
+                                as next_queued_deadline_at
+                       from runtime.work_items work
+                       where work.work_class = 'maintenance_job'
+                         and work.terminalized_at is null
+                         and work.state in ('queued', 'running')
+                         and (work.metadata_json::jsonb)->>'maintenance_kind'
+                               = requested.kind
+                     ) active on true
+                     left join lateral (
+                       select terminal.terminalized_at
+                       from runtime.work_items terminal
+                       where terminal.work_class = 'maintenance_job'
+                         and terminal.terminalized_at is not null
+                         and terminal.state = 'completed'
+                         and (terminal.metadata_json::jsonb)->>'maintenance_kind'
+                               = requested.kind
+                       order by terminal.terminalized_at desc,
+                                terminal.updated_at desc,
+                                terminal.work_id desc
+                       limit 1
+                     ) latest_completed on true
+                     left join lateral (
+                       select terminal.state, terminal.terminalized_at
+                       from runtime.work_items terminal
+                       where terminal.work_class = 'maintenance_job'
+                         and terminal.terminalized_at is not null
+                         and terminal.state in ('completed', 'failed')
+                         and (terminal.metadata_json::jsonb)->>'maintenance_kind'
+                               = requested.kind
+                       order by terminal.terminalized_at desc,
+                                terminal.updated_at desc,
+                                terminal.work_id desc
+                       limit 1
+                     ) latest_finished on truerunningnext_queued_duelast_completed_atlast_failed_atselect detail_json from runtime.maintenance_markers where marker_key = $1insert into runtime.maintenance_markers (marker_key, detail_json)
+                     values ($1, $2)
+                     on conflict (marker_key) do nothinginsert into runtime.maintenance_markers (marker_key, detail_json)
+                     values ($1, $2)
+                     on conflict (marker_key) do update
+                     set completed_at = now(), detail_json = excluded.detail_jsonwith recursive descendants as (
+                       select child.work_id, child.created_at
+                       from runtime.work_items child
+                       where child.parent_work_id = $1
+                         and child.terminalized_at is null
+                       union all
+                       select child.work_id, child.created_at
+                       from runtime.work_items child
+                       join descendants parent on child.parent_work_id = parent.work_id
+                       where child.terminalized_at is null
+                     )
+                     select work_id
+                     from descendants
+                     order by created_at desc, work_id ascselect work_id from runtime.work_items
+                where work_class='maintenance_job' and terminalized_at is null
+                and state in ('queued','running')
+                and (metadata_json::jsonb)->>'maintenance_kind'=$1
+                order by created_at, work_id limit 1select exists(
+               select 1 from runtime.maintenance_markers where marker_key = $1
+             ) as presentpresentupdate runtime.work_items
+                     set state = $3,
+                         phase = $4,
+                         subphase = $5,
+                         heartbeat_at = now(),
+                         updated_at = now()
+                     where work_id = $1
+                       and state = $2
+                       and terminalized_at is nullwith requested as (
+                       select unnest($1::text[]) as kind
+                     )
+                     select requested.kind as kind,
+                            exists (
+                              select 1
+                              from runtime.work_items active
+                              where active.work_class = 'maintenance_job'
+                                and active.terminalized_at is null
+                                and active.state in ('queued', 'running')
+                                and (active.metadata_json::jsonb)->>'maintenance_kind'
+                                      = requested.kind
+                            ) as has_active,
+                            latest_terminal.terminalized_at as last_terminalized_at,
+                            latest_terminal.maintenance_occurrence
+                              as last_terminalized_occurrence,
+                            readiness.detail_json as readiness_cursor_json
+                     from requested
+                     left join runtime.maintenance_markers readiness
+                       on readiness.marker_key = 'maintenance-readiness:' || requested.kind
+                     left join lateral (
+                       select terminal.terminalized_at,
+                              (terminal.metadata_json::jsonb)->>'maintenance_occurrence'
+                                as maintenance_occurrence
+                       from runtime.work_items terminal
+                       where terminal.work_class = 'maintenance_job'
+                         and terminal.terminalized_at is not null
+                         and (terminal.metadata_json::jsonb)->>'maintenance_kind'
+                               = requested.kind
+                       order by terminal.terminalized_at desc,
+                                terminal.updated_at desc,
+                                terminal.work_id desc
+                       limit 1
+                     ) latest_terminal on truehas_activelast_terminalized_atlast_terminalized_occurrencereadiness_cursor_jsonwith updated as (
+                       update runtime.work_items
+                       set state = $2,
+                           phase = 'terminalization',
+                           subphase = null,
+                           terminal_reason = $3,
+                           terminal_detail = $4,
+                           diagnostic_json = $5,
+                           terminalized_at = now(),
+                           heartbeat_at = now(),
+                           updated_at = now()
+                       where work_id = any($1)
+                         and terminalized_at is null
+                       returning work_id, state, terminal_reason, terminal_detail, terminalized_at
+                     ),
+                     existing as (
+                       select current.work_id, current.state, current.terminal_reason,
+                              current.terminal_detail, current.terminalized_at
+                       from runtime.work_items current
+                       where current.work_id = any($1)
+                         and current.terminalized_at is not null
+                         and not exists (
+                           select 1 from updated where updated.work_id = current.work_id
+                         )
+                     )
+                     select * from updated
+                     union all
+                     select * from existingupdate runtime.work_items
+                     set state = $3,
+                         phase = 'terminalization',
+                         subphase = null,
+                         terminal_reason = $4,
+                         terminal_detail = $5,
+                         diagnostic_json = $6,
+                         terminalized_at = now(),
+                         heartbeat_at = now(),
+                         updated_at = now()
+                     where work_id = $1
+                       and lease_owner = $2
+                       and terminalized_at is null
+                     returning terminalized_atwith candidate as (select work_id from runtime.work_items
+               where work_class = 'maintenance_job'
+                 and terminalized_at is null
+                 and state = 'queued'
+                 and lease_owner is null
+                 and (deadline_at is null or deadline_at <= now())
+                 and (metadata_json::jsonb)->>'maintenance_kind' = $1
+                 and (not $2 or coalesce((metadata_json::jsonb)->>'suspend_policy',
+                     'complete_when_awake') <> 'opportunistic')
+               order by deadline_at asc nulls first, created_at, work_id
+               limit 1 for update skip locked)
+               update runtime.work_items work set updated_at = clock_timestamp()
+               from candidate where work.work_id = candidate.work_id
+               returning work.work_idactive_countsuspend_blocking_counthold_blocking_countwork_classphasesuspend_oldest_heartbeat_age_mssuspend_max_deadline_overdue_msselect work_id from runtime.work_items
+               where work_class = 'maintenance_job'
+                 and terminalized_at is null
+                 and state = 'queued'
+                 and lease_owner is null
+                 and (deadline_at is null or deadline_at <= now())
+                 and (metadata_json::jsonb)->>'maintenance_kind' = $1
+               order by deadline_at asc nulls first, created_at, work_id
+               limit 1select ceil(
+                                      extract(epoch from min(coalesce(queued.deadline_at, now())))
+                                        * 1000
+                                    )::bigint,
+                                    floor(extract(epoch from now()) * 1000)::bigint
+                             from runtime.work_items queued
+                             where queued.work_class = 'maintenance_job'
+                               and queued.terminalized_at is null
+                               and queued.state = 'queued'
+                               and (queued.lease_owner is null or queued.lease_owner = $1)
+                               and coalesce((queued.metadata_json::jsonb)->>'maintenance_kind', '')
+                                     <> all($2::text[])
+                               and not exists (
+                                 select 1
+                                 from runtime.work_items running
+                                 where running.work_class = 'maintenance_job'
+                                   and running.terminalized_at is null
+                                   and running.state = 'running'
+                                   and (running.metadata_json::jsonb)->>'maintenance_kind'
+                                         = (queued.metadata_json::jsonb)->>'maintenance_kind'
+                               )update runtime.work_items
+                     set state = 'terminalizing',
+                         phase = 'terminalization',
+                         subphase = null,
+                         terminal_reason = $2,
+                         terminal_detail = $3,
+                         diagnostic_json = $4,
+                         metadata_json = $5,
+                         heartbeat_at = now(),
+                         updated_at = now()
+                     where work_id = $1 and terminalized_at is nullselect diagnostic_json from runtime.work_items
+                     where work_id = $1 and work_class = 'maintenance_job'
+                       and terminalized_at is not nullselect exists(
+                       select 1 from runtime.work_items
+                       where work_class = 'maintenance_job'
+                         and terminalized_at is null
+                         and state = 'queued'
+                         and (metadata_json::jsonb)->>'maintenance_kind' = $1
+                         and work_id <> $2
+                         and ($3::text is null
+                              or (metadata_json::jsonb)->>'maintenance_occurrence' <> $3)
+                         and coalesce((metadata_json::jsonb)->>'maintenance_occurrence', '')
+                               not like 'immediate:%'
+                     )

@@ -1,0 +1,75 @@
+select e.*, q.instruction,q.state as request_state,q.result_json
+         from chat_private.company_conversations e
+         join agent.chat_worker_requests q on q.request_id=e.approved_request_id
+         where e.chat_id=$1instructionrequest_stateresult_jsonselect input_json from agent.group_inputs where group_id=$1 order by sequenceselect r.delivery_key,r.text_content,d.state,d.updated_at_utc,d.result_json,d.last_error
+         from agent.group_replies r join chat_private.deliveries d using(delivery_key)
+         where r.group_id=$1 and d.attempt_count>0 and d.state <> 'pending'
+         order by d.sequencecompany_delivery_keyexchange_counttext_contentupdated_at_utcSELECT s.child_agent_id, s.completed_at, s.handoff_state_json -> $2::text AS record,
+                m.agent_id AS admitted_by
+         FROM agent.subagent_spawns AS s
+         LEFT JOIN agent.message_mailbox AS m
+           ON m.submission_id = s.handoff_state_json -> $2::text ->> 'submission_id'
+         WHERE s.child_agent_id = ANY($1)
+         ORDER BY s.child_agent_id
+         FOR UPDATE OF sUPDATE agent.subagent_spawns AS s
+         SET handoff_state_json = jsonb_set(COALESCE(s.handoff_state_json, '{}'::jsonb),
+                                           ARRAY[$3]::text[], r.record::jsonb)
+         FROM unnest($1::text[], $2::text[]) AS r(child_agent_id, record)
+         WHERE s.child_agent_id = r.child_agent_idagent.subagent_spawns.handoff_state_jsonSELECT pg_advisory_xact_lock_shared(hashtextextended($1, 0))agent.volatile_context_pins.lifecycleSELECT pg_advisory_xact_lock(hashtextextended($1, 0))
+WITH owners AS MATERIALIZED (
+    SELECT DISTINCT agent_id COLLATE "C" AS agent_id
+    FROM unnest($1::text[]) AS input(agent_id)
+)
+SELECT pg_advisory_xact_lock(hashtextextended($2 || agent_id, 0))
+FROM owners ORDER BY agent_id COLLATE "C"
+agent.volatile_context_pins:SELECT agent_id FROM agent.agents WHERE agent_id = $1SELECT handoff_state_json -> $2::text AS state,
+                (extract(epoch FROM clock_timestamp()) * 1000)::bigint AS now_ms
+         FROM agent.subagent_spawns WHERE child_agent_id = $1 FOR UPDATEnow_msUPDATE agent.subagent_spawns
+         SET handoff_state_json = jsonb_set(COALESCE(handoff_state_json, '{}'::jsonb),
+                                           ARRAY[$2]::text[], $3::jsonb)
+         WHERE child_agent_id = $1insert into chat_private.publication_turns (execution_id, chat_id, disposition, phase)
+        select $1, $2, $3, $4 where pg_try_advisory_xact_lock_shared(hashtextextended($5, 0))
+        on conflict(execution_id) do nothing returning trueselect chat_id, phase, disposition from chat_private.publication_turns
+        where execution_id = $1 for updatepublication execution belongs to another chatworker open-todos block skipped: stored snapshot unreadableworker open-todos block skipped: snapshot load faileddeleted sessions.updated events require an owner-visible deletion proofsession row unavailable for sessions.updated payloadfailed to hydrate sessions.updated payloadfailed to resolve public session id for streamed framefailed to broadcast streamed frame for root sessiondropped companion progress frame after its voice call changedunreadable legacy hook was not admittedinvalid legacy hook path was not admittedinvalid legacy hook was not admittedfailed to read next wake-eligible maintenance deadline; scheduled resume projection is incompletefailed to read wake-eligible maintenance occurrences; scheduled resume projection is incompletedynamic timezone unresolvedpersist reconciled scheduler statecancel queued runs for unresolved dynamic timezone jobs; failed to revoke stale Sentinel grants; cron reactivation remains quarantinedfailed to project authoritative side-chat cron fallback to the filesystemretired completed authoritative runonce definitionscheduler reconcile errordynamic scheduled-resume resolver returned unknown jobs; projection is incompletedynamic scheduled-resume eligibility could not be resolved; projection is incompletefailed to revoke Sentinel grants for removed cron schedulescheduler released source paths held by removed jobs so live definitions could persistreleased_source_pathsnext_effective_dispatch_at_utcdynamic_timezone_next_run_refreshed_jobsgrant_revocation_failuresinvalid_definitionsselect pg_advisory_xact_lock(4841544348435458)insert into context.ingest_attempts
+        (id, source_id, contributor_key, recorded_at, outcome,
+         submitted, inserted, duplicates, event_ids, error_code)
+        values ($1,$2,$3,clock_timestamp(),$4,$5,$6,$7,$8,$9)select last_append_position from context.sources where id = $1 for updateupdate context.sources set last_append_position = $2 where id = $1select id, (group_key is not distinct from $3
+            and payload_kind = $4
+            and occurred_at is not distinct from $5::timestamptz
+            and payload = $6 and content_hints = $7
+            and ttl_seconds is not distinct from $8) as matches
+         from context.events where source_id = $1 and dedupe_key = $2 for sharematchesinsert into context.events
+        (id, source_id, append_position, dedupe_key, group_key, payload_kind,
+         occurred_at, ingested_at, payload, content_hints, ttl_seconds, expires_at, group_id)
+        values ($1,$2,$3,$4,$5,$6,$7,statement_timestamp(),$8,$9,$10,
+            statement_timestamp() + $10::integer * interval '1 second',$11)delete from context.ingest_attempts where id in
+    (select id from context.ingest_attempts where recorded_at < now() - interval '7 days'
+     order by recorded_at, id limit 100)select pg_notify($1, '')hatch_context_committedinsert into context.sources
+    (id, source_domain, source_key, display_name, created_at, last_append_position)
+    values ($1, $2, $3, $4, clock_timestamp(), 0)
+    on conflict (source_domain, source_key) do nothingselect id, source_domain, source_key as key, display_name, created_at::text as created_at
+     from context.sources where source_domain = $1 and source_key = $2image prompt must not be emptyHTTP_PROXYHTTPS_PROXYALL_PROXYhttp_proxyhttps_proxyall_proxy.media-generationConnection work is temporarily unavailableMuse connections are temporarily unavailablehttp://localhost/hatch/onboarding_statusesbackground job has an unsupported content localefailed to resolve public session id for agent.statusagent.status
+    select
+        node_id,
+        coalesce(display_name, node_id) as display_name,
+        platform,
+        enabled_permissions_json,
+        commands_json,
+        data_sources_json,
+        version,
+        device_family,
+        model_id,
+        metadata_json,
+        is_wakeup_supported,
+        delivery_app,
+        invoke_protocol,
+        -- Sentinel rejects a pairing identity with a space; created_at::text has one.
+        coalesce(
+            paired_at_text,
+            to_char(created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')
+        ) as paired_at,
+        coalesce(last_seen_at_text, last_seen_at::text, created_at::text) as last_seen_at,
+        status,
+        pairing_status
+    from device.nodes
+pairing_status <> 'revoked'workspace/podcastsID3
