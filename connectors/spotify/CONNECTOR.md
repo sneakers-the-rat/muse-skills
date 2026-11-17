@@ -87,6 +87,8 @@
 
 - When the device carrying the call lists `music_fulfillment` in its device catalog, follow [wearable playback](references/wearable-playback.md) instead of the rest of this section.
 
+- For a Muse-generated podcast episode on an app call, use Spotify only when its catalog entry has a `spotify_episode_uri`, Spotify is connected, and the caller didn't ask for the Muse app; never upload an episode to play it. Otherwise play it as [Podcast Production](/opt/muse/skills/generate_podcast/SKILL.md) describes. If the caller asked for Spotify and there is no saved URI, say it isn't saved to their Spotify and offer that instead.
+
 - On other calls, including from glasses without `music_fulfillment`, play through Spotify Connect and never send `device.invoke` with `music_fulfillment` to any device.
 
 - If the caller asks for another service or source, such as Apple Music, say that only Spotify plays here for now, offer to play it on Spotify and run no command.

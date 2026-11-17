@@ -58,4 +58,6 @@
 
 - [easyJet](/opt/hatch/connectors/easyjet/CONNECTOR.md) for easyJet flights and live fares, live easyJet flight status, and returned links to book on easyJet.
 
+- [Ryanair](/opt/hatch/connectors/ryanair/CONNECTOR.md) for Ryanair's own lowest fares, cheapest days and routes, shown as flight cards with links to book on ryanair.com.
+
 - [ShopBack](/opt/hatch/connectors/shopback_mcp/CONNECTOR.md) for flight prices from travel partners and the cashback each offer pays.

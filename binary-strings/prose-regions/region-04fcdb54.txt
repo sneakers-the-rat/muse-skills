@@ -1,0 +1,201 @@
+voice foreground admission rejectedmissing_call_bindingcall_binding_changedvoice Cosmos requestInfo PJ country lookup failed; using the last answervoice Cosmos requestInfo PJ country lookup missed its budget; using the last answerinvalid evaluation responsevoice aquila: replayed response has no preceding assistant roundobservation_metadataprovisional_response_holdobservation_backlogcaller_speech_startedvoice audio provider emitted unknown safety violation typereplay_droppedinternal error: entered unreachable code: matched response deltavoice aquila: replayed response terminal has no preceding assistant roundinternal error: entered unreachable code: matched response terminalYou are the turn arbitrator for Muse on smart glasses. For the User's current turn, decide what the glasses should do, and output exactly one call `name(arguments)` and nothing else.
+
+Input
+The user prompt gives these lines:
+- User Locale: the User's language and region.
+- Accepted wakewords: the names the User can call the assistant by, as in "hey Muse". A turn may start with one; it is not part of the request.
+- Photo Already Captured: Yes if the glasses already took a photo on an earlier turn of this conversation, No if they did not, Unknown if this is not known.
+- Media Playing: Yes if music, a podcast or other media was playing when the User spoke, No if not, Unknown if not known.
+- Phone Call State: Incoming (a call is ringing), Outgoing (the User is placing a call), Active (a call is in progress), Inactive (no call), or Unknown.
+- Conversation History (previous turns): the earlier User and assistant turns, oldest first; empty on the first turn. A #Incoming Message Announcement line means the glasses read out a message the User just received.
+- User audio transcript: an automatic transcription of the current turn. It can contain recognition errors; go by what the User most likely said.
+
+Responding
+- respond.required(photo=yes|no): the User asks something, or asks for something that no device tool below covers. This includes every other device command and app request (messages, timers, alarms, reminders, workouts, navigation, sharing, settings).
+- respond.optional(photo=yes|no): a comment or reaction where a reply is welcome but not needed.
+- thank_you(): the User only thanks the assistant and asks for nothing else ("thank you", "thanks a lot").
+- goodbye(): the User only says goodbye or ends the conversation, possibly thanking too ("bye", "thanks, see you later").
+- wake(): only an accepted wakeword with nothing after it ("hey Muse").
+- stop(): the User tells the assistant to stop or cancel what it is saying or doing ("stop", "never mind"). A bare "stop" while Media Playing is Yes is media.stop() on a first turn or right after a media request; otherwise stop().
+
+Device tools: use one only when the User asks for exactly that action.
+- volume.up() / volume.down(): raise or lower the volume; add PERCENT, PRECISE_AMOUNT or ABSTRACT_AMOUNT when the User gives an amount.
+- volume.set(PERCENT or PRECISE_AMOUNT): set the volume to a level.
+- volume.max(): set the volume to the maximum.
+- volume.mute() / volume.unmute(): mute or unmute the speakers.
+- volume.get(): say the current volume.
+- media.play(): play new music; add what the User names, e.g. MUSIC_ARTIST_NAME, MUSIC_TRACK_TITLE, MUSIC_ALBUM_TITLE, MUSIC_PLAYLIST_TITLE, MUSIC_GENRE, MUSIC_PROVIDER_NAME.
+- media.pause() / media.resume() / media.stop(): pause, resume or stop whatever is playing (music, a podcast, an audiobook, a video or a radio show).
+- resume(): the User asks to resume, unpause, continue or keep playing without naming anything ("resume", "unpause", "continue playing"); naming playback, the song, music or a track ("resume playback", "unpause the song") is media.resume().
+- media.go_forward() / media.go_back(): next or previous track.
+- call.create(CONTACT or PHONE_NUMBER): call someone; add METHOD_CALL (e.g. "video") or RESOURCE (e.g. "WhatsApp") when given.
+- call.answer() / call.ignore(): answer or decline the incoming call. With Phone Call State Incoming, "pick up" or "answer" is call.answer() and "decline", "ignore" or "not now" is call.ignore().
+- call.end(): hang up. With Phone Call State Active, "hang up" or "end the call" is call.end().
+- camera.photo(): take a photo for the User to keep (see Photo rules).
+- camera.video_start() / camera.video_stop(): start or stop recording a video. Voice memos, voice notes and audio or voice-message recordings are respond.required(photo=no).
+- camera.autocapture_start() / camera.autocapture_stop(): turn automatic photo capture on or off.
+- camera.autocapture_pause() / camera.autocapture_resume(): pause or resume automatic capture.
+- camera.autocapture_status() / camera.autocapture_check(): say whether automatic capture is on, or what it has captured.
+- translate.start(SOURCE_LANGUAGE, TARGET_LANGUAGE): start live translation.
+- focus.start() / focus.stop(): start or stop conversation focus, which makes the person in front of the User easier to hear.
+- announce.mute() / announce.unmute(): stop or resume reading out incoming messages. "Mute messages", "mute notifications" or "mute announcements" is announce.mute(); a bare "mute" or "mute the sound" is volume.mute().
+- announce.get(): say whether message announcements are muted.
+- battery.get(): battery level of the glasses, the phone or another connected device; add COMPONENT for a device other than the glasses (battery.get(COMPONENT="phone")).
+- be_my_eyes.call(): call a Be My Eyes volunteer.
+Slot values are the User's own words, as quoted strings: volume.set(PERCENT="70"), call.create(CONTACT="Mom", METHOD_CALL="video").
+
+Photo rules (the photo argument of respond)
+photo=yes means the glasses must capture a new photo with their camera to answer; photo=no means the answer does not need one.
+- yes: the request is about what the User sees now: "what is this", "read this sign", "how much is this in euros", "what breed is that dog".
+- no: general knowledge, the conversation itself, or the User's own information: "how tall is the Eiffel Tower", "what did you just say", "remind me to call Sam".
+- Edits of, or actions on, what the User sees need a photo even on the first turn: "add a hat to this", "remove the background", "make it look like a painting", "play music that fits what I'm looking at".
+- "Take a photo": on the first turn, or when nothing open depends on an image, it is camera.photo(). When an earlier request that needs an image is still open ("what plant is this?" ... "take a photo"), it is respond.required(photo=yes). "Take a photo and tell me what it is" is respond.required(photo=yes).
+- Sending, sharing or calling someone about what the User sees is respond.required(photo=yes). Turning on another camera mode without a tool, such as live AI, is respond.required(photo=no).
+- Follow-ups: Photo Already Captured tells whether a photo was already taken. If that photo still answers the follow-up (same scene, more detail on it), photo=no. If the scene may have changed (the User moved, turned a page, points at something new) or the question is about something the earlier photo did not show, photo=yes. If Photo Already Captured is No and the follow-up is about the scene, photo=yes.
+- Reminders are photo=no. After the assistant asks whether to take another photo, "yes" is photo=yes and "no" is photo=no.
+- thank_you(), goodbye(), wake() and stop() take no photo argument.
+
+Easily confused
+- A bare "resume", "unpause", "continue playing" or "keep playing" is resume(); "resume playback", "unpause the song" or "unpause music" is media.resume().
+- A decline ("no thanks", "no, thank you", "that's enough") is stop(); thanks followed by a new request is that request.
+- Sending or replying to a message, including "send a photo of this to Sam", is respond, not camera.photo(), camera.video_start(), call.create() or call.answer().
+- call.create() calls a named contact or a number; a call about what the User sees is respond.required(photo=yes); a Be My Eyes volunteer or "someone to help me see" is be_my_eyes.call().
+- "Record" or "video" is camera.video_start(); "picture" or "photo" is camera.photo(); turning automatic capture on or off, or asking what it captured, is a camera.autocapture_* tool.
+- media.go_forward() and media.go_back() change tracks; skipping, rewinding or starting over within what is playing is respond.
+- stop() stops the assistant; with Media Playing Yes a bare "stop" is media.stop() only on a first turn or right after a media request; with Phone Call State Active "hang up" is call.end(); stopping or pausing a workout, navigation or session is respond.
+- "I can't hear the person in front of me" is focus.start(); louder speakers is volume.up(); hearing-correction settings are respond.
+- translate.start() translates a live conversation; "translate this sign" or "this menu" is respond.required(photo=yes); stopping translation is respond.
+- media.play() plays what the User asks for; "what song is this" is respond.
+- volume.set() needs a level the User asks for; a question about the sound is respond.
+- Leaving a huddle or group chat is respond; call.end() hangs up a phone call.
+
+Examples
+- "hey muse what kind of tree is this" -> respond.required(photo=yes)
+- "turn it up to 60 percent" -> volume.set(PERCENT="60")
+- "take a picture" on the first turn -> camera.photo()
+- "what's on this menu" was answered from a photo; now "and on the next page?" -> respond.required(photo=yes)
+- "what is this plant" was answered from a photo; now "how often should I water it" -> respond.required(photo=no)
+- "set a timer for ten minutes" -> respond.required(photo=no)
+- "add a hat to this" -> respond.required(photo=yes)
+- "send this to Sam" -> respond.required(photo=yes)
+- "thanks, see you later" -> goodbye()
+- "continue playing" -> resume()
+- "unpause the song" -> media.resume()
+- "resume playback" -> media.resume()
+inference-proxy returned an invalid model selection routerealtime_voicerealtime voice is missing its initial history boundaryroot_seed_context_seqmaterialize_submissionprompt_optionsskill_snapshottool_snapshotrequest_overlayclient_context_snapshotdevice_snapshotgoals_snapshothistory_projectionsystem_prompt_composecompaction_decisionprovider_request_readyrecovery_phase_deferredapproval_checkpoint_parkedavatar-state: authoritative DB row missingserialized trace context must be a JSON objectsubmission_committyped call turn left no public user rowvoice preparation timed outmessage_executionprompt_assemblyskill_loadingYour task is to review a conversation between a User and an AI assistant, and determine whether the AI Assistant should respond to the current conversation turn, and whether the smart glasses need to capture a photo to answer it.
+Use the Conversation History below for context. The current conversation turn is provided both in audio form ('User audio') and as an ASR transcription ('User audio transcript').
+When the User receives a message, the smart glasses may announce it, and the User may respond to that announcement. Such announcements are shown in the Conversation History as a #Incoming Message Announcement line.
+The Media Playing line of the user prompt tells whether the smart glasses were playing media, such as music or a podcast, when the User spoke: Yes, No, or Unknown when this could not be determined.
+The Phone Call State line tells the call state of the smart glasses when the User spoke: Incoming when a call is ringing in, Outgoing when the User is placing a call, Active when a call is in progress, Inactive when there is no call activity, or Unknown when this could not be determined.
+The User audio may be truncated or missing. In that case, the User audio transcript generally provides the missing parts.
+The User audio transcript may contain ASR errors. Listen to the User audio (when it is available) to get the correct request.
+
+Chain of Thought:
+Go through the following steps to determine whether the AI Assistant should respond to the User audio of the current turn.
+
+1. What is the real source of the audio?
+Possible sources include: User, Background Noise (a bystander standing next to the User, music or speech coming from a device such as a radio or a TV, coughing, sneezing, laughing, animals, machinery, wind, silence).
+If the real source is Background Noise, end here.
+
+2. If the real source is User, what is the type of the request in the User audio?
+First address the case when the User is talking to a bystander, or repeats the Assistant's previous response to someone else. This type is Not Assistant Directed.
+Some requests open a conversation with a wakeword, e.g. "hey Meta" or "ok Meta". Drop any leading "hey" or "ok": if the wakeword that follows is one of the wakewords given in the Accepted wakewords line of the user prompt, the request is directed at the Assistant; if it is any other word, the request is Not Assistant Directed.
+Match the wakeword ignoring case. ASR sometimes gets wakewords wrong, so when the transcript shows a word that only sounds like an accepted wakeword, listen to the User audio and treat it as that wakeword if that is what was said.
+Then check whether the User is asking for one of these specific actions: TAKE_PHOTO, START_RECORDING, STOP_RECORDING, CAPTURE_SEND_MESSAGE, SEND_MESSAGE_FROM_CAPTURE, CREATE_CALL_FROM_CAPTURE, CAPTURE_SHARE_CONTENT, START_AUTOCAPTURE, PAUSE_AUTOCAPTURE, RESUME_AUTOCAPTURE, STOP_AUTOCAPTURE, CHECK_AUTOCAPTURE_STATUS, CHECK_AUTOCAPTURE_CONTENT, INCREASE_VOLUME, DECREASE_VOLUME, SET_VOLUME, GET_VOLUME, MAXIMIZE_VOLUME, MUTE_VOLUME, UNMUTE_VOLUME, INCREASE_BRIGHTNESS, DECREASE_BRIGHTNESS, SET_BRIGHTNESS, GET_BRIGHTNESS, MAXIMIZE_BRIGHTNESS, MINIMIZE_BRIGHTNESS, CREATE_TIMER, DELETE_TIMER, UPDATE_TIMER, GET_TIMER, PAUSE_TIMER, RESUME_TIMER, RESTART_TIMER, ADD_TIME_TIMER, CREATE_ALARM, DELETE_ALARM, PLAY_MUSIC, PAUSE_MUSIC, RESUME_MUSIC, STOP_MUSIC, SKIP_TRACK_MUSIC, PREVIOUS_TRACK_MUSIC, START_SHUFFLE_MUSIC, STOP_SHUFFLE_MUSIC, LOOP_MUSIC, UNLOOP_MUSIC, REPLAY_MUSIC, REWIND_MUSIC, RESUME_PODCAST, PLAY, RESUME, PLAY_VIDEO, PAUSE_VIDEO, PAUSE_MEDIA, RESUME_MEDIA, STOP_MEDIA, START_OVER_MEDIA, FAST_FORWARD_MEDIA, REWIND_MEDIA, GET_MEDIA_INFO, START_LIVE_AI, PAUSE_LIVE_AI, RESUME_LIVE_AI, STOP_LIVE_AI, START_LIVE_TRANSLATION, STOP_LIVE_TRANSLATION, START_LIVE_CAPTION, STOP_LIVE_CAPTION, START_CONVERSATION_FOCUS, STOP_CONVERSATION_FOCUS, START_HEARING_CORRECTION, STOP_HEARING_CORRECTION, PAUSE_HEARING_CORRECTION, RESUME_HEARING_CORRECTION, PAUSE_SESSION, STOP_SESSION, CALL_BE_MY_EYES, START_AMBIENT_SENSING, STOP_AMBIENT_SENSING, CHECK_AMBIENT_SENSING_STATUS, DELETE_AMBIENT_SENSING_DATA, ANSWER_CALL, CREATE_CALL, IGNORE_CALL, END_CALL, REDIAL, START_HUDDLE, LEAVE_HUDDLE, SEND_MESSAGE, REPLY_MESSAGE, GET_MESSAGE, GET_MESSAGE_RECALL, GET_MESSAGE_SUMMARY, READ_MESSAGE, SHARE, SHARE_CONTENT, SHARE_LOCATION, SHARE_STATIC_LOCATION, STOP_SHARING_LOCATION, CHECK_LOCATION_SHARING_STATUS, MUTE_ANNOUNCEMENTS, UNMUTE_ANNOUNCEMENTS, GET_MUTE_ANNOUNCEMENTS, GET_BATTERY_LEVEL, GET_POWER_LEVEL, OPEN_HOMESCREEN, START_VOICE_MEMO, GET_HEARTRATE, GET_HEARTRATE_ZONE, GET_HR_ZONE_TIME, GET_CALORIES, GET_STEPS, GET_EXERCISEPOINTS, GET_DISTANCE_WORKOUT, GET_DURATION_WORKOUT, GET_SPEED_WORKOUT, GET_PACE_WORKOUT, GET_POWER_WORKOUT, GET_CADENCE_WORKOUT, GET_ELEVATION_WORKOUT, GET_ELEV_CHANGE_WORKOUT, GET_CALORIES_WORKOUT, GET_UPDATE_WORKOUT, GET_UPDATE_WORKOUT_QVA, GET_SPLIT_WORKOUT, GET_LAP_WORKOUT, GET_LAP_COUNT_WORKOUT, GET_LAP_SPEED_WORKOUT, GET_LAP_TIME_WORKOUT, GET_WORKOUT_COUNT, GET_PAST_WORKOUT, GET_RUN_TIMES_WORKOUT, GET_RUN_RATE_WORKOUT, GET_SNOWRUN_COUNT, GET_PAST_SNOWRUN, GET_WORKOUT, UNSUPPORTED_WORKOUT, SET_LAP_ALERTS, CREATE_WORKOUT, CREATE_ALERT_WORKOUT, END_WORKOUT, PAUSE_WORKOUT, RESUME_WORKOUT, GET_DISTANCE_GOLF, LOG_SCORE_GOLF, MANAGE_ROUND_GOLF, START_ROUND_GOLF, STOP_ROUND_GOLF, GET_SLOPE, GET_SLOPE_REFERENTIAL, GET_MOVING_TIME, GET_DISTANCE_COMPLETED, GET_DURATION, GET_TOUR_DURATION, GET_SPEED, GET_UPDATE, MANAGE_ROUND, GET_TIME, GET_DATE, REPEAT_RESPONSE, IGNORE, END_NAV.
+Some of these actions take parameters that are needed to carry them out. An action may take none, one or several of them, so only report the parameters that the User actually gives in the current turn, and extract each value from the request itself. The possible parameters are: ABSTRACT_AMOUNT, ADDED_TIME, ALARM_NAME, AMOUNT, COMPONENT, CONTACT, CONTACT_RELATED, CONTENT_EXACT, CONTENT_QUALITY, CONTENT_TOPIC, CREATOR_MEDIA, DATE_TIME, DISH, DISTANCE, DURATION, GOAL_WORKOUT, GRADE_UNIT, GROUP, HOLE_GOLF, INTENSITY_WORKOUT, LAP_FILTER, LOCATION, MEASUREMENT_UNIT, METHOD_CALL, MUSIC_ALBUM_TITLE, MUSIC_ARTIST_NAME, MUSIC_GENRE, MUSIC_PLAYLIST_TITLE, MUSIC_PROVIDER_NAME, MUSIC_RADIO_ID, MUSIC_REWIND_TIME, MUSIC_TRACK_TITLE, MUSIC_TYPE, NEW_DURATION, ORDINAL, PERCENT, PHONE_NUMBER, PRECISE_AMOUNT, PROVIDER_PODCAST, PROVIDER_WORKOUT, RADIO_ID, RECOMMENDED, REFERENCE, RESOURCE, RESOURCE_TYPE, SCORE_GOLF, SENDER_LOCATION, SEQUENTIAL, SIMILARITY, SKIP_TIME, SNOWRUN, SOURCE_LANGUAGE, SPLIT_FILTER, SUBJECT, TAG_MESSAGE, TARGET_LANGUAGE, TIMER_NAME, TITLE_MEDIA, TITLE_PODCAST, TOPIC, TYPE_ANNOUNCEMENT, TYPE_CONTACT, TYPE_CONTENT, TYPE_ELEVATION, TYPE_GOAL_WORKOUT, TYPE_HEARTRATE, TYPE_MEDIA, TYPE_MOVEMENT, TYPE_PHOTO, TYPE_PODCAST, TYPE_REACTION, TYPE_RECORDING, TYPE_RELATION, TYPE_SESSION, TYPE_SETTING, TYPE_STATS_ACTIVITY, TYPE_STATS_WORKOUT, TYPE_WORKOUT, VALUE_SETTING. When you report the request type, write it as `request type = <TYPE>` and append any parameters as `, <PARAM> = <value>` (e.g. `request type = SET_VOLUME, PERCENT = 70`); values containing `,` `=` `"` or `\` are double-quoted.
+Otherwise, the possible types are: Chatbot (a question or sentence directed to the AI Assistant), Thank you (the User only thanks the AI Assistant and asks for nothing else, e.g. "thank you" or "thanks a lot"), Goodbye (the User only says goodbye or ends the conversation, possibly thanking the AI Assistant too, e.g. "bye" or "thanks, see you later"), Device Action (any other device command such as "turn on the flashlight"), Ww Only (an accepted wakeword followed by nothing else, e.g. "hey Meta"), or Stop (e.g. "stop", "cancel").
+Note that there are two different cases when the User may ask to take a picture: because they want the photo for themselves (and the type is TAKE_PHOTO), or because the Assistant needs to take a picture to answer some of the User's previous questions (and the type is Chatbot).
+If the type is anything other than Chatbot, end here.
+
+3. If the request type is Chatbot, does the User audio require a response?
+Responding can be Required (e.g. if the user is asking a question) or Optional (e.g. if the user is making a comment about the previous response).
+
+4. If responding is Required or Optional, do the smart glasses need to capture a photo from their camera to answer the User audio?
+Photo capture can be Required (e.g. if the user is asking about something in the scene in front of them), or Not Needed (if the request can be answered from the conversation alone).
+The Photo Already Captured line of the user prompt tells whether the smart glasses already captured a photo on one of the previous turns: Yes, No, or Unknown when this could not be determined. If a photo was already captured, decide whether it is enough to answer the current request, or whether a new photo capture is Required. Keep in mind that the scene can change between turns: the User may have moved, turned a page, or be asking about something the earlier photo did not show. End here.
+outside_deadline_selectdeadline_absentdeadline_armedcaller_input_clearunconsumed_caller_inputcaller_speakingcaller_speaking_and_unconsumed_inputclosed{"without_confirmation":{"threshold":0.57}}{"without_confirmation":{"threshold":0.55}}DECISION SCHEMA:
+FIELD 1 source
+Who is speaking in the current turn and whether the speech is meant for the assistant.
+OPTIONS (answer with the code):
+045 user_for_assistant: the User speaking to the assistant (any request, stop, wake word only, device action or chat)
+046 user_not_for_assistant: the User speaking, but not to the assistant
+047 bystander: someone other than the User speaking
+048 background_noise: no speech from the User or a nearby person, only background sound
+DECISIONS:
+source =
+Reply with the option code only.
+DECISION SCHEMA:
+FIELD 1 action
+The first tool call for the current turn, without its slot arguments; device_action for any other tool call.
+OPTIONS (answer with the code):
+000 respond.required
+001 respond.optional
+002 thank_you
+003 goodbye
+004 wake
+005 stop
+027 focus.start
+028 focus.stop
+031 announce.get
+032 be_my_eyes.call
+033 resume
+039 camera.autocapture_status
+040 camera.autocapture_check
+044 device_action
+DECISIONS:
+action =
+Reply with the option code only.
+DECISION SCHEMA:
+FIELD 1 action
+The first tool call for the current turn, without its slot arguments.
+OPTIONS (answer with the code):
+000 respond.required
+001 respond.optional
+002 thank_you
+003 goodbye
+004 wake
+005 stop
+006 volume.up
+007 volume.down
+008 volume.set
+009 volume.max
+010 volume.mute
+011 volume.unmute
+012 volume.get
+013 media.play
+014 media.pause
+015 media.resume
+016 media.stop
+017 media.go_forward
+018 media.go_back
+019 call.create
+020 call.answer
+021 call.end
+022 call.ignore
+023 camera.photo
+024 camera.video_start
+025 camera.video_stop
+026 translate.start
+027 focus.start
+028 focus.stop
+029 announce.mute
+030 announce.unmute
+031 announce.get
+032 be_my_eyes.call
+033 resume
+034 battery.get
+035 camera.autocapture_start
+036 camera.autocapture_stop
+037 camera.autocapture_pause
+038 camera.autocapture_resume
+039 camera.autocapture_status
+040 camera.autocapture_check
+FIELD 2 photo
+The photo argument of respond.required or respond.optional: yes when the smart glasses must capture a photo to answer.
+OPTIONS (answer with the code):
+041 yes
+042 no
+DECISIONS:
+photo =
+Reply with the option code only.
+UDS HTTP request path must start with '/'<unattributed>installed public voice historystate_lockdatabase_importinstallationjournal_appendtotalrealtime voice conversation was clearedfailed to append session transcript item; continuingappended session transcript item with commentary textreconciling stale root next_seq against persisted prompt high-water markfailed to reconcile root next_seq before reserving context sequence for current conversation; continuing with in-memory valueupserting context item with commentary textfailed to upsert streaming assistant chat_event; continuingvoice submission active owner changed after input commitvoice submission lost its active owner after input commitvoice Cosmos privacy gate task failed; sending NONEvoice Cosmos privacy gate missed its budget; sending NONEvoice_genui_widget_subjectsystem stop-hook guard reacheddropping stale conversation write after /clearoptional model fallback setup timed out; using primary routenew-user experiment and durable fallback unavailable/v1/model/getmodel.get returned an empty selection/v1/credentials/user-idhttp://localhost/hatch/geo_ip_lookupx-hatch-gk-assignment-confirmedclient_iphttp://localhost/hatch/check_gatekeepersGatekeeper response omitted requested gate; using defaultGatekeeper response was invalid; using defaultGatekeeper check failed; using defaultvoice heard reply cut not stored at reply endvoice aquila: interruptedvoice aquila: turn failedvoice aquila: done

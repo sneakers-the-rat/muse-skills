@@ -148,6 +148,10 @@ Artifact inventory, names, source locations and session associations.
 
   The Space a template_clone row was copied from; null on every other row.
 
+- `side_chat_id` uses `text` and is nullable.
+
+  Soft local reference → `chat.chats.chat_id`. Stored preferred chat reference for this local Space; the API returns only active persistent owner-visible chats. Chat retirement clears the reference; archiving retains it.
+
 ## Keys and relationships
 
 - PRIMARY KEY `spaces_pkey` covers `space_slug`.

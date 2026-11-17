@@ -138,7 +138,6 @@ Or open directly in a podcast app:
   "enabled": true,
   "predicted_connector_permissions": [],
   "timeout_secs": 1800,
-  "schedule": {"kind": "daily", "time": "07:00"},
   "body": "Produce today's episode of the tides podcast with the Podcast Production skill. Research today's tide and weather news first. Keep the cast: Muse (--speaker Muse=avocado_v2:MAI_01) and Jordan (--speaker Jordan=avocado_v2:MAI_03). Run manifest read and avoid topics earlier episodes covered. Use --series-id daily-tides-podcast and --cover-prompt 'ocean tides at sunrise', and pass a short topics summary with --topics-file. Publish to the feed titled 'Tides with Muse'."
 }
 ```

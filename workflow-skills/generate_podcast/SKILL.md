@@ -56,6 +56,8 @@
 
 - Deliver the episode, publish it when authorized and schedule recurring episodes as described in [publishing and delivery](references/publishing.md). For a recurring request, deliver the first episode now and offer to publish it, then create the schedule.
 
+- When the caller asks to play an episode during an app call and `ui.list` offers `podcast.play_during_call`, play it with that command instead of sending its listen link.
+
 - Save an episode to the user's own Spotify only when they explicitly ask, following [Save to Spotify](references/save-to-spotify.md). It is separate from RSS publishing.
 
 ## Available connectors

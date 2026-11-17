@@ -1,0 +1,56 @@
+SELECT generation, consent_version, consent_granted_at, phase, connected_at, enrollment_generation, enrollment_confirmed_at, activity_since_ms, synced_through_at, last_sync_attempt_at, last_sync_success_at, last_error_code, retry_not_before, paused_since, paused_reason, applied_deletion_seq, applied_purged_before_ms, reconcile_pending, reconcile_reason, reconcile_cursor, reconcile_started_seq, last_reconcile_at, partial_listing_since, backfill_cursor, backfill_started_at, backfill_floor_ms, backfill_reached_ms, backfill_completed_at, backfill_exists_cursor, last_pruned_at, updated_at FROM meta_ai.sync_state WHERE singletonUPDATE meta_ai.sync_state SET updated_at = now() WHERE singleton AND generation = SELECT EXISTS (SELECT 1 FROM meta_ai.sync_state WHERE singleton AND generation = $1)SELECT count(*), coalesce(sum(message_count), 0)::bigint, coalesce(sum(text_bytes), 0)::bigint FROM meta_ai.conversations WHERE generation = $1SELECT conversation_id, change_token_ms FROM meta_ai.conversations WHERE generation = $1 AND conversation_id = ANY($2)SELECT conversation_id, change_token_ms FROM meta_ai.conversations WHERE generation = $1 AND needs_refetch_until > $2 ORDER BY needs_refetch_until, conversation_id LIMIT $3SELECT conversation_id, deletion_seq, deleted_at_ms, first_checked_at, last_checked_at, last_state FROM meta_ai.deletion_checks WHERE generation = $1 ORDER BY last_checked_at, conversation_id LIMIT $2SELECT conversation_id, change_token_ms FROM meta_ai.conversations WHERE generation = $1 AND ($2::text IS NULL OR conversation_id > $2) ORDER BY conversation_id LIMIT $3SELECT conversation_id, message_count, text_bytes FROM meta_ai.conversations WHERE generation = $1 ORDER BY last_activity_at, conversation_id LIMIT $2WITH doomed AS ( SELECT conversation_id FROM meta_ai.tombstones WHERE recorded_at < $1 ORDER BY recorded_at, conversation_id LIMIT $2 ) DELETE FROM meta_ai.tombstones t USING doomed d WHERE t.conversation_id = d.conversation_idUPDATE meta_ai.sync_state SET applied_purged_before_ms = $1, updated_at = now() WHERE singletonDELETE FROM meta_ai.deletion_checks WHERE conversation_id = ANY($1)
+INSERT INTO meta_ai.tombstones (conversation_id, generation, deleted_at_ms, reason)
+SELECT t.conversation_id, $1, t.deleted_at_ms, t.reason
+FROM unnest($2::text[], $3::bigint[], $4::text[]) AS t(conversation_id, deleted_at_ms, reason)
+ON CONFLICT (conversation_id) DO NOTHING
+DELETE FROM meta_ai.deletion_checks d USING unnest($1::text[], $2::bigint[]) AS c(conversation_id, deletion_seq) WHERE d.conversation_id = c.conversation_id AND d.deletion_seq <= c.deletion_seq
+INSERT INTO meta_ai.deletion_checks AS d (
+  conversation_id, generation, deletion_seq, deleted_at_ms, first_checked_at, last_checked_at,
+  last_state
+)
+SELECT c.conversation_id, $1, c.deletion_seq, c.deleted_at_ms, c.first_checked_at,
+       c.last_checked_at, c.last_state
+FROM unnest($2::text[], $3::bigint[], $4::bigint[], $5::timestamptz[], $6::timestamptz[],
+            $7::text[])
+  AS c(conversation_id, deletion_seq, deleted_at_ms, first_checked_at, last_checked_at,
+       last_state)
+ON CONFLICT (conversation_id) DO UPDATE SET
+  generation = excluded.generation,
+  deletion_seq = greatest(d.deletion_seq, excluded.deletion_seq),
+  deleted_at_ms = CASE WHEN excluded.deletion_seq >= d.deletion_seq
+                       THEN coalesce(excluded.deleted_at_ms, d.deleted_at_ms)
+                       ELSE d.deleted_at_ms END,
+  first_checked_at = CASE WHEN excluded.deletion_seq > d.deletion_seq
+                            THEN excluded.first_checked_at
+                          WHEN excluded.deletion_seq = d.deletion_seq
+                            THEN least(d.first_checked_at, excluded.first_checked_at)
+                          ELSE d.first_checked_at END,
+  last_checked_at = CASE WHEN excluded.deletion_seq >= d.deletion_seq
+                         THEN excluded.last_checked_at
+                         ELSE d.last_checked_at END,
+  last_state = CASE WHEN excluded.deletion_seq >= d.deletion_seq
+                    THEN excluded.last_state
+                    ELSE d.last_state END
+SELECT message_id FROM meta_ai.messages WHERE conversation_id = $1DELETE FROM meta_ai.messages WHERE conversation_id = $1 AND message_id = ANY($2)SELECT bool_and(coalesce(i.indisvalid, false)) FROM unnest($1::text[]) AS n(name)
+                 LEFT JOIN pg_index i ON i.indexrelid=to_regclass(n.name)BEGIN ISOLATION LEVEL READ COMMITTED; SET LOCAL statement_timeout = '250ms'SELECT pg_try_advisory_xact_lock(hashtextextended($1, 0))agent.volatile_context_pins.lifecycle
+DELETE FROM agent.volatile_context_pin_bodies AS body
+WHERE body.body_hash = ANY($1::bytea[])
+  AND NOT EXISTS (
+      SELECT 1 FROM agent.volatile_context_pins AS pin
+      WHERE pin.body_hash = body.body_hash
+  )
+SELECT body_hash FROM agent.volatile_context_pin_bodies ORDER BY body_hash LIMIT $1SELECT body_hash FROM agent.volatile_context_pin_bodies WHERE body_hash > $1 ORDER BY body_hash LIMIT $2activity_id, kind, muse_id, at_ms, dismissed, payload, dedupe_keyName not recordedUnnamed chat`DateTime + TimeDelta` overfloweddispositionreconsider_atcandidateexpires_atcreated_atheld_atcandidate_idcontext_store.initializemeta_ai.conversations.titletimed out while writing egress approval mirror requesttimed out while reading egress approval mirror responseinternal_errorIdeas composer owner run is missingavatar-state: authoritative DB row missingdecision_idsrecord idea dedupresolve embedding near-dup candidateresolve fingerprint bandresolve idea source before mintingrefresh superseded idea contentattach idea sourceupsert idea sourceproactive reads grants unavailablelist host system cron definitionsconnect to host cron storewire_dailycontrolconnector_tiltfeed open-run admission collapse raced the run's terminalizationwebsocialconnectorsdeviceshealthscheduled_resume_projectionscheduledadhoc_useradhoc_agentadhoc_visitproactive_pulseingestagent_unitfeed activity signal unreadable; the caller folds its own polarity (a scheduled fire skips, an adhoc generation falls to the pulse lane)model_picksingletonfallback_errorfallback_step_failedpulseassignment_in_developer_messagepicker_connector_tiltadvertised_output_schemasucceededideas_locale_supersededIdeas generation was superseded by a language change.eval_fixturelimited_feedobjective execution gate is closedStripe Link connection status is unavailableStripe Link connection status failed to startStripe Link connection status was invalidStripe Link connection inspection timed outStripe Link connection status timed outStripe Financial Insights permission was unavailabledayindexdiscovery_persistence_skippedIdeas locale refresh admission returned no occurrenceattempterrorfailedsent_at_msconnectedtriggerinternal:catalog:proactive_notificationproactive_notifierideasfingerprintrequestedfeed_queue_stampsfeed_rerun_skippedideas_refreshlocale_flips_suppressedlocale_change_pendingputthe store reported an absence for a putdelete/definitions/deletethe cron definition does not exist/definitions/listthe store reported an absence for a listingbackground_workersturnssourcescontext_table.sourceseventscontext_table.eventsingest_attemptscontext_table.ingest_attemptssubscriptionscontext_table.subscriptionssubscription_sourcescontext_table.subscription_sourcesgroup_cursorscontext_table.group_cursorscontextcontext_store.accesscontext_store.reuseconnections.research_identityconnections.research_participantsconnections.research_handoffsconnections.research_resourcesacquired connection, but time to acquire exceeded slow thresholdacquired connectiontriggeredlease_waiting$2$1ideas.search_deliverable_ideas_semanticmemoryentrieshttp://localhost/hatch/meta-ai/conversationsUDS HTTP request path must start with '/'goals.connection_closuresgoals.connection_closures_pendinggoals.connection_tracking_listgoals.next_connection_matchmeta_ai.sync_statemeta_ai.update_sync_statemeta_ai.update_sync_state_plannedsync_stateconversationsmediablocked_media_digeststombstonesdeletion_checksmeta_aimeta_ai.store_sizemeta_ai.local_chat_refsmeta_ai.settle_refetch_duemeta_ai.deletion_checks_duemeta_ai.conversation_ids_pagemeta_ai.prune_to_capslast_activity_at < $2meta_ai.prune_inactivemeta_ai.prune_tombstoneslast_activity_at <= $2meta_ai.apply_purged_beforemeta_ai.scrub_conversationsmeta_ai.clear_deletion_checksmeta_ai.record_deletion_checksmeta_ai.replace_conversationwrite egress approval mirror requestread egress approval mirror responseConnection transcript indexing is not readyruntime.events e
+             LEFT JOIN agent.chat_workers w ON w.agent_id=coalesce(e.parent_agent_id,e.agent_id) AND w.active
+             LEFT JOIN agent.connections c ON c.connection_id::text=w.group_id AND c.activeagent.connections c
+             JOIN agent.chat_workers w ON w.group_id=c.connection_id::text AND w.active
+             CROSS JOIN LATERAL (
+               (SELECT e.* FROM runtime.events e
+                WHERE e.parent_agent_id=w.agent_id
+                  AND e.event_name IN ('message.user','message.assistant','message.internal')
+                  AND e.created_at >= $1 AND e.created_at < $3)
+               UNION ALL
+               (SELECT e.* FROM runtime.events e
+                WHERE e.agent_id=w.agent_id AND e.parent_agent_id IS NULL
+                  AND e.event_name IN ('message.user','message.assistant','message.internal')
+                  AND e.created_at >= $1 AND e.created_at < $3)
+             ) eeconnections.bookkeeping_transcript_page€ 

@@ -1,0 +1,132 @@
+SELECT pg_advisory_xact_lock_shared(hashtextextended($1, 0))agent.volatile_context_pins.lifecycleSELECT pg_advisory_xact_lock(hashtextextended($1, 0))
+WITH owners AS MATERIALIZED (
+    SELECT DISTINCT agent_id COLLATE "C" AS agent_id
+    FROM unnest($1::text[]) AS input(agent_id)
+)
+SELECT pg_advisory_xact_lock(hashtextextended($2 || agent_id, 0))
+FROM owners ORDER BY agent_id COLLATE "C"
+agent.volatile_context_pins:SELECT handoff_state_json -> $2::text AS state,
+                (extract(epoch FROM clock_timestamp()) * 1000)::bigint AS now_ms
+         FROM agent.subagent_spawns WHERE child_agent_id = $1now_msSELECT agent_id FROM agent.agents WHERE agent_id = $1SELECT handoff_state_json -> $2::text AS state,
+                (extract(epoch FROM clock_timestamp()) * 1000)::bigint AS now_ms
+         FROM agent.subagent_spawns WHERE child_agent_id = $1 FOR UPDATEagent.subagent_spawns.handoff_state_jsonUPDATE agent.subagent_spawns
+         SET handoff_state_json = jsonb_set(COALESCE(handoff_state_json, '{}'::jsonb),
+                                           ARRAY[$2]::text[], $3::jsonb)
+         WHERE child_agent_id = $1insert into chat_private.publication_turns (execution_id, chat_id, disposition, phase)
+        select $1, $2, $3, $4 where pg_try_advisory_xact_lock_shared(hashtextextended($5, 0))
+        on conflict(execution_id) do nothing returning trueselect chat_id, phase, disposition from chat_private.publication_turns
+        where execution_id = $1 for updatechat_iddispositionpublication execution belongs to another chatfailed to prepare hook exec cgroup; continuing without cgroup attributionHATCH_HOOK_RUNTIME# shellcheck shell=bash
+
+_HATCH_HOOK_DISABLE_AFTER_RUN=false
+
+_hatch_hook_compact_json() {
+    local value="${1-}"
+    printf '%s' "$value" | jq -ce '.'
+}
+
+_hatch_hook_object_json() {
+    local value="${1-}"
+    printf '%s' "$value" | jq -ce 'select(type == "object")'
+}
+
+_hatch_hook_emit() {
+    local decision="$1"
+    local reason="${2-}"
+    local payload="${3-}"
+    local result
+
+    if [[ -n "$payload" ]]; then
+        payload="$(_hatch_hook_compact_json "$payload")" || return
+        result="$(
+            jq -cn \
+                --arg decision "$decision" \
+                --arg reason "$reason" \
+                --argjson payload "$payload" \
+                --argjson disable_after_run "$_HATCH_HOOK_DISABLE_AFTER_RUN" \
+                '{
+                    decision: $decision,
+                    reason: $reason,
+                    payload: $payload
+                } + if $disable_after_run then {disable_after_run: true} else {} end'
+        )" || return
+    else
+        result="$(
+            jq -cn \
+                --arg decision "$decision" \
+                --arg reason "$reason" \
+                --argjson disable_after_run "$_HATCH_HOOK_DISABLE_AFTER_RUN" \
+                '{
+                    decision: $decision,
+                    reason: $reason
+                } + if $disable_after_run then {disable_after_run: true} else {} end'
+        )" || return
+    fi
+
+    printf 'HATCH_HOOK_RESULT:%s\n' "$result"
+    exit 0
+}
+
+silent() {
+    _hatch_hook_emit "silent" "${1-}" "${2-}"
+}
+
+wake() {
+    _hatch_hook_emit "wake" "${1-}" "${2-}"
+}
+
+disable_after_run() {
+    _HATCH_HOOK_DISABLE_AFTER_RUN=true
+}
+
+log() {
+    local message="${1-}"
+    local fields="${2-}"
+    local entry
+
+    if [[ -z "$fields" ]]; then
+        fields='{}'
+    fi
+    fields="$(_hatch_hook_object_json "$fields")" || return
+    entry="$(
+        jq -cn \
+            --arg message "$message" \
+            --argjson fields "$fields" \
+            '$fields + {message: $message}'
+    )" || return
+    printf 'HATCH_HOOK_LOG:%s\n' "$entry" >&2
+}
+
+_hatch_hook_state_path() {
+    printf '%s/%s.json' "${HATCH_HOOK_STATE_DIR:?HATCH_HOOK_STATE_DIR is unset}" \
+        "${HATCH_HOOK_ID:?HATCH_HOOK_ID is unset}"
+}
+
+# Read this hook's persisted state object. Prints `{}` when nothing has been
+# stored yet or the stored file is unreadable/corrupt, so callers can pipe
+# straight into jq without a first-run special case.
+hook_state_get() {
+    local path
+    path="$(_hatch_hook_state_path)" || return
+    if [[ ! -f "$path" ]]; then
+        printf '{}'
+        return 0
+    fi
+    jq -ce 'select(type == "object")' <"$path" 2>/dev/null || printf '{}'
+}
+
+# Persist this hook's state object. The value is validated on every run, but
+# the write is SKIPPED on dry runs so testing a hook can never consume a
+# detection the next live poll still needs to make.
+hook_state_set() {
+    local value path temporary
+    value="$(_hatch_hook_object_json "${1-}")" || return
+    if [[ "${HATCH_HOOK_DRY_RUN-0}" == "1" ]]; then
+        return 0
+    fi
+    path="$(_hatch_hook_state_path)" || return
+    temporary="${path}.${HATCH_HOOK_INVOCATION_ID:-$$}.tmp"
+    printf '%s\n' "$value" >"$temporary" || return
+    mv -f "$temporary" "$path"
+}
+
+exec /bin/bash -- "$HATCH_HOOK_SCRIPT_PATH"failed to load idea quality rows for HTTP feed selectionfailed to read active feed for rotation; selecting without itfailed to load persisted idea bandit state for HTTP feed selectionfailed to read idea memory affinity; ranking without the affinity termfailed to fetch ideas explore policy for HTTP feed selectioncannot classify an active avatar without an active stemactive avatar uses a newer choreography profile versionrefusing to store an incomplete avatar choreography behavior planavatar choreography classification completedavatar-choreography-classifier-v8:avocrono-9bavatar choreography classification failed; using form-agnostic fallbackavatar choreography classification failed; retryingactivity_monitor bumped activity epoch after direct finishactivity_monitor bumped activity epoch after finish summary updateactivity_monitor failed to repair stale non-terminal feed rowactivity_monitor repaired stale non-terminal feed rows for finished activity threadsactivity_monitor failed to read feed entry state during stale finished sweepactivity_monitor ignored finish verdict from live subtitle laneambiguous root sessions for activity thread projectionfailed to resolve root session for activity thread projectionThe activity finished when the conversation turn completed.activity_monitor finished-subtitle lane rendered finish verdictsuppressed new activity thread projection without visible rootpersisting existing activity thread projection without visible rootactivity_monitor_timing activity_thread_projection_persistedfailed to resolve public session id for agent.statusagent.statusfailed to resolve retired Companion caller for relay telemetryunreadable legacy hook was not admittedinvalid legacy hook path was not admittedinvalid legacy hook was not admittedreconciledgoal guide path is not a regular filegoal workspace path is not a real directorySELECT COALESCE(sql, '') AS sql FROM sqlite_master WHERE name NOT LIKE 'sqlite\_%' ESCAPE '\' ORDER BY type, nameSELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite\_%' ESCAPE '\' AND name NOT LIKE '\_\_%' ESCAPE '\' ORDER BY name"" || '
