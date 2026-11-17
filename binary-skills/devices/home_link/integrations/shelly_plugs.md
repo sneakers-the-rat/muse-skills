@@ -1,5 +1,6 @@
 # Shelly Plugs (Gen 4): Switching and Power Metering
 
+<!-- personal-muse-only:start -->
 **Last verified:** 2026-09-21 on a Shelly Plug US Gen 4 (model S4PL-00116US,
 firmware 2.0.0)
 
@@ -101,3 +102,8 @@ Worth knowing about, though most requests will not need them:
 - BLE and BTHome, MQTT, the vendor cloud, and Matter. These are alternative
   control planes. Prefer the local RPC API over the network the Link already
   reaches.
+<!-- personal-muse-only:end -->
+<!-- group-muse-only:start -->
+Shelly plugs are reached through Muse Home Link, which is not available on
+this group's Muse.
+<!-- group-muse-only:end -->

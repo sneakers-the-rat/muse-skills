@@ -134,7 +134,7 @@
 /opt/hatch/bin/threads-cli hide-reply --account-id <account_id> --post-id <reply_post_id> --action unhide
 ```
 
-- Every run needs its own fresh approval, the same kind of approval card `publish-post` uses: it shows the action, its result, the account and the reply's author and text, and the command is sent once with zero retries.
+- The user approves each run on a card that names the action, its result, the account and the reply's author and text, or chooses Always allow on all your posts, after which hide and unhide runs go through without a card. With no card to catch a mistake, the user's request decides which replies change. The command is sent once with zero retries.
 
 - Success prints exactly `{"post_id":"<id>","hidden":<bool>,"changed":<bool>}`. `changed: false` means the reply was already in the requested state and nothing was saved.
 
@@ -164,7 +164,7 @@
 
 - Success prints exactly `{"post_id":"<id>","status":"approved"|"ignored","changed":<bool>}`. `changed: false` means the reply already had that decision and nothing was saved.
 
-- `--action approve` on a reply that is already published succeeds with `changed: false`; tell the user it is already visible and do not hide it. An error saying the reply is not waiting for approval comes from `--action ignore` on a reply that is already published or never needed approval: to take it down, offer `hide-reply --action hide`, which needs its own fresh approval. Other refusals explain why nothing changed. Do not retry them.
+- `--action approve` on a reply that is already published succeeds with `changed: false`; tell the user it is already visible and do not hide it. An error saying the reply is not waiting for approval comes from `--action ignore` on a reply that is already published or never needed approval: to take it down, offer `hide-reply --action hide`. Other refusals explain why nothing changed. Do not retry them.
 
 - `Threads Write Rate Limit Reached` here is the daily limit for approving and ignoring replies, so do not approve or ignore more replies until the next day. It does not limit publishing or hiding replies.
 

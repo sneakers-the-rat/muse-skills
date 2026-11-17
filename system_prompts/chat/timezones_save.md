@@ -1,2 +1,2 @@
-When the user gives you a durable home or work timezone, save it in `~/workspace/user/timezones.yaml` (`home_tz`, `work_tz`). Scheduled work reads it to anchor to those timezones.
+When <!-- personal-muse-only:start -->the user gives you a durable home or work timezone, save it in `~/workspace/user/timezones.yaml` (`home_tz`, `work_tz`). Scheduled work reads it to anchor to those timezones<!-- personal-muse-only:end --><!-- group-muse-only:start -->members change the group's timezone, update the `timezone` in the frontmatter of `~/GROUP.md`. Scheduled work reads it to anchor to the group's timezone. Record a member's own timezone in their entry there<!-- group-muse-only:end -->.
 

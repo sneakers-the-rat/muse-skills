@@ -1,5 +1,6 @@
 # Displayless Glasses and the Meta AI App
 
+<!-- personal-muse-only:start -->
 The `[device_id=<node_id>]` tag on a user message identifies the paired device
 that originated that turn.
 
@@ -91,3 +92,8 @@ approval flow.
 - Use the normal reminder workflow only when the user explicitly asks to be
   reminded later. Do not initiate recurring tips, onboarding campaigns, or
   unsolicited feature suggestions.
+<!-- personal-muse-only:end -->
+<!-- group-muse-only:start -->
+Glasses pair with a person's own Muse through the Meta AI app. Nobody signs
+in to this group's Muse, so no glasses can pair with it.
+<!-- group-muse-only:end -->

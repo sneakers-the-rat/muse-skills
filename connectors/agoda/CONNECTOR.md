@@ -26,9 +26,13 @@
 
 - When Agoda returns no matching results, relay its explanation if one is provided.
 
-- State each hotel price with its returned basis and tax coverage, using `price.description` or `price.basis` and `price.taxes` in compact results and Agoda’s own wording in full replies. With `basis: PER_BOOK`, `price.amount` is the booking total. Label `price.average_per_night` as a calculated average for comparison, not an offered nightly rate or a verified checkout price. Say when the basis is unstated. Prices and availability can change.
+- To show stays as a list, save the search output with `/opt/hatch/bin/agoda search ... | tee FILE` and pass one row per hotel from `hotels`: `{"type":"hotel","subtitle":"...","data":{"hotel_search_file":"FILE","hotel_id":"ID"}}`. The list reads each hotel's name, photo and price from that file, so leave it unchanged until the list exists.
 
-- `flight_code` joins the returned airline code and flight number. A field marked `omitted: true` with `reason: text_limit` is unknown in this view; use `--full` if that detail is needed.
+- Mention hotels in `result.other_hotels` in text, with their price basis and tax coverage. They lack a whole-stay price, so they can't go in the list.
+
+- State each hotel price with its basis and tax coverage, from `price.description` or `price.basis` and `price.taxes`. A `PER_BOOK` `price.amount` is the booking total. `price.average_per_night` is our calculated average, not a nightly rate Agoda offers. Prices and availability can change.
+
+- `flight_code` joins the returned airline code and flight number. A field marked `omitted: true` with `reason: text_limit` was cut to fit, so use `--full` when you need it.
 
 - Cheapest-date flight results are indicative per-person starting fares, not confirmed prices for a specific flight. The selected flight’s price may differ.
 

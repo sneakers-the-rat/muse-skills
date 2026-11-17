@@ -1,0 +1,33 @@
+c.active AND (
+    r.host_muse <> 'self' OR r.kind NOT IN ('space', 'goal')
+    OR (r.kind = 'space' AND EXISTS (
+        SELECT 1 FROM spaces.spaces live_space
+        WHERE live_space.space_id::text = r.resource_id AND live_space.space_slug = r.reference))
+    OR (r.kind = 'goal' AND EXISTS (
+        SELECT 1 FROM goals.goals live_goal WHERE live_goal.goal_id = r.resource_id))
+)with recursive chain as (
+                       select invocation_id, parent_invocation_id, ordinal, input_json, 0 as depth
+                       from runtime.browser_invocations where invocation_id = $1 and task_id = $2
+                       union all
+                       select p.invocation_id, p.parent_invocation_id, p.ordinal, p.input_json, c.depth + 1
+                       from runtime.browser_invocations p
+                       join chain c on c.parent_invocation_id = p.invocation_id
+                       where p.task_id = $2)
+                     select ordinal, input_json from chain where depth > 0 order by depth desc
+SELECT f.event_seq, f.field_path, f.scalar_type, f.scalar_value, f.text_value
+FROM event_payload_fields AS f
+WHERE f.event_seq IN (
+) ORDER BY f.event_seq ASC, length(f.field_path) ASC, f.field_path ASCevent_seqfield_pathscalar_typescalar_valuetext_value
+SELECT event_seq, ordinal, resource_kind AS kind, resource_key AS uri, label, mime_type, size_bytes, metadata_json
+FROM resources
+WHERE event_seq IN (
+) ORDER BY event_seq ASC, ordinal ASCurilabelmime_typesize_bytesmetadata_jsonselect s.detail_json from runtime.browser_seat_inputs s
+                     join runtime.browser_task_requests r on r.request_id = s.source_id
+                       and r.task_id = s.task_id
+                     where s.task_id = $1 and s.invocation_id is null and s.kind = 'task_update'
+                     order by r.state_revision, s.created_at, s.input_idselect i.invocation_id, i.kind, i.sign_in_site
+    from runtime.browser_invocations i
+    join runtime.browser_tasks t on t.task_id = i.task_id
+    where i.task_id = $1 and i.result_json is null
+      and i.planner_agent_id = t.owner_agent_id
+    order by i.ordinalideas_build_hand_off

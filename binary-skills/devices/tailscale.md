@@ -1,7 +1,7 @@
 ---
-summary: "Tailscale - private network connecting this VM to the user's own machines"
+summary: "Tailscale - private network connecting this VM to <!-- personal-muse-only:start -->the user's own<!-- personal-muse-only:end --><!-- group-muse-only:start -->a member's<!-- group-muse-only:end --> machines"
 read_when:
-  - Reach a machine on the user's Tailscale network or tailnet
+  - Reach a machine on <!-- personal-muse-only:start -->the user's<!-- personal-muse-only:end --><!-- group-muse-only:start -->a member's<!-- group-muse-only:end --> Tailscale network or tailnet
   - Join a Tailscale network from this device, or check whether it has
   - Reach a personal, work, or home machine not on the public internet
   - Access a service on a `100.64.0.0/10` address (`100.64.` through `100.127.`)
@@ -12,10 +12,16 @@ title: "Tailscale"
 
 This device requests the name `muse` on your Tailscale network.
 
-Tailscale is a private network joining this VM to the user's own machines. Once
+Tailscale is a private network joining this VM to <!-- personal-muse-only:start -->the user's own<!-- personal-muse-only:end --><!-- group-muse-only:start -->a member's<!-- group-muse-only:end --> machines. Once
 connected, they are reachable at their tailnet addresses, which Tailscale
-assigns from `100.64.0.0/10` — anything from `100.64.` to `100.127.`, not just
+assigns from `100.64.0.0/10`<!-- personal-muse-only:start --> —<!-- personal-muse-only:end --><!-- group-muse-only:start -->,<!-- group-muse-only:end --> anything from `100.64.` to `100.127.`, not just
+<!-- personal-muse-only:start -->
 `100.64.`.
+<!-- personal-muse-only:end -->
+<!-- group-muse-only:start -->
+`100.64.`. Any member can then ask you to reach those machines, and the first
+request to each address needs an approval in the group.
+<!-- group-muse-only:end -->
 
 This device joins as a client only: it makes outgoing connections and accepts
 none. It cannot be reached from the tailnet, hosts nothing, and does not route
@@ -29,16 +35,24 @@ traffic for other machines.
 tailscale up
 ```
 
+<!-- personal-muse-only:start -->
 Prints a link. **Show it to the user and ask them to open it** — only they can
 approve this device. Approval finishes the join on its own; the connection comes
 up as soon as they approve, and `tailscale status` is how you confirm it.
+<!-- personal-muse-only:end -->
+<!-- group-muse-only:start -->
+Prints a link. **Post it in the group for the member who owns the Tailscale
+network**; only that network's owner can approve this device. Approval finishes
+the join on its own; the connection comes up as soon as they approve, and
+`tailscale status` is how you confirm it.
+<!-- group-muse-only:end -->
 
 Safe to run again while waiting: it shows the same link again and keeps
 watching for the approval. The link stays good for five days. This device
-stops watching a while after each ask, so if the user needs longer, run it
+stops watching a while after each ask, so if the <!-- personal-muse-only:start -->user<!-- personal-muse-only:end --><!-- group-muse-only:start -->member<!-- group-muse-only:end --> needs longer, run it
 again; it picks up the same link.
 
-If the user runs their own control server (headscale or another self-hosted
+If the <!-- personal-muse-only:start -->user<!-- personal-muse-only:end --><!-- group-muse-only:start -->member<!-- group-muse-only:end --> runs their own control server (headscale or another self-hosted
 control plane), pass it the way the vanilla CLI does — an https origin only:
 
 ```bash
@@ -52,11 +66,13 @@ approval is single-use and names the server, unlike a plain `tailscale up`,
 which can carry a standing allow.
 
 `tailscale down` disconnects this VM and erases its Tailscale identity, so
-coming back up needs a fresh approval — use it when the user wants this VM to
+coming back up needs a fresh approval — use it when <!-- personal-muse-only:start -->the user wants<!-- personal-muse-only:end --><!-- group-muse-only:start -->members want<!-- group-muse-only:end --> this VM to
 stop holding access.
 
-It cannot remove the device from the Tailscale admin console or their own
-control server. Tell the user to delete it there themselves.
+It cannot remove the device from the Tailscale admin console or <!-- personal-muse-only:start -->their own
+control server. Tell the user to delete it there themselves<!-- personal-muse-only:end --><!-- group-muse-only:start -->the
+member's own control server. Ask the member who owns the network to delete
+it there<!-- group-muse-only:end -->.
 
 ## Reaching Machines
 
@@ -83,7 +99,7 @@ Opening a TCP connection through the proxy is the only test.
   this proxy. Another name or IP for the same machine (short name, full
   MagicDNS name, IPv4, IPv6) is a different address and needs its own approval;
   keep using one.
-- Any request awaiting approval may wait for the user to answer it. Expected: do
+- Any request awaiting approval may wait for <!-- personal-muse-only:start -->the user<!-- personal-muse-only:end --><!-- group-muse-only:start -->a member<!-- group-muse-only:end --> to answer it. Expected: do
   not time out, retry, or read the pause as a failure.
 - If this device has not joined a network, or the address is not one the
   tailnet reaches, the request fails rather than falling back to the public
@@ -95,7 +111,7 @@ Opening a TCP connection through the proxy is the only test.
 `tailscale status` lists the connection state and every device with its
 addresses; `tailscale ip` shows this device's own.
 
-Machines can be addressed by tailnet IP or, when the user's network enables
+Machines can be addressed by tailnet IP or, when the <!-- personal-muse-only:start -->user's <!-- personal-muse-only:end -->network enables
 MagicDNS, by their name. Requests through port `3130` use the network's DNS
 settings, including search domains, split DNS, NextDNS over HTTPS, plain DNS,
 DNS-over-TLS, and private DNS servers reachable through the tailnet. If a DNS
@@ -112,7 +128,18 @@ routes.
 `tailscale status` says whether an address is on the network. There is no
 reachability probe; test the service with a TCP connection through the proxy.
 
+<!-- personal-muse-only:start -->
 ## User-Facing Language
+<!-- personal-muse-only:end -->
+<!-- group-muse-only:start -->
+## Language in the group
+<!-- group-muse-only:end -->
 
+<!-- personal-muse-only:start -->
 Say "your Tailscale network" or name the machine. Do not quote raw commands or
 `100.64.0.0/10` addresses unless the user asks for detail.
+<!-- personal-muse-only:end -->
+<!-- group-muse-only:start -->
+Say whose Tailscale network it is, or name the machine. Do not quote raw
+commands or `100.64.0.0/10` addresses unless a member asks for detail.
+<!-- group-muse-only:end -->

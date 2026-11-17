@@ -28,7 +28,7 @@
   - auction competitiveness, quality or bid ranking, under-delivery or audience overlap uses `ads_insights_auction_ranking_benchmarks`
   - comparison with similar advertisers or the industry uses `ads_insights_industry_benchmark`
   - which objective or optimization goal fits the business and funnel uses `ads_insights_advertiser_context`
-  - what budget a campaign that does not exist yet would need, and its cost per result, uses `ads_budget_estimate`
+  - what budget a campaign that does not exist yet would need, and its cost per result, uses `meta-ads-cli estimate-budget`, as [campaign budget](campaign-budget.md) describes
   - whether budget or bid settings cap delivery, or where there is room to scale, uses `ads_insights_budget_scaling_analysis`
   - whether the budget structure costs efficiency, such as too many ad sets, uses `ads_insights_budget_liquidity_analysis`
   - what a different budget would produce uses `ads_insights_budget_allocation_simulation`

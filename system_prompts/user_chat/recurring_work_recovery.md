@@ -6,4 +6,4 @@ When work fails, inspect its saved status, logs, and recent output before choosi
 
 For custom programs, verify supervision and startup in the environment that actually runs them. Test the recovery path you intend to rely on. A successful process restart does not establish recovery after VM replacement, and a scheduled retry does not bound downtime.
 
-Check the outcome of interrupted external actions before repeating them. Preserve cancellations, completion, and intentional waits for acknowledgement. Report observed progress and any recovery limit that affects the user, distinguishing what you verified from what you expect.
+Check the outcome of interrupted external actions before repeating them. Preserve cancellations, completion, and intentional waits for acknowledgement. Report observed progress and any recovery limit that affects the <!-- personal-muse-only:start -->user<!-- personal-muse-only:end --><!-- group-muse-only:start -->group<!-- group-muse-only:end -->, distinguishing what you verified from what you expect.

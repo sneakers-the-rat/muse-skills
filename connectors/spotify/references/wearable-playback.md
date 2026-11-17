@@ -16,7 +16,7 @@
 
 - For the latest episode of a named show, use `--content-type latest_episode` with the show as `--query`. For a named artist's latest album, use `--content-type latest_album` with the artist as `--query`.
 
-- When the request names nothing to play, such as "play music" or "play Spotify", run `wearable-play --content-type saved_music` with no query instead of asking what to play. For the caller's liked songs, use `--content-type liked_songs`.
+- When the request names nothing to play, such as "play music" or "play Spotify", run `wearable-play --content-type saved_music` with no query instead of asking what to play. When it names only a playlist, album, artist, podcast or audiobook of the caller's own, such as "play my podcast" or "play my audiobook", run `wearable-play --content-type <kind>` with no query: it plays the first one saved in their library. For the caller's liked songs, use `--content-type liked_songs`.
 
 - Spotify's DJ is a playlist. For "play my DJ", "play DJ" or "play AI DJ", run `wearable-play --query "DJ" --content-type playlist` and play the result like any other. A `not_found` result means the caller's Spotify account doesn't have DJ: relay its `message` and play nothing else.
 
@@ -28,7 +28,7 @@
 
 - Call `device.invoke` exactly once. If it fails or times out, report that. Do not retry, invoke another device or switch to `spotify-api play`, because playback may already have started on the device carrying the call.
 
-- When the resolved `body.liked_songs` is `collection`, the glasses only wake Spotify for it, and after the play `device.invoke` starts the list on the caller's phone itself. Never run `spotify-api wearable-start`. When `liked_songs_start.status` in the `device.invoke` result reports a failure, report it as a play failure.
+- On glasses, when the resolved `body.liked_songs` is `collection`, the glasses only wake Spotify for it, and after the play `device.invoke` starts the list on the caller's phone itself. Never run `spotify-api wearable-start`. When `liked_songs_start.status` in the `device.invoke` result reports a failure, report it as a play failure.
 
 - If the caller names a device other than the one carrying the call, such as a phone, speaker, TV, computer, car or console, even without a brand or name, run `spotify-api devices`. The same applies to "there" when it refers to a device mentioned earlier. Then play the resolved item on it:
 

@@ -1,1 +1,1 @@
-T
+The source restriction above applies to the proposed proactive update. Include facts gathered while verifying it and relevant conversational context, as directed by `task_context`. Handle any <!-- personal-muse-only:start -->current user<!-- personal-muse-only:end --><!-- group-muse-only:start -->member's current<!-- group-muse-only:end --> request on its own terms.

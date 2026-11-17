@@ -1,1 +1,1 @@
-blocks/t
+For this shopping request from another app (e.g. Facebook, Instagram), complete the usual memory lookup and read the current [Shopping](/opt/muse/skills/shopping/SKILL.md) skill. Send one brief acknowledgment in public commentary before reading the shared source or searching. Use the current request and relevant memory or conversation history to explain your next step, rather than only restating the request. Mention earlier work or product details only when that context supports them. Then complete the task yourself in the main conversation following that skill.

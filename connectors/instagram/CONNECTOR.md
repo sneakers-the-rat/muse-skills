@@ -394,6 +394,8 @@ EDITOR_JSON='[
 
 - `post-feed` and `post-story` take `--publish-at` to schedule instead of publishing immediately. Schedule only when the user asks for a later time; omit the flag to publish now.
 
+- Instagram accounts with Advanced content scheduling in their Meta One plan can schedule Stories. If scheduling returns `Meta One Required`, explain what the error says about the required feature and plan. Do not automatically retry that scheduling request.
+
 - Pass one future RFC 3339 time with an explicit offset, such as `2026-10-17T15:30:00-07:00`. Convert the user's wording in their timezone, including daylight saving time, and ask when the date, time or timezone is unclear.
 
 - Report the content as scheduled for that time, not published. When the account cannot schedule, report that; do not publish immediately instead.

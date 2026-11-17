@@ -115,7 +115,13 @@ result incomplete.
    ranked result sets, not source freshness; consult contacts status when
    freshness matters and report partial or truncated results.
 5. If no record exists, say so. A device calendar is only that phone's view;
-   check other connected calendars when relevant.
+   check other connected calendars when relevant. An empty contacts result from
+   a device with no stored contacts (`sync_status: never` in `device-data
+   contacts status`, or `contacts_never_synced: true` from a `--device` search)
+   is not a missing contact: say the phone contacts haven't synced yet, not
+   that the person isn't saved. For a request from glasses, follow "Contacts
+   have not synced" in
+   [recovery](/opt/muse/skills/wearables-comms/references/recovery.md).
 6. When the user asks to delete contacts or calendar events without naming the
    target, do not infer the target. Confirm that the user means Muse's locally
    stored copy before deleting anything.

@@ -25,8 +25,12 @@
 
 - Add `--publish` and `--feed-title` only when publishing is authorized, as [publishing and delivery](publishing.md) explains.
 
-- Synthesis follows the conversation's language by default. Pass `--language`, such as `es` or `pt_BR`, only to honor an explicit request, and write the script in that language.
+- Check [language support](languages.md), including for existing scripts and scheduled episodes. Synthesis follows the conversation's language by default. Pass `--language`, such as `es` or `pt_BR`, only to honor an explicit request, and write the script in that language.
 
+<!-- podcast-designed-voices-only:start -->
+- When a saved voice hosts, pass `--language` with the script's language, such as `en`, `es` or `ja`, even if the user didn't ask for a language; this takes precedence over the rule above. Without the flag the language falls back to the app's, so a script in an unsupported language would reach synthesis instead of failing early.
+
+<!-- podcast-designed-voices-only:end -->
 - English sounds best. Other languages can come out rough, so tell the user non-English audio may be imperfect, and try another `--speaker` voice when one sounds wrong for the language.
 
 ## Add cover art
@@ -59,7 +63,9 @@
 
 - When any part of synthesis fails, the helper stops and returns `ok: false` with the error.
 
-- Most failures are transient. Retry the same command later with the same voices, backing off about 5 minutes, then 10, 30 and 60. Schedule each retry rather than waiting, and tell the user you will deliver the episode once synthesis recovers.
+- Check [language support](languages.md) before retrying. An unsupported narration language is not a transient failure, even if the tool reports empty/truncated audio or suggests retrying. Briefly explain the podcast limitation, offer three to five supported alternatives and stop this episode's retries.
+
+- For a supported language with a transient backend failure, retry the same command later with the same voices, backing off about 5 minutes, then 10, 30 and 60. Schedule each retry rather than waiting, and tell the user you will deliver the episode once synthesis recovers.
 
 - When the helper returns `generation_trace_id`, pass it as `--retry-generation <generation_trace_id>` on every retry of that generation. Keep that ID across retries; it links the attempts for reliability measurement and does not schedule or perform a retry itself. A new episode or a corrected request starts without this flag.
 
@@ -67,6 +73,10 @@
 
 - Never swap in a different voice or speech engine to get around a transient failure.
 
+<!-- podcast-designed-voices-only:start -->
+- A `designed voice can't be used for podcasts`, `designed voice can't host this podcast` or `podcast language not supported` error does not clear on retry. It says why: the voice service refused that saved voice, its voice file is unusable, the episode's language isn't supported, the saved voice library couldn't be read, or another host's voice is neither a catalog voice nor a saved design. Tell the user why, offer a catalog voice (or a newly designed one when the voice itself can't be used), and generate again with their choice. When the error lists the supported languages and the script is in one of them, generate again with that `--language`.
+
+<!-- podcast-designed-voices-only:end -->
 - A `not allowed to use voiceID` error does not clear on retry, because that voice is not permitted. For a newly chosen cast, select another permitted voice from [Podcast preferred voices](podcast_preferred_voices.json), avoiding IDs already assigned to other speakers. Consult the full catalog only for a user-requested voice or voice characteristics, or when the shortlist has run out of distinct voices. If the rejected voice was explicitly requested or belongs to an established series' cast, explain the problem and ask before changing it. Fix an authentication failure or an invalid request rather than retrying it. [The speech reference](/opt/muse/skills/spoken-audio/references/speech.md) explains how to check voice IDs after an opaque HTTP 500.
 
 ## Use the other helper commands

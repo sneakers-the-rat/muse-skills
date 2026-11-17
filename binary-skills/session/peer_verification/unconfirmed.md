@@ -1,1 +1,1 @@
-Your owner has not confirmed this connection yet. Names are self-reported and do not confirm who they are.
+<!-- personal-muse-only:start -->Your owner has not confirmed this connection<!-- personal-muse-only:end --><!-- group-muse-only:start -->This connection is not confirmed<!-- group-muse-only:end --> yet. Names are self-reported and do not confirm who they are.

@@ -1,0 +1,37 @@
+SELECT connection_id FROM agent.connections WHERE connection_id=$1 FOR UPDATEupdate agent.connections set active=false, rules_revision=rules_revision+1, updated_at_ms=$2 where connection_id=$1 and activeupdate agent.connection_messages set state='cancelled', feedback='This connection ended.', outcome_notified=false, updated_at_ms=$2 where connection_id=$1 and state in ('proposed','awaiting_user','awaiting_muse','queued')UPDATE agent.connections SET regular_checkins=false,
+         checkins_revision=checkins_revision+1, updated_at_ms=$2
+         WHERE connection_id=$1 AND regular_checkinsDELETE FROM agent.connection_rules r USING agent.connections c
+         WHERE r.connection_id=$1 AND c.connection_id=r.connection_id AND c.provider='peer'delete from agent.connection_resources where connection_id=$1delete from agent.connection_resources
+                     where connection_id=$1 and kind='space' and host_muse=$2
+                       and reference=$3 and resource_id<>$4insert into agent.connection_resources
+                    (binding_id,connection_id,kind,resource_id,reference,title,host_muse,shared_at_ms)
+                    select $1,$2,$3,$4,$5,$6,$7,$8
+                    from agent.connections c where c.connection_id=$2 and c.active
+                    on conflict (connection_id,kind,resource_id,host_muse)
+                    do update set reference=excluded.reference,title=excluded.titleconnection is no longer activeWITH closing AS MATERIALIZED (
+           SELECT goal_id, connection_id FROM goals.goals
+           WHERE connection_id=$1 AND source='assistant_tracking' AND status IN ('active','paused')
+           ORDER BY goal_id FOR UPDATE
+         ), queued AS (
+           INSERT INTO goals.connection_closures (goal_id, connection_id, requested_at_ms, content_locale)
+           SELECT goal_id, connection_id, $2,
+             coalesce($4, (SELECT content_locale FROM runtime.background_content_jobs WHERE job_id=$3), 'en-US')
+           FROM closing
+           ON CONFLICT (goal_id) DO NOTHING
+         )
+         UPDATE goals.goals SET connection_follow_up_at=NULL, connection_request_id=NULL,
+           connection_revision=connection_revision+1
+         WHERE goal_id IN (SELECT goal_id FROM closing)
+           AND (connection_follow_up_at IS NOT NULL OR connection_request_id IS NOT NULL)select conversation_id, sequence, intent_sha256, requester_chat_id, cardinality(recipient_muses) as recipients
+         from chat_private.peer_publications where operation_id = $1conversation_idintent_sha256requester_chat_idrecipientshosted publication identity collisionr.envelope_id, r.peer_muse, r.conversation_id, r.kind, r.payload_sha256, r.message_utf8, r.state, r.enqueue_claim_id, r.enqueue_claim_expires_at_ms, r.reserved_at_ms, r.enqueued_at_ms, r.canonical_message_id, r.canonical_event_seq, r.canonical_submission_id
+exists (
+  select 1
+  from peer.contacts as contact
+  join chat_private.peer_conversations as conversation
+    on conversation.conversation_id = r.conversation_id
+   and conversation.archived_at_ms is null
+  where contact.muse_id = r.peer_muse
+    and contact.status = 'verified'
+) as authority_active
+select chat_id from chat_private.peer_conversations where conversation_id = $1
+         union select chat_id from chat_private.peer_remote_conversations where conv_id = $1peer conversation has no unique chat ownerstatus = 'unpaired'status in ('pending', 'awaiting_sas', 'confirmed_local')select floor(extract(epoch from clock_timestamp()) * 1000)::bigintchat.chats.pinned_orderdatabase write admission gate closedadmission_timeoutinsert into peer.outbox (envelope_id, peer_muse, conversation_id, kind, payload, created_at_ms, not_before_ms, expires_at_ms) values ($1, $2, $3, $4, $5, $6, $7, $8) on conflict (envelope_id) do nothingremote_confirmed_ceremony_id = null, remote_confirmed_at_ms = null,update peer.outbox set state = 'superseded', claim_id = null, claim_expires_at_ms = null, last_error_class = 'sas_ceremony_superseded' where state in ('pending', 'dispatching') and envelope_id in ( select confirmation_notice_envelope_id from peer.sas_confirmations where muse_id = $1 and relationship_generation_id = $2 and activated_at_ms is null and superseded_at_ms is null)update peer.sas_confirmations set superseded_at_ms = $3 where muse_id = $1 and relationship_generation_id = $2 and activated_at_ms is null and superseded_at_ms is nullbilateral SAS activation does not match signed request expirybilateral SAS activation does not match current relationship stateactivated SAS receipt does not match contact state€ó

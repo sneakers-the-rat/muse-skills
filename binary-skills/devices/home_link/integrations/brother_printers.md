@@ -1,5 +1,6 @@
 # Brother Printers: IPP Printing
 
+<!-- personal-muse-only:start -->
 **Last verified:** 2026-09-14 on a Brother MFC-J880DW
 
 Use this guide when fresh discovery identifies a Brother printer with IPP and
@@ -15,3 +16,8 @@ the user asks to print.
    printer's advertised values. Scale the layout and text for that resolution.
 4. Submit it through Home Link as an IPP `Print-Job` with document format
    `image/pwg-raster`. Check the job status and output before retrying.
+<!-- personal-muse-only:end -->
+<!-- group-muse-only:start -->
+Brother printers are reached through Muse Home Link, which is not
+available on this group's Muse.
+<!-- group-muse-only:end -->

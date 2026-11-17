@@ -1,0 +1,93 @@
+update runtime.browser_calls set checkout_wait_state='settled'
+                     where operation_id=$1 and checkout_wait_state='withdraw_pending'update runtime.browser_calls set checkout_wait_state='withdraw_pending'
+                     where operation_id=$1 and checkout_wait_json=$2 and checkout_wait_state='waiting'update runtime.browser_calls set checkout_wait_state=case
+                      when checkout_wait_state='waiting' then 'awaiting_card'
+                      else 'withdraw_on_arrival' end
+                     where operation_id=$1 and checkout_approval_id is null
+                       and checkout_wait_state in ('waiting', 'withdraw_pending')approval_typelegacy-unversionedbackground_sync_disabledselect domains from context.subscriptions where id = $1 for updateupdate context.subscriptions set last_polled_at = clock_timestamp() where id = $1select g.source_id, g.group_id, g.acknowledged_position,
+              coalesce(g.window_position, g.available_position) as through_position, ss.start_position
+            from context.group_cursors g join context.subscription_sources ss
+              on ss.subscription_id = g.subscription_id and ss.source_id = g.source_id
+            join context.sources s on s.id = g.source_id
+            where g.subscription_id = $1 and ss.active and g.acknowledged_position < g.available_position
+              and not (s.source_domain = any($2))
+              and (g.lease_expires_at is null or g.lease_expires_at <= clock_timestamp())
+              and (g.retry_at is null or g.retry_at <= clock_timestamp())
+            order by g.last_pulled_at nulls first, g.source_id, g.group_id limit 1 for update of gsource_idacknowledged_positionstart_positione.id, e.dedupe_key as key, e.group_key, e.payload_kind, e.content_hints,
+     e.occurred_at, e.ingested_at, e.ttl_secondsappend_positionupdate context.group_cursors set acknowledged_position = $4,
+                window_position = null, batch_position = null, lease_token = null,
+                lease_expires_at = null, evidence_expires_at = null, retry_at = null, last_error = null,
+                last_pulled_at = clock_timestamp()
+                where subscription_id = $1 and source_id = $2 and group_id = $3select exists(select 1 from context.group_cursors g
+                join context.subscription_sources ss on ss.subscription_id = g.subscription_id and ss.source_id = g.source_id
+                join context.sources s on s.id = g.source_id
+                where g.subscription_id = $1 and ss.active and g.acknowledged_position < g.available_position
+                and not (s.source_domain = any($2)))select id, source_domain, source_key as key, display_name, created_at::text as created_at
+            from context.sources where id = $1update context.group_cursors set window_position = $4, batch_position = $5,
+            lease_token = $6, lease_expires_at = least(clock_timestamp() + $7 * interval '1 second', $8::timestamptz), evidence_expires_at = $8, last_pulled_at = clock_timestamp(), retry_at = null
+            where subscription_id = $1 and source_id = $2 and group_id = $3 returning lease_expires_at
+SELECT action_index, action_seq, action_id, activity_thread_id, agent_id, agent_depth, icon, title, subtitle, report, status, created_at
+FROM activity_monitor_thread_actions
+WHERE activity_thread_id = $1
+ORDER BY action_index ASC, action_seq ASC
+
+SELECT action_index, action_id, activity_thread_id, agent_id, agent_depth, icon, title, subtitle, report, status, created_at
+FROM (
+    SELECT
+        action_index,
+        action_id,
+        activity_thread_id,
+        agent_id,
+        agent_depth,
+        icon,
+        title,
+        subtitle,
+        report,
+        status,
+        created_at,
+        action_seq AS insertion_order
+    FROM activity_monitor_thread_actions
+    WHERE activity_thread_id = $1
+    ORDER BY action_index DESC, insertion_order DESC
+    LIMIT $2
+)
+ORDER BY action_index ASC, insertion_order ASC
+
+SELECT user_message_id
+FROM activity_monitor_carrier_user_messages
+WHERE carrier_message_id = $1
+  AND ($2::text IS NULL OR root_agent_id IS NULL OR root_agent_id = $2)
+ORDER BY link_seq ASC
+
+SELECT b.activity_thread_id
+FROM activity_monitor_message_threads b
+WHERE b.message_id = $1
+
+SELECT b.activity_thread_id
+FROM activity_monitor_message_threads b
+JOIN activity_monitor_threads g ON g.activity_thread_id = b.activity_thread_id
+WHERE b.message_id = $1
+  AND g.status = $2
+
+SELECT activity_thread_id, name, subtitle, icon, emoji, status, created_at, finished_at, finish_message,
+       finish_status, finish_status_reason, activity_thread_kind, space_slug, status_title,
+       expected_finish_description
+FROM activity_monitor_threads
+WHERE activity_thread_id = $1
+context_store.initializedefaulttimed out while writing egress approval mirror requesttimed out while reading egress approval mirror responseavatar-state: authoritative DB row missingthe avatar state registry is unavailableEmojiTaglineshopping_results_v2node_card.notification_opt_inGatekeeper response omitted requested gate; using defaultactive onboarding avatar has no retained choreography profile/opt/hatch/binnotion-cligranola-clibox-clibinskills.updatedcannot resolve the active avatar image pathrefusing to replace a newer avatar choreography profile versionavatar choreography classification unavailable; preserving existing derived mediaavatar-choreography-classifier-unavailable-v8:avocrono-9bdancing backfill campaign changedinvalid dancing backfill expiryexpired legacy backfill is missing authorized inputsdancing backfill target is unavailablecontext append position exhaustedruntime-orphan approval resolution failedruntime-orphan approval response missing approvalctalegacy CVM manifest is not a JSON objectpublished standard client is incompleteStripe Link connection status is unavailableStripe Link connection status failed to startStripe Link connection status was invalidStripe Link connection inspection timed outStripe Link connection status timed outStripe Financial Insights permission was unavailablevoice-option planner preparation failedcatalog_loadvoice_pickvoice-option planner failedcheckout approval has no agentcheckout approval has no callconsent_unavailablebinary_unavailableprobe_timeoutprobe_failedupdated_atauthenticatedavatar.call_portrait.embodimentReview this image for avatar embodiment compatibility. Make these three determinations independently:
+
+1. Visible mouth
+The character must have a visible mouth. Closed mouths count. A visible jaw or teeth opening counts. Do not reject a normal animal because its mouth line is faint or blends into fur. Turned or sideways views count. Fail this check only if no mouth exists or a mask covers it.
+
+2. Obvious under 18 in real or photorealistic images only
+Apply this check only to a clearly real person or a photorealistic depiction of a human. Fail this check only when clear visible evidence makes it obvious that the person is under 18. Do not fail for ambiguous age, a youthful-looking adult, or uncertainty about age. If age is uncertain, pass this check.
+Do not apply the age check to stylized, cartoon, anime, illustrated, painted, 3D-rendered, game, toy, mascot, or otherwise clearly fictional or non-photorealistic characters. These characters pass the age check regardless of how young they appear. Do not identify anyone or guess an exact age.
+
+3. Nudity
+Fail this check if any person appears visibly nude. Do not count ordinary clothing, shorts, or swimwear as nudity. If nudity is obscured or cannot be determined, do not assume nudity. Keep any explanation brief and non-graphic.
+
+Set `embodiment_compatible` to true only if all three checks pass. Otherwise set it to false. If more than one check fails, mention each failed check briefly in `reason`.
+
+Return only minified JSON and nothing else:
+{"embodiment_compatible":<bool>,"reason":"brief reason if false, otherwise empty"}
+invalid dark media backfill expiryfailed to read activity monitor carrier/user mappingfailed to read activity thread binding for messagefailed to read activity thread snapshot with actionsfailed to read activity thread actionsok

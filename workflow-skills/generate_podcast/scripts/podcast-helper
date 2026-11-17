@@ -23,6 +23,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import unicodedata
 import urllib.parse
 import uuid
 from datetime import datetime, timezone
@@ -814,6 +815,9 @@ def _generate(args, telemetry):
     ]
     for speaker_mapping in args.speaker:
         tts_cmd.extend(["--speaker", speaker_mapping])
+    # Marks this as a podcast render so tts may use the podcast cTTS pilot
+    # when its gate is on; other synthesize-script callers never opt in.
+    tts_cmd.append("--podcast")
 
     telemetry.stage = "synthesis"
     result = subprocess.run(tts_cmd, capture_output=True, text=True)
@@ -2459,12 +2463,65 @@ def cmd_generate_slug(args):
     print(json.dumps({"ok": True, "slug": slug}, separators=(",", ":")))
 
 
+# Room for the date, a collision suffix and the cover file names inside a
+# 255-byte file name.
+SLUG_TITLE_MAX_BYTES = 150
+# Hex digits of the title's SHA-256 in a hashed slug.
+SLUG_HASH_CHARS = 8
+
+
+def _title_hash(title):
+    return hashlib.sha256(title.encode("utf-8")).hexdigest()[:SLUG_HASH_CHARS]
+
+
+def _ascii_letters(c):
+    """The ASCII a non-ASCII letter or decimal digit folds to (é -> e,
+    full-width Ｔ -> T, full-width ３ -> 3), or "" when it has none (灯, ß, ٣)."""
+    return "".join(
+        part
+        for part in unicodedata.normalize("NFKD", c)
+        if part.isascii() and part.isalnum()
+    )
+
+
 def make_slug(title):
-    slug = title.lower().strip()
+    # Slugs stay ASCII: Aura Android percent-encodes the slug path segment and
+    # compares it still encoded, so a non-ASCII slug loses its cover art and
+    # feed title there. ASCII titles come out exactly as before. Accented and
+    # full-width letters fold to their base letters (Música -> musica). Other
+    # letters and digits (灯台の話) are dropped, and the slug then ends in a
+    # hash of the whole title, so titles that differ only in them stay apart.
+    # Symbols, emoji, marks and other numbers (①, ½) go, as they always did.
+    folded = []
+    dropped = False
+    for c in title:
+        category = unicodedata.category(c)
+        if c.isascii():
+            folded.append(c)
+        elif category[0] == "L" or category == "Nd":
+            ascii_form = _ascii_letters(c)
+            folded.append(ascii_form)
+            dropped = dropped or not ascii_form
+        elif c.isspace():
+            folded.append(" ")
+    slug = "".join(folded).lower().strip()
     slug = re.sub(r"[^a-z0-9\s-]", "", slug)
     slug = re.sub(r"[\s]+", "-", slug)
     slug = re.sub(r"-+", "-", slug)
     slug = slug.strip("-")
+    cut = len(slug) > SLUG_TITLE_MAX_BYTES
+    if cut:
+        # Leave room for "-<hash>" inside the same budget.
+        slug = slug[: SLUG_TITLE_MAX_BYTES - SLUG_HASH_CHARS - 1].rstrip("-")
+    if not slug:
+        # Nothing ASCII left (an emoji-only or all-Japanese title, say).
+        slug = "episode-" + _title_hash(title)
+    elif cut or dropped:
+        # Two titles that share their first bytes, or their ASCII, would
+        # otherwise share a slug, and the second unpublished episode of the day
+        # would overwrite the first. A hash of the whole title keeps them apart,
+        # and one title still gets the same slug each time it is regenerated.
+        slug = f"{slug}-{_title_hash(title)}"
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     return f"{slug}-{today}"
 

@@ -1,0 +1,114 @@
+internal error: entered unreachable codefalseunclassifiednot_foundinterruptederrorsuccessbackground task failedall branches are disabled and there is no else branchgave up waiting for a socket-activated service to answerstill waiting for a socket-activated service to answersocket-activated service answered after waitinguds accept loop listeninguds accept loop shutting downdaemon_setup.http_api_preparationdaemon_setup.http_apidaemon_setup.http_api_route_preparationen-USwritehatch:db:operationthe code's original question and login are no longer eligiblefailedcancelledShopify cart telemetry could not read frozen run scopeunknownbrowser_task_idhttp_api_make_serviceserving_prereq.pre_recovery_checkpoint_doctorskipped primary-root tool gate prefetchowner_credentials_absentowner_credentials_unresolvedprimary-root tool gate prefetch task failedhttp API server stoppedpost-recovery startup producers remained gateddeferred checkpoint recovery remained gatedbackground exec interruption sweep remained gatedmain system prompt copy skipped because the primary root is unavailablecould not write the startup system prompt reference copycleared execd drain state on daemon startupfailed to clear execd drain state on daemon startupexecd drain clear timed out after 5s (best-effort; retried by                              the first spawn)message_idcontent-understanding inference client readyfailed to build content-understanding inference client; media analysis disabledselect distinct root_agent_id from agent.root_turn_queuerequest_idsource, completedfollow_up_settlementSELECT b.message_id FROM activity_monitor_message_threads b
+             WHERE b.activity_thread_id = $1
+               AND EXISTS (SELECT 1 FROM activity_monitor_carrier_user_messages carrier
+                           WHERE carrier.carrier_message_id = b.message_id)
+             ORDER BY b.message_id
+WITH bound_carriers AS MATERIALIZED (
+    SELECT b.message_id,
+           CASE WHEN mailbox.state IN ('accepted', 'attached') OR EXISTS (
+               SELECT 1 FROM agent.message_mailbox active
+               WHERE active.agent_id = mailbox.agent_id
+                 AND active.stream_owner_message_id = b.message_id
+                 AND active.state = 'attached'
+           ) THEN FALSE
+           WHEN mailbox.state IN ('completed', 'aborted', 'invalid') THEN TRUE
+           END AS terminal
+    FROM activity_monitor_message_threads b
+    LEFT JOIN agent.message_mailbox mailbox ON mailbox.submission_id = b.message_id
+    WHERE b.activity_thread_id = $1
+      AND EXISTS (
+          SELECT 1
+          FROM activity_monitor_carrier_user_messages carrier
+          WHERE carrier.carrier_message_id = b.message_id
+      )
+),
+unresolved_carriers AS MATERIALIZED (
+    SELECT message_id FROM bound_carriers WHERE terminal IS NULL
+),
+carrier_events AS (
+    SELECT
+        bc.message_id AS carrier_message_id,
+        ev.event_seq AS user_event_seq,
+        ev.request_id AS user_request_id,
+        ev.root_request_id AS user_root_request_id,
+        ev.parent_request_id AS user_parent_request_id
+    FROM unresolved_carriers bc
+    JOIN activity_monitor_carrier_user_messages carrier
+      ON carrier.carrier_message_id = bc.message_id
+    JOIN runtime.events ev
+      ON ev.message_id = carrier.user_message_id
+)
+SELECT
+    bc.message_id AS message_id,
+    COALESCE(bc.terminal, EXISTS (
+        SELECT 1 FROM runtime.events terminal
+        WHERE terminal.event_name IN ('message.assistant', 'message.internal')
+          AND terminal.message_id = 'assistant-msg-' || bc.message_id
+    ) OR EXISTS (
+        SELECT 1 FROM runtime.events terminal
+        WHERE terminal.event_name IN ('message.assistant', 'message.internal')
+          AND terminal.source = 'runtime'
+          AND terminal.request_id = 'req:fallback:submission:' || bc.message_id
+    ) OR EXISTS (
+        SELECT 1
+        FROM carrier_events ce
+        JOIN runtime.events terminal ON terminal.request_id = ce.user_request_id
+          AND terminal.root_request_id = ce.user_root_request_id
+          AND terminal.event_seq > ce.user_event_seq
+        WHERE ce.carrier_message_id = bc.message_id
+          AND terminal.event_name IN ('message.assistant', 'message.internal')
+          AND terminal.source = 'runtime'
+    ) OR EXISTS (
+        SELECT 1
+        FROM carrier_events ce
+        JOIN runtime.events terminal ON terminal.request_id = ce.user_parent_request_id
+          AND terminal.event_seq > ce.user_event_seq
+        WHERE ce.carrier_message_id = bc.message_id
+          AND terminal.event_name IN ('message.assistant', 'message.internal')
+          AND terminal.source = 'runtime'
+    ) OR EXISTS (
+        WITH matching_submissions AS MATERIALIZED (
+            SELECT submission.event_seq
+            FROM runtime.event_payload_fields submission
+            WHERE submission.field_path = '/metadata/submission_message_id'
+              AND hashtextextended(COALESCE(submission.text_value, submission.scalar_value), 0)
+                  = hashtextextended(bc.message_id, 0)
+              AND COALESCE(submission.text_value, submission.scalar_value) = bc.message_id
+        )
+        SELECT 1
+        FROM matching_submissions submission
+        JOIN runtime.events settled ON settled.event_seq = submission.event_seq
+        WHERE settled.event_name = 'message.internal'
+          AND EXISTS (
+              SELECT 1
+              FROM runtime.event_payload_fields f
+              WHERE f.event_seq = settled.event_seq
+                AND f.field_path = '/metadata/kind'
+                AND COALESCE(f.text_value, f.scalar_value) = 'follow_up_settlement'
+          )
+          AND EXISTS (
+              SELECT 1
+              FROM runtime.event_payload_fields f
+              WHERE f.event_seq = settled.event_seq
+                AND f.field_path = '/metadata/action'
+                AND COALESCE(f.text_value, f.scalar_value) = 'nothing_to_do'
+          )
+    ) OR EXISTS (
+        -- A subagent completion is marked seen only after the relay has
+        -- deliberately consumed its handoff. This durable evidence closes the
+        -- exact carrier if the daemon restarted after marking the child seen
+        -- but before Activity Monitor observed its terminal lifecycle event.
+        SELECT 1
+        FROM activity_monitor_carrier_user_messages carrier
+        JOIN agent.subagent_spawns child
+          ON child.child_agent_id =
+             split_part(carrier.user_message_id, ':completion:', 2)
+         AND carrier.user_message_id =
+             'subagent-progress:' || child.parent_message_id
+             || ':completion:' || child.child_agent_id
+        WHERE carrier.carrier_message_id = bc.message_id
+          AND child.seen_at IS NOT NULL
+    )) AS terminal
+FROM bound_carriers bc
+ORDER BY bc.message_id ASC
+enter-tool-environment connection failedMedia browser callback connection failedno provider configured for media descriptionsgeo client not availableNo EXIF data available.inference-proxy returned an invalid model selection routeruntimemodel lock state read timed out`DateTime + TimeDelta` overflowedstorage_and_root_session.model_resolveinvalid_paramsbroker_timeoutbrowser sensitive-site settings request rejectedbroker_incompatiblebroker_rejected

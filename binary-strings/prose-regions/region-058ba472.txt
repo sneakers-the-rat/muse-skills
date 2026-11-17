@@ -1,0 +1,19 @@
+
+    AND NOT EXISTS (
+      SELECT 1 FROM chat_private.bindings
+      WHERE provider = $1 AND conversation_key = $3
+    )
+  ORDER BY metadata.updated_at DESC
+  LIMIT 1
+), moved AS (
+  UPDATE chat_private.bindings AS transport
+  SET conversation_key = $3, delivery_target = $3, revoked = false,
+      epoch = transport.epoch + 1
+  FROM target
+  WHERE transport.chat_id = target.chat_id
+  RETURNING transport.chat_id
+)
+UPDATE chat.chats
+SET status = $6, updated_at = $4
+WHERE chat_id IN (SELECT chat_id FROM moved)
+RETURNING chat_id

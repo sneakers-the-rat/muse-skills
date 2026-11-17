@@ -8,7 +8,7 @@
 
 - Texts default to native SMS when the user names no app. For a named app, read its connector docs and use that route, because app messages are never device commands. If the app is not connected, give the same brief refusal without starting setup, switching to SMS or offering another route. Check an unfamiliar app before calling it unsupported.
 
-- When the user asks what the glasses can do or which accounts are connected, answer normally.
+- When the user asks what the glasses can do or which accounts are connected, answer normally. If they ask whether calling or texting is set up and a fresh `device.describe` advertises neither calling nor texting commands, say it isn't available on these glasses right now and give the setup steps from "Calling and texting commands are unavailable" in [recovery](references/recovery.md). Offer to check again once they have done it, not to send a test text.
 
 ## Emergency numbers
 
@@ -98,9 +98,9 @@
 
 - After a timeout, interruption or transport error the action may already have happened, so do not retry or switch devices.
 
-- For a timed-out text, keep the uncertainty and duplicate warning in the spoken reply, in the user's language: "I can't confirm whether the message was sent. Check Messages on your phone before trying again, because another attempt could send a duplicate." Do not automatically resend or treat the timeout as a setup failure.
+- For a text that timed out or reports `send_outcome_unknown`, keep the uncertainty and duplicate warning in the spoken reply, in the user's language: "I can't confirm whether the message was sent. Check Messages on your phone before trying again, because another attempt could send a duplicate." Do not automatically resend or treat it as a setup failure.
 
-- When contacts have never synced, a text fails with `map_not_connected`, or a fresh description advertises no calling or texting commands, follow [recovery](references/recovery.md) before replying.
+- When contacts have never synced, a text fails with `map_not_connected`, `permission_denied`, `rate_limited`, `no_service` or `attempt_failed`, or a fresh description advertises no calling or texting commands, follow [recovery](references/recovery.md) before replying.
 
 ## Available connectors
 
@@ -122,4 +122,4 @@
 
 - A complete phone number from the user avoids a contact search when contacts are missing or a name keeps colliding.
 
-- When the selected glasses are offline or reject a native call or text, say so plainly. The user can still place it from their phone.
+- When the selected glasses are offline, say so plainly. The user can still place it from their phone.

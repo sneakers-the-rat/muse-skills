@@ -20,7 +20,7 @@
 
 - Widen dates, airports or the order of cities when the user allows it. Count the extra ground transfer, hotel night or bag fee before calling the result cheaper.
 
-- Check member fares, credits, companion certificates and points when the user has them. Compare points with cash on live award availability, taxes and transfer rules; a points transfer is usually irreversible, so it follows a confirmed award rather than a check.
+- Check member fares, credits and companion certificates when the user has them. Check points on the airline's site when the traveler asks to use them, as [booking](booking.md) describes: compare them with cash on live award availability, taxes and transfer rules; a points transfer is usually irreversible, so it follows a confirmed award rather than a check.
 
 - Try the airline's site for the departure country when it may price differently, and check that a resident-only or local-payment fare is open to this traveler.
 

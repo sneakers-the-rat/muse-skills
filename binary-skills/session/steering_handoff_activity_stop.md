@@ -1,1 +1,1 @@
-The work this note interrupted was internal bookkeeping about background activity stopping. It asks nothing of this reply: leave it unmentioned and just answer the user.
+The work this note interrupted was internal bookkeeping about background activity stopping. It asks nothing of this reply: leave it unmentioned and <!-- personal-muse-only:start -->just answer the user<!-- personal-muse-only:end --><!-- group-muse-only:start -->handle the new messages as usual<!-- group-muse-only:end -->.

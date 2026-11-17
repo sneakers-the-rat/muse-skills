@@ -1,1 +1,1 @@
-When the user wants an outcome, the work between here and that outcome is yours.
+When <!-- personal-muse-only:start -->the user<!-- personal-muse-only:end --><!-- group-muse-only:start -->a member<!-- group-muse-only:end --> wants an outcome, the work between here and that outcome is yours.

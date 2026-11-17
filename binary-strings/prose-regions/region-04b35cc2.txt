@@ -1,0 +1,112 @@
+browser page audio was not transcribedbrowser revocation was not acknowledgedprimary_root_checkpoint_deferred_marker_cleanupen-UScheckpoint carried duplicate pending tool identitiescheckpoint reused a tool call id for contradictory callscheckpoint carried an incomplete pending tool identitycheckpoint carried duplicate tool output identitiescheckpoint carried an incomplete tool identitydurable tool call disagreed with checkpoint evidencedurable tool call projection was malformeddurable tool call identity was not uniquedurable tool output existed without its function calldurable tool output projection was malformeddurable tool output identity was not uniquecheckpoint tool identity map was inconsistentfailed to load durable checkpoint row during index reconstructionmemory flush inference stream timed out waiting for first model output chunkmemory flush inference stream timed out waiting for next model output chunkunexpected compaction block during memory flushmodel_output_shape_errormemory flush inference stream ended before Done eventthe glasses this request came frominvalid RL relay referencesgoal briefing push decision failedupdate runtime.browser_invocations set suspended_state = 'running'
+                 where invocation_id = $1 and suspended_state = 'waiting_child'select owner_agent_id, root_session_id
+        from runtime.browser_tasks where task_id = $1 and status = 'running' for updateselect epoch, control_revision from runtime.browser_executions
+        where task_id = $1 and planner_agent_id = $2 for updatebrowser seat changedbrowser service authority changedbrowser invocation authority changedSELECT e.event_seq FROM runtime.events e JOIN runtime.event_payload_fields f ON f.event_seq = e.event_seq WHERE COALESCE(NULLIF(TRIM(e.agent_id), ''), e.parent_agent_id) = $1 AND event_name IN ('message.user', 'message.assistant') AND f.field_path = '/metadata/context_seq' AND NULLIF(COALESCE(f.text_value, f.scalar_value), '')::bigint = ANY($2)/metadata/exclude_from_context_window/metadata/context_exclusion/reason/metadata/context_exclusion/ts_msINSERT INTO event_payload_fields (event_seq, field_path, scalar_type, scalar_value)  ON CONFLICT (event_seq, field_path) DO UPDATE SET scalar_type = excluded.scalar_type, scalar_value = excluded.scalar_value, text_value = NULL
+SELECT json_build_object(
+         'accepted_ordinal', accepted_ordinal,
+         'state', state,
+         'checkpoint_custody', checkpoint_custody,
+         'submission_json', submission_json
+       )::text
+FROM agent.message_mailbox
+WHERE agent_id = $1
+  AND state IN ('accepted', 'attached')
+ORDER BY accepted_ordinal, submission_id
+FOR UPDATE
+SELECT payload_json FROM runtime_restart_checkpoints WHERE agent_id = $1
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = 'executing',
+    stream_owner_message_id = $3,
+    attached_at = now()
+WHERE submission_id = $1
+  AND agent_id = $2
+  AND state = 'accepted'
+  AND stream_owner_message_id IS NULL
+
+SELECT agent_id, state, stream_owner_message_id, submission_json,
+       accepted_ordinal
+FROM agent.message_mailbox
+WHERE submission_id = $1
+FOR UPDATE
+tracked mailbox successor unexpectedly lost custodymessage mailbox successor promotion cannot overtake an older priority peer
+UPDATE agent.message_mailbox
+SET state = CASE WHEN $4 THEN 'completed' ELSE 'aborted' END,
+    checkpoint_custody = coalesce(checkpoint_custody, 'executing'),
+    terminalized_at = now()
+WHERE agent_id = $1
+  AND stream_owner_message_id = $2
+  AND submission_id = ANY($3)
+  AND state = 'attached'
+
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = 'executing',
+    stream_owner_message_id = $2,
+    attached_at = coalesce(attached_at, now())
+WHERE agent_id = $1
+  AND submission_id = ANY($3)
+  AND (
+    (state = 'accepted' AND stream_owner_message_id IS NULL)
+    OR (state = 'attached' AND stream_owner_message_id = $2)
+  )
+
+UPDATE agent.message_mailbox
+SET checkpoint_custody = 'queued'
+WHERE agent_id = $1
+  AND stream_owner_message_id = $2
+  AND submission_id = ANY($3)
+  AND state = 'attached'
+
+UPDATE agent.message_mailbox
+SET state = CASE
+      WHEN state = 'attached' AND $2 THEN 'completed'
+      ELSE 'aborted'
+    END,
+    terminalized_at = now()
+WHERE agent_id = $1
+  AND state IN ('accepted', 'attached')
+
+SELECT accepted_ordinal, submission_json FROM agent.message_mailbox
+WHERE agent_id = $1 AND state = 'accepted'
+  AND accepted_ordinal < $2 AND accepted_ordinal > $3
+ORDER BY accepted_ordinal LIMIT 128
+
+INSERT INTO agent.volatile_context_pins
+  (agent_id, variant_hash, variant_json, prompt_floor_seq, checkpoint_seq, body)
+SELECT $1, $2, $3, $4, $5, NULL
+WHERE EXISTS (SELECT 1 FROM agent.agents WHERE id = $1)
+ON CONFLICT (agent_id, variant_hash) DO UPDATE SET
+  variant_json = excluded.variant_json,
+  prompt_floor_seq = excluded.prompt_floor_seq,
+  checkpoint_seq = excluded.checkpoint_seq,
+  created_at = now()
+
+SELECT COALESCE(a.prompt_floor_seq, -1) AS prompt_floor_seq,
+       COALESCE(c.checkpoint_seq, -1) AS checkpoint_seq
+FROM agent.agents AS a
+LEFT JOIN LATERAL (
+    SELECT checkpoint_seq
+    FROM agent.agent_compactions
+    WHERE agent_id = $1
+      AND has_replacement_history
+    ORDER BY id DESC
+    LIMIT 1
+) AS c ON c.checkpoint_seq > COALESCE(a.prompt_floor_seq, -1)
+WHERE a.id = $1
+checkpoint_seqselect transcript_event_seq, submission_json from agent.message_mailbox
+                     where agent_id = $1 and submission_id = $2transcript_event_seqforeground report fallback requires its exact public submissionselect e.parent_agent_id as agent_id, e.event_seq, e.message_id, e.created_at,
+                    coalesce(f.text_value, f.scalar_value) as context_seq
+     from runtime.events e
+     left join runtime.event_payload_fields f on f.event_seq = e.event_seq
+       and f.field_path = '/metadata/context_seq'
+     where e.parent_agent_id = $1 and e.event_seq = $2
+       and e.event_name in ('message.user', 'message.internal')
+     order by e.event_seq limit 2select e.parent_agent_id as agent_id, e.event_seq, e.message_id, e.created_at,
+                    coalesce(f.text_value, f.scalar_value) as context_seq
+     from runtime.events e
+     left join runtime.event_payload_fields f on f.event_seq = e.event_seq
+       and f.field_path = '/metadata/context_seq'
+     where e.parent_agent_id = $1 and e.message_id = $2
+       and e.event_name = 'message.user' and e.role = 'user'
+     order by e.event_seq limit 2database write admission gate closedadmission_timeoutassert_table_existstable_presence.queryindividual delivery is missing its formatwidgetbrowser specialists were not readbrowser report refusal was not recordedopen browser specialists were not readbrowser specialist was not stoppedowed browser specialist results were not settledcart handoff is invalidbrowser task already reportedcaptured cart belongs to another taskrejecting malformed restart replay fence transitionfailed to persist replay fence before successor activationfailed to persist restart replay fencereplay-forbidden checkpoint had no durable payload fingerprintrejecting malformed replay-forbidden checkpointfailed to reconcile durable cancellation handoff before checkpoint replayfailed to read durable cancellation handoff evidencereplay-forbidden checkpoint changed before successor activationrestart checkpoint changed before successor activationfailed to persist replay-forbidden checkpoint successorfailed to persist restart checkpoint successorrejecting restart checkpoint with contradictory tool output evidencefailed to reconcile checkpoint tool outputs with the durable transcriptfailed to read durable tool output evidencefailed to terminalize invalid restart checkpoint ownerfailed to check for a live session before closing a refused browser checkpointbrowser_input_unsupported_kindbrowser_input_classification_failedbrowser_input_refusedclosing browser restart checkpoint refused by browser input admissionrestart checkpoint payload was invalidfailed to decode runtime restart checkpoint payloadpayload_decode_failedruntime restart checkpoint payload was missingpayload_missingrestart checkpoint payload version was invalidunsupported runtime restart checkpoint version was invalidunsupported_payload_versionruntime restart checkpoint required the retired voice executorlegacy_voice_execution_unsupportedruntime restart execution config was invalidexecution_config_invalidexplicit restart recovery identity had no execution configexplicit_execution_config_missingruntime restart approval correlation was invalidapproval_wait_invalidremoving invalid runtime restart checkpoint without executing itprimary_root_checkpoint_owner_terminalizationprimary_root_checkpoint_closefailed to terminalize owner of invalid restart checkpointprimary_root_checkpoint_metadata_readprimary_root_checkpoint_envelope_validationvalidprimary_root_checkpoint_terminal_cleanupterminal restart checkpoint classification lacked conversation metadataprimary_root_checkpoint_owner_validationprimary_root_checkpoint_invalid_cleanupfailed to load conversation meta before restart envelope validationfailed to resolve restart recovery policy inputs

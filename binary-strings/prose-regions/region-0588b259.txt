@@ -1,0 +1,23 @@
+select batch_id, lane, high_water_global_seq, pending_count,
+                            oldest_received_at_unix_ms
+                     from device.media_upload_batches
+                     where lane = $1
+                     for updatepending_countnewest_global_seqoldest_received_at_unix_msinsert into device.media_upload_batches (
+                       lane, batch_id, high_water_global_seq, pending_count,
+                       oldest_received_at_unix_ms
+                     )
+                     values ($1, $2, $3, $4, $5)
+                     on conflict (lane) do nothing
+                     returning batch_id, lane, high_water_global_seq, pending_count,
+                               oldest_received_at_unix_msselect batch_id, lane, high_water_global_seq, pending_count,
+                                    oldest_received_at_unix_ms
+                             from device.media_upload_batches
+                             where lane = $1
+                             for updateinsert into device.media_upload_events (
+                       event_id, media_id, node_id, lane, received_at_text, received_at_unix_ms,
+                       status, received_at
+                     )
+                     values (
+                       $1, $2, $3, $4, $5, $6, $7, to_timestamp($6::double precision / 1000.0)
+                     )
+                     on conflict (event_id) do nothing€&

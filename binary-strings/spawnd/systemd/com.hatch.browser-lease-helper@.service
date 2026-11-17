@@ -16,7 +16,16 @@ StandardInput=socket
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
-RestrictAddressFamilies=AF_UNIX
+# AF_INET binds the test-VM browser cell's in-cell proxy listener inside the
+# cell's network namespace, never the host's; AF_NETLINK reads the host's nft
+# ruleset to check that no NAT rule covers that cell
+# (hatch-engine/crates/hatch-browser-lease/docs/browser-egress.md). Every other
+# helper request uses Unix sockets, so allow only loopback IP. The in-cell
+# listener and its probe are this unit's sockets, so the filter covers them, and
+# their loopback addresses inside the cell fall under localhost.
+RestrictAddressFamilies=AF_UNIX AF_INET AF_NETLINK
+IPAddressDeny=any
+IPAddressAllow=localhost
 # Scope the writable surface to just the dirs the helper actually writes instead
 # of all of /run + /var. The viewer bind-mount itself runs in PID 1's mount
 # namespace via nsenter, but the helper may create the fixed viewer-socket
@@ -25,9 +34,12 @@ RestrictAddressFamilies=AF_UNIX
 # broker-owned lease staging leaf is the helper's only other runtime write
 # path. The fixed local Chrome profile leaf is writable only so
 # the helper can clear its disposable working copy and the retired persistent
-# profile while the cell is stopped.
+# profile while the cell is stopped. On a test VM whose browser egress switch
+# selects Sentinel, the helper also writes the cell unit's egress drop-in, the
+# overlaid proxy policy, and the NSS database it stages through
+# descriptor-relative, no-follow opens into HBI's root-parented NSS directory.
 # RuntimeDirectory below is writable regardless of this list.
-ReadWritePaths=-/run/hatch/browser-broker/viewer -/run/hatch/browser-broker/lease -/run/hatch/cron-browser-broker/viewer -/run/hatch/cron-browser-broker/lease -${browser_cell_profile_dir} -${browser_cell_state_dir}/profile -${var_lib_dir}/browser-work/uploads
+ReadWritePaths=-/run/hatch/browser-broker/viewer -/run/hatch/browser-broker/lease -/run/hatch/cron-browser-broker/viewer -/run/hatch/cron-browser-broker/lease -${browser_cell_profile_dir} -${browser_cell_state_dir}/profile -${var_lib_dir}/browser-work/uploads -${browser_cell_pki_dir} -${browser_cell_egress_policy_dir} -/run/systemd/system/com.hatch.browser-container.service.d
 # The leased-viewer bind-mount must propagate to the host mount namespace so
 # nginx's take-over route sees it.
 MountFlags=shared

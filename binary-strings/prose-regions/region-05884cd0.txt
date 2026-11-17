@@ -1,0 +1,62 @@
+proactivity.admit_deliveryproactive_editions.getproactive_editions.recordproactive_editions.unqueuedproactive_editions.settleableproactive_editions.mark_droppedproactive_editions.record_outcomeproactive_editions.recentproactive_editions.missing_home_chat_splitsproactivity_notifications.readnotification plan belongs to another coordinatorfollow_up_queue.pending_timingsfollow_up_queue.delivered_sincefollow_up_queue.latest_deliveryfollow_up_queue.deferred_proactivefollow_up_queue.latest_delivery_or_in_flightfollow_up_queue.freeze_delivery_contextfollow_up_queue.skip_notification_childfollow_up_queue.defer_deliveryfollow_up_queue.due_in_flightreply_referencefollow_up_queue.root_turn_waitfollow_up_queue.record_continuationcontinuation has no handoff identityfollow_up_queue.delivery_product_messagefollow_up_queue.continuation_ownerproactivity_notifications.publicationproactivity_changes.confirm_disclosureselect case when pg_try_advisory_xact_lock_shared(hashtextextended($1, 0))
+         then pg_try_advisory_xact_lock_shared(hashtextextended($2, 0)) else false endselect exists(select 1 from chat.chats where chat_id = $1)chat owner is absent or being retiredselect root.id, c.chat_id, b.provider,
+           b.epoch, b.revoked, coalesce(s.body ->> 'enabled' = 'true', false) as enabled
+         from runtime.events e
+         join agent.agent_ancestors ancestry
+           on ancestry.descendant_id = coalesce(e.parent_agent_id, e.agent_id)
+         join agent.agents root on root.id = ancestry.ancestor_id
+         join chat.chats c on c.chat_id = root.session_id
+         left join chat_private.bindings b on b.chat_id = c.chat_id
+         left join chat_private.transport_state s on s.provider = b.provider and s.name = 'config'
+         where e.transcript_surface = 'main_chat' and e.visibility = 'public'
+           and e.role = 'user' and e.event_name = 'message.user' and e.source = 'runtime'
+           and e.message_id is not null and e.payload_json is not null
+           and root.kind = 'root' and root.parent_agent_id is null
+           and root.ephemeral is distinct from true
+           and c.origin in ('fresh', 'fork') and c.status = 'active'
+           and not exists (select 1 from agent.chat_workers w where w.group_id = c.chat_id)
+         order by e.event_seq desc limit 1revokedenabledchat_ididepochselect c.chat_id, case when not b.revoked
+          and s.body ->> 'enabled' = 'true' then b.epoch end as epoch
+        from agent.agents root join chat.chats c on c.chat_id = root.session_id
+        left join chat_private.bindings b on b.chat_id = c.chat_id
+        left join chat_private.transport_state s on s.provider = b.provider and s.name = 'config'
+        where root.id = coalesce($1, (select active_root_id from agent.chat_preferences where id = 1))
+          and root.kind = 'root' and root.parent_agent_id is nullselect research, generation from self_improvement.proactivity_flow
+        where singleton = true for share:deferred:insert into self_improvement.follow_up_queue
+       (follow_up_id, producer, message, source_root_agent_id, priority, not_before,
+        expires_at, delivery_instructions, allowed_tools, metadata_json,
+        conversation_derived, allocation, chat_id, chat_binding_epoch, disposition_reason)
+     select $2, producer, message, source_root_agent_id, priority, $3,
+        expires_at, delivery_instructions, allowed_tools, $4,
+        conversation_derived, allocation, chat_id, chat_binding_epoch,
+        'proactivity_delivery_deferred'
+     from self_improvement.follow_up_queue where follow_up_id=$1
+     on conflict (follow_up_id) do nothinginsert into self_improvement.proactive_editions
+                       (edition_id, slot, local_date, timezone, state, lead, items, presentation,
+                        item_count, skip_reason, composed_at, run_id, presentation_locale, allocation, research_flow, flow_generation)
+                     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+                     on conflict (edition_id) do nothingedition identity belongs to a retired flowupdate self_improvement.proactivity_changes set delivered_at=$3
+                 where claimed_follow_up_id=$1 and claimed_submission_id=$2
+                   and delivered_at is nullupdate self_improvement.proactivity_changes
+         set claimed_follow_up_id=null,claimed_submission_id=null
+         where claimed_follow_up_id=$1 and claimed_submission_id=$2
+           and delivered_at is nullinsert into self_improvement.attention_ledger
+           (decision_id, lane, candidate_key, goal_id, outcome, reason, message,
+            decided_at, state, source, suggestion_id, presentation, edition_id)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+         on conflict (lane, candidate_key) do update set
+           goal_id=excluded.goal_id, outcome=excluded.outcome, reason=excluded.reason,
+           message=excluded.message, decided_at=excluded.decided_at,
+           state=excluded.state, source=excluded.source, suggestion_id=excluded.suggestion_id,
+           presentation=excluded.presentation, edition_id=excluded.edition_id,
+           updated_at=excluded.decided_at
+         where attention_ledger.state='dropped' and attention_ledger.outcome='include'
+           and attention_ledger.reason='proactivity_coordinator_retired'
+           and attention_ledger.surfaced_at is nullselect id from context.subscriptions where id = $1 for updateupdate context.group_cursors g set acknowledged_position = g.batch_position,
+        window_position = case when g.batch_position >= g.window_position then null else g.window_position end,
+        batch_position = null, lease_token = null, lease_expires_at = null, evidence_expires_at = null, retry_at = null, last_error = null,
+        acknowledged_at = clock_timestamp() from context.subscription_sources ss
+        where g.subscription_id = $1 and g.lease_token = any($2) and g.lease_expires_at > clock_timestamp()
+        and ss.subscription_id = g.subscription_id and ss.source_id = g.source_id and ss.activeupdate self_improvement.proactivity_changes set delivered_at=$4
+        where claimed_follow_up_id=$1 and claimed_submission_id=$2
+          and change_id=any($3) and delivered_at is nulldatabase write admission gate closedadmission_timeoutcalled `Result::unwrap()` on an `Err` valuedroppedcommitmentfollow_upincludesilencemissedobjective_idrequest_idrequest_originrun_clockdiagnosticsqueued_atavailable_atrecovery_phase_versionrecovery_admitted_atrecovery_admission_boot_idcurrent_file_hashprojection_hashlast_run_utcstate_jsonemitted_atcard_idconfig_hashoutputscalibration_idchange_idclassificationConfigurationInvalidArgumentIoTlsRowNotFoundTypeNotFoundtype_nameColumnIndexOutOfBoundsindexlenColumnNotFoundColumnDecodesourceEncodeDecodeAnyDriverErrorPoolTimedOutPoolClosedWorkerCrashedMigrateInvalidSavePointStatementBeginFaileda Display implementation returned an error unexpectedlyErrorBUG: inner connection already taken!`DateTime + TimeDelta` overflowed`DateTime - TimeDelta` overflowedxî‹

@@ -26,6 +26,15 @@ install, start, stop, update or remove it, set it up, or add an integration.
   own requests. Each command prints one JSON object; `"ok": false` comes with
   an `error` to report.
 
+- Home Assistant runs as its own user and sees only `~/homeassistant`. Never
+  run anything from `~/homeassistant` yourself, such as its `venv`, Python,
+  `uv` or `hass`: the command runs them as Home Assistant's user. Files an
+  integration needs go in `~/homeassistant/config`; it cannot read the rest of
+  the home. Home Assistant can change that directory, so never write there
+  with `write` or a shell redirect: pipe the content into
+  `/opt/muse/assets/home-assistant/home-assistant put-file config/<path>`,
+  which writes it as Home Assistant's user.
+
 | Command | What it does |
 |---|---|
 | `status` | Reports the state below; changes nothing |
@@ -34,6 +43,7 @@ install, start, stop, update or remove it, set it up, or add an integration.
 | `setup` | Onboards Home Assistant and stores its access token; resumes an interrupted setup |
 | `rollback` | Returns to the release before the last upgrade and its database, setting aside changes made since; only with the user's agreement (see Install) |
 | `step-text` | Reads a config flow reply on stdin and adds the step's own text (see Add an Integration) |
+| `put-file config/<path>` | Writes its stdin to that file under `config/` as Home Assistant's user, creating folders as needed; refuses links |
 
 - Read `status` before acting, and again after any command:
 

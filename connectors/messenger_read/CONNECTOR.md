@@ -6,13 +6,9 @@
 
 ## Choose the right feature
 
-- Talking to Muse on Messenger is a separate side chat, described in `~/docs/chat-connections/messenger.md` and checked with `chat.connection_status`. Muse's replies there return automatically.
-
-- Never target that side chat through this connector, by `--cid`, `--to` or an automatic reply rule, and leave it out when resolving recipients.
+- Never target a conversation with Muse through this connector, by `--cid`, `--to` or an automatic reply rule, and leave it out when resolving recipients.
 
 - This connector never delivers Muse's own reminders, monitoring or scheduled results, or status updates. Background workers return those with `muse.notify_main_agent`, and the runtime delivers them through the originating chat. An automatic reply rule is the only send that may run unattended.
-
-- When the user asks to connect or disconnect "Messenger" without saying which feature, explain both briefly and ask.
 
 - Messenger call history covers Messenger audio and video calls only. Native phone calls and their history belong to the paired phone.
 
@@ -20,7 +16,7 @@
 
 - Run `check`. If the connector is not connected, run `connect-url` and share exactly `[Connect Messenger](<connect_url>)`, without the raw URL. Never collect secrets or walk the user through manual sign-in in chat, and continue with the request once they link it.
 
-- To disconnect, run `disconnect-url` and share exactly `[Disconnect Messenger](<disconnect_url>)`. This removes access to the personal account and leaves the side chat connected.
+- To disconnect, run `disconnect-url` and share exactly `[Disconnect Messenger](<disconnect_url>)`. This removes access to the personal account.
 
 ```sh
 /opt/hatch/bin/hatch_messenger_cli check

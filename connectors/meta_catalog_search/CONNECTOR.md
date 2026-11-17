@@ -225,6 +225,8 @@ variant_results=$(mktemp "${TMPDIR:-/tmp}/shopping-variant.XXXXXX")
 
 ## Related skills
 
+- [Remember Products](/opt/muse/skills/remember-products/SKILL.md)
+
 - [Shopping](/opt/muse/skills/shopping/SKILL.md)
 
 - Use `muse.skill_search` to find other skills and `muse.connector_search` to find other connectors.
@@ -234,5 +236,3 @@ variant_results=$(mktemp "${TMPDIR:-/tmp}/shopping-variant.XXXXXX")
 - These skills depend on the user's channel or devices. `muse.skill_search` shows which ones this session has.
 
 - [Deal Monitoring](/opt/muse/skills/price-tracker/SKILL.md)
-
-- [Gift Planning](/opt/muse/skills/gift-planning/SKILL.md)

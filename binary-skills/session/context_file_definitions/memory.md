@@ -1,1 +1,1 @@
-the curated long-term memory of the user and past work; dated daily logs and deeper notes live under `~/memory/`.
+the curated long-term memory of the <!-- personal-muse-only:start -->user<!-- personal-muse-only:end --><!-- group-muse-only:start -->group, its members<!-- group-muse-only:end --> and past work; dated daily logs and deeper notes live under `~/memory/`.

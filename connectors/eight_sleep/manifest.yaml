@@ -1,0 +1,99 @@
+version: 1
+metadata:
+  visible_in_settings: true
+connector: eight_sleep
+category: health
+display_name: Eight Sleep
+icon: eight_sleep
+description: Review your sleep data and manage your Pod settings and alarms
+cli:
+  binary: eight-sleep
+  skill: eight_sleep
+auth:
+  provider: eight_sleep
+  required: true
+  client_id: "https://auth-api.8slp.net/v1/oauth/clients/muse"
+  mcp:
+    endpoint: https://public-api.8slp.net/mcp
+    oauth:
+      type: oauth
+      authorization_url: https://auth-api.8slp.net/v1/ui/authorize
+      token_url: https://auth-api.8slp.net/v1/tokens
+      revoke_url: https://auth-api.8slp.net/v1/revoke
+      revoke_on_disconnect: true
+      resource: https://public-api.8slp.net/mcp
+      scope: read_sleep read_device write_device
+      token_endpoint_auth_method: none
+    tool_names:
+      sleep.read:
+        - get_sleep_days
+        - get_sleep_sessions
+        - get_sleep_session
+      device.read:
+        - get_device_status
+        - get_temperature_settings
+        - list_alarms
+      device.modify:
+        - create_alarm
+        - update_alarm
+        - delete_alarm
+        - set_pod_power
+        - set_temperature
+        - update_temperature_schedule
+surrogation:
+  name: eight_sleep
+  schema: oauth
+  mode: direct_oauth
+  privsep: true
+  hosts:
+    - public-api.8slp.net
+    - auth-api.8slp.net
+  token_proxy:
+    - field: credentials.access_token
+      placement: bearer_header
+  stripped:
+    - credentials.refresh_token
+  token_refresh:
+    - path: /v1/tokens
+request_quota:
+  mode: enforce
+  workers:
+    - eight-sleep
+  queries_per_minute: 60
+  burst: 10
+actions:
+  read:
+    default: allow
+    label: Read permissions
+    methods:
+      sleep.read:
+        label: Read sleep data
+      device.read:
+        label: Read Pod settings and alarms
+  write:
+    default: ask
+    label: Write permissions
+    methods:
+      device.modify:
+        label: Manage your Pod settings and alarms
+        approval_phrase: change your Pod settings and alarms
+cli_subcommands:
+  - status
+  - authorize-url
+  - exchange-code
+  - refresh
+  - disconnect
+consent_screen:
+  bullets:
+    - icon: data_types
+      title: Level up with Eight Sleep
+      text: Muse will access things like your sleep data, Pod settings and alarms.
+    - icon: info
+      title: You choose what Muse can do
+      text: By default, Muse will ask before taking actions it thinks need review. Disconnect at any time in Settings.
+    - icon: caution
+      title: Keep an eye on things
+      text: Muse may take unexpected actions. Monitor it carefully.
+  footer_paragraphs:
+    - "Learn more about how we use this info in our [Privacy Policy](https://www.facebook.com/privacy/policy/) and [Health Policy](https://www.facebook.com/privacy/policies/health/)."
+    - "Muse will exchange info with Eight Sleep. To learn more, view their [terms](https://www.eightsleep.com/terms-and-conditions/) and [privacy policy](https://www.eightsleep.com/privacy-policy/)."

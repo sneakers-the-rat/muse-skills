@@ -8,7 +8,7 @@
 
 - Run `spotify-api status` before searching or reading the library. Its `status` is `connected` or `not_connected`. Playback controls and commands that act on the item playing now report `not_connected` themselves, so run them directly.
 
-- When it is not connected, run `spotify-api authorize-url` and share only the link `[Connect to Spotify](<connect_url>)`. Never paste the raw URL.
+- When it is not connected, run `spotify-api authorize-url` and share the link as `[Connect to Spotify](<connect_url>)`, with the URL inside the Markdown link. A command that fails as not connected prints a `Connect link:`; share that link the same way instead of running `authorize-url`.
 
 - If playlist changes stop working after a reconnect, ask the user to connect again so the new grant carries the latest scopes.
 

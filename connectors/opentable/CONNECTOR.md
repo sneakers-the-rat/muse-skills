@@ -61,6 +61,10 @@
 
 - Say a change or cancellation went through only when its result has `ok: true`. After `outcome_unknown`, check the reservation with `get-reservation` before telling the user what happened, and never repeat the command. Report a failure or an empty result plainly, and never invent a confirmation or a workaround.
 
+- When `outcome_unknown` comes with no confirmation number, `get-reservation` has nothing to read. Say the request may or may not have gone through, and ask the user to check for a confirmation email from OpenTable or in their OpenTable account.
+
+- When a booking fails at `make_reservation` without `outcome_unknown`, it was refused and nothing was reserved. Tell the user the reason the result gives. If the diner already has a reservation that overlaps the requested time, that reservation has to be cancelled or moved before this one can be booked.
+
 - If OpenTable needs another step, explain it instead of retrying. If the result is unconfirmed, keep the reference, offer only a continuation or recovery link the command returned, and never retry automatically.
 
 - A success with `resource_authorization.persisted: false` still went through. Give the user the confirmation number and say later management here may not be available, and do not repeat the booking, change or cancellation.

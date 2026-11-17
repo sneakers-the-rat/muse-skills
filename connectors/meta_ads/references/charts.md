@@ -32,3 +32,10 @@
 - One question gets one chart with nothing beside it. When more objects qualify than eight series hold, plot the leading eight on the measure asked about and say how many you plotted out of how many.
 
 - Correct only an input error the renderer reports. If it still fails, or the widget fails, give the figures in a list or table, say once that the chart could not be shown and do not retry.
+
+## Performance-trend report card
+
+- `ads_insights_performance_trend` renders its own interactive report card. On success the tool result already includes a `sandbox_link` (a `sandbox://workspace/.ads-performance/…html` path) and a `_present_ads_performance_card` directive — the report file has already been written for you.
+- To show the card, place that `sandbox_link` on its own line as a Markdown link, e.g. `[Ad performance trend](sandbox://workspace/.ads-performance/…html)`. That line becomes the interactive card (the ad table that expands into per-ad metric tiles and a trend chart). Do not call `render-chart`, `widget.create_html_file_widget`, or `render-performance-trend` for the same data, and do not write the card's HTML yourself.
+- The card already shows every ad's metric tiles, trend charts, status, objective and percent changes. Do not restate that data in prose — no summary table, no per-ad metric list, no repeating each percent change. Below the card, add a short takeaway (you may cite the single most important figure) and one next step.
+- If the result has no `sandbox_link` (older data or a render error), fall back to the analytical-answer rules in [metrics](metrics.md): give the decisive figures in prose and do not retry the card.

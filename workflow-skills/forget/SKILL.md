@@ -30,7 +30,7 @@
 
 - For shopping preferences, check `~/memory/shopping/PROFILE.md` directly and edit or remove the matching entries. Verify that no staged, queued, running or scheduled shopping-profile run can restore them.
 
-- For travel preferences, do the same with `~/memory/travel/PROFILE.md` and travel-profile runs.
+- For travel preferences, do the same with `~/memory/travel/PROFILE.md` and travel-profile runs. For past trips or bookings, edit or remove the matching lines in `~/memory/travel/HISTORY.md` directly and verify the file from fresh state.
 
 - Do not send approved cleanup targets to recoverable trash. Remove an exact standalone file with `rm -- <exact-path>` through `muse.exec`, revalidating the path immediately before removal.
 

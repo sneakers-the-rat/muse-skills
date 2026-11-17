@@ -1,0 +1,24 @@
+select distinct source_idea_id
+                     from feed.units
+                     where source_idea_id is not nullselect i.embedding::text as embedding_text,
+                            (u.seen_at_ms is not null) as seen
+                     from feed.units u
+                     join ideas.ideas i on i.idea_id = u.source_idea_id
+                     where u.origin = 'idea'
+                       and u.prompt_id = $1
+                       and i.embedding is not null
+                     order by u.edition_generated_at_ms desc, u.unit_id desc
+                     limit $2select embedding::text as embedding_text
+                     from feed.units
+                     where embedding is not null
+                       and prompt_id = $1
+                       and origin <> 'idea'
+                     order by created_at_ms desc, unit_id desc
+                     limit $2select embedding::text as embedding_text
+                     from feed.units
+                     where embedding is not null
+                       and prompt_id = $1
+                       and origin <> 'idea'
+                       and created_at_ms >= $3
+                     order by created_at_ms desc, unit_id desc
+                     limit $2prompt_id, coalesce(nullif(btrim(full_prompt), ''), free_text) as prompt_text, created_at_ms, updated_at_ms

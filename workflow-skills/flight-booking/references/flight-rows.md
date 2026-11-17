@@ -26,4 +26,11 @@
 
 ## The row's action
 
+<!-- gflights-first-off-only:start -->
 - A row offers `Book with Muse` unless the list sets a `flight_action`, such as the planning action in [flight comparison](flights.md). Either way the runtime appends the exact itinerary and total to the reply, and the offer id stays the private checkout mapping. Creating a row doesn't submit it or authorize a purchase.
+<!-- gflights-first-off-only:end -->
+<!-- gflights-first-only:start -->
+- A row offers `Book with Muse` unless it or the list sets a `flight_action`, such as the planning action in [flight comparison](flights.md) or a route's "Open on united.com". A row's own action replaces the list's for that row. Either way the runtime appends the exact itinerary and total to the reply, and the offer id stays the private checkout mapping. Creating a row doesn't submit it or authorize a purchase.
+
+- Rows from a Google Flights search point at its unchanged file, like a connector's. `duffel route` writes each finished row, with its action, so use those rows as they are.
+<!-- gflights-first-only:end -->

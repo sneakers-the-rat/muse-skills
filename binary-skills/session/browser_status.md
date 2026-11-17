@@ -1,5 +1,5 @@
 <!-- tasks-only:start -->
-<browser_status as_of="{as_of}" tasks="{task_count}" note="Replaces earlier browser status. Act only on what the user's message asks.">
+<browser_status as_of="{as_of}" tasks="{task_count}" note="Replaces earlier browser status. Act only on what the <!-- personal-muse-only:start -->user's<!-- personal-muse-only:end --><!-- group-muse-only:start -->member's<!-- group-muse-only:end --> message asks.">
 <!-- tasks-only:end -->
 <!-- no_tasks-only:start -->
 <browser_status as_of="{as_of}" tasks="0">
@@ -32,7 +32,7 @@ More are open; browser.windows list shows every window.
 <!-- tasks-only:start -->
 New work: browser.browse with task_id "new".
 Update: browser.browse with the task's task_id.
-Answer: browser.browse with the task's task_id and your answer in task, plus answer_to set to the question ID when its row names one. When the user's message gives a paused task what it waits on, answer that task rather than starting new work.
+Answer: browser.browse with the task's task_id and your answer in task, plus answer_to set to the question ID when its row names one. When <!-- personal-muse-only:start -->the user's<!-- personal-muse-only:end --><!-- group-muse-only:start -->a member's<!-- group-muse-only:end --> message gives a paused task what it waits on, answer that task rather than starting new work.
 Stop a scheduled job's run: cron.stop with its schedule id (cron.list finds it); that cancels the whole run, not just its browser window.
 Stop only a browser window: browser.windows close with the task's task_id, whatever its state.
 <!-- tasks-only:end -->

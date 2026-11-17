@@ -92,6 +92,13 @@ IPAddressDeny=::/0
 ExecStartPre=+/bin/sh -c 'cd ${browser_cell_profile_dir} && exec /usr/bin/setpriv --reuid=${browser_cell_hbi_hatch_host_uid} --regid=${browser_cell_hbi_broker_host_gid} --clear-groups -- /usr/bin/rm -rf -- Default/Sessions'
 ExecStartPre=+/bin/sh -c '/usr/sbin/ip link delete ${browser_cell_veth} 2>/dev/null || true'
 ExecStartPre=+/usr/bin/networkctl reload
+# htch-browser.nspawn overlays the egress policy directory onto two managed
+# policy directories of the rootfs, and nspawn resolves those rootfs paths on
+# the host, following symlinks. The cell's root owns its rootfs, so refuse every
+# start, systemd's automatic restart included, while any component of either
+# path is not a real directory; no cell process runs between this check and
+# nspawn's mount.
+ExecStartPre=+/bin/sh -c 'cd ${browser_cell_root_dir} && for path in etc etc/chromium etc/chromium/policies etc/chromium/policies/managed etc/opt etc/opt/chrome etc/opt/chrome/policies etc/opt/chrome/policies/managed; do if [ -L "$$path" ] || [ ! -d "$$path" ]; then echo "browser cell rootfs $$path is not a directory" >&2; exit 1; fi; done'
 ExecStart=+/usr/bin/systemd-nspawn --quiet --keep-unit --settings=override --as-pid2 --kill-signal=SIGTERM --setenv=HOME=/var/lib/hatch/browser --setenv=HATCH_BROWSER_CELL_NSPAWN=1 --setenv=CBH_MODE --directory=${browser_cell_root_dir} --machine=${browser_cell_machine} /usr/bin/tini -g -s -- /usr/local/bin/entrypoint.sh
 # --as-pid2 runs no init, so configure host0 (addr + default route) in the cell
 # netns after start.

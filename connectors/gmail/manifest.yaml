@@ -128,6 +128,8 @@ declarable_scopes:
   - https://www.googleapis.com/auth/gmail.compose
   - https://www.googleapis.com/auth/gmail.modify
   - https://www.googleapis.com/auth/gmail.settings.basic
+  - openid
+  - https://www.googleapis.com/auth/userinfo.email
 # Drafts are a DATA CLASS, not an API surface: a Gmail draft is an ordinary
 # message carrying the system DRAFT label, so message and thread reads return
 # full draft content even while the dedicated drafts methods are denied.
@@ -281,13 +283,14 @@ actions:
         label: Manage email change notifications
         approval_phrase: enable or stop Gmail mailbox change notifications
         requires_scopes:
-          - https://www.googleapis.com/auth/gmail.readonly
+          - openid https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/gmail.readonly
 commands:
   status: null
   disconnect: null
   "+triage": users.messages.list
   "+watch": users.messages.list
   "+read": users.messages.get
+  "+save-attachment": users.messages.get
   "+draft": users.drafts.create
   "+mark": users.mail.read_state
   "+archive": users.labels.manage
@@ -365,17 +368,32 @@ commands:
   users.threads.trash: users.messages.trash
   users.threads.untrash: users.messages.trash
 
+webhooks:
+  version: 2
+  sources:
+    mailbox_changes:
+      label: Gmail mailbox changes (test)
+      guidance:
+        - id: hold_only
+          when: ready
+          text: Mailbox change hints are retained for testing. This does not read email or notify the assistant.
+
 consent_screen:
   bullets:
     - icon: data_types
-      title: "Get more done with Gmail"
-      text: "Muse will access things like emails, attachments, contact info and email metadata."
+      title: "Stay on top of your email"
+      text: "Muse will read new emails, so it can help you keep up with what’s important to you."
     - icon: info
       title: "You choose what Muse can do"
-      text: "By default, Muse will ask before taking actions it thinks need review. Disconnect at any time in Settings."
+      text: "By default, Muse will ask before taking actions it thinks need review. Manage whether Muse can read new emails or disconnect at any time in Settings."
     - icon: caution
       title: "Keep an eye on things"
       text: "Muse may take unexpected actions. Monitor it carefully."
   footer_paragraphs:
-    - "The info used for your tasks is part of your interactions with Muse, which we may use to improve AI at Meta. You can manage this in Settings. [Learn more](https://muse.ai/privacy)"
+    - text: "The info used for your tasks is part of your interactions with Muse, which we may use to improve AI at Meta. You can manage this in Settings. [Learn more](https://muse.ai/privacy)"
+      variants:
+        european_region:
+          omit: true
+        united_kingdom:
+          omit: true
     - "Muse will exchange info with Gmail. To learn more, view their [terms](https://policies.google.com/terms) and [privacy policy](https://policies.google.com/privacy)."

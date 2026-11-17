@@ -1,0 +1,189 @@
+
+update runtime.browser_tasks
+set status = $5,
+    terminal_reason = $6,
+    terminal_interrupt_subtype = $7,
+    completed_at = now(),
+    terminal_user_update_due_at = now(),
+    requester_source = null,
+    requester_transport = null,
+    requester_model = null,
+    requester_effective_model = null,
+    request_mode_json = null,
+    max_training_tier_json = null,
+    initial_instruction = null,
+    deadline_at = null,
+    state_revision = state_revision + 1,
+    updated_at = now()
+where task_id = $1
+  and admission_seq is not null
+  and owner_agent_id is not distinct from $2
+  and stream_owner_message_id = $3
+  and state_revision = $4
+  and status in ('running', 'user_controlled')
+  and completed_at is null
+  and outcome_status is null
+returning state_revision
+
+update runtime.browser_tasks
+set browser_route = coalesce($3, browser_route),
+    egress_profile = coalesce($4, egress_profile)
+where task_id = $1
+  and admission_seq is not null
+  and owner_agent_id = $2
+  and completed_at is null
+  and (browser_route is distinct from coalesce($3, browser_route)
+       or egress_profile is distinct from coalesce($4, egress_profile))
+returning true
+
+update runtime.browser_tasks
+set browser_navigation_attempted = true
+where task_id = $1
+  and admission_seq is not null
+  and owner_agent_id = $2
+  and status = 'running'
+  and completed_at is null
+returning browser_navigation_attempted
+
+with stopped as (
+    update runtime.browser_tasks
+    set status = 'superseded',
+        terminal_reason = 'user_stop',
+        completed_at = now(),
+        terminal_user_update_due_at = now(),
+        requester_source = null,
+        requester_transport = null,
+        requester_model = null,
+        requester_effective_model = null,
+        request_mode_json = null,
+        max_training_tier_json = null,
+        wallet_selection_provider = null,
+        wallet_selection_payment_method_id = null,
+        initial_instruction = null,
+        deadline_at = null,
+        state_revision = state_revision + 1,
+        updated_at = now()
+    where task_id = $1
+      and admission_seq is not null
+      and owner_agent_id is not distinct from $2
+      and stream_owner_message_id = $3
+      and state_revision = $4
+      and status in ('running', 'user_controlled')
+      and completed_at is null
+      and outcome_status is null
+    returning state_revision
+)
+select state_revision from stopped
+union all
+select state_revision
+from runtime.browser_tasks
+where task_id = $1
+  and admission_seq is not null
+  and owner_agent_id is not distinct from $2
+  and stream_owner_message_id = $3
+  and state_revision = $5
+  and status = 'superseded'
+  and terminal_reason = 'user_stop'
+  and completed_at is not null
+  and outcome_status is null
+limit 1
+
+with aligned as (
+    update runtime.browser_tasks
+    set state_revision = state_revision + 1,
+        updated_at = now()
+    where task_id = $1
+      and admission_seq is not null
+      and owner_agent_id is not distinct from $2
+      and stream_owner_message_id = $3
+      and state_revision = $4
+      and status = $5
+      and completed_at is null
+    returning state_revision
+)
+select state_revision from aligned
+union all
+select state_revision
+from runtime.browser_tasks
+where task_id = $1
+  and admission_seq is not null
+  and owner_agent_id is not distinct from $2
+  and stream_owner_message_id = $3
+  and state_revision = $6
+  and status = $5
+  and completed_at is null
+limit 1
+
+update runtime.browser_tasks
+set status = 'user_controlled',
+    deadline_at = now() + interval '60 minutes',
+    state_revision = state_revision + 1,
+    updated_at = now()
+where task_id = $1
+  and admission_seq is not null
+  and owner_agent_id is not distinct from $2
+  and stream_owner_message_id = $3
+  and state_revision = $4
+  and status = $5
+  and completed_at is null
+  and relocating_to is null
+  and (
+    (
+      $6::boolean
+      and outcome_status is not null
+      and deadline_at > now()
+    )
+    or (not $6::boolean and outcome_status is null)
+  )
+returning state_revision
+
+select state_revision
+from runtime.browser_tasks
+where task_id = $1
+  and admission_seq is not null
+  and owner_agent_id is not distinct from $2
+  and stream_owner_message_id = $3
+  and state_revision = $4
+  and status = 'user_controlled'
+  and completed_at is null
+  and (
+    ($5::boolean and outcome_status is not null)
+    or (not $5::boolean and outcome_status is null)
+  )
+for update
+
+select deadline_at <= now()
+from runtime.browser_tasks
+where task_id = $1
+  and admission_seq is not null
+  and owner_agent_id is not distinct from $2
+  and stream_owner_message_id = $3
+  and state_revision = $4
+  and status = 'parked_outcome'
+  and outcome_status is not null
+  and completed_at is null
+for update
+
+select input_grants_json
+from runtime.browser_tasks
+where task_id = $1
+  and admission_seq is not null
+  and status = 'running'
+  and owner_agent_id = $2
+  and stream_owner_message_id = $3
+  and state_revision = $4
+  and completed_at is null
+  and wallet_selection_provider is not distinct from $5
+  and wallet_selection_payment_method_id is not distinct from $6
+for update
+
+select input_grants_json
+from runtime.browser_tasks
+where task_id = $1
+  and admission_seq is not null
+  and status = 'running'
+  and owner_agent_id = $2
+  and stream_owner_message_id = $3
+  and state_revision = $4
+for update
+select metadata_json from subagent_spawns where child_agent_id = $1$7€…

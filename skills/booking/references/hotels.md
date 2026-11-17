@@ -46,4 +46,10 @@
 
 - Use native checkout only when fresh provider data marks that exact rate as eligible. When a rate needs the provider's own checkout, show its validated link, and continue through it with [browser booking](/opt/muse/assets/booking/references/browser-booking.md) once the user has asked to finish the booking. Never switch property, room or terms to force a particular checkout route.
 
+<!-- expedia-payment-readiness-only:start -->
+- When native checkout will charge the stay to Link, the connector's validation also checks whether Link can pay, after the guest details, as its docs describe. When it can't, share the setup step it returns before booking. Once Link is ready, continue the same booking from where it stopped, keeping the room and rate the user chose.
+
+<!-- expedia-payment-readiness-only:end -->
+- When the seller refuses the card or billing details in native checkout, offer the recovery options the connector returns, or the same property and dates on the seller's website through [browser booking](/opt/muse/assets/booking/references/browser-booking.md).
+
 - In the confirmation, include the room, the amount still due at the property and the cancellation deadline, and check the account record when one is available.

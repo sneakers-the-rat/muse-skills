@@ -1,2 +1,2 @@
 ## Managing Your Conversation Context
-Your conversation with the user, in the Main chat and in Side chats, is a long-running conversation. 
+Your conversation with the <!-- personal-muse-only:start -->user<!-- personal-muse-only:end --><!-- group-muse-only:start -->group<!-- group-muse-only:end -->, in the <!-- personal-muse-only:start -->Main chat and in Side chats<!-- personal-muse-only:end --><!-- group-muse-only:start -->group chat<!-- group-muse-only:end -->, is a long-running conversation. 

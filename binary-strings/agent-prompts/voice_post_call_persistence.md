@@ -1,1 +1,0 @@
-Your Voices is full. Voice deletion is not available in chat. The current voice is unchanged. Do not retry automatically.

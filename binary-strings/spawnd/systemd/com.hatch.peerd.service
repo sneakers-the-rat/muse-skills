@@ -1,13 +1,8 @@
 [Unit]
 Description=com.hatch.peerd
-# Muse peer-plane transport broker: the Noise_IK responder behind ingress's
-# bridged /v1/noise?peer=v1 upgrades and the outbound dialer toward other
-# Hatch VMs. Holds
-# per-boot channel keys only (authd custodies identity at rest); no durable
-# state, no grants, no content.
-# No start-limit park: peerd terminates internet traffic, so a crash an
-# attacker can trigger repeatedly must degrade to paced restarts, never a
-# unit parked failed until manual reset (an attacker-owned off switch).
+# Peer message-header signer and public binding publisher. Ingress owns peer
+# sockets, Noise state and admission; authd retains the durable identity key.
+# Losing this process invalidates the signer incarnation used by ingress.
 StartLimitIntervalSec=0
 ConditionPathExists=!${keep_services_down_early_marker}
 ConditionPathExists=${host_bin_dir}/hatch-peerd
@@ -22,8 +17,7 @@ PartOf=hatch-rv.target
 Type=simple
 User=${peerd_user}
 Group=${peerd_group}
-# hatch-shared permits the tee-report attestation socket dial (0660 in its
-# setgid directory) and reading Vault's serving deadline (0640). Never add
+# hatch-shared permits reading Vault's serving deadline (0640). Never add
 # the daemon's credential groups. The group also gates the edge TLS key and
 # daemon/browser socket directories, which are masked below.
 SupplementaryGroups=${shared_group}
@@ -59,21 +53,15 @@ SystemCallArchitectures=native
 SystemCallFilter=@system-service
 SystemCallFilter=~@mount @privileged @resources setns unshare
 SystemCallErrorNumber=EPERM
-# peerd dials other VMs' ingresses over TLS:
-# it needs the internet families for exactly that one client role. Its only
-# listeners remain UDS.
-RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
-# peerd DIALS the public LB; it never binds an INET socket or talks to
-# link-local/metadata or loopback services. The one loopback exception is
-# systemd-resolved's stub at 127.0.0.53 — without it every FQDN dial fails
-# name resolution and the whole peer plane is deaf.
+# The signer has no IP transport. Its caller-checked UDS listeners and authd
+# client are its only network surface.
+RestrictAddressFamilies=AF_UNIX
 SocketBindDeny=any
-IPAddressAllow=127.0.0.53/32
-IPAddressDeny=localhost link-local multicast
+IPAddressDeny=any
 PrivateIPC=true
-# The two 32-byte per-boot secrets are mlocked; a small allowance is enough
-# and keeps a leak from pinning real memory.
+# The incarnation's signing subkey is mlocked; a small allowance is enough.
 LimitMEMLOCK=512K
+LimitCORE=0:0
 # /run/hatch/peerd holds the two sockets peerd binds itself (no socket unit:
 # serve_uds_admitted owns bind + unlink). 0755 so the ingress proxy and the
 # daemon's host-side supervisor can traverse; the socket-file PeerAcls are the
@@ -81,9 +69,8 @@ LimitMEMLOCK=512K
 RuntimeDirectory=hatch/peerd
 RuntimeDirectoryMode=0755
 ExecStartPre=+/usr/bin/install -d -m 0755 -o root -g root /run/hatch
-# Peer identity resolution (JARVIS_FQDN) and the authd socket come from the
-# shared host env file; env.override is the ops-only emergency layer every
-# host service honors (docs/deploy-and-systemd.md).
+# The authd socket comes from the shared host env file; env.override is the
+# ops-only emergency layer every host service honors (docs/deploy-and-systemd.md).
 EnvironmentFile=-${env_file}
 EnvironmentFile=-${env_override_file}
 Environment=RUST_LOG=info

@@ -12,7 +12,7 @@ Browser tasks and subagents already deliver completion handoffs. Use those inste
 
 ## Saved jobs and hooks
 
-Record the user's scope, target, cadence, completion condition, owner, and delivery destination. A request to monitor one operation covers the observations needed to finish, not repeating the operation. Reuse an existing goal as owner when applicable. Other reminders and follow-ups need a tracked owner.
+Record the <!-- personal-muse-only:start -->user's<!-- personal-muse-only:end --><!-- group-muse-only:start -->requested<!-- group-muse-only:end --> scope, target, cadence, completion condition, owner, and delivery destination. A request to monitor one operation covers the observations needed to finish, not repeating the operation. Reuse an existing goal as owner when applicable. Other reminders and follow-ups need a tracked owner.
 
 Keep goal-owned working files in `~/workspace/goals/<goal-slug>/hidden_files/`, including checkpoints, run logs, watermarks, and source snapshots. Hook scripts and state use the hook paths below.
 
@@ -47,7 +47,7 @@ When recovering work, follow these steps.
 3. Reconcile each component independently. Inspect running state before starting another copy. One component's timeout must not prevent unrelated components from recovering. Record partial success so the next attempt does not repeat completed work.
 4. Resume from checkpoints and verify useful progress. Write checkpoints atomically and regularly. Abrupt termination can skip shutdown handlers. For external actions, reconcile recorded intent and receipts with the destination before retrying an uncertain outcome.
 
-On cancellation, save the stop state before stopping the service and its recovery job. Recovery must not undo the user's decision.
+On cancellation, save the stop state before stopping the service and its recovery job. Recovery must not undo the <!-- personal-muse-only:start -->user's<!-- personal-muse-only:end --><!-- group-muse-only:start -->group's<!-- group-muse-only:end --> decision.
 
 ## Verification and delivery
 
@@ -57,4 +57,4 @@ Test the failure mode you claim to handle. Restarting a worker with its manager 
 
 Report component states separately when recovery partially succeeds. A failed bootstrap does not prove that every service is down. A quiet listener does not prove a crash. Preserve rate-limit stops, denied access, and uncertain external outcomes rather than retrying them as setup failures.
 
-Deliver results to the originating chat unless the user chose another allowed destination. Provider-connected side chats retain their exact-chat boundary. Keep unchanged observations quiet unless requested, and report failures or gaps that affect the user's outcome. A chat result or push notification is not an arbitrary SMS or a message to another person.
+Deliver results to the originating chat unless <!-- personal-muse-only:start -->the user<!-- personal-muse-only:end --><!-- group-muse-only:start -->a member<!-- group-muse-only:end --> chose another allowed destination<!-- personal-muse-only:start -->. Provider-connected side chats retain their exact-chat boundary<!-- personal-muse-only:end -->. Keep unchanged observations quiet unless requested, and report failures or gaps that affect the <!-- personal-muse-only:start -->user's<!-- personal-muse-only:end --><!-- group-muse-only:start -->group's<!-- group-muse-only:end --> outcome. A <!-- personal-muse-only:start -->chat result or push notification is not an arbitrary<!-- personal-muse-only:end --><!-- group-muse-only:start -->result posted in the group is not an<!-- group-muse-only:end --> SMS or a message to another person.

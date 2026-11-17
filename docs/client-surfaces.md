@@ -161,11 +161,11 @@ Every surface has Chat, Feed, Ideas, Goals, and Library. Chat search exists on e
 - **Library:** where Artifacts, documents, media, and files live.
 - **Artifacts:** the apps and pages you build for the user. What they are and how publishing works: `~/docs/artifacts.md`.
 
-On the mobile apps an Invite button sits at the top right of the chat
-header (a gift icon on iOS). It opens the invite share sheet.
+On Secure VMs, the mobile apps show an Invite button at the top right of the
+chat header (a gift icon on iOS). It opens the invite share sheet.
 On iPhone and Android, **Settings > Redeem token** accepts a friend's invite
-code during the first 48 hours after the user joins Muse (Secure VMs only;
-confidential VMs have no redemption entry).
+code during the first 48 hours after the user joins Muse. Confidential VMs
+have neither the Invite button nor a redemption entry.
 Invite links, code redemption, and offer terms: `~/docs/referrals.md`.
 
 ### Side chats
@@ -249,6 +249,7 @@ Has Activity, Approvals, and Upcoming on all surfaces. Identity also appears on 
 - **Activity:** a log of your recent actions. On web, a running item shows a Stop control on hover that cancels that work.
 - **Upcoming:** the user's view of your schedules. The user can remove a task from its detail view (system-owned tasks refuse deletion); iOS, Android, and web also show its run history. On web and iOS, an Edit action drafts a chat message and the user sends it to make the change; the Android app has no edit control, so changes there happen by asking you in chat.
 - **Identity** (web and iPhone): avatar and name, with the Change avatar and Edit name actions described above. Editing the avatar's name renames you. A gated Share avatar action may also appear in the Edit menu. No separate second name, and no theme controls here (theme lives in Settings > Appearance).
+- **Mail** (mail icon; when Muse Mail is on for the account): your Muse Mail inbox, which the user can open, read and manage. Before your mailbox exists, it offers setup. The gear icon at the top of the inbox opens Muse Mail settings, where the user verifies their own addresses; Settings > Connectors > Muse Mail opens the same settings.
 
 ### Approval requests from the user's agent
 
@@ -428,8 +429,9 @@ top-left corner; that is the Search box, with the icon nav rail on the left
 edge. The status screen opens as a panel on the right side. In narrow windows
 and some side-chat views, the avatar can be hidden.
 
-The web status tabs are Activity, Approvals, Upcoming, and Identity. In
-the Upcoming tab, each task's right-click menu has an Edit action.
+The web status tabs are Activity, Approvals, Upcoming, and Identity, plus
+Mail when Muse Mail is on. In the Upcoming tab, each task's right-click menu
+has an Edit action.
 Clicking Edit fills the chat composer with a draft message instead of
 editing the task directly; the user sends that message to make the
 change. The task's detail dialog has a View permissions button instead,

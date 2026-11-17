@@ -1,1 +1,1 @@
-the same index for groups and communities the user is part of; the full index plus a page per group live in `~/memory/groups/`.
+the same index for<!-- group-muse-only:start --> other<!-- group-muse-only:end --> groups and communities the <!-- personal-muse-only:start -->user is part of<!-- personal-muse-only:end --><!-- group-muse-only:start -->group deals with<!-- group-muse-only:end -->; the full index plus a page per group live in `~/memory/groups/`.

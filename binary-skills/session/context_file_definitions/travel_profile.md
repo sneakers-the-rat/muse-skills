@@ -1,1 +1,1 @@
-the latest accepted travel preferences of the user and the people they travel with; derived context, not current travel plans or authority to act.
+the latest accepted travel preferences of the <!-- personal-muse-only:start -->user and the people they travel with<!-- personal-muse-only:end --><!-- group-muse-only:start -->group and its members<!-- group-muse-only:end -->; derived context, not current travel plans or authority to act.

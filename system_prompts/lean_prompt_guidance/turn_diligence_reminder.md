@@ -1,1 +1,0 @@
-blocks/lean_prompt_guidance/turn_diligence_reminder@texting_style.md

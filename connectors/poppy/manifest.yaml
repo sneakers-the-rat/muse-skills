@@ -1,0 +1,114 @@
+version: 1
+metadata:
+  visible_in_settings: false
+auth: none
+cli:
+  binary: poppy-broker
+  skill: poppy
+connector: poppy
+display_name: Personal Agent Protocol
+description: Work with companies through the Personal Agent Protocol
+actions:
+  read:
+    # Reads of a verified company's protocol documents and declared GET
+    # operations. The tool enforces the destination itself: only the company
+    # it verified, its declared servers, public HTTPS addresses, no redirects.
+    default: allow
+    label: Read from companies
+    methods:
+      company.read:
+        label: Read a company's protocol documents and operations
+      # A declared GET operation, or a public read (a read-only MCP tool call
+      # sent signed out). Like api.write, the tool
+      # also asks Sentinel's network authorization for it, which can show the
+      # user a card unless its request screen clears a public read.
+      api.read:
+        label: Read from a company's API
+  write:
+    default: ask
+    label: Act with companies
+    methods:
+      # Tool-composed protocol requests: no user data or model-written content.
+      # No command maps here since every command works in the company's main
+      # Session; token requests still authorize under it.
+      session.open:
+        default: allow
+        label: Start a session with a company
+      # A declared operation with no files, or an MCP tool call. This check
+      # stays silent: the tool then asks Sentinel's network authorization for
+      # the exact request, which shows the user the same card a custom
+      # connector's write gets. Anything with a business effect also comes
+      # back as an operation that needs operations.confirm.
+      api.write:
+        default: allow
+        label: Send a request to a company's API
+      # Operations v2 has no cancel request, so the tool no longer uses this
+      # method; it stays declared because removing a shipped key needs a
+      # permanent retire migration.
+      operations.cancel:
+        default: allow
+        label: Cancel a company's proposal
+      # Declared but unused while Device Sign-In is off: Direct Sign-In never
+      # asks here (it runs as the company's connector card, whose consent sheet
+      # and the company's own page are the user's consent). Kept rather than
+      # retired: the key is in the permission ledger, and retiring it would
+      # need a migration generation for a capability that may return.
+      account.connect:
+        label: Sign in to your account at a company
+        approval_phrase: sign in to your account
+        approval_policy: fresh_consent_only
+      # Muse's own browser joining its session with a company (spec 0.3
+      # section 6): the code comes from the page Muse's browser loaded, and
+      # Sentinel allows this method only in the daemon's browser-join
+      # context, never from a model-run command.
+      browser_session.authorize:
+        default: allow
+        label: Use your session with a company in Muse's browser
+      # Revoking Muse's access only reduces what Muse holds.
+      account.disconnect:
+        default: allow
+        label: Disconnect your account from a company
+      # The user's files: one card per upload, showing every file.
+      api.upload:
+        label: Send your files to a company
+        approval_phrase: send your files
+        approval_policy: fresh_consent_only
+      # One conversation with a company's agent, for the brief shown on the
+      # card: its goal, what Muse may share and do, and the company's name and
+      # domain, which the approval binds with its conversation endpoint.
+      conversation.approve:
+        label: Start a conversation with a company's agent
+        approval_phrase: talk with this company's agent
+        approval_policy: fresh_consent_only
+      # Operations v2 requires the user's approval of each exact revision, so
+      # every confirmation is a single-use card showing the company's terms;
+      # only then does the tool resend the request with `Poppy-Approval`.
+      operations.confirm:
+        label: Confirm an action a company proposed
+        approval_phrase: make this change
+        approval_policy: fresh_consent_only
+commands:
+  discover: company.read
+  probe: company.read
+  "api describe": company.read
+  # The method depends on the request: api.read, api.write, or api.upload.
+  "api call": null
+  # Listing tools is company.read. A public read is api.read; every other
+  # tool call is api.write and a network write.
+  mcp: null
+  "api upload": api.upload
+  "operation confirm": operations.confirm
+  "conversation start": conversation.approve
+  # Run by the daemon for each send in an approved conversation; authorized
+  # by the conversation's approval, not a card.
+  "conversation exchange": null
+  # Run by the daemon to read a reported conversation's later replies; sends
+  # nothing, under the same approval.
+  "conversation read": null
+  "account connect": account.connect
+  "account disconnect": account.disconnect
+  "browser-session authorize": browser_session.authorize
+  # No network: reads the worker's own browser records.
+  "browser-session status": null
+  # No network: lists what Muse holds in authd.
+  "account list": null

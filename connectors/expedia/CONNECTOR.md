@@ -4,11 +4,13 @@
 
 - Before a user-facing search or booking, read [Hotel Booking](/opt/muse/skills/hotel-booking/SKILL.md), which compares Expedia with other sources, and [checkout](/opt/muse/assets/booking/references/checkout.md).
 
+- Use this connector, not a browser task on expedia.com, for what it supports: Expedia lodging search, room rates and native-checkout booking. Expedia often blocks Muse's cloud browser, so keep `browser.browse` on expedia.com for what the connector can't do, as this doc and [Hotel Booking](/opt/muse/skills/hotel-booking/SKILL.md) describe.
+
 ## Connect an account
 
 - Connecting is optional. `status` reports the connection, and `authorize-url` returns a `connect_url` to share. Guest access stays available while setup is pending.
 
-- When you first show results, end with any `connect_offer` and the `connect_url`. Member discounts appear only after they connect, so search again then rather than estimating them.
+- Guest results leave out Expedia's member discounts of 10% or more at select hotels, as `member_discounts_included: false` shows. They appear once the user connects through the `connect_url`. After they connect, search again rather than estimating member prices.
 
 - When the user asks about Expedia itself, such as One Key, member discounts, OneKeyCash or support, read [Expedia membership and support](/opt/hatch/connectors/expedia/references/membership-and-support.md).
 
@@ -123,9 +125,18 @@
 
 - For booking review, run `validate-booking` after guest details and Link are ready. Compare the fresh rate with `displayed_terms` for the same offer and rate. Explain material changes and follow the checkout guide if the price rises or terms worsen. Continue when `ready_to_book` is true. For other checkouts, this separate call is optional because `book` refreshes the rate.
 
+<!-- expedia-payment-readiness-only:start -->
+- `validate-booking` also checks whether Link can pay a pay-now rate. `payment_setup_required` means `book` would stop for Link setup: share its `next_action.markdown` unchanged and end the message, and don't run `book` until Link is ready. Keep the booking document unchanged and follow its `resume`, so the user doesn't choose the room again. A `book` that stops for Link setup carries the same `resume`.
+<!-- expedia-payment-readiness-only:end -->
+
 - Call `book --body-json '<unchanged document>'` once to open checkout approval, and never retry a failed booking automatically. For `billing_address_incomplete`, once the user gives the missing billing details, run the same command with the `--billing-*` flags it names. Those flags don't change the purchase, so it resumes the approved checkout. `link_request_open` means Stripe Link refused this payment request for a few minutes because a matching one from an earlier attempt was created in the last few minutes; nothing was created or charged, and this checkout keeps its approval. Run the same command again after 5 minutes only if the earlier attempt is known to have ended without a booking or charge. If it may have booked or is unresolved, stop and recover it as below. If the outcome is uncertain, follow **Recover a booking or arrange changes** below. Add `--payment-method-id ID` only for a card the user chose for this purchase. Otherwise omit it: the approval preselects the wallet default, or a usable card if none is marked default. The user can change the card there.
 
 - An identical invocation resumes the same purchase instead of starting a new one. `already_booked` refers to a purchase that already exists, and a cancelled itinerary needs a new approved purchase.
+
+- When Expedia refuses an approved booking, the result has `rejection` (`card_invalid`, `card_declined`, `billing_details`, `price_changed` or `other_rejection`), `recovery_options`, `expedia_url` and a `next_step`. Nothing was booked and that checkout is closed: running the same command again only returns the same refusal, marked `replayed`, without contacting Expedia. Tell the user plainly what Expedia refused and offer the listed options. `expedia_website` means booking the same property and dates on Expedia's site through `expedia_url` or with browser checkout. `requote` means running `validate-booking` again and booking at the new price only after the user agrees. `retry_unavailable` means the command named a different card or billing address, but paying another way isn't available right now: nothing was sent. Don't run `book` again. If the user approved an earlier `book` command for this stay that named another card or address, have them check their Expedia confirmation email or the Expedia Help Center before booking on the website.
+<!-- expedia-card-retry-only:start -->
+- `another_link_card`: ask which other Link card to use, then run the same `book` command with `--payment-method-id` set to it. That opens one new approval for this stay, where the user picks the card, so they should keep one other than the refused card. A command naming the same card as the command that sent the refused attempt only returns its refusal. Every later command naming another card or address reaches that same new attempt, so once it books it returns `already_booked`. `confirm_billing_address` (after a billing refusal): confirm the card's billing address with the user and run the same command with `--billing-address-line1`, `--billing-city` and `--billing-country`, plus `--billing-region` and `--billing-postal-code` for a US or Canadian address or when the address has them. Together they replace the card's whole address for that attempt. A billing address confirmed after a billing refusal is fine to ask for, and it goes only in the `--billing-*` flags.
+<!-- expedia-card-retry-only:end -->
 
 - A booking succeeded only when Expedia returns an itinerary number. Return the safe confirmation, dates, amount charged now, amount due at the property, total and cancellation terms, and never reveal the virtual card.
 
@@ -135,7 +146,9 @@
 
 - For `result_unknown`, keep the `transaction_id` and any `itinerary_id`, and check an `itinerary_id` with `booking-status`. Unless that shows the booking, tell the user you couldn't confirm whether it went through and that they may already have been charged, and direct them to their Expedia confirmation email or the [Expedia Help Center](https://www.expedia.com/helpcenter/) with the transaction ID. `booking_not_found` doesn't mean no booking was made. Don't retry automatically or switch to browser checkout while the earlier purchase is unresolved.
 
-- The CLI does not change or cancel bookings. Direct those and other booking help to the [Expedia Help Center](https://www.expedia.com/helpcenter/).
+- The CLI can't change or cancel a booking. For a change or cancellation the user asks for, when the browser status lists a device browser (the Chrome extension or the in-app browser) for this message, ask once whether to make it on expedia.com in their own browser, then start the `browser.browse` task with `browser` set to `device`. Otherwise, or when they'd rather not, give them the itinerary number and point them to the Expedia app, Trips on Expedia.com or the [Expedia Help Center](https://www.expedia.com/helpcenter/). Don't use the cloud browser for it: Expedia often blocks it there.
+
+- The CLI can't move a booking to new dates. Some stays can be changed in Trips or by Expedia's support, so check that route first, as above. When the stay can't be changed, book the new stay first, with its own approval, and only after Expedia confirms the new itinerary have the old booking cancelled as above, with the user's separate go-ahead. Say up front that the new stay is a new booking at the current price.
 
 ## Present results
 

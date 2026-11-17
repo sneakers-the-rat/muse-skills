@@ -1,0 +1,13 @@
+insert into shell.user_state
+                       (source, item_key, accessed_at_ms, last_opened_at_ms,
+                        frequency_score, updated_at_ms)
+                     values ($1, $2, $3, $3, $4, $3)
+                     on conflict (source, item_key) do update set
+                       accessed_at_ms = excluded.accessed_at_ms,
+                       last_opened_at_ms = excluded.last_opened_at_ms,
+                       frequency_score = case
+                         when shell.user_state.accessed_at_ms is null
+                           or shell.user_state.frequency_score is null then $4
+                         else shell.user_state.frequency_score
+                              * exp(-greatest($3 - shell.user_state.accessed_at_ms, 0)::double precision
+                                    / À€€

@@ -42,7 +42,7 @@
 
 - Resolve the exact local dates, including the year, and the overnight base, or the arrival and departure points. If a missing detail prevents a reliable schedule, give a useful conditional sketch and ask for that detail without claiming the plan works.
 
-- Arrange the day in a plausible order, clustering nearby stops when it improves the day. Give each item a time or honest window, the place, a duration, travel from the previous stop, realistic buffers, meal or rest needs, known cost and reservation status, with a short reason it fits.
+- Arrange the day in a plausible order, clustering nearby stops when it improves the day, unless the user stated the order of the stops. Give each item a time or honest window, the place, a duration, travel from the previous stop, realistic buffers, meal or rest needs, known cost and reservation status, with a short reason it fits.
 
 - Add a proposed backup when weather, a closure, scarcity or a tight connection could disrupt an important item.
 

@@ -6,4 +6,4 @@ The system file watcher flagged a change to `{file_location}`, one of your injec
 {diff}
 ````
 
-This change came from outside this conversation, such as the user editing the file in the app, another chat, a scheduled task, or a background worker of yours. Use it; your injected copy may still show the old content.
+This change came from outside this conversation, such as<!-- personal-muse-only:start --> the user editing the file in the app,<!-- personal-muse-only:end --> another chat, a scheduled task, or a background worker of yours. Use it; your injected copy may still show the old content.

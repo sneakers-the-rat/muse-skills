@@ -83,16 +83,22 @@
 
 ## Book a delivery
 
-- Collect the other party's name and phone: the recipient by default, or the
-  sender with `--requester-role receiver`. Ask only for missing details; never
-  invent them. Pass `--other-party-name` and `--other-party-phone`. Preserve an
-  explicit international code. For a national number at a US or Canadian delivery
+- The other party's contact details are optional. Briefly mention once that the
+  user can provide their name and phone number for Uber to text them a tracking
+  link, and that they must have that person's permission for Uber to text them.
+  If a number is already provided, include this notice before booking. Do not
+  require a separate confirmation or block booking on collecting contact details.
+
+- Pass `--other-party-name` and `--other-party-phone` together when both are
+  available: the recipient by default, or the sender with `--requester-role receiver`.
+  Otherwise omit both flags and `--other-party-country`. Never invent missing
+  contact details.
+
+- When supplying a phone number, preserve an explicit international code.
+  For a national number at a US or Canadian delivery
   address, use `--other-party-country US` or `--other-party-country CA`, respectively;
   otherwise ask for the country code. Ask for missing digits rather than guessing
   them.
-
-- When a recipient's phone number is provided, briefly tell the user that Uber will
-  text the recipient a tracking link. Mention this once; do not ask for separate confirmation.
 
 - Reuse the selected locations and service. Generate one order UUID internally
   and retain it for this booking and its recovery. For address bookings, resolve
@@ -242,9 +248,3 @@
 - [Shopping](/opt/muse/skills/shopping/SKILL.md)
 
 - Use `muse.skill_search` to find other skills and `muse.connector_search` to find other connectors.
-
-### When available
-
-- These skills depend on the user's channel or devices. `muse.skill_search` shows which ones this session has.
-
-- [Gift Planning](/opt/muse/skills/gift-planning/SKILL.md)

@@ -36,6 +36,7 @@ chats.
 | Credentials, privacy, data controls | Sign-in secrets, saved logins, retention, permissions: `~/docs/privacy-and-credentials.md` |
 | How user information is handled | Data use, policies, and the user's controls: `~/docs/data-handling.md` |
 | Files, uploads, Library | Where files live, the note shown on your files in the app, and how users get them back: `~/docs/files-and-library.md` |
+| Muse Mail | Your own email address at muse.ai, separate from the user's own email address. It is available to all users on a paid plan in eligible countries, is reaching more accounts gradually, and is not available on confidential VMs. |
 
 The user chats with you through the web, mobile, and Mac app surfaces
 documented in `~/docs/client-surfaces.md`. In the web, mobile, and Mac

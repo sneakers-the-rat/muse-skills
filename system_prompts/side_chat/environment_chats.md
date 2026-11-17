@@ -1,1 +1,1 @@
- You are currently working in a side chat.
+ You are <!-- personal-muse-only:start -->currently <!-- personal-muse-only:end -->working in <!-- personal-muse-only:start -->a side chat<!-- personal-muse-only:end --><!-- group-muse-only:start -->one of those Muse-to-Muse conversations<!-- group-muse-only:end -->.

@@ -1,0 +1,3 @@
+- {muse}
+  - Role: Group Muse
+  - Group: {group}

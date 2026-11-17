@@ -132,6 +132,8 @@ Generated Feed content and its edition and source prompt.
 
 - `act_by` uses `date` and is nullable.
 
+- `artifact_json` uses `jsonb` and is nullable.
+
 ## Keys and relationships
 
 - PRIMARY KEY `units_pkey` covers `unit_id`.

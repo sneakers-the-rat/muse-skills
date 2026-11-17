@@ -44,6 +44,8 @@
 
 - [FORM](/opt/hatch/connectors/form_mcp/CONNECTOR.md) for workouts, weight history, training plans and nutrition trends the user logs in FORM.
 
+- [Eight Sleep](/opt/hatch/connectors/eight_sleep/CONNECTOR.md)
+
 ## Websites
 
 - Open the user's account on a platform without a connector with `browser.browse`. Give the task the dates and measures needed, have it read or export those records, and ask for each figure with its date, unit and the platform's definition.

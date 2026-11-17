@@ -1,144 +1,137 @@
 # Plan a complete Meta campaign
 
-- Use this full-research path by default. An explicit step-by-step request uses [guided planning](campaign-guided.md) instead, and [account scope](account-scope.md) and [evidence](evidence.md) apply throughout.
+Planning turns the request into a strategy the advertiser approves.
 
-## Settle strategy before creative
+- Use this full-research path by default. If the advertiser asks to go step by step, ask about one setting per turn with your recommendation, and price the whole plan once, at the end, as [campaign budget](campaign-budget.md) describes. Planning then ends in a budget choice rather than the complete plan: `Use <amount>` (or `Keep <amount>` when it's their amount) and `Change the budget`. The checks below still apply. [Account scope](account-scope.md) and [evidence](evidence.md) apply throughout.
 
-- Strategy turns the advertiser's intent into executable delivery settings. Resolve them in this order:
-  - signals and tracking
-  - objective and optimization
-  - destination
-  - compliance
-  - geography and audience
-  - structure and placements
-  - budget and schedule
+- A plan-only request still gets the full research; it just doesn't create anything.
 
-- The current request overrides memory. Earlier conversations may supply stable facts the advertiser did not replace, never an old budget, objective, destination, promotion or one-off asset.
+- Facts about the offering come from the advertiser or a verified source, not from the business category, an account name, an old campaign or memory. When some are missing, you should ask for them together before recommending a strategy.
 
-- The strategy may name the number of ads needed for structure or pricing. Creative format, concept, copy, button wording, in-image text and production source belong to [creative preparation](campaign-creative.md) after strategy approval.
-
-## Establish the product brief
-
-- Before discovery, decide whether the conversation explains what is being advertised or tested well enough to research without adding facts. If describing what the audience receives, how it is delivered or what a test changes would need invention, the brief is incomplete.
-
-- Account names, campaign labels and history cannot fill that gap unless the advertiser asks to reuse or duplicate a setup. A name, date, audience or price alone does not establish what the offering is.
-
-- Ask the natural product or test questions together in one brief turn, with a short reason and no example answers, campaign settings or talk of research and later stages. Research, not the advertiser, recommends the goal, destination type, audience, placements, structure and schedule, and the budget when they leave it open.
-
-- A detail needed only to write or render the ad waits for the creative stage. When this clarification turn is needed anyway and no spending limit is known, include one natural budget question that lets the advertiser leave it open, never requiring them to invent an amount.
-
-- The brief is complete only when the remaining unknown facts cannot change a delivery decision or how the budget should be read. Ask only for facts that resolve such a dependency, without anchoring the answer to another product, and otherwise continue and state the limitation.
-
-- An omitted budget alone never creates a clarification turn. When the brief is otherwise enough, continue, and call `ads_budget_estimate` without a seed once the other pricing inputs are stable.
-
-- Use options only when one bounded question is enough. Once the brief is complete, begin discovery and the first research call in the same turn, and the final response carries a finding, a blocker or a decision, never troubleshooting narration.
+- The strategy rests on what the Ads tools return. Before you recommend it, these results come back:
+  1. the ad account, the Page and the Instagram account
+  2. the account context and the matching past campaigns
+  3. the tracking sources from `ads_get_datasets`
+  4. the targeting search results for each location, interest or audience in the plan
+  5. the `ads_policy_tool` result for each Special Ad Category or regulated topic in the plan
+  6. the budget estimate for the final structure
 
 ## Resolve identity
 
-- Use the sole enabled account or one clear match by name or context. Otherwise show one named account picker and stop, and with no account available, continue plan-only and say Ads Manager creation is unavailable.
+The campaign uses one ad account and one Page returned for this advertiser, plus their Instagram account if they have one.
 
-- Read Pages with `ads_get_ad_account_pages` for the selected account, and use the Page the advertiser chose or one clear compatible match. With several plausible Pages, ask with one picker.
+- The ad account is chosen as [account scope](account-scope.md) describes. With none available, the plan continues without Ads Manager creation and says so.
 
-- When the Page name materially differs from the verified destination brand, show the pairing and offer only `Use <Page name>` and `Choose another Page`. Ignore cosmetic differences.
+- The Page is the advertiser's choice or the one clear match among the account's Pages; several plausible ones are the advertiser's choice. Tools: `ads_get_ad_account_pages`.
 
-- That list holds the account's promoted Pages, not every Page the advertiser may advertise from. When it is empty or has no match, widen to `ads_get_user_pages`, which takes no ID, because `ads_create_creative` accepts any Page they hold advertising rights to.
+- A Page name that differs materially from the destination brand is confirmed with the advertiser, with options to use that Page or choose another; cosmetic differences pass.
 
-- An empty or unmatched account Page list never blocks creation and is never reported as something to fix, such as attaching a Page in Business Settings. Use `ads_get_pages_for_business` only with a returned `business_id` and a real need for business scope.
+- The account's list holds its promoted Pages, not every Page the advertiser can use, since a creative accepts any Page they hold advertising rights to. An empty or unmatched list widens to `ads_get_user_pages`, or `ads_get_pages_for_business` with a returned business ID, and isn't something for the advertiser to fix.
 
-- Resolve Instagram with `ads_get_ig_accounts` before recommending placements that may deliver on Instagram, using only an identity returned for the selected account. An Instagram-only placement, Instagram Direct or an Instagram profile destination needs that account.
+- Instagram ads should use an account `ads_get_ig_accounts` returns for this ad account. If none comes back, they can still run under the Page's name and picture.
 
-- Without a usable Instagram account, revise those placements or state the limitation, saying no Instagram account is linked to the ad account and that linking one would show their Instagram profile on ads delivered there. Revise the plan the same way when no Page is usable at all.
+## Settle the strategy
 
-- Reuse stable same-context choices by name, and refresh a prior campaign through `ads_get_ad_entities` only when the request refers to it. One-off offers, URLs, seasons, assets, IDs, capability results and live delivery state never carry into a new context, and carried choices are defaults, not permission to spend.
+The three groups below are settled in order, each narrowing the next.
 
-## Run decision-bearing research
+- Account context comes first: `ads_insights_advertiser_context` when available, and `ads_get_ad_entities` history when that summary is absent, misses a fact that could change a decision, or the request names an object. You look at past campaigns that match the product, objective, destination, audience type and season.
 
-- A plan-only request suppresses writes, not research. Run the same reads needed to ground the recommendation.
+- Conflicts resolve by compliance first, then the advertiser's explicit preference, compatible first-party evidence and safe Advantage+ defaults.
 
-- Use ordinary `call-tool --agent-output` reads, one tool per `describe-tool` command, with independent descriptors run together and no creation schemas yet. A failed lane is missing evidence for that lane only, never a negative fact.
+### What the campaign gets
 
-- Complete the lanes that matter before asking anything:
-  - account context first, from `ads_insights_advertiser_context` when exposed, reading `ads_get_ad_entities` history only when that summary is absent, lacks a fact that could change a decision or the request names an object
-  - tracking, reading only the dataset, event, quality, pixel and custom-conversion facts that can change the objective or optimization
-  - audience, inspecting an existing audience only when the request or account context makes it a plausible choice
-  - destination and brand, verifying only the public facts needed for delivery settings
-  - performance and benchmarks, called only when their inputs are grounded and the result can change the plan
-  - policy or help, called only when the category or a proposed setting needs it
+#### Destination
 
-- Leave creative-market patterns, asset inventory and all Ad Library research for the creative stage. Read only compatible history, matching the product, objective, destination, audience type and season, and never average unrelated history.
+Where people go after tapping the ad: a website, an app, an instant form, a messaging app, a phone call, or a Meta Page, profile, post or video.
 
-- Call research complete only when every selected lane has returned or been recorded unavailable, and describe exactly what was checked rather than calling everything verified. Names and IDs in a listing are leads, not evidence, and empty, failed or unmatched results never prove the advertiser lacks history.
+- What it needs exists for this account: a verified URL, a Page that accepted lead terms, a connected Instagram or WhatsApp account, a phone number, or the app ID and store link. Tools: `ads_get_ad_account_pages`, `ads_get_ig_accounts`.
 
-- Every cited fact changes a setting or explains why a candidate was rejected. Resolve conflicts with compliance first, then the advertiser's explicit preference, compatible first-party evidence and safe Advantage+ defaults.
+- Messaging can span several apps.
 
-- Missing or failed evidence may rule out a setting but never establishes its replacement. Recommend the objective, destination and audience from stated intent, affirmative evidence or a supported default shown as an assumption, and otherwise keep the decision open.
+#### Signals and tracking
 
-- Execution-bound URLs and targeting values come from the advertiser or a tool result. Price a destination only once its URL or object identity is supplied or returned, never a hypothetical one.
+- Lead forms, messaging, calls, engagement, profile visits and video views are measured on Meta.
 
-- Describe the audience as only what the executable targeting encodes. Personas used to shape messaging are creative direction, not targeting.
+- A website or app result is measurable when a conversion source has received that event recently. If none has, that's a [binding constraint](#binding-constraints), and you can offer something Meta does measure instead, such as page visits. Tools: `ads_get_datasets`, `ads_get_dataset_details`, `ads_get_dataset_stats`, `ads_get_customconversions`.
 
-## Choose objective, targeting and budget
+- Quality-lead optimization depends on CRM outcomes reaching Meta.
 
-- Choose the objective and optimization only after the destination and tracking facts, applying [delivery compatibility](campaign-delivery-compatibility.md) before settling, pricing or recommending either. Never silently replace the requested outcome.
+#### Objective and optimization
 
-- If the outcome's measurement event is unavailable, finish the useful non-pricing research and go to the binding constraint below before pricing any alternative.
+The objective is the campaign's business goal: awareness, traffic, engagement, leads, app promotion or sales. The optimization goal is the result each ad set asks Meta to get the most of.
 
-- Then apply compliance and resolve targeting. A country code is already canonical, and any interest, language or other location goes through [targeting](campaign-targeting.md) in one grounded `ads_targeting_search` batch.
+- Each campaign has one objective. Under a campaign budget, the optimization goal is fixed once ads run.
 
-- A partial targeting result is final for that round, so carry only returned objects forward. An unresolved requested place stays open, and never price a partial audience, substitute a nearby place, widen a radius or drop the geography.
+The whole combination passes [delivery compatibility](campaign-delivery-compatibility.md) before it's priced or recommended.
 
-- Check whether each campaign or ad set earns its own budget, preferring consolidation to unsupported fragmentation. Once pricing inputs, identities and capabilities are stable, price the whole structure once with [campaign budget](campaign-budget.md).
+### Who sees it
 
-- An estimate that prompts an optimization change is feasibility evidence, not final pricing. Any accepted input change invalidates it, and only the final structure is repriced.
+The audience is the people the advertiser actually serves, in the places they serve, within any Special Ad Category's limits.
 
-- Check coherence across all seven settings, including the delivery combination. Repair what evidence can resolve, and when one advertiser-owned blocker remains, finish research and ask only about it.
+#### Compliance
 
-- Research ends in exactly one state, a binding-choice widget, one genuinely open question, or the complete strategy with approve and revise options, even for a plan-only request. Never stop at an informational campaign or budget summary.
+The campaign's Special Ad Category matches what is advertised, judged by the offer, not the customers.
 
-## Resolve a binding constraint
+- The categories are housing (including mortgages and home loans), employment, financial products and services, social issues, elections or politics, and online gambling and gaming, scoped as [safety](safety.md) describes. A financial offer needs its category when the advertiser or audience is in the United States.
 
-- Stop before the complete review when evidence makes the request unexecutable or creates a material fork in outcome, optimization, target or spend. An unavailable measurement event is a tracking constraint, while a buildable event whose volume or cost conflicts with the advertiser's target or limit is budget feasibility.
+- The category applies to every country the ads target.
 
-- Show only the evidence, its consequence and one recommendation, followed by one bounded widget. Keep the requested outcome as an option when executable, add a spend or target revision when it resolves the constraint, and list the recommendation first.
+- Social issues, elections or politics needs the advertiser and Page authorized in each country, runs in its own campaign and is unavailable in the European Union.
 
-- Do not preview the complete plan or ask for strategy approval here. The selection settles only the disputed path, so collect any free-form value next, rerun affected research, price the final structure once and then show the complete strategy.
+- Other regulated topics, such as alcohol, healthcare or pharmaceuticals, follow Meta's policy, checked with `ads_policy_tool` when a planned setting depends on it.
 
-## Recommend the complete plan
+- When a category applies, the plan names it and what it changes; otherwise the campaign declares none without mentioning it.
 
-- Lead with the recommendation, not a research log. A beginner gets the outcome and timing, destination, audience, structure and placements, budget and expectations in business language, and an experienced advertiser gets the seven setting names, with only unfamiliar or disputed choices explained.
+#### Geography and audience
 
-- Give each setting its planned value and a concise basis, and surface the two to four findings that changed decisions, first-party evidence first. Use sparse links for external claims, never raw IDs, and state only assumptions or gaps that materially bound the plan.
+- A business people visit, or one serving a local area, targets its real service area: a city with a 10–50 mile radius, a neighborhood, or a radius of about 1–50 miles around the address. A whole state, region or country is confirmed with the advertiser. Location targeting reaches people who live in or were recently in the area.
 
-- Include no creative plan, campaign summary, prepared media, upload or Ads write at this stage.
+- Advantage+ Audience is on by default: location, a minimum age up to 25, language and exclusions stay fixed, while age, gender, interests and custom audiences are suggestions Meta can go beyond, so two or three interests the business supports are enough. Turning it off, for a stricter age range or narrowing the advertiser asks for, makes those settings limits; housing, employment and financial products and services restrict them further, as [safety](safety.md) describes.
 
-- Ask "Proceed with this strategy?" and say in the same short paragraph that approving settles these delivery settings and moves to the creative, while nothing is created and nothing spends until the final review is approved. Create `muse.create_options` first with exactly these choices:
-  - `Approve this strategy`
-  - `No, make changes`
+- Places, interests and languages come from one [targeting](campaign-targeting.md) search, and country codes can be used as they are. If the search finds only some of the places, keep those and ask the advertiser about the rest. Hold off on the estimate until they answer, since pricing only what was found assumes the missing place is dropped. A missing place shouldn't be swapped for a nearby one, widened or dropped.
 
-- Then write the complete plan and question with the returned token alone on the last line. Commentary carries status only, never plan settings.
+- An existing custom audience fits when the request or account points to it and it's ready to use; Meta blocks flagged audiences and expires ones unused for two years. Tools: `ads_get_ad_account_custom_audiences`, `ads_get_custom_audience`.
 
-- Approval accepts every shown delivery value, including budget and structure, but no creative or write. After `No, make changes`, ask what to revise, rerun only affected lanes, reprice once if a pricing input changed and show the complete revised strategy, and after approval go to creative preparation without repeating research.
+- The plan describes the audience only as its targeting encodes it; personas shape the creative, not the targeting.
 
-## Recommendation rules
+### How it delivers and spends
 
-- Campaigns separate objectives, ad sets separate material delivery mechanics such as budget, audience, geography, schedule, placement or optimization, and ads separate messages and concepts. Several ads are not a controlled test without an experiment, and never fragment beyond what the priced budget supports.
+Structure, placements, budget and schedule depend on each other: the budget decides how many campaigns and ad sets can learn, and the budget level and placements decide whether the campaign runs as Advantage+. Sales, app and leads campaigns run as Advantage+ when Advantage+ Audience, a campaign budget and automatic placements are all on, unless an advertiser constraint rules one out.
 
-- Never invent an exact URL, spending limit, offer, claim or service geography. Geography comes from the advertiser or verified service-area evidence, never from the account currency, timezone, Page language or location, a destination domain, old campaigns or market convention, so ask one geography question before pricing.
+#### Structure and placements
 
-- A business people visit, or one serving a local area, needs its service area, meaning the city, neighborhood or a radius around the address. When the advertiser gives only a state, region or country, ask once whether customers really come from all of it, and resolve the answer through [targeting](campaign-targeting.md).
+The campaign uses only as many campaigns, ad sets and ads as real differences and the budget call for, delivering on placements that fit the creative and destination.
 
-- With Advantage+ Audience on, suggest two or three interests the business itself supports, such as Japanese cuisine or sushi for a Japanese restaurant, look them up in the same `ads_targeting_search` batch, and say they guide delivery rather than limit who sees the ads.
+- Campaigns differ by objective, ad sets by delivery mechanics such as budget, audience, geography, schedule, placement or optimization, and ads by message. Several ads in one ad set aren't a controlled test; that takes an experiment.
 
-- Unless constrained, use auction buying, a campaign-level daily budget, broad Advantage+ Audience, automatic placements, no end date and compatible billing and optimization. Keep native messaging destinations native, and call a platform-restricted placement set by that name, never automatic placements.
+- Each campaign or ad set has enough budget to learn, so fewer, larger ones beat many small ones. Under a campaign budget, ad sets share one bid strategy and one optimization goal.
 
-- No end date suits delivery meant to run on. When the advertiser's own goal ends, such as a let unit, an event or a closing offer, raise it before the complete review and settle an end date, the only stop this connector can set, and a lifetime budget needs one either way.
+- Placements are automatic by default, which keeps Advantage+ placements on. Which placements exist depends on the objective. Restricting them on any ad set turns Advantage+ placements off for the whole campaign, so a restricted set reflects a stated need and the plan calls it restricted. Choosing Threads means Instagram Feed has to be chosen too.
 
-- A stopping rule is not an end date. "Pause it once the unit is leased" names a condition nothing here watches, so say stopping is a manual step and offer a date as a backstop, and when they mean it to run on, leave the end date out rather than inventing one.
+#### Budget and schedule
 
-- Before promising optimization or reporting for applications, purchases or another offsite conversion, read `ads_get_datasets`. With no usable dataset, say so and say what the campaign will measure instead, such as visits to the page rather than completed applications, as part of the recommendation.
+- By default the plan uses auction buying, a campaign-level daily budget, no end date, bidding for the most results and billing that fits the optimization goal. A daily budget is an average: days with better opportunities can spend more, within seven daily budgets per week. A lifetime budget is paced over the whole run and needs an end date.
 
-## Optional strategy artifact
+- Cost-per-result, return-on-ad-spend and bid-cap goals reflect a target the advertiser stated, and each can leave budget unspent. A return goal needs value optimization with purchase values reaching Meta, and on iOS app campaigns, cost and return goals run at least three days.
 
-- Create an unshared `artifact.create_web_static` strategy only when the advertiser asks, or after they accept a brief offer prompted by a material finding. Name it with the campaign name plus "campaign strategy", pass the exact request as `verbatim_request` and set `capabilities` to `{public_web_read: false, connectors: []}`.
+- An end date reflects a real end to the goal, such as an event, a closing offer or a let unit, and is the only stop this connector can set. A condition like "pause once it's leased" is a manual step, with a date offered as a backstop.
 
-- The builder can use the conversation's evidence, so do not force a recap through `artifact.send_input`. The artifact may explain evidence, recommendations, assumptions and links, never raw IDs, signed URLs, unsupported claims or approval controls, and it never replaces the final review.
+- Hours-of-day scheduling serves a goal that needs it, uses a lifetime budget, and runs in the viewer's or the account's time zone. Budget increases for known peak periods can be scheduled ahead, and unpaced delivery suits flash sales and live events.
+
+- The amount comes from the advertiser or compatible account history; otherwise pricing with `meta-ads-cli estimate-budget` offers choices, as [campaign budget](campaign-budget.md) describes. A missing amount alone isn't a reason to ask.
+
+- An event whose recent volume or cost doesn't fit the advertiser's target or limit is a [binding constraint](#binding-constraints).
+
+## Binding constraints
+
+Sometimes the evidence shows the request can't be built as asked, or that it could go in clearly different directions. That's a question for the advertiser, and their answer can change the plan, so ask it before you show one.
+
+Explain what you found and why it matters. Then offer the paths as options. Put your recommendation first, then what they asked for if it can still be built. Add any other change that would solve the problem. Don't show a plan or ask for approval in the same message.
+
+Once they choose, do the research their answer affects, then price the final plan once.
+
+## Recommend the plan
+
+- The plan should lead with your recommendation, in business language for a beginner and setting names for an experienced advertiser. Each setting gets its value and a short basis, with the two to four findings that changed a decision. Mention only the assumptions or gaps that limit the plan.
+
+- It asks "Proceed with this strategy?" with the options `Approve this strategy` and `No, make changes`. Approval goes to [creative](campaign-creative.md) without redoing research. A revision should rerun only the research it affects, reprice once if needed and show the whole revised plan.

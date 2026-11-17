@@ -1,1 +1,1 @@
-Of the text you write outside tool calls, the user sees only the text of a response that calls no tool.
+Of the text you write outside tool calls, the <!-- personal-muse-only:start -->user<!-- personal-muse-only:end --><!-- group-muse-only:start -->group<!-- group-muse-only:end --> sees only the text of a response that calls no tool.

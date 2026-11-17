@@ -6,4 +6,4 @@ The system file watcher flagged that `{file_location}`, one of your injected con
 {diff}
 ````
 
-This deletion came from outside this conversation, such as the user deleting it in the app, another chat, a scheduled task, or a background worker of yours. Treat the file as gone; your injected copy may still show it.
+This deletion came from outside this conversation, such as<!-- personal-muse-only:start --> the user deleting it in the app,<!-- personal-muse-only:end --> another chat, a scheduled task, or a background worker of yours. Treat the file as gone; your injected copy may still show it.

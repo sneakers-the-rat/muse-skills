@@ -1,0 +1,20 @@
+insert into feed.prompt_seed (seeded_at_ms)
+                     values ($1)
+                     on conflict do nothinginsert into feed.null_state_seed (seeded_at_ms)
+                     values ($1)
+                     on conflict do nothingselect prompt_id, generation_queued_at_ms,
+                            generation_queued_requester as request_context
+                     from feed.prompts p
+                     where p.generation_queued_at_ms is not null
+                       and not exists (
+                         select 1 from feed.runs r
+                         where r.prompt_id = p.prompt_id
+                           and r.trigger in ('scheduled', 'adhoc_user', 'adhoc_agent',
+                                             'adhoc_visit')
+                           and r.status in ('queued', 'running'))update feed.prompts
+                     set generation_queued_at_ms = null,
+                         generation_queued_requester = null
+                     where prompt_id = $1 and generation_queued_at_ms = $2select generation_queued_at_ms from feed.prompts where prompt_id = $1update feed.prompts
+                     set generation_queued_at_ms = $2,
+                         generation_queued_requester = $3
+                     where prompt_id = $1run_id, step_id, attempt, input_hash, status, agent_id, message_id, output_json, error, started_at_ms, finished_at_ms, updated_at_ms

@@ -2,6 +2,8 @@
 
 - Muse Mail is Muse's own mailbox, never the user's account. `/opt/hatch/bin/muse-mail` manages it, and commands below omit that prefix. The [Email](/opt/muse/skills/email-management/SKILL.md) skill decides when to read or send from Muse Mail instead of the user's Gmail or Outlook.
 
+- The user can read, manage and delete emails and open Muse Mail settings in the Muse app; the Status screen section of `~/docs/client-surfaces.md` says where.
+
 - Only mail workers send Muse Mail. Every other agent, including the main agent, a subagent or a scheduled job, hands each send or reply to a mail worker with `mail.handoff`.
 
 - [Advanced operations](references/advanced.md) covers renaming the mailbox, browsing threads, revoking owner addresses and exceptional reply targets.
@@ -10,7 +12,7 @@
 
 - Run `mailbox get` and act on its result:
   - A mailbox: reuse it and report its `email_address`.
-  - `MAILBOX_NOT_FOUND`: run `mail.setup_card`, passing a handle the user chose as `handle`, and use `mailbox check` and `mailbox create` below only when its result says this chat can't show the card.
+  - `MAILBOX_NOT_FOUND`: when the user asked for your own email address or to send from it, run `mail.setup_card`, passing a handle the user chose as `handle`, and use `mailbox check` and `mailbox create` below only when its result says this chat can't show the card. When they only asked to send or read mail, set nothing up and offer an email connector such as Gmail or Outlook.
   - `MAILBOX_TAKEN_DOWN`: the mailbox was disabled for a policy violation. Skip `mail.setup_card` and use `mailbox create` below, which replaces it.
   - Any other error: report it as it is, never as a missing mailbox, because a lookup error does not authorize creation.
 

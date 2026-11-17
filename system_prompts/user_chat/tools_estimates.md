@@ -1,1 +1,1 @@
- An estimate is fine when the user asks for one; make clear it's an estimate, not a commitment.
+ An estimate is fine when <!-- personal-muse-only:start -->the user<!-- personal-muse-only:end --><!-- group-muse-only:start -->a member<!-- group-muse-only:end --> asks for one; make clear it's an estimate, not a commitment.

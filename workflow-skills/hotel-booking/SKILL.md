@@ -2,7 +2,9 @@
 
 ## Find a stay that fits
 
-- Saved travel preferences, when the user has any, live in `~/memory/travel/PROFILE.md`, including each guest's hotel brands, room and bed preferences and loyalty programs. Reading it early lets you search from what they have already told Muse instead of asking again. What they say in this conversation takes precedence, and naming the saved preferences you used lets them correct one. Muse updates the profile in the background from the conversation.
+- Saved travel preferences, when the user has any, live in `~/memory/travel/PROFILE.md`, including each guest's hotel brands, room and bed preferences and loyalty programs. Reading it early lets you search from what Muse already knows about them instead of asking again. What they say in this conversation takes precedence, and naming the saved preferences you used lets them correct one. Muse updates the profile in the background.
+
+- Earlier bookings may be listed in `~/memory/travel/HISTORY.md`. When a place repeats, follow [earlier bookings](/opt/muse/assets/booking/references/travel-history.md) to use it.
 
 - Establish the destination, dates, number of rooms and who sleeps in each, with every child's exact age. Use the known budget, location and accessibility needs. Guest identity and payment can wait until the user chooses a rate.
 
@@ -25,6 +27,14 @@
 - Book with the seller of the verified rate. [Hotel comparison](references/hotels.md) explains when to use native checkout and when to continue on the seller's website.
 
 - Follow [checkout](/opt/muse/assets/booking/references/checkout.md) for the final refresh, worse terms, approval, an uncertain result and cancellation.
+
+## Change or cancel a stay
+
+- Change or cancel a stay only through its seller, as [checkout](/opt/muse/assets/booking/references/checkout.md) explains. Get the seller and confirmation number from the user or the confirmation email first.
+
+- Use the seller's connector when it can make the change, or `browser.browse` on the seller's site when it can't. When the site blocks the cloud browser, as expedia.com often does, ask once whether to use the user's own browser if the browser status lists a device browser for this message, and start the task with `browser` set to `device`. When there is none or they'd rather not, give them the confirmation number and the seller's app or help center.
+
+- When the seller can't move a booking to new dates, book the new stay first with its own approval, and cancel the old one only after the new booking is confirmed, with its own go-ahead.
 
 ## Available connectors
 
@@ -52,11 +62,11 @@
 
 ## Websites
 
-- Check rates with `browser.browse` on the property's own site and on sellers. Carry the exact dates, rooms with their occupants and children's ages, the room type and the cancellation terms, and ask for the full total and payment timing.
+- Check rates with `browser.browse` on the property's own site and on sellers that no available connector covers. Carry the exact dates, rooms with their occupants and children's ages, the room type and the cancellation terms, and ask for the full total and payment timing.
 
 - [Google Hotels](https://www.google.com/travel/hotels) compares sellers for the same property. [Booking.com](https://www.booking.com/) has wide coverage, especially in Europe.
 
-- [Expedia](https://www.expedia.com/) adds packages and the changes and cancellations its connector cannot make, and it covers Expedia wherever the connector is unavailable.
+- [Expedia](https://www.expedia.com/) adds packages and covers Expedia wherever the connector is unavailable. Expedia often blocks the cloud browser, so when the connector is available, use it for Expedia search, rates and native-checkout booking, follow its doc for rates that book only on Expedia's site, and handle changes as **Change or cancel a stay** describes.
 
 - [Airbnb](https://www.airbnb.com/) and [Vrbo](https://www.vrbo.com/) list rentals, from apartments to whole houses.
 

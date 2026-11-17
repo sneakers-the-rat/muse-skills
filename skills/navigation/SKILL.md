@@ -68,6 +68,20 @@
 
 - Report the confirmation number, pickup or departure point, the local time, what the user must bring, such as the license, permit, card or ticket, and the cancellation deadline.
 
+## Watch a booked train, bus or ferry
+
+- When you book a train, long-distance bus or ferry leg or find one in the user's confirmations, offer a status watch once. Start it when the user accepts or asks for ongoing updates, because a booking alone does not ask for recurring checks.
+
+- Follow [Flight Tracking](/opt/muse/skills/flight-tracking/SKILL.md) for its owner, state, job body and notices, and `~/docs/chat/scheduling-and-watching.md` for the limits of a scheduled check.
+
+- Give it its own job and state file, and its own Tracking item unless a user goal owns the trip, because completing an item stops every job it owns.
+
+- End only this watch when the leg departs or is cancelled with no replacement: remove just its job with `cron.remove`, then complete its Tracking item only when `cron.list` shows no other job under it. Flight Tracking's stop steps end all of a trip's monitoring, and a later flight watch can share this item, so either shortcut would stop the trip's flight alerts.
+
+- Check the operator's own live status for that service and date with `browser.browse`, starting three days before departure: daily until 36 hours before, every six hours until 12 hours before, then hourly until it departs. Have the job body tell each run to move its own schedule to the band it is in.
+
+- Alert on a cancellation, a delay of 30 minutes or more and a changed platform or departure point.
+
 ## Available connectors
 
 <!-- duffel-rental-cars-only:start -->

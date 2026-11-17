@@ -35,7 +35,7 @@
 
 - For a request to buy, say explicitly that the task completes checkout and confirms the order was placed. Ask it to stop after cart preparation only when that is what the user requested. The browser inspects the cart, presents cart and payment decisions, enters the approved card and checks the merchant's confirmation. Do not direct it through provider setup or individual checkout actions.
 
-- Pass a payment preference in ordinary terms. A wallet card goes in `wallet`, with its masked label in `task`; never put opaque method IDs or payment tokens in `task`. Do not forward card details supplied in chat. Follow `~/docs/chat/payments-and-purchases.md` for Wallet setup or browser takeover. A merchant's Link or Shop Pay button is not evidence of the workflow's supported payment routes.
+- Follow `~/docs/chat/payments-and-purchases.md` for payment selection, Wallet setup and browser takeover. Carry the user's payment preference and masked label in `task`; keep method IDs in structured payment fields. Do not forward card details supplied in chat. A merchant's Link or Shop Pay button does not establish support for the wallet route.
 
 - Mention any payment refusal, checkout failure or unresolved earlier outcome for this purchase.
 

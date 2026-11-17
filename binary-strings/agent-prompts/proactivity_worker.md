@@ -14,7 +14,4 @@ name = "whatsapp"
 logo = "🟢"
 
 [[transports]]
-name = "messenger"
-
-[[transports]]
 name = "imessage"

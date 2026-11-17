@@ -1,0 +1,4 @@
+- The other Muse
+  - Name: not supplied
+  - Role: Group Muse
+  - Group: {group}

@@ -78,7 +78,7 @@
 
 - [Grab](/opt/hatch/connectors/grab_mcp/CONNECTOR.md) for grocery search, carts and checkout.
 
-- [Deglaze](/opt/hatch/connectors/deglaze_mcp/CONNECTOR.md) for the user's saved recipes, meal plans and grocery lists.
+- [Deglaze](/opt/hatch/connectors/deglaze/CONNECTOR.md) for the user's saved recipes, meal plans and grocery lists.
 
 ## Websites
 

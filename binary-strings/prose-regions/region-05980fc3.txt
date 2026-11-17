@@ -1,0 +1,85 @@
+select greatest(
+                           (select max(coalesce((metadata_json->>'proactivity_first_delivered_at')::timestamptz, terminal_at))
+                            from self_improvement.follow_up_queue
+                            where state = 'delivered' or metadata_json ? 'proactivity_first_delivered_at'),
+                           (select $1::timestamptz
+                            where exists (
+                              select 1
+                              from self_improvement.follow_up_queue
+                              where state = 'delivering'
+                            ))
+                         )update self_improvement.follow_up_queue
+                     set metadata_json = metadata_json || jsonb_build_object(
+                       'proactivity_notification_delivery', true,
+                       'proactivity_delivery_guidance', coalesce(metadata_json->'proactivity_delivery_guidance',to_jsonb($3::text)),
+                       'proactivity_delivery_common_guidance', coalesce(metadata_json->'proactivity_delivery_common_guidance',to_jsonb($5::text)),
+                       'proactivity_delivery_sources', coalesce(metadata_json->'proactivity_delivery_sources',to_jsonb($4::text)),
+                       'proactivity_delivery_context', coalesce(metadata_json->'proactivity_delivery_context',$6::jsonb))
+                     where follow_up_id=$1 and delivery_submission_id=$2 and state='delivering'
+                       and producer in ('proactive_notifier','proactivity_changes')
+                       and metadata_json->'proactivity_delightfulness'='true'::jsonb
+                     returning metadata_jsonproactivity_delivery_guidanceproactivity_delivery_sourcesupdate self_improvement.follow_up_queue
+                     set metadata_json=jsonb_set(metadata_json,'{proactivity_skipped_children}',
+                       coalesce(metadata_json->'proactivity_skipped_children','{}'::jsonb)
+                         || jsonb_build_object($3::text,$4::text)),updated_at=now()
+                     where follow_up_id=$1 and delivery_submission_id=$2 and state='delivering'
+                       and producer in ('proactive_notifier','proactivity_changes')
+                       and exists(select 1 from jsonb_array_elements(metadata_json->'proactivity_notification_batch'->'messages') child
+                         where child->>'submission_id'=$3)update self_improvement.follow_up_queue
+                     set not_before = $3, disposition_reason = $4,
+                         metadata_json = jsonb_set(metadata_json,
+                             '{delivery_recovery_attempts}', $6::jsonb),
+                         updated_at = now()
+                     where follow_up_id = $1 and state = 'delivering'
+                       and delivery_submission_id = $2
+                       and (coalesce(metadata_json->'delivery_recovery_attempts', '0'::jsonb) = $5::jsonb
+                         or (metadata_json->'delivery_recovery_attempts' = $6::jsonb
+                             and not_before = $3 and disposition_reason = $4))delivery_waiting_for_rootselect min(not_before) from self_improvement.follow_up_queue
+                     where state='delivering' and disposition_reason = $1
+                       and ($2 or priority in ($3, $4) or producer = $5)
+                       and ($6::text is null or metadata_json->>'owner_run_id' = $6)update self_improvement.follow_up_queue
+                 set metadata_json = jsonb_set(metadata_json, '{delivery_continuations}',
+                    coalesce(metadata_json->'delivery_continuations', '{}'::jsonb)
+                        || jsonb_build_object($4::text, $5::jsonb)),
+                     updated_at = now()
+                 where follow_up_id = $1 and delivery_submission_id = $2
+                   and chat_id = $3 and producer in ('proactive_notifier','proactivity_changes')
+                   and state = 'delivering'
+                   and (metadata_json->'delivery_continuations' is null
+                        or jsonb_typeof(metadata_json->'delivery_continuations') = 'object')
+                   and (metadata_json->'delivery_continuations' ? $4::text
+                        or (select count(*) from jsonb_object_keys(
+                            coalesce(metadata_json->'delivery_continuations', '{}'::jsonb))) < 256)
+                   and (metadata_json->'delivery_continuations'-> $4::text is null
+                        or metadata_json->'delivery_continuations'-> $4::text = $5::jsonb)
+                 returning coalesce(metadata_json->'proactivity_delightfulness' = 'true'::jsonb, false),
+                    coalesce(metadata_json->'proactivity_direct_delivery' = 'true'::jsonb, false),
+                    coalesce(metadata_json->>'proactivity_admitted' = delivery_submission_id
+                      and nullif(btrim(metadata_json->>'proactivity_delivery_guidance'), '') is not null, false)select metadata_json->>'product_message' from self_improvement.follow_up_queue
+                 where delivery_submission_id=$1 limit 1select delivery_submission_id,chat_id,chat_binding_epoch,
+                       case when $4 then metadata_json->'proactive_reply_to_message_id' end as reply_reference
+                     from self_improvement.follow_up_queue
+                 where follow_up_id=$1 and producer in ('proactive_notifier','proactivity_changes') and state='delivering'
+                   and (delivery_submission_id=$2 or (
+                     metadata_json->>'proactivity_admitted'=delivery_submission_id
+                     and metadata_json->'delivery_continuations'->$2::text->>'submission_id'=$2
+                     and metadata_json->'delivery_continuations'->$2::text->>'root_agent_id'=$3))select metadata_json from self_improvement.follow_up_queue
+                     where follow_up_id=$1 and delivery_submission_id=$2 and state='delivering'
+                       and producer in ('proactive_notifier','proactivity_changes') for updateupdate self_improvement.proactivity_changes
+                    set report_suppression_reason='reviewed_by_delivery',
+                        report_note='Completed action review in the destination conversation.'
+                    where change_id=any($1) and claimed_follow_up_id=$2 and claimed_submission_id=$3
+                      and delivered_at is null and report_suppression_reason is nullupdate self_improvement.follow_up_queue set metadata_json=$3,updated_at=now()
+                    where follow_up_id=$1 and delivery_submission_id=$2notification publication lost its coordinatorselect jsonb_build_object(
+                     'proactivity_changes', metadata_json->'proactivity_changes')
+                   || case when metadata_json ? 'proactivity_change_notice_ids'
+                        then jsonb_build_object('proactivity_change_notice_ids',
+                            metadata_json->'proactivity_change_notice_ids')
+                        else '{}'::jsonb end
+                 from self_improvement.follow_up_queue
+                 where follow_up_id=$1 and delivery_submission_id=$2
+                   and producer in ('proactive_notifier','proactivity_changes')
+                   and state='delivering' for updateconfirmed_change_idsupdate self_improvement.follow_up_queue
+                set metadata_json=jsonb_set(metadata_json,'{proactivity_changes}',$3)
+                where follow_up_id=$1 and delivery_submission_id=$2select count(*) from self_improvement.proactivity_changes
+                 where change_id=any($1) and delivered_at is null and report_suppression_reason is nullrun occurrence requires a nonempty coalesce keyinvalid delivery recovery attempt countnotification has no coordinatorfollow-up source chat no longer existsdelivered notice has no terminal timeacquired connection, but time to acquire exceeded slow thresholdacquired connectionconnector_sync.pruneconnector_sync.settleconnector_sync.accountconnector_sync.cursorsconnector_sync.pendingconnector_sync.reconcileconnector_sync.account_if_presentconnector_sync.automation_failurecoalesce_keyinternal_proactive.deferinternal_proactive.cancelinternal_proactive.expireinternal_proactive.cursorinternal_proactive.store_pageinternal_proactive.finish_batchinternal_proactive.reject_batchinternal_proactive.pending_batchesinternal_proactive.cancel_removed_catalogfollow_up_queue.split_proactive_deferralsfollow_up_queue.requeue_proactive_deferralproactivity_changes.claimproactivity_changes.recorddescribe the completed changeproactivity_changes.notice_keyproactivity.historyrelationship_briefs.get_previewrelationship_briefs.mark_openedruns.maintenance_readinessruns.createruns.release_leaseruns.try_acquire_leaseruns.any_incompleteruns.has_incompleteruns.claim_next_queuedruns.list_for_objectiveruns.list_stalled_runningruns.update_state_if_stateruns.stamp_running_boot_claimruns.idle_session_run_exists_sinceruns.latest_signal_cycle_admissionfailedskippedruns.resolve_stalled_if_runningruns.skip_queued_for_objectiveruns.admit_staged_restart_phaseruns.claim_next_queued_idle_gatedruns.latest_automatic_cycle_admissionruns.requeue_interrupted_in_placeself-improvement restart phase version must be positiveruns.abort_restart_phase_admissionruns.attach_restart_phase_executor

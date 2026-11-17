@@ -51,7 +51,7 @@
 
 - Use [Rightmove](https://www.rightmove.co.uk/) and [Zoopla](https://www.zoopla.co.uk/) in the UK, [Realtor.ca](https://www.realtor.ca/) in Canada, [Idealista](https://www.idealista.com/) in Spain, Italy and Portugal, [SeLoger](https://www.seloger.com/) in France and [ImmobilienScout24](https://www.immobilienscout24.de/) in Germany.
 
-- Use [SUUMO](https://suumo.jp/) in Japan, [Inmuebles24](https://www.inmuebles24.com/) in Mexico, and [Domain](https://www.domain.com.au/) or [realestate.com.au](https://www.realestate.com.au/) in Australia.
+- Use [SUUMO](https://suumo.jp/) in Japan, [Inmuebles24](https://www.inmuebles24.com/) in Mexico, and [realestate.com.au](https://www.realestate.com.au/) and [Domain](https://www.domain.com.au/) in Australia.
 
 ## Alternatives for better results
 

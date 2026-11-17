@@ -18,7 +18,9 @@
 
 - `link_request_open` means Stripe Link refused this payment request because a matching one from an earlier attempt (same merchant, amount and card) was created in the last few minutes, and that attempt isn't proven to have ended without a booking. Nothing was created or charged, and this checkout keeps its approval. Resolve the earlier attempt first, with `booking-status` when its outcome is unknown, and don't retry while it is unresolved or may have booked. When the earlier attempt was cancelled before submission or rejected with no order, `book` waits out those minutes itself, so let it finish.
 
-- Before any approval or submission for this purchase, correct validation errors; for an expired offer, search the itinerary again and present fresh terms for approval.
+- Before any approval or submission for this purchase, correct validation errors. For `offer_unavailable` or an expired quote from `validate-booking`, search the itinerary again and present fresh terms for approval. `book` refreshes an expired quote itself.
+
+- `next_step: requote` means no order exists and the approved payment is closed. When `book` re-quoted in the same call, `requote` holds the offer's current terms: present `requote.total_amount` beside `requote.approved_total_amount` and `requote.changed_fields`, and run the same `book` again only when `requote.book_again` is true and the user wants the flight at that price; it asks for a fresh approval. Otherwise follow `next_action`.
 
 - After approval or submission for this purchase, each outcome carries its own `message` and `next_action` for that state, including whether a booking or payment may already have gone through and whether anything can be retried. Expiry does not resolve booking or funding uncertainty or permit retry or replacement.
 
@@ -32,6 +34,6 @@
 
 - A success with `resource_authorization.persisted: false` is still a booking. Report it and warn that later management may be unavailable; booking again would create a second booking.
 
-- The same offer with the same booking data is the same checkout and can resume, except after `checkout_pricing_stopped`. A new offer starts another checkout and may place another hold, so it is a new purchase for the user to choose, not a retry.
+- The same offer with the same booking data is the same checkout and can resume, except after a `requote` result, where the same `book` starts a fresh checkout with its own approval. A new offer starts another checkout and may place another hold, so it is a new purchase for the user to choose, not a retry.
 
 - After success, report every carrier booking reference and ticket status from the receipt. A loyalty account marked `not_confirmed_on_order` is unconfirmed, not rejected. Suggest checking with the airline using the booking reference; rebooking would buy a second ticket.

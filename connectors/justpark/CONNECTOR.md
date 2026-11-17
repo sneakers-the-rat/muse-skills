@@ -2,11 +2,11 @@
 
 - JustPark lists bookable UK parking, from car parks to private driveways, and holds the user's driver bookings and vehicles. Run `/opt/hatch/bin/justpark <command>`, with `--help` on any command for its options. Read the JSON it returns yourself, and never show commands, field names, raw JSON or internal IDs other than a booking number.
 
-- It searches parking and reads the user's account. It cannot book, pay for, extend, change or cancel parking: the user books through the space's link and manages bookings in the JustPark app or website.
+- It searches parking and reads the user's account. Its tools cannot book, pay for, extend, change or cancel parking. Muse books a space on JustPark's website with `browser.browse`, as **Book a space** describes, and the user manages bookings in the JustPark app or website.
 
 ## Connect
 
-- Use this connector for JustPark rather than justpark.com in the browser. Every tool, including parking search, needs the connection. Run `status`; if it reports not connected, run `authorize-url`, say in one sentence that connecting lets you find spaces and show their prices, a map and the user's bookings here, post its exact `connect_url` as `[Connect JustPark](<connect_url>)`, and run `status` again once the user has connected, before calling a tool. Use the website only if the user prefers not to connect. `status` shows only that credentials are stored; the first real call shows whether JustPark responds. Never invent a URL, send the user to Settings or ask for their JustPark password.
+- Use this connector rather than justpark.com in the browser to find spaces and read the user's account, and use the browser only to book a space. Every tool, including parking search, needs the connection. Run `status`; if it reports not connected, run `authorize-url`, say in one sentence that connecting lets you find spaces and show their prices, a map and the user's bookings here, post its exact `connect_url` as `[Connect JustPark](<connect_url>)`, and run `status` again once the user has connected, before calling a tool. Use the website only if the user prefers not to connect. `status` shows only that credentials are stored; the first real call shows whether JustPark responds. Never invent a URL, send the user to Settings or ask for their JustPark password.
 
 - To disconnect, run `disconnect`, post its exact `disconnect_url` as `[Disconnect JustPark](<disconnect_url>)`, and claim the disconnection only after the user confirms through that link.
 
@@ -65,15 +65,34 @@
 
 - When the user sends "Show details for <name>", with a price when two spaces share a name, or asks for one returned space's details, match it to the search result and call `get_listing_details` with its `id`. Start with a map of just that space from its `latitude` and `longitude`, then give the address, what the space is like, facilities, size and height limits, EV charging, cancellation terms and the review summary. End every reply that shows a space's details with `muse.create_options` offering exactly "Book <name>", with the space's `name`, and "Show other options".
 
-- For "Book <name>", reply in one sentence with the booking link of the space with that name whose details you showed most recently, inside the sentence with more words after it, such as "Book [First Way, HA9 on JustPark](<booking_url>) for £30.44, Thursday 08:00 to 18:00." Use its `booking_url` from the search; if it came from no search in this conversation, use its `canonical_url` and tell the user to choose their times on JustPark.
+- For "Book <name>", book the space with that name whose details you showed most recently, as **Book a space** describes.
 
 - For "Show other options", show the map, list and buttons again with the search's other spaces, leaving out the one just viewed.
 
+## Book a space
+
+- When the user asks to book a returned space, including with "Book <name>", book it on JustPark's website with `browser.browse`, following [browser booking](/opt/muse/assets/booking/references/browser-booking.md) and [checkout](/opt/muse/assets/booking/references/checkout.md). Don't reply with the booking link instead.
+
+- Start one browser task with `task_id: "new"` at the space's exact `booking_url` from the search, which carries the searched times. If the space came from no search in this conversation, search again for the user's times and use the matching space's `booking_url`; if it isn't returned, start at its `canonical_url` and give the task the times to choose.
+
+- Give the task the space's name and address, the parking start and end in local time, the chosen vehicle's registration with its make and model, the price JustPark quoted for those times and the account email from `get_me`. Ask for a registration first if the account has no vehicle. JustPark takes payment, so ask the task to complete the booking; the browser's checkout asks the user to approve the payment before it books:
+
+```json
+{
+  "task_id": "new",
+  "task": "Book <name>, <address> on JustPark at <booking_url>. Park from <YYYY-MM-DD HH:mm> to <YYYY-MM-DD HH:mm> local time with vehicle <registration> (<make> <model>). JustPark quoted <price> for these times. If JustPark asks, sign in to the user's JustPark account, <email>, so the booking shows in their JustPark app. Decline add-ons the user did not ask for. Report any change in price or times. Complete the booking and confirm it was made, with JustPark's booking number."
+}
+```
+
+- Continue the same task with its `task_id` for answers and changes. If its outcome is unclear, call `list_bookings` with `status` `upcoming` and `active`, following `next_page`, and look for a booking that matches the space, times and vehicle before doing anything else, because a booking that starts soon may already be active. Never start another checkout until it is clear that no booking was made.
+
+- Share the booking link for the user to finish themselves only when they ask for it, or when sign-in, blocked automation or another real limit stops the browser. Then say what is already chosen and what remains.
+
 ## Booking links
 
-- Put every booking link inside a sentence or bullet with more words after it. Never put a link on a line by itself or at the end of a line outside a list, because Muse turns a lone link into a large preview card. Use only returned HTTPS links whose hostname is exactly `www.justpark.com`, and never ask for card details in chat.
+- Put every booking link inside a sentence or bullet with more words after it. Never put a link on a line by itself or at the end of a line outside a list, because Muse turns a lone link into a large preview card. Use only returned HTTPS links whose hostname is exactly `www.justpark.com`, in replies and as a browser task's starting page. Never ask for card details in chat; the browser's checkout handles payment.
 
-- Sharing a link books nothing. Say a space is booked only after `list_bookings` or `get_booking_details` shows the booking.
+- Sharing a link or opening a booking page books nothing. Say a space is booked only when the browser task reports JustPark's booking confirmation with a booking number, or `list_bookings` or `get_booking_details` shows the booking, and give the user the booking number.
 
 ## Bookings and vehicles
 

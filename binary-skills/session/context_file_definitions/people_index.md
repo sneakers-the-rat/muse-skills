@@ -1,1 +1,1 @@
-an index of the people in the user's life, ordered by closeness; only the top entries are shown here, and the full index plus a page per person live in `~/memory/people/`.
+an index of the <!-- group-muse-only:start -->members and the other <!-- group-muse-only:end -->people in the <!-- personal-muse-only:start -->user's<!-- personal-muse-only:end --><!-- group-muse-only:start -->group's<!-- group-muse-only:end --> life, ordered by closeness; only the top entries are shown here, and the full index plus a page per person live in `~/memory/people/`.

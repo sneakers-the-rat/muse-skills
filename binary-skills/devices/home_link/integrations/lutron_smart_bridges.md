@@ -1,5 +1,6 @@
 # Lutron Smart Bridges: Light and Shade Control
 
+<!-- personal-muse-only:start -->
 **Last verified:** 2026-09-14 on a Lutron Smart Bridge 2 (firmware 8.28.0, non-Pro)
 
 Use this guide when fresh discovery identifies a Lutron Smart Bridge with
@@ -30,3 +31,8 @@ button on the back of the bridge, with no setup code.
    device.
 5. HAP may expose generic device names instead of Lutron app room names. If the
    user wants room mapping, identify devices one at a time by toggling them.
+<!-- personal-muse-only:end -->
+<!-- group-muse-only:start -->
+Lutron Smart Bridges are reached through Muse Home Link, which is not
+available on this group's Muse.
+<!-- group-muse-only:end -->

@@ -19,7 +19,7 @@
 /opt/hatch/bin/instacart authorize-url
 /opt/hatch/bin/instacart list-tools
 /opt/hatch/bin/instacart search-products --shopping-results --arguments-json '<JSON object>'
-/opt/hatch/bin/instacart cart --arguments-json '<JSON object>' [--include-addresses]
+/opt/hatch/bin/instacart cart --arguments-json '<JSON object>' [--expected-retailer '<task store>'] [--include-addresses]
 /opt/hatch/bin/instacart add-to-cart --product-id <id> [--retailer-name <expected-retailer>]
 ```
 
@@ -29,9 +29,9 @@
 
 - Use the retailer the user named. Otherwise use the store of the ongoing shopping task they mean, judged from the recent messages in this thread, and ask which one when several could apply. For a new task with no store preference, use the selected retailer, and ask the user to choose when none is selected.
 
-- Passing `retailer_name` selects the active retailer, which Instacart shares across sessions. Omit it on cart reads. For searches, include it only when the user's current request selects a retailer by name or an unambiguous reference. Check that the returned retailer is the intended store before using the data; resolve a missing or mismatched retailer first.
+- Passing `retailer_name` selects the active retailer, which Instacart shares across sessions. Omit it on cart reads. For searches, include it when selecting or switching stores to fulfill the user's request; omit it when searching the already-selected store. Check that the returned retailer is the intended store before using the data; resolve a missing or mismatched retailer first.
 
-- Select or switch a store only when the user asks or agrees, passing `retailer_name` with no item changes, and ask before restoring a store that changed unexpectedly. If a needed selection is refused or denied, explain that and stop. Include the intended `retailer_name` on authorized item changes and verify the result. Pass `{"show_retailer_selector": true}` to show other stores when the user asks.
+- When searching for products to fulfill the user's request, select or switch Instacart stores as needed without asking for confirmation. To select or switch stores, pass `retailer_name` without item changes. Pass `{"show_retailer_selector": true}` to show other stores when the user asks.
 
 - On cart reads for delivery orders or address questions and changes, add `--include-addresses`. The entry in `result.artifacts.addresses` with `is_default: true` is the current address. If none is marked, ask the user to check it on Instacart rather than assuming the first entry.
 
@@ -51,7 +51,9 @@
 
 - Before the first change, mention items already in the cart and keep them unless the user says otherwise. That mention needs no confirmation unless it is unclear whether to keep or replace them.
 
-- Use `search-products` for browsing, replacements and exact sizes or weights, and `cart` for additions, quantity changes, removals and delivery or pickup changes. Batch the requested changes into one `cart` call, then verify the result and report warnings or skipped items, because multi-item changes are best effort.
+- Use `search-products` for browsing, replacements and exact sizes or weights, and `cart` for additions, quantity changes, removals and delivery or pickup changes. Batch the requested item changes into one `cart` call with `--expected-retailer '<task store>'`. Verify the result and report warnings or skipped items, because multi-item changes are best effort.
+
+- `--expected-retailer` checks the active store without switching it. If the command reports `retailer_mismatch`, no item changes were made. Select the intended store in a separate call using `retailer_name` without item changes, then retry the edit. Ask which store to use only when the intended store is unclear.
 
 - Put product, brand and variety names in `quick_add_search_queries`, never measurements, and treat their quantities as amounts to add. For an exact size or weight, search first and use the returned `product_id` in `item_updates`, where quantities are absolute and zero removes the item.
 

@@ -1,1 +1,1 @@
-Substantial work the main agent keeps track of, manages, or follows up on for the user over time.
+Substantial work the main agent keeps track of, manages, or follows up on for the <!-- personal-muse-only:start -->user<!-- personal-muse-only:end --><!-- group-muse-only:start -->group<!-- group-muse-only:end --> over time.

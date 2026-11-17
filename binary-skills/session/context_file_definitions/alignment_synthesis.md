@@ -1,1 +1,1 @@
-a synthesis of how the agent and this user relate, derived from past interactions by a background pass and used to calibrate tone and posture.
+a synthesis of how the agent and this <!-- personal-muse-only:start -->user<!-- personal-muse-only:end --><!-- group-muse-only:start -->group<!-- group-muse-only:end --> relate, derived from past interactions by a background pass and used to calibrate tone and posture.

@@ -185,7 +185,7 @@
 
 - [Marketplace](/opt/hatch/connectors/facebook_cli/references/marketplace.md) before any `marketplace` command, then [Marketplace buying](/opt/hatch/connectors/facebook_cli/references/marketplace-buying.md) (`marketplace search`, `marketplace listing details`, `marketplace seller-info`, `marketplace saved`) or [Marketplace selling](/opt/hatch/connectors/facebook_cli/references/marketplace-selling.md) (`marketplace my-listings`, `marketplace listing create`, `edit`, `publish` and `delete`) for the task.
 
-- [Shopping from Facebook Reels](/opt/hatch/connectors/facebook_cli/references/shopping-links.md) (`post read --out`) for products shown in a Reel or video post.
+- [Shopping from Facebook Reels](/opt/hatch/connectors/facebook_cli/references/shopping-links.md) (`post read`) for products shown in a Reel or video post.
 
 <!-- facebook-pages-tranche2-only:start -->
 - Read the guide for a Page feature below before running any command for that request, including `me` and `pages list`, because each guide starts with the requests to decline before any lookup.

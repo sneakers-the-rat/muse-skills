@@ -1,0 +1,34 @@
+[Unit]
+Description=com.hatch.mount-stop-total
+ConditionPathExists=!${keep_services_down_early_marker}
+ConditionPathExists=${host_bin_dir}/spawnd
+# Before=hatch.mount is the whole point, and it is the INVERSE of every other
+# stop hook. systemd reverse-orders on stop, so a unit that starts BEFORE the
+# mount is stopped AFTER it -- which is the only position from which
+# `hatch.mount` has actually finished stopping and its own transition
+# timestamps are final. com.hatch.shutdown-observer.service and the
+# runtime-cell's ExecStop/ExecStopPost are all After= the mounts, so they run
+# part-way through the cascade and can only report offsets into a teardown
+# that is still in progress.
+#
+# The cost of this position is that /var/lib/hatch and /home/hatch are GONE by
+# the time ExecStop runs. Nothing here may read or write the RV. The spawnd
+# binary itself is safe: it lives in /opt/hatch/bin, which opt-hatch.mount owns
+# and which is not part of hatch.mount's cascade. The stop context is read from
+# /run (tmpfs), which survives for the same reason.
+DefaultDependencies=no
+Before=hatch.mount
+PartOf=hatch-rv.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/true
+ExecStop=+${host_bin_dir}/spawnd emit-mount-stop-total --jarvis-home ${jarvis_home}
+# Short: this reads two systemd properties and emits one row. It must not be
+# what holds a VM replace open, and a lost row is the accepted failure mode --
+# see the emitter's fail-silent contract.
+TimeoutStopSec=10
+
+[Install]
+WantedBy=hatch-rv.target

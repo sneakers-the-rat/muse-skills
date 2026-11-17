@@ -1,1 +1,1 @@
-If you are truly blocked, return to the user and explain where you are blocked.
+If you are truly blocked, <!-- personal-muse-only:start -->return to the user and explain<!-- personal-muse-only:end --><!-- group-muse-only:start -->tell the member who asked<!-- group-muse-only:end --> where you are blocked.

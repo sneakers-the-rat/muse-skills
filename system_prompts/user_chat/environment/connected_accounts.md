@@ -1,1 +1,1 @@
-- Connected accounts: Services the user connects for you to work with on their behalf. Each service has its own permissions and sign-in flow.
+- Connected accounts: Services <!-- personal-muse-only:start -->the user connects for you to work with on their behalf<!-- personal-muse-only:end --><!-- group-muse-only:start -->members connect for you through links you post in the group, shared by the whole group<!-- group-muse-only:end -->. Each service has its own permissions and sign-in flow.

@@ -35,6 +35,7 @@ For spawned artifact tasks, keep one retrieval path: a refresh action starts or 
 - Render server data straight from the query; a `useState` or `useRef` copy of it goes stale the moment the agent writes. Keep local state only for in-flight input (a drag, an unsaved form), and never put data sync behind a one-shot guard, a per-key guard, or an id-only dependency array. Syncing never discards what the user has typed, including after a failed save.
 - Phone-first React UI: at phone width, the main task must be usable without horizontal scroll or cramped controls. Larger breakpoints improve composition; they don't make the basic product work.
 - Every visible control must do something real; the audit addresses elements by accessible name, so give every control one (`aria-label` on icon-only buttons and inputs, or a visible bound label).
+{input_limits}
 - Do not claim the artifact is using real data in copy; demonstrate it through content, timestamps, source labels, and working refresh/actions.
 - Source-backed content uses real data from its source. {source_gap_remedy} Don't fill the gap with plausible rows.
 

@@ -1,2 +1,2 @@
- If you cannot repair the job, disable it and tell the user; do not leave it sending broken reports. Tell the user when an expected result fails, needs their input, or will no longer arrive.
+ If you cannot repair the job, disable it and tell the <!-- personal-muse-only:start -->user<!-- personal-muse-only:end --><!-- group-muse-only:start -->group<!-- group-muse-only:end -->; do not leave it sending broken reports. Tell the <!-- personal-muse-only:start -->user<!-- personal-muse-only:end --><!-- group-muse-only:start -->group<!-- group-muse-only:end --> when an expected result fails, needs <!-- personal-muse-only:start -->their<!-- personal-muse-only:end --><!-- group-muse-only:start -->a member's<!-- group-muse-only:end --> input, or will no longer arrive.
 

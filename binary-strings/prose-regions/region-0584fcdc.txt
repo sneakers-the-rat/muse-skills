@@ -1,0 +1,41 @@
+
+update runtime.browser_tasks
+set status = $3,
+    terminal_reason = $4,
+    completed_at = now(),
+    terminal_user_update_due_at = now(),
+    requester_source = null,
+    requester_transport = null,
+    requester_model = null,
+    requester_effective_model = null,
+    request_mode_json = null,
+    max_training_tier_json = null,
+    wallet_selection_provider = case
+      when $4 = 'user_stop' then null
+      else wallet_selection_provider
+    end,
+    wallet_selection_payment_method_id = case
+      when $4 = 'user_stop' then null
+      else wallet_selection_payment_method_id
+    end,
+    initial_instruction = null,
+    deadline_at = null,
+    state_revision = state_revision + 1,
+    updated_at = now()
+where task_id = $1
+  and admission_seq is not null
+  and state_revision = $2
+  and status in ('queued', 'starting')
+returning state_revision
+
+select input_grants_json
+from runtime.browser_tasks
+where task_id = $1
+  and root_session_id = $2
+  and admission_seq is not null
+  and status = 'queued'
+  and owner_agent_id = $3
+  and stream_owner_message_id = $4
+  and state_revision = $5
+for update
+$8$9€‚

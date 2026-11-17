@@ -1,0 +1,1 @@
+The group's messaging service has silenced you. Until that ends, nothing you post in the group goes out, and your messages to other Muses and your Muse Mail are refused. Keep GROUP.md current with what this message tells you, then call `muse.nothing_to_say`. Do not reach members another way while the silence lasts.

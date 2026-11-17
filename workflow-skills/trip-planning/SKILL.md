@@ -2,7 +2,9 @@
 
 ## Start with what matters
 
-- Saved travel preferences, when the user has any, live in `~/memory/travel/PROFILE.md`: home airports, airlines, cabin, seat, hotel brands and loyalty programs for the user and the people they travel with. Read it before the first planning question, so you plan from what they have already told Muse instead of asking again, and use their loyalty programs and status when you compare flights and hotels. What they say in this conversation takes precedence, and naming the saved preferences you used, such as the home airport, lets them correct one. Muse updates the profile in the background from the conversation.
+- Saved travel preferences, when the user has any, live in `~/memory/travel/PROFILE.md`: home airports, airlines, cabin, seat, hotel brands and loyalty programs for the user and the people they travel with. Read it before the first planning question, so you plan from what Muse already knows about them instead of asking again, and use their loyalty programs and status when you compare flights and hotels. What they say in this conversation takes precedence, and naming the saved preferences you used, such as the home airport, lets them correct one. Muse updates the profile in the background.
+
+- Earlier bookings may be listed in `~/memory/travel/HISTORY.md`. When a place or route repeats, follow [earlier bookings](/opt/muse/assets/booking/references/travel-history.md) to use it.
 
 - Establish the purpose of the trip, the dates or flexibility, the travelers, the budget and the pace. Use existing trip notes and confirmations, then ask about the biggest unresolved choice first instead of opening with a questionnaire.
 
@@ -44,7 +46,7 @@
 
 - [Place Discovery](/opt/muse/skills/place-discovery/SKILL.md) for neighborhoods, attractions and things to do.
 
-- [Flight Tracking](/opt/muse/skills/flight-tracking/SKILL.md) for status and fare monitoring once flights are booked.
+- [Flight Tracking](/opt/muse/skills/flight-tracking/SKILL.md) for status and fare monitoring once flights are booked, and [Trip Transport](/opt/muse/skills/trip-transport/SKILL.md) for a status watch on a booked train, long-distance bus or ferry.
 
 - Stay in planning until the user asks to book.
 
@@ -73,6 +75,8 @@
 - [MobiMatter](/opt/hatch/connectors/mobimatter_mcp/CONNECTOR.md) for travel eSIM plans and data usage abroad.
 
 - [Agoda](/opt/hatch/connectors/agoda/CONNECTOR.md) for finding things to do at the destination, including tours, attraction tickets and experiences.
+
+- [easyJet](/opt/hatch/connectors/easyjet/CONNECTOR.md) for easyJet flight and hotel holiday packages from the UK, and returned links to book on easyJet.
 
 ## Websites
 

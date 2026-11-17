@@ -34,12 +34,34 @@ NoNewPrivileges=true
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 PrivateTmp=true
+PrivateDevices=true
+PrivateIPC=true
+# PeerAcl needs other units' /proc/<pid>/cgroup; CVM detection needs /proc/cmdline.
 ProtectProc=default
 ProcSubset=all
 ProtectSystem=strict
+ProtectHome=true
+ProtectClock=true
+ProtectControlGroups=true
+ProtectHostname=true
+ProtectKernelLogs=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+MemoryDenyWriteExecute=true
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@mount @privileged @resources setns unshare
+SystemCallErrorNumber=EPERM
 RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
-ReadWritePaths=/run
-InaccessiblePaths=-/etc/hatch/credentials/inference -/etc/hatch/credentials/stefi -/etc/hatch/credentials/db
+# Keep /run read-only across API filesystem mounts. The optional exceptions
+# let the + prestarts create their directories on a fresh boot.
+ReadOnlyPaths=/run
+ReadWritePaths=-/run/hatch/ingress-rev-proxy -/run/hatch/owner-client-ip
+InaccessiblePaths=-/etc/hatch/credentials -${var_lib_dir} -/hatch
 Environment=JARVIS_BIN_DIR=${host_bin_dir}
 Environment=JARVIS_RUNTIME_CELL_DRAIN_FILE=${runtime_cell_drain_file}
 Environment=PATH=${host_bin_dir}:${image_bin_dir}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
@@ -58,11 +80,16 @@ WorkingDirectory=/
 # own 0600 key) rather than widening the source. `[ -s ]`-guarded so absence
 # (live-install / pre-provisioning) falls back to the in-memory cert.
 ExecStartPre=+/usr/bin/install -d -m 0755 -o root -g root /run/hatch
-ExecStartPre=+/usr/bin/install -d -m 0700 -o ${ingress_rev_proxy_user} -g ${ingress_rev_proxy_group} /run/hatch/ingress-rev-proxy
+# The daemon traverses this directory to reach peer.sock. The bootstrap key
+# stays 0600; the socket admits only the daemon's unit through PeerAcl.
+ExecStartPre=+/usr/bin/install -d -m 0711 -o ${ingress_rev_proxy_user} -g ${ingress_rev_proxy_group} /run/hatch/ingress-rev-proxy
 # setgid: the 0640 IP file ingress writes here (OWNER_CLIENT_IP_FILE) takes Stefi's group,
 # so Stefi can read it; gk-proxy only watches the directory. Same line in com.hatch.gk-proxy.service.
 ExecStartPre=+/usr/bin/install -d -m 2755 -o ${ingress_rev_proxy_user} -g ${stefi_proxy_user} /run/hatch/owner-client-ip
 ExecStartPre=+/bin/sh -c 'if [ -s ${tls_bootstrap_src_cert_path} ] && [ -s ${tls_bootstrap_src_key_path} ]; then /usr/bin/install -m 0644 -o ${ingress_rev_proxy_user} -g ${ingress_rev_proxy_group} ${tls_bootstrap_src_cert_path} ${tls_bootstrap_cert_path} && /usr/bin/install -m 0600 -o ${ingress_rev_proxy_user} -g ${ingress_rev_proxy_group} ${tls_bootstrap_src_key_path} ${tls_bootstrap_key_path}; fi'
+# Restrict new IP connections without blocking replies to accepted clients.
+# Failure to attach the kernel gate must prevent either listener from starting.
+ExecStartPre=+${host_bin_dir}/spawnd attach-ingress-gate
 # Transitional: pass the deprecated `--listen [::]:4431` alias, NOT the split
 # `--listen-user`/`--listen-infra` flags, so a binary-only hot-swap is safe in
 # BOTH directions during the rollout. The new binary maps `--listen` onto the
@@ -88,6 +115,8 @@ Restart=always
 RestartSec=1
 TimeoutStopSec=60
 LimitNOFILE=65535
+LimitMEMLOCK=512K
+LimitCORE=0:0
 
 [Install]
 WantedBy=multi-user.target

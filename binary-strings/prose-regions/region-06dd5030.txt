@@ -1,0 +1,140 @@
+created space worker supervisor
+SELECT agents.session_id, checkpoint.execution_config_json
+FROM agent.chat_preferences preferences
+JOIN agent.agents agents ON agents.id = preferences.active_root_id
+JOIN agent.runtime_restart_checkpoints checkpoint ON checkpoint.agent_id = agents.id
+WHERE preferences.id = 1
+  AND agents.id = $1
+  AND agents.agent_id = $1
+  AND agents.kind = 'root'
+  AND agents.parent_id IS NULL
+  AND agents.parent_agent_id IS NULL
+  AND agents.depth = 0
+  AND agents.agent_type IS NULL
+  AND agents.status = 'completed'
+  AND agents.session_id IS NOT NULL
+  AND checkpoint.mode = 'idle'
+  AND checkpoint.payload_json IS NULL
+  AND checkpoint.recovery_class = 'foreground_root'
+  AND checkpoint.recovery_owner_id = $1
+  AND checkpoint.execution_config_json IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM agent.message_mailbox
+    WHERE agent_id = $1 AND state IN ('accepted', 'attached')
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM agent.mail_conversations WHERE agent_id = $1
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM agent.chat_workers WHERE agent_id = $1
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM agent.delegate_requests WHERE worker_agent_id = $1
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM agent.recovery_owners
+    WHERE agent_id = $1 AND terminal_at IS NULL
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM runtime.workflow_agent_calls calls
+    JOIN runtime.workflow_runs runs ON runs.run_id = calls.run_id
+    LEFT JOIN runtime.workflow_phase_runs phases
+      ON phases.phase_run_id = calls.phase_run_id
+    WHERE calls.child_agent_id = $1
+      AND calls.status IN ('pending', 'running')
+      AND runs.status IN ('queued', 'running', 'paused')
+      AND (calls.phase_run_id IS NULL OR phases.status IN ('pending', 'running', 'paused'))
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM self_improvement.run_steps
+    WHERE agent_id = $1 AND status = 'running'
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM background_workers.turns
+    WHERE agent_id = $1 AND state = 'running'
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM feed.run_steps
+    WHERE agent_id = $1 AND status = 'running'
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM scheduler.job_runs
+    WHERE worker_agent_id = $1 AND status IN ('queued', 'running')
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM runtime.execute_resolve_runs
+    WHERE worker_agent_id = $1 AND status IN ('pending', 'notify_pending')
+  )
+execution_config_jsonterminal primary-root checkpoint needs generic session cleanupterminal primary-root checkpoint needs generic config cleanupbrowser.service_waitbrowser.task_service_statebrowser.save_service_stateload_postgres_health_metricspayment_routemissing web artifact slugbrowser.task_tabswork_itemspoppy-brokerpoppy printed help instead of runningfailed to read instance state for local worker gatebrowser.execution_actor,file preparation failedruntime_work_pending_terminalfailed to persist runtime work terminal statefailed to parse runtime work row for rehydrationfailed to load RuntimeWork DB liveness-blocking countstimed out loading RuntimeWork DB liveness-blocking countsdescendant_lookup_faileddescendant_terminalization_failedfailed to persist runtime work descendant terminal stateruntime work descendant terminal CAS did not return a DB rowfailed to persist runtime work pending terminal intentruntime work terminal CAS did not find a terminal DB row in enforce modefailed to mirror canonical runtime work terminal rowfailed to load runtime work DB descendantsbrowser.specialist_refscheduleridle_checkpoint_stop.check_out_connectionLazy instance has previously been poisoned/v1/configs/getx-hatch-config-refreshedoptional model fallback setup timed out; using primary routebrowser-session--chatruntime.browser_session_joinauthorizeauthorizedsigned_indispatching request to space workerspace worker command channel is closedwaiting for space worker readinessspace worker exited before becoming readyspace worker startup timed out; forcing shutdown/v1/flushbrowser.end_invocationbrowser.control_is_suspendedobservemissing browser observationbrowser.callbrowser.begin_callinvalid browser continuationbrowser.complete_callbrowser.advance_actionbrowser.pending_actionsbrowser.reconcile_actiononly a browser action is dispatchedmemory capture task failedroot session has no durable public-session classificationfailed to classify root session visibilityfailed to load root session visibilityhttp://localhost/hatch/check_gatekeepersGatekeeper response was invalid; using defaultGatekeeper check failed; using defaultwrite Shopify checkout runtime requestread Shopify checkout runtime responseselect case when pg_try_advisory_xact_lock_shared(hashtextextended($1, 0))
+         then pg_try_advisory_xact_lock_shared(hashtextextended($2, 0)) else false endselect exists(select 1 from chat.chats where chat_id = $1)chat owner is absent or being retirednew-user experiment and durable fallback unavailablerevoke preapproved purchaseruntime egress context registration/v1/model/getmodel.get returned an empty selection/v1/credentials/user-idcredentials/v1/auth-file/getx-hatch-gk-assignment-confirmedinvalid protected browser imageinvalid protected browser image sizebundledocprotected image was not committedsha256Poppy blocked-site config unavailable; keeping the last listspace completion widget requires a canonical slugspace completion widget requires a widget idshutdown_doneselect exists(select 1 from spaces.user_state
+         where sharing_state is null or accessed_at_ms is not null
+           or last_opened_at_ms is not null or frequency_score is not null
+           or favorite_order is not null)insert into spaces.user_state (space_slug, favorite_order, is_favorite) values library on conflict (space_slug) do update set
+            favorite_order = excluded.favorite_order, is_favorite = true
+          where spaces.user_state.sharing_state is not null
+            and spaces.user_state.accessed_at_ms is null
+            and spaces.user_state.last_opened_at_ms is null
+            and spaces.user_state.frequency_score is null
+            and spaces.user_state.favorite_order is null, (, true)poppy/blocked_sites
+SELECT pg_advisory_xact_lock(hashtextextended(agent_id, $2))
+FROM unnest($1::text[]) AS locked(agent_id)
+ORDER BY agent_id
+select chat_id from chat_private.publication_turns where execution_id = $1update chat_private.publication_turns set
+          disposition = case when disposition = 'pending' then $2 else disposition end,
+          phase = $3, settled_at_utc = extract(epoch from clock_timestamp())::bigint
+        where execution_id = $1 and phase = 'active'update chat_private.publications p set
+          state = case when t.disposition = 'quiet'
+            or (t.phase = 'aborted' and (p.content_state <> 'terminal' or not p.display_ready))
+            or (t.phase = 'completed' and p.content_state = 'streaming')
+            or length(trim(p.body)) = 0 then 'retired' else 'pending' end
+        from chat_private.publication_turns t
+        where p.execution_id = $1 and p.state = 'writing'
+          and t.execution_id = p.execution_id
+          and (t.disposition = 'quiet'
+            or (t.phase = 'aborted' and (p.content_state <> 'terminal' or not p.display_ready))
+            or (t.phase = 'completed' and p.content_state = 'streaming')
+            or (t.disposition = 'publish' and p.display_ready and (
+              p.content_state = 'terminal'
+              or (t.phase = 'completed' and p.content_state = 'static'))))select t.execution_id from chat_private.publication_turns t
+        join agent.agents a on a.session_id = t.chat_id
+        where a.id = $1 and t.phase = 'active'select pg_try_advisory_xact_lock(hashtextextended($1, 0))with recursive chain as (
+        select invocation_id, parent_invocation_id from runtime.browser_invocations
+        where invocation_id = $1
+        union all select p.invocation_id, p.parent_invocation_id
+        from runtime.browser_invocations p join chain c on c.parent_invocation_id = p.invocation_id)
+    select invocation_id from chain where parent_invocation_id is nullfailed to read telemetry-proxy access token through authdworker open-todos block skipped: stored snapshot unreadableworker open-todos block skipped: snapshot load failedruntime.subagent_progressfailed to resolve voice-design parent presentation ownerfailed to link completed web artifact to goal workspaceSpace edit request not settled after its build stoppedspace construction status already terminal; skipping duplicate terminal updatefailed to update space construction status from completion resultconsuming voice-design completion without a parent follow-updelivered_space_build_completed_widget_idscontext_seqinvalid recovered result metadata; omitting annotation
+
+[failure cause not recorded: this subagent ended errored, but the runtime did not capture a failure reason on its record. The text above is the subagent's last message, not the error.]failed to persist recovered subagent completion final_responseskipping goal suggestion with missing ideacommitted goal maintenance planning failedfailed to serialize goal detail for goal.updated websocket eventfailed to load goal detail for goal.updated websocket eventfailed to serialize localized goal.updated websocket eventbroadcast goal.updated websocket eventfailed to hydrate goal Space associations from Spaces catalogcontrol receipt not sentJARVIS_TRACE_CONTEXTJARVIS_TOOL_CALL_ID/opt/hatch/binskill command runtime context registration failedevent hook runtime startedinternal error: entered unreachable code: failed to match bindstandalonefailed to register space runtime egress context; falling back to runtime.unknown
+UPDATE agent.message_mailbox
+SET state = 'aborted', terminalized_at = now()
+WHERE agent_id = $1
+  AND state IN ('accepted', 'attached')
+DELETE FROM runtime_restart_checkpoints WHERE agent_id = $1
+SELECT mode, recovery_class, payload_json IS NOT NULL AS payload_present
+FROM runtime_restart_checkpoints
+WHERE agent_id = $1
+FOR UPDATE
+
+SELECT status, session_id, presentation_root_session_id
+FROM agent.agents
+WHERE id = $1
+FOR SHARE
+
+SELECT
+  EXISTS (
+    SELECT 1
+    FROM agent.message_mailbox
+    WHERE agent_id = $1
+      AND state IN ('accepted', 'attached')
+  ) AS live_mailbox_rows,
+  EXISTS (
+    SELECT 1
+    FROM chat_private.publication_turns
+    WHERE chat_id = $2
+      AND phase = 'active'
+  ) AS active_publication_turns
+recovery_classpayload_presentlive_mailbox_rowsactive_publication_turnshotset manifest serialization failed; successor prewarm degradeshotset manifest written for successor prewarmhotset manifest write failed; successor prewarm degradeshotset manifest write task failed; successor prewarm degradestier-2hotset.manifesthotset manifest collection failed; successor prewarm degradesexecution-ready.markerhandoff finalized: resume index sealed and marker committedupdate runtime.browser_invocations set suspended_state = 'running'
+                 where invocation_id = $1 and suspended_state = 'waiting_child'select owner_agent_id, root_session_id
+        from runtime.browser_tasks where task_id = $1 and status = 'running' for updateselect epoch, control_revision from runtime.browser_executions
+        where task_id = $1 and planner_agent_id = $2 for updatebrowser seat changedbrowser service authority changedbrowser invocation authority changeddatabase write admission gate closedadmission_timeoutassert_table_existstable_presence.querygoal_slugspace_preview_repairspace preview repair: handler not registeredspace preview repair: handler registry unavailablespace_preview_missingspace preview repair: runtime work store unavailablequeued Space preview repairspace preview repair: seeding failedload browser task presentation root statuscheck browser task terminal update mailbox receiptcheck browser task terminal update queue receiptopen browser task queue for completion relay ownershipload browser task relocation predecessorload browser task terminal-update ownershipparse browser task execution root for completion relay ownershipbundled Ideas localization catalog is unavailablefailed to load bundled Ideas localization provenancefailed to load bundled Ideas dogfood provenancepartialthe change stopped before it finished.part of the change is done.the change is done.space_name{name} asked to change your user's space "{space}", and {outcome} Tell your user unless they already know. Otherwise call `muse.nothing_to_do`.
+{name}{space}{outcome}the owner's Muse was not told how a Space edit endedthe change stopped before it finishedpeer_space_editfile path missingfile length missingfile_outcomesprotected image descriptor is missingprotected image bundle is missing.hatch-browserprotected image name is missingprotected image path is invalidprotected image MIME type is missingprotected image digest is missingprotected image length is missingbrowser_visual_groundingbrowser source is missingbrowser source trace is missingbrowser task is missingresearch trace is missingscheduled action previously reached its deadlinescheduled action was already dispatched; its outcome is uncertain after interruption. Verify committed effects before a manual retry[redacted-url]

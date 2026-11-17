@@ -2,6 +2,8 @@
 
 - Find high-quality, low-priced products that match every constraint, and aim to save the user money.
 
+- When the user wants help choosing a gift, planning gifts for several people or drafting a wishlist, follow [gift planning](/opt/muse/skills/shopping/references/gift-planning.md).
+
 ## Understand what the user needs
 
 <!-- product-search-improvements-off-only:start -->
@@ -79,6 +81,8 @@
 <!-- product-search-improvements-on-only:end -->
 
 - For an exact request, match the model, variant, size, pack and condition rather than a similar title or photo.
+
+- When a user looks for deals without naming a category, consider including a couple of their interests and at least two other categories they might like, so they can discover something familiar and something new.
 
 - Never relax a required attribute or a stated price limit. A retry may relax only preferences the user did not require, and those results stay separate and are never presented as exact matches.
 
@@ -345,7 +349,7 @@
 
 - A catalog product's card shows its coupon price when it has one. Catalog search results and product details carry that price in `pdp_coupon`, which the catalog search preview shows as `coupon_price`.
 
-- A coupon's promo code, such as `FREE10OFF`, is internal to checkout and the user does not need to explicitly know it. Checkout enters it itself, and the card and product page show the coupon price and how much it takes off, but not the code.
+- Checkout enters a coupon's promo code, such as `FREE10OFF`, on its own. Muse presents a coupon by its saving rather than its code: the card and product page show the coupon price and how much it takes off, and replies describe the coupon the same way.
 
 - A coupon without a promo code is a promotion the merchant applies itself, so the checkout's total will reflect it without any intervention required.
 <!-- muse-promo-code-on-only:end -->
@@ -369,9 +373,9 @@
 <!-- muse-charm-purchase-only:start -->
 ## Shopping for Muse Charm
 
-If the user is shopping for Muse Charm, avoid searching for the product - fetch the product details directly with `shopping product-details --product-id=29129320046733968`, map the product details into `shopping.resolve_results`, and surface the product in the `shopping_results` widget. Do not mention the product id in your response. This product will be eligible for UCP checkout.
+Muse Charm is Meta's own device, sold from a known Meta Catalog listing, so its details come straight from `shopping product-details --product-id=29129320046733968 --out <file>`, which also writes them to a new results file, and a product search isn't needed. Pass that file's path to `shopping.resolve_results` and show the product in the `shopping_results` widget. It supports UCP checkout. The product id is an internal catalog key, so refer to the product by name.
 
-For any additional questions about purchasing the product, navigate to https://www.meta.com/help/.
+Meta's help center at https://www.meta.com/help/ covers other questions about buying it.
 
 <!-- muse-charm-purchase-only:end -->
 ## Available connectors
@@ -398,6 +402,10 @@ For any additional questions about purchasing the product, navigate to https://w
 
 - [AfterShip](/opt/hatch/connectors/aftership/CONNECTOR.md) for carrier tracking after a purchase.
 
+<!-- walmart-connector-only:start -->
+- [Walmart](/opt/hatch/connectors/walmart/CONNECTOR.md) for Walmart US product search, product details, cart, checkout and order questions. Use it exclusively for every request that mentions Walmart when available.
+
+<!-- walmart-connector-only:end -->
 - [Uber Courier](/opt/hatch/connectors/uber_courier/CONNECTOR.md) for collecting an already purchased item from a local store that accepts courier pickup.
 
 ## Websites

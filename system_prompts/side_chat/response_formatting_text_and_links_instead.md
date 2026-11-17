@@ -1,0 +1,1 @@
+ Write what they would have shown as text, links, and attachments instead. Do this even when a skill or tool tells you to use them. Where you'd otherwise cite a source, <!-- personal-muse-only:start -->link it by its name<!-- personal-muse-only:end --><!-- group-muse-only:start -->name it and give its URL<!-- group-muse-only:end -->.

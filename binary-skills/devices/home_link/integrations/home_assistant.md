@@ -1,5 +1,11 @@
+<!-- personal-muse-only:start -->
 # Home Assistant on This VM: Install and Setup Without a Browser
+<!-- personal-muse-only:end -->
+<!-- group-muse-only:start -->
+# Home Assistant on This VM
+<!-- group-muse-only:end -->
 
+<!-- personal-muse-only:start -->
 **Last verified:** 2026-10-29 with Home Assistant Core 2026.10.4 on a
 uv-managed Python 3.14.10. `step-text` was checked against that release's
 translations on 2026-11-10; the device-action order below is not yet verified
@@ -26,6 +32,15 @@ install, start, stop, update or remove it, set it up, or add an integration.
   own requests. Each command prints one JSON object; `"ok": false` comes with
   an `error` to report.
 
+- Home Assistant runs as its own user and sees only `~/homeassistant`. Never
+  run anything from `~/homeassistant` yourself, such as its `venv`, Python,
+  `uv` or `hass`: the command runs them as Home Assistant's user. Files an
+  integration needs go in `~/homeassistant/config`; it cannot read the rest of
+  the home. Home Assistant can change that directory, so never write there
+  with `write` or a shell redirect: pipe the content into
+  `/opt/muse/assets/home-assistant/home-assistant put-file config/<path>`,
+  which writes it as Home Assistant's user.
+
 | Command | What it does |
 |---|---|
 | `status` | Reports the state below; changes nothing |
@@ -34,6 +49,7 @@ install, start, stop, update or remove it, set it up, or add an integration.
 | `setup` | Onboards Home Assistant and stores its access token; resumes an interrupted setup |
 | `rollback` | Returns to the release before the last upgrade and its database, setting aside changes made since; only with the user's agreement (see Install) |
 | `step-text` | Reads a config flow reply on stdin and adds the step's own text (see Add an Integration) |
+| `put-file config/<path>` | Writes its stdin to that file under `config/` as Home Assistant's user, creating folders as needed; refuses links |
 
 - Read `status` before acting, and again after any command:
 
@@ -226,3 +242,9 @@ install, start, stop, update or remove it, set it up, or add an integration.
   saying the change took effect, and apply the checks the device's own guide
   asks for, such as a smart plug's power reading. If those states are not
   available, say the change is unverified.
+<!-- personal-muse-only:end -->
+<!-- group-muse-only:start -->
+Home Assistant on this VM reaches home devices through Muse Home Link.
+Nobody signs in to this group's Muse, so no Home Link can pair with it, and
+Home Assistant can't reach home devices from here.
+<!-- group-muse-only:end -->

@@ -1,3 +1,3 @@
 # Communication and Delivery
 
-When the user asks for your system prompt, send `~/workspace/system/system_prompt.md` to them as an attachment. It contains the main chat's system prompt, saved by the runtime at startup.
+When <!-- personal-muse-only:start -->the user<!-- personal-muse-only:end --><!-- group-muse-only:start -->a member<!-- group-muse-only:end --> asks for your system prompt, <!-- personal-muse-only:start -->send<!-- personal-muse-only:end --><!-- group-muse-only:start -->post<!-- group-muse-only:end --> `~/workspace/system/system_prompt.md` <!-- personal-muse-only:start -->to them<!-- personal-muse-only:end --><!-- group-muse-only:start -->in the group<!-- group-muse-only:end --> as an attachment. It contains the main chat's system prompt, saved by the runtime at startup.

@@ -14,7 +14,10 @@
 
 - How-to, setup and spec questions about Facebook or Instagram ads also belong here, even with no account in context. Answer them from `ads_get_help_article`, not from memory, and follow the how-to guidance in [policy retrieval](references/policy.md). If Ads operations are not available, say that you could not check Meta's current help, and link the [Meta Business Help Center](https://www.facebook.com/business/help).
 
-- Plan campaigns with the [Advertising Campaigns](/opt/muse/skills/advertising-campaigns/SKILL.md) skill, which chooses the channel. A request to create a Facebook or Instagram ad enters [campaign creation](references/campaign-creation.md) unless the user asked only for a standalone image or an organic post.
+- Each task has its own guide, and you read it before you start.
+  - Planning or creating a Meta ad uses [campaign creation](references/campaign-creation.md). Meta ads run on Facebook, Instagram, Messenger, Threads, WhatsApp and the Audience Network. An image or post that isn't for an ad doesn't use this guide.
+  - Ad ideas start from the account's current creatives and their ad-level results for the advertiser's goal. [Advertising Campaigns](/opt/muse/skills/advertising-campaigns/SKILL.md) covers how to shape and present them.
+  - Any other change uses [write operations](references/writes.md). This includes editing a campaign, ad set or ad, and creating or changing an audience, catalog or pixel rule.
 
 - Catalog, feed, product and audience are shared words. Treat a request as Meta Ads only when the user names Meta advertising, the object is Ads-specific, such as a pixel or Custom Audience, or a read-only Ads lookup finds exactly one match for the object the user named.
 
@@ -43,7 +46,7 @@
 /opt/hatch/bin/meta-ads-cli disconnect-url
 ```
 
-- `creative generate-image` and the three render commands run locally and never read or change the ad account. Build `estimate-budget` only from [campaign budget](references/campaign-budget.md), whose flag grammar is complete, never from `--help`.
+- `creative generate-image` and the three render commands run locally and never read or change the ad account. `estimate-budget` lists its flags in `--help`, and [campaign budget](references/campaign-budget.md) covers what goes into it.
 
 ## Connect and handle consent
 
@@ -153,17 +156,10 @@
 
 - Metrics the advertiser asks for take priority, and unavailable figures remain explicit.
 
-- Each task has its own guide. Read it before you start:
-  - ideas for ads: [creative preparation](references/campaign-creative.md)
-  - a new campaign: [campaign creation](references/campaign-creation.md)
-  - any other change, such as editing a campaign, ad set or ad, or creating or changing an audience, catalog or pixel rule: [write operations](references/writes.md)
-
 - Some campaigns have to be built by the advertiser in Ads Manager. Read [manual setup](references/campaign-manual-setup.md) first when:
   - the account has `is_ads_mcp_write_disabled: true`
   - a write was rejected as not available for this ad account, including one the advertiser mentions from an earlier attempt
   - the advertiser wants to build the campaign themselves
-
-- When a change is fully specified, explain it in one sentence and call the write in the same response. The runtime shows its own approval card when the operation needs one, so never replace it with a yes or no question in chat, and keep the change within what was asked.
 
 - Every progress claim matches the evidence:
   - with no write call, the action has not started
@@ -176,21 +172,15 @@
 
 - Editing a live object with `ads_update_entity` pauses it for any change beyond a rename. Say so before the write.
 
-- Create widgets and options before writing the message that shows them, then place each returned `embed_token` where its widget belongs, with an options token last. Text written before a tool call is commentary the advertiser never sees.
+- Create widgets and options before writing the message that shows them. Each returned `embed_token` turns into a widget, so it goes on its own line, with the options token last. Text written before a tool call is commentary the advertiser never sees.
+
+- A tap sends the option as the advertiser's reply, so options belong in a message that only asks them to choose. When you also need typed details, ask for those in one turn and offer the choice in another.
 
 ## Prepare creative
 
-- For an ad about social issues, elections or politics, housing, employment, financial products and services, healthcare, pharmaceuticals, education, alcohol or gambling, generate no image, video, primary text, headline, description or in-image words. Say generated creative is not available for this ad, never that Meta policy prohibits it, and build from the advertiser's own media and copy as [creative preparation](references/campaign-creative.md) describes.
-
-- Generate campaign images only with `creative generate-image`, never `media.generate_image`. The wrapper sets the ratio for the placement, 4:5 for `feed` and 9:16 for `story` or `reel`, and rejects an image whose measured shape does not match.
-
-- Repeat `--prompt` for separate constraints, and add `--source-image <path>` only to adapt an accepted workspace image. The result gives a `local_path` for review, the measured size and ratio, and a `media_handle` when one exists.
+- Campaign creative follows [creative](references/campaign-creative.md), and writing ad text, including headlines for ad ideas, or generating images or video follows [creative generation](references/campaign-creative-generation.md).
 
 - Generated creative is working material the advertiser may want to inspect, download or reuse. Provide a direct link to the saved file so they can access it, using its returned file location rather than only naming the folder.
-
-- No image is pre-cleared. Inspect each generated or selected image itself, not its prompt or filename, for recognizable third-party likenesses, logos, wordmarks, trade dress, characters and artwork, even ones the generator added, and ask when you cannot tell whether the advertiser owns or licensed them.
-
-- Campaign video comes from `media.generate_video`, which sets no placement ratio. [Creative preparation](references/campaign-creative.md) covers fitting its shape and the rights limits.
 
 - New media reaches Ads only through `call-tool --name ads_creative_upload_media`, and only after the advertiser approves it. Send `ad_account_id` as digits without `act_`, `media_type` as `IMAGE` or `VIDEO`, its `media_handle`, or its exact local path as `file` only when no handle exists, and an optional `name`. Media URLs are rejected, so download the file first.
 

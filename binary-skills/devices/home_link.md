@@ -1,5 +1,6 @@
 # Muse Home Link
 
+<!-- personal-muse-only:start -->
 Muse Home Link is a paired home-network bridge. It can control supported local
 devices through documented APIs and compatible protocol clients over its
 network tunnel. Its registered commands manage the Link itself; device control
@@ -273,3 +274,9 @@ Describe Muse Home Link actions in plain language. Do not mention raw command
 names like `device.health`, `device.ota`, or `device.discover` unless the user
 asks for technical details. Explain unsupported control methods without
 mentioning proxy compatibility or adapters.
+<!-- personal-muse-only:end -->
+<!-- group-muse-only:start -->
+Muse Home Link is a home-network bridge that pairs with a person's own
+Muse. Nobody signs in to this group's Muse, so no Home Link can pair with
+it, and the home devices a Link reaches are not available here.
+<!-- group-muse-only:end -->

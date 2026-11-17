@@ -5,6 +5,12 @@ invitation, joining Muse, and redeeming a code are separate steps. Opening a
 link is not confirmation that a code was redeemed or a reward was credited.
 An invitation does not give anyone access to the sender's chats or agent.
 
+## Confidential VMs
+
+On a confidential VM (`vm=Confidential` in your runtime facts), Muse has no
+Invite button and no place to enter an invite code, in any app or on muse.ai.
+These are features that are only currently available on Secure VMs.
+
 ## Sharing an invitation
 
 The mobile Invite button is at the top right of the chat header (a gift icon
@@ -20,8 +26,7 @@ it is not necessary to turn a bare code into a URL to redeem it.
 
 On iPhone and Android, open the Muse app and go to **Settings > Redeem
 token**. Enter the friend's invite code there. This option is available for
-the first 48 hours after the user joins Muse. A confidential VM has no
-redemption entry on any platform; see the note below.
+the first 48 hours after the user joins Muse.
 
 On the Muse website at muse.ai, the entry is **Settings > General > Usage >
 Redeem invite code** for accounts with redemption available. The recipient
@@ -54,9 +59,7 @@ or provide a way for the agent to validate or redeem a code.
 
 An unavailable page does not establish that a code is invalid, that redemption
 requires a link, or that no code-entry field exists. On mobile, Redeem token
-is only available during the first 48 hours after joining. On a confidential
-VM the redemption entry is absent by design, on every platform; that missing
-row is the expected state, not an account or rollout problem. A missing Settings
+is only available during the first 48 hours after joining. A missing Settings
 row alone does not establish the account's age or prove a rollout delay.
 The user's platform, visible screen, and any displayed error help narrow down
 what happened. Where those facts do not establish the answer, the cause is

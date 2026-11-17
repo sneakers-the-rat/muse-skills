@@ -6,7 +6,7 @@
 
 ## Check that Shop Pay is offered
 
-- When Shop Pay is selected, use it for ordinary merchant card forms, including at non-Shopify stores, only if its `wallet.list_payment_methods` result includes `card_shaped` in `supported_credential_modes`. Otherwise, use Shop Pay only on the native route verified by the browser checkout. The checkout workflow presents the payment choice. A Shop Pay button on the merchant's page starts the merchant's own sign-in and does not establish support for the wallet route.
+- For browser checkout, use Shop Pay only when the checkout agent reports it as eligible. A merchant's Shop Pay button starts its own sign-in and does not establish support for the wallet route.
 
 - For direct UCP checkout, offer Shop Pay as a route before the checkout is created, as the [UCP](/opt/hatch/connectors/ucp/CONNECTOR.md) docs describe.
 
@@ -16,7 +16,7 @@
 
 - Call `wallet.list_payment_methods` with `provider: "shop-pay"`. For `not_connected` or `reauth_required`, send its `next_action.markdown` unchanged, say it opens Shop Pay's secure connection page and end the message. After the user finishes, list the methods again.
 
-- Use only methods whose `type` is `card`. Keep a card the user already chose for this purchase if it is still listed. For browser checkout, pass an explicitly requested provider in `wallet`; include a card ID only when the user chose a particular card. Otherwise the runtime preselects the default or first usable card, and the user can change it in payment approval. Without an explicit provider preference, leave provider selection to the runtime.
+- Use only methods whose `type` is `card`. Keep a card the user already chose for this purchase if it is still listed.
 
 - For a direct checkout, follow its connector's instructions. If it requires a card ID, use the only card or the default; with several cards and no default, ask the user to choose by masked label, written like `Visa ....1234`.
 
@@ -24,15 +24,15 @@
 
 - Before asking for a missing name, email address or phone number, call `wallet.get_user_info`. For a missing delivery address, call `wallet.list_shipping_addresses` and use the only or default address. Use these values only to fill matching empty checkout fields, never to sign in to a merchant.
 
-- Treat each payment-method ID as opaque. It goes only in the UCP completion input or in the `wallet` field of `browser.browse`, never in a task brief, message, file or memory.
+- Treat each payment-method ID as opaque. Use it only in structured payment fields, not in task briefs, messages, files or memory.
 
 - Use `wallet.get_connection_status` only to manage the connection outside a purchase. Share its `next_action.markdown` only when it matches a request to connect, reconnect or disconnect.
 
 ## Pay
 
-- In a browser checkout, pass the requested provider in the `wallet` field of `browser.browse`, as `{"provider": "shop-pay"}`. Add `"payment_method_id": "<exact id>"` only when the user chose a particular card, and name Shop Pay and, when chosen, the card's masked label in the brief. On later updates, answers and cart confirmations, follow `browser.browse`'s wallet rules: omitting `wallet` preserves the current choice, including a card changed in payment approval; `wallet: null` clears it to pay another way; a wallet object changes the provider or card choice. The browser's checkout pays with the approved card through Shop Pay and shows the user Muse's payment approval for the exact merchant, total and card, never the merchant's own Shop Pay button. On its native route Shop Pay pays with a one-time token; on a supported card route it supplies card fields for the browser to enter after approval. Do not ask for a separate chat confirmation, and treat the approval decision as final.
+- In a browser checkout, the checkout agent pays through Shop Pay and obtains payment approval when required. Do not use the merchant's own Shop Pay button. Without purchase preapproval, its native route pays with a one-time token; on a supported card route it supplies card fields for the browser to enter after approval. Do not ask for a separate chat confirmation.
 
-- A declined approval ends the attempt without a charge. A later attempt with a card the user picks starts a fresh approval.
+- After an approval denial, follow the browser's question or final report. Continue only from the user's later direction and obtain fresh approval.
 
 - Pending secure actions, such as a replacement approval, resume automatically. Do not relay another approval question or start a replacement task.
 
@@ -46,7 +46,7 @@
 
 - When a payment's outcome is unknown, do not retry, switch cards or pay again through takeover. Establish what happened from the latest browser result first.
 
-- Cancelling a pending purchase releases its approval. It does not refund a completed order, which follows the merchant's refund process.
+- Report payment cancellation only when the checkout result confirms it. A completed order follows the merchant's refund process.
 
 ## Related skills
 

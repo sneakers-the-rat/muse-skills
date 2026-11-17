@@ -4,6 +4,8 @@
 
 - Read the [checkout protocol](references/checkout-protocol.md) before creating or completing a checkout, or checking an order placed through native checkout. The Shopping skill covers choosing and comparing products.
 
+- A store whose own catalog a browser task read can be checked out directly by that task's `browser_task_id`; the checkout protocol says how. The CLI never takes a store or domain.
+
 ## Commands
 
 - Every command except `order get` reads a JSON input file with snake_case keys. Omit unknown optional fields and empty strings. Output is JSON, and `--timeout-secs` changes the 30-second default.
@@ -16,7 +18,7 @@
 
 - `cart` keeps an optional saved basket. `checkout create` makes a quote, `checkout update` changes buyer contact and shipping details, the delivery option or discount codes and `checkout complete` pays and places the order.
 
-- `checkout get` and `order get` read the current state of a checkout or placed order. `checkout cancel` cancels a placed order.
+- `checkout get` and `order get` read the current state of a checkout or placed order. `checkout cancel` takes `{"checkout_id": "<checkout_id>"}` and ends a checkout that is not completed. A placed order is changed or cancelled with the merchant.
 
 ## Safety rules
 
@@ -26,7 +28,7 @@
 
 - Never copy the merchant, item, total, buyer, delivery or legal-link data the endpoint returns into a later input. The CLI keeps those authoritative values itself.
 
-- Run `checkout cancel` only when the user explicitly asks to cancel that order, then confirm the result with `order get`. It runs without its own approval prompt, so the user's request is the safeguard.
+- `checkout cancel` runs without its own approval prompt, so the user's request to cancel that checkout is the safeguard.
 
 - Keep raw result JSON, internal IDs, buyer contact details and shipping addresses out of replies.
 

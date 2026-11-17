@@ -5,6 +5,11 @@ integrations retain their own checkout and approval contract. For a live
 website, assign the work through `browser.browse`; the browser's checkout
 workflow owns cart review, payment choice, approval, submission and verification.
 
+## Payment preapproval
+
+For browser purchase preapproval, follow
+`~/docs/chat/browser-purchase-preapproval.md` before preparing checkout.
+Use `binding.wallet` only for an explicit wallet preference when requesting purchase preapproval.
 
 ## Wallet readiness
 
@@ -78,22 +83,23 @@ message. The payment choice carries over unless you change it with `wallet`
 as below. Payments require the user's checkout approval unless an existing
 approval or provider policy covers the purchase.
 
-Naming a wallet in `task` does not select it. Set `wallet` in `browser.browse`
-for an explicit wallet provider preference from the user, including a preference
+Naming a wallet in `task` does not select it. For a purchase without preapproval,
+set `wallet` in `browser.browse` for an explicit wallet provider preference from the user, including a preference
 in memory or their shopping profile, only when that provider is available.
 When they name only a provider, pass just
 `provider`, including when answering a browser question. The runtime selects a payment method and handles any required payment approval. Do not ask for a card choice in chat before
 proceeding. Payment approval lets the user choose among the selected wallet's
-payment methods. To change wallet providers, update `browser.browse.wallet`; checkout
+payment methods. Without preapproval, change providers through `browser.browse.wallet`; checkout
 must prepare payment approval for that provider.
 
-When the user chose a particular payment method, include its exact `payment_method_id`
+For a purchase without preapproval, when the user chose a particular payment method, include its exact `payment_method_id`
 from `wallet.list_payment_methods` in `wallet` and name its returned label in
 `task`. Do not reproduce the payment sheet as another chat approval.
 When the user prefers a method saved by the merchant, include that preference
 in the task. For a new task, leave `wallet` unset; to change an existing payment
-choice, use `wallet: null`. Without an explicit wallet preference, omit `wallet`;
-the browser can use a connected wallet and handles payment approval.
+choice, use `wallet: null`. Without an explicit wallet preference, omit `wallet`
+and leave payment out of `task`. Checkout pays with a method saved by the
+merchant before a connected wallet, and handles payment approval.
 When the user requests a method Wallet cannot supply, such as Apple Pay
 or Google Pay, offer Wallet first: the usable connected wallet, or one secure
 setup action. Assign takeover only after the user declines Wallet or the browser
@@ -108,15 +114,17 @@ it may differ from the method you proposed. It does not prove a charge or an ord
 Updates and answers keep the current payment choice when
 you omit `wallet`, including a method picked in payment approval. When changing
 how to pay, use a wallet object to change the provider or payment-method choice, or `wallet: null`
-to switch to a merchant-saved method or browser takeover.
+to switch to a merchant-saved method or browser takeover. Renew a preapproval
+before changing its bound wallet preference; an unbound approval needs no renewal.
 
 A merchant logo does not prove that a route is supported. Preserve an exact
 user choice; do not silently replace it with a default. When the workflow
 reports missing information, provide already established values together or
 present its remaining secure action.
 
-Send a Wallet setup offer on its own, without another way to pay. Suggest
-another way to pay only after the user declines setup, the wallet
+Send a Wallet setup offer on its own, except for a saved-card CVV choice on a
+purchase without preapproval. Suggest
+another way to pay for that CVV choice or after the user declines setup, the wallet
 connection fails, the wallet refuses payment or is over its spend limit, the
 wallet integration does not support this checkout, the merchant declines the
 card, or the checkout takes no card entry. When wallet payment has definitively failed or cannot pay this checkout,
@@ -124,20 +132,15 @@ ask the user about another wallet or offer browser takeover. The checkout uses
 `payment_route: takeover` to prepare checkout as far as the assigned details
 allow. It then returns the prepared cart and remaining steps through its final
 report. Offer the user the live browser to enter payment and complete the
-order. If they return control, continue the same task with `wallet: null` to
+order. After they complete payment and return control, continue the same task with `wallet: null` to
 verify the merchant's outcome. While a payment is pending or its outcome is unknown,
 wait for it to settle before suggesting another way. With no user to ask, as
 in scheduled work, report the blocked payment in your final message.
 
-Do not request credit card numbers from the user over chat or repeat, store or
-forward credit card numbers they send there. The user can securely give Muse
-access to their credit card through Wallet. Wallet-issued payment credentials
-returned by the payment runtime stay within the checkout workflow.
+Never request, repeat, store or forward card numbers or CVVs in chat. For CVV entry, have the user take over, complete verification and leave the CVV page before handing back. Resume the same task with `wallet: null` to verify an order they placed or finish with `merchant_saved`. Wallet provides secure access to cards; its issued credentials stay in checkout.
 
 A wallet connection, method selection, cart review, completed login or return
-of browser control does not itself authorize spending. A merchant-saved card
-is used only when the user approves it in the payment approval, or when the
-user chose it for a preapproved purchase.
+of browser control does not itself authorize spending. For a preapproved purchase, the checkout agent selects a usable saved card or a connected wallet under its checkout instructions. Other purchases require checkout approval unless provider policy covers them.
 The payment sheet owns provider disclosures and final consent. Funding
 allowance is not permission to raise the purchase total.
 
@@ -145,9 +148,11 @@ allowance is not permission to raise the purchase total.
 
 An approval covers every page of the checkout while the currency stays the
 same and both the total and any conditional charge stay within their approved
-amounts; the payment service checks those. Extending a wallet-issued Link
-card's requested lifetime requires replacement payment approval; a shorter
-or unchanged lifetime can reuse it. When items, variants or quantities
+amounts; the payment service checks those. Changing an issued Link card's
+charge cutoff, earlier or later, requires replacement funding. Let the checkout
+verify the prior order's outcome and recover funding before retrying.
+If it requires purchase renewal, renew the same `purchase_id` through
+`~/docs/chat/browser-purchase-preapproval.md`. When items, variants or quantities
 change, or delivery, dates, addresses, cancellation terms or other obligations
 materially change, the checkout asks you to check the cart again through the
 same cart-confirmation handoff. Resolve the change within the user's request
