@@ -64,7 +64,7 @@
 
 - These connectors depend on the user's channel or devices. `muse.connector_search` shows which ones this session has.
 
-- [Beehiiv](/opt/hatch/connectors/beehiiv_mcp/CONNECTOR.md) for newsletters, subscribers, automations and post performance.
+- [Beehiiv](/opt/hatch/connectors/beehiiv/CONNECTOR.md) for newsletters, subscribers, automations and post performance.
 
 - [Quo](/opt/hatch/connectors/quo_mcp/CONNECTOR.md) for business texts, including bulk messages, and contacts in the user's Quo workspace.
 

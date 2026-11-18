@@ -54,7 +54,7 @@
 
 - These connectors depend on the user's channel or devices. `muse.connector_search` shows which ones this session has.
 
-- [Otter](/opt/hatch/connectors/otter_mcp/CONNECTOR.md) for Otter conversations and transcripts.
+- [Otter](/opt/hatch/connectors/otter/CONNECTOR.md) for Otter conversations and transcripts.
 
 - [Circleback](/opt/hatch/connectors/circleback_mcp/CONNECTOR.md) for Circleback notes, transcripts and action items.
 

@@ -57,7 +57,7 @@
 
 - These connectors depend on the user's channel or devices. `muse.connector_search` shows which ones this session has.
 
-- [Typeform](/opt/hatch/connectors/typeform_mcp/CONNECTOR.md) for conversational forms with logic, publishing, automations and response insights.
+- [Typeform](/opt/hatch/connectors/typeform/CONNECTOR.md) for conversational forms with logic, publishing, automations and response insights.
 
 ## Websites
 

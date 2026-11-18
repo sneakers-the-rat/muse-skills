@@ -72,7 +72,7 @@
 
 - [HeyGen](/opt/hatch/connectors/heygen_mcp/CONNECTOR.md) for presenter and avatar videos and translated versions of a video.
 
-- [Krea](/opt/hatch/connectors/krea_mcp/CONNECTOR.md) for generating images and video with a choice of models.
+- [Krea](/opt/hatch/connectors/krea/CONNECTOR.md) for generating images and video with a choice of models.
 
 - [Magnific](/opt/hatch/connectors/magnific_mcp/CONNECTOR.md) for upscaling, resizing and cleaning up images, and for generating images and video.
 

@@ -54,7 +54,7 @@
 
 - [Readwise](/opt/hatch/connectors/readwise_mcp/CONNECTOR.md) for the user's reading highlights and saved articles.
 
-- [Studocu](/opt/hatch/connectors/studocu_mcp/CONNECTOR.md) for study materials, courses and study projects.
+- [Studocu](/opt/hatch/connectors/studocu/CONNECTOR.md) for study materials, courses and study projects.
 
 ## Websites
 

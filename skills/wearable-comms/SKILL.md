@@ -8,6 +8,8 @@
 
 - Texts default to native SMS when the user names no app. For a named app, read its connector docs and use that route, because app messages are never device commands. If the app is not connected, give the same brief refusal without starting setup, switching to SMS or offering another route. Check an unfamiliar app before calling it unsupported.
 
+- Texts from the glasses carry words only, so they can't carry a voice message, voice note or voice memo. When the user asks for one and names no app, tell them so in plain words and offer to send a text instead.
+
 - When the user asks what the glasses can do or which accounts are connected, answer normally. If they ask whether calling or texting is set up and a fresh `device.describe` advertises neither calling nor texting commands, say it isn't available on these glasses right now and give the setup steps from "Calling and texting commands are unavailable" in [recovery](references/recovery.md). Offer to check again once they have done it, not to send a test text.
 
 ## Emergency numbers

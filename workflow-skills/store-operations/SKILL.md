@@ -50,7 +50,7 @@
 
 - [Gumroad](/opt/hatch/connectors/gumroad_mcp/CONNECTOR.md) for digital products, sales and payouts, and for drafting and publishing products.
 
-- [Wix](/opt/hatch/connectors/wix_mcp/CONNECTOR.md) for a store built on Wix.
+- [Wix](/opt/hatch/connectors/wix/CONNECTOR.md) for a store built on Wix.
 
 - [Flexport](/opt/hatch/connectors/flexport_mcp/CONNECTOR.md) for freight quotes, shipment tracking and bookings.
 

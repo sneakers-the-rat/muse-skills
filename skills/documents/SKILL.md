@@ -58,9 +58,9 @@
 
 - These connectors depend on the user's channel or devices. `muse.connector_search` shows which ones this session has.
 
-- [Studocu](/opt/hatch/connectors/studocu_mcp/CONNECTOR.md) for the user's study materials and study projects.
+- [Studocu](/opt/hatch/connectors/studocu/CONNECTOR.md) for the user's study materials and study projects.
 
-- [Gamma](/opt/hatch/connectors/gamma_mcp/CONNECTOR.md) for generating and exporting presentations and documents in Gamma.
+- [Gamma](/opt/hatch/connectors/gamma/CONNECTOR.md) for generating and exporting presentations and documents in Gamma.
 
 ## Websites
 

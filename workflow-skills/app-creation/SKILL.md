@@ -67,7 +67,7 @@
 
 - [Zite](/opt/hatch/connectors/zite_mcp/CONNECTOR.md) for building and publishing an app with its own database.
 
-- [Wix](/opt/hatch/connectors/wix_mcp/CONNECTOR.md) for changing or publishing an existing Wix site.
+- [Wix](/opt/hatch/connectors/wix/CONNECTOR.md) for changing or publishing an existing Wix site.
 
 ## Websites
 
