@@ -1,0 +1,50 @@
+update runtime.browser_specialist_steers set delivered_at = now()
+                     where steer_id = $1 and delivered_at is null and undeliverable_at is nullupdate runtime.browser_seat_inputs set shown_at = now()
+                     where source_id = $1 and shown_at is null and revision is not null
+                       and invocation_id = (select invocation_id
+                         from runtime.browser_specialist_steers where steer_id = $1)update runtime.browser_specialist_steers set undeliverable_at = now()
+                     where steer_id = $1 and delivered_at is null and undeliverable_at is null
+JOIN LATERAL (
+  SELECT MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/kind') AS kind,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/action') AS action,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/handoff_message_id') AS handoff_message_id,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/handoff_source') AS handoff_source,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/submission_message_id') AS submission_message_id,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/submission_source') AS submission_source,
+         MAX(COALESCE(f.text_value, f.scalar_value))
+           FILTER (WHERE f.field_path = '/metadata/assistant_message_id') AS assistant_message_id
+  FROM runtime.event_payload_fields AS f
+  WHERE f.event_seq = e.event_seq AND f.field_path IN (
+    '/metadata/kind', '/metadata/action', '/metadata/handoff_message_id',
+    '/metadata/handoff_source', '/metadata/submission_message_id', '/metadata/submission_source',
+    '/metadata/assistant_message_id'
+  )
+) AS metadata ON true
+follow_up_settlementnothing_to_doaborted
+SELECT e.event_seq,
+       e.payload_json,
+       message.body AS display_text
+FROM runtime.events AS e
+JOIN runtime.messages AS message ON message.event_seq = e.event_seq
+WHERE e.parent_agent_id = $1
+  AND e.reply_to_message_id = $2
+  AND e.payload_json IS NOT NULL
+  AND (
+    (e.event_name = 'message.assistant' AND e.role = 'assistant' AND e.source = 'runtime')
+    OR (e.event_name = 'message.internal' AND e.source = ANY($3::text[]))
+  )
+ORDER BY e.event_seq DESC
+LIMIT 1
+FOR UPDATE OF e
+display_textroot follow-up assistant payload is not an objectstatusselect detail_json::text from runtime.maintenance_markers
+                     where marker_key = $1 for updateinsert into runtime.maintenance_markers (marker_key, detail_json)
+                     values ($1, jsonb_build_object('id', gen_random_uuid()::text, 'paired', $2))
+                     on conflict (marker_key) do update
+                     set completed_at = now(), detail_json = excluded.detail_json
+                     returning detail_json->>'id'€ÿ

@@ -1,0 +1,7 @@
+Your previous review did not satisfy the decision contract. Nothing has been sent. Review the same evidence and call `submit_connection_review` once with a corrected decision.
+
+Include `draft_approval_required`. Set it to `true` only for an instruction requiring the user's approval of the final draft, and use an ask decision unless denying the send. Ordinary ask-first rules and one-time exceptions leave it `false`.
+
+Hold a draft with `ask_owner` or `ask_user` when `draft_approval_required` is `true`. When the draft answers another participant who asked for this, hold it with `ask_owner` if a saved rule you cite asks for the user's go-ahead and they have not given it, and with `ask_user` if it is sensitive, no rule speaks to it and nothing shows the user wants it shared. Otherwise decide it yourself. A hold is refused when no other participant's message started this turn. `allow` sends the message, with a complete revised `text` when wording resolves your concern. `deny` returns it to the Muse that wrote it, with a `reason` saying what to leave out, change or find out first. `nothing_shared` needs a reason and applies only when the send discloses nothing about the user and respects all rules and confidences. Files, images and shared resources cannot use it.
+
+Cite only stored rule IDs, each once, and only where a rule speaks to the send. Preserve exact quotations and wording the user asked to send verbatim, and keep attachments, recipients and the shared item within the reviewed send.

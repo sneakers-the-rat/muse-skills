@@ -533,6 +533,18 @@ harness = "hybrid_selector"
 "avocado-5.17-v8" = { weights = "avocado-5.17", local_inference = true }
 "avocrono-5.17-v8" = { weights = "avocado-5.17", local_inference = true }
 "avocado-5.17-browser-v8" = { weights = "avocado-5.17", local_inference = true }
+"avocado-5.17-v9" = { weights = "avocado-5.17", local_inference = true }
+"avocrono-5.17-v9" = { weights = "avocado-5.17", local_inference = true }
+"avocado-5.17-browser-v9" = { weights = "avocado-5.17", local_inference = true }
+"avocado-5.17-v10" = { weights = "avocado-5.17", local_inference = true }
+"avocrono-5.17-v10" = { weights = "avocado-5.17", local_inference = true }
+"avocado-5.17-browser-v10" = { weights = "avocado-5.17", local_inference = true }
+"avocado-5.17-v11" = { weights = "avocado-5.17", local_inference = true }
+"avocrono-5.17-v11" = { weights = "avocado-5.17", local_inference = true }
+"avocado-5.17-browser-v11" = { weights = "avocado-5.17", local_inference = true }
+"avocado-5.17-v12" = { weights = "avocado-5.17", local_inference = true }
+"avocrono-5.17-v12" = { weights = "avocado-5.17", local_inference = true }
+"avocado-5.17-browser-v12" = { weights = "avocado-5.17", local_inference = true }
 # SGLang TEE deployments behind MAGI's llm_predictor API, on the 5.16 checkpoint.
 "avocado-5.16-v4-sglang" = { weights = "avocado-5.16" }
 "avocrono-5.16-v4-sglang" = { weights = "avocado-5.16" }
@@ -1092,6 +1104,54 @@ responses_companion = true
 preview = true
 roles = ["big_boy"]
 eval_targets = ["jarvis_avocado-5.17-v8"]
+
+[[models]]
+id = "ipnext/avocado-5.17-v9"
+display_name = "Avocado 5.17 v9"
+provider = "ipnext"
+category = "internal"
+model = "avocado-5.17-v9"
+lanes = { main = "avocado-5.17-v9", browser = "avocado-5.17-browser-v9", cron = "avocrono-5.17-v9", voice = "avocado-9b-voice" }
+responses_companion = true
+preview = true
+roles = ["big_boy"]
+eval_targets = ["jarvis_avocado-5.17-v9"]
+
+[[models]]
+id = "ipnext/avocado-5.17-v10"
+display_name = "Avocado 5.17 v10"
+provider = "ipnext"
+category = "internal"
+model = "avocado-5.17-v10"
+lanes = { main = "avocado-5.17-v10", browser = "avocado-5.17-browser-v10", cron = "avocrono-5.17-v10", voice = "avocado-9b-voice" }
+responses_companion = true
+preview = true
+roles = ["big_boy"]
+eval_targets = ["jarvis_avocado-5.17-v10"]
+
+[[models]]
+id = "ipnext/avocado-5.17-v11"
+display_name = "Avocado 5.17 v11"
+provider = "ipnext"
+category = "internal"
+model = "avocado-5.17-v11"
+lanes = { main = "avocado-5.17-v11", browser = "avocado-5.17-browser-v11", cron = "avocrono-5.17-v11", voice = "avocado-9b-voice" }
+responses_companion = true
+preview = true
+roles = ["big_boy"]
+eval_targets = ["jarvis_avocado-5.17-v11"]
+
+[[models]]
+id = "ipnext/avocado-5.17-v12"
+display_name = "Avocado 5.17 v12"
+provider = "ipnext"
+category = "internal"
+model = "avocado-5.17-v12"
+lanes = { main = "avocado-5.17-v12", browser = "avocado-5.17-browser-v12", cron = "avocrono-5.17-v12", voice = "avocado-9b-voice" }
+responses_companion = true
+preview = true
+roles = ["big_boy"]
+eval_targets = ["jarvis_avocado-5.17-v12"]
 
 # The browser routing experiment's model (no picker role). Every lane but voice
 # names avocado-5.17-browser-v4, which MAGI prod serves from the 5.17 TPU tier,

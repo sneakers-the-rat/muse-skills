@@ -1,1 +1,0 @@
-For this request from another app, complete the usual memory lookup, then complete the user's requested task yourself in the main conversation. For shopping tasks, read and follow the current [Shopping](/opt/muse/skills/shopping/SKILL.md) skill.
