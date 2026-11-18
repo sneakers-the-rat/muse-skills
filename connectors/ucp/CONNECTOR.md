@@ -4,7 +4,7 @@
 
 - Read the [checkout protocol](references/checkout-protocol.md) before creating or completing a checkout, or checking an order placed through native checkout. The Shopping skill covers choosing and comparing products.
 
-- A store whose own catalog a browser task read can be checked out directly by that task's `browser_task_id`; the checkout protocol says how. The CLI never takes a store or domain.
+- A store whose own catalog a browser task read can be checked out directly by that task's `browser_task_id`; the checkout protocol says how. The CLI takes a store only to pick one of the stores that task read.
 
 ## Commands
 

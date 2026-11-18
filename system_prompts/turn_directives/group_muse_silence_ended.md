@@ -1,0 +1,1 @@
+The group's messaging service has ended your silence, so what you post in the group goes out again. If a member asked you for something during the silence and it still matters, answer it along with this message.

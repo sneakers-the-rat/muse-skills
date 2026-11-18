@@ -1,0 +1,77 @@
+update runtime.browser_calls set checkout_wait_state='settled'
+                     where operation_id=$1 and checkout_wait_state='withdraw_pending'update runtime.browser_calls set checkout_wait_state='withdraw_pending'
+                     where operation_id=$1 and checkout_wait_json=$2 and checkout_wait_state='waiting'update runtime.browser_calls set checkout_wait_state=case
+                      when checkout_wait_state='waiting' then 'awaiting_card'
+                      else 'withdraw_on_arrival' end
+                     where operation_id=$1 and checkout_approval_id is null
+                       and checkout_wait_state in ('waiting', 'withdraw_pending')legacy-unversionedapproval_typebackground_sync_disabledselect domains from context.subscriptions where id = $1 for updateupdate context.subscriptions set last_polled_at = clock_timestamp() where id = $1select g.source_id, g.group_id, g.acknowledged_position,
+              coalesce(g.window_position, g.available_position) as through_position, ss.start_position
+            from context.group_cursors g join context.subscription_sources ss
+              on ss.subscription_id = g.subscription_id and ss.source_id = g.source_id
+            join context.sources s on s.id = g.source_id
+            where g.subscription_id = $1 and ss.active and g.acknowledged_position < g.available_position
+              and not (s.source_domain = any($2))
+              and (g.lease_expires_at is null or g.lease_expires_at <= clock_timestamp())
+              and (g.retry_at is null or g.retry_at <= clock_timestamp())
+            order by g.last_pulled_at nulls first, g.source_id, g.group_id limit 1 for update of gsource_idacknowledged_positionstart_positione.id, e.dedupe_key as key, e.group_key, e.payload_kind, e.content_hints,
+     e.occurred_at, e.ingested_at, e.ttl_secondsexpires_atappend_positionupdate context.group_cursors set acknowledged_position = $4,
+                window_position = null, batch_position = null, lease_token = null,
+                lease_expires_at = null, evidence_expires_at = null, retry_at = null, last_error = null,
+                last_pulled_at = clock_timestamp()
+                where subscription_id = $1 and source_id = $2 and group_id = $3select exists(select 1 from context.group_cursors g
+                join context.subscription_sources ss on ss.subscription_id = g.subscription_id and ss.source_id = g.source_id
+                join context.sources s on s.id = g.source_id
+                where g.subscription_id = $1 and ss.active and g.acknowledged_position < g.available_position
+                and not (s.source_domain = any($2)))select id, source_domain, source_key as key, display_name, created_at::text as created_at
+            from context.sources where id = $1update context.group_cursors set window_position = $4, batch_position = $5,
+            lease_token = $6, lease_expires_at = least(clock_timestamp() + $7 * interval '1 second', $8::timestamptz), evidence_expires_at = $8, last_pulled_at = clock_timestamp(), retry_at = null
+            where subscription_id = $1 and source_id = $2 and group_id = $3 returning lease_expires_at
+SELECT action_index, action_seq, action_id, activity_thread_id, agent_id, agent_depth, icon, title, subtitle, report, status, created_at
+FROM activity_monitor_thread_actions
+WHERE activity_thread_id = $1
+ORDER BY action_index ASC, action_seq ASC
+
+SELECT action_index, action_id, activity_thread_id, agent_id, agent_depth, icon, title, subtitle, report, status, created_at
+FROM (
+    SELECT
+        action_index,
+        action_id,
+        activity_thread_id,
+        agent_id,
+        agent_depth,
+        icon,
+        title,
+        subtitle,
+        report,
+        status,
+        created_at,
+        action_seq AS insertion_order
+    FROM activity_monitor_thread_actions
+    WHERE activity_thread_id = $1
+    ORDER BY action_index DESC, insertion_order DESC
+    LIMIT $2
+)
+ORDER BY action_index ASC, insertion_order ASC
+
+SELECT user_message_id
+FROM activity_monitor_carrier_user_messages
+WHERE carrier_message_id = $1
+  AND ($2::text IS NULL OR root_agent_id IS NULL OR root_agent_id = $2)
+ORDER BY link_seq ASC
+
+SELECT b.activity_thread_id
+FROM activity_monitor_message_threads b
+WHERE b.message_id = $1
+
+SELECT b.activity_thread_id
+FROM activity_monitor_message_threads b
+JOIN activity_monitor_threads g ON g.activity_thread_id = b.activity_thread_id
+WHERE b.message_id = $1
+  AND g.status = $2
+
+SELECT activity_thread_id, name, subtitle, icon, emoji, status, created_at, finished_at, finish_message,
+       finish_status, finish_status_reason, activity_thread_kind, space_slug, status_title,
+       expected_finish_description
+FROM activity_monitor_threads
+WHERE activity_thread_id = $1
+context_store.initializedefaulttimed out while writing egress approval mirror requesttimed out while reading egress approval mirror responseinvalid Sentinel base URL

@@ -16,6 +16,10 @@
 - A flight search also reads Google Flights in a browser task, with `gflights-url` and `route`, as [Google Flights](references/google-flights.md) describes.
 <!-- gflights-first-only:end -->
 
+<!-- duffel-stays-only:start -->
+- It also books hotel stays with `stay-search`, `stay-rates`, `stay-quote` and `book --quote-id`. Read [hotel stays](references/stays.md) before any hotel command. The flight sections below don't apply to hotels.
+<!-- duffel-stays-only:end -->
+
 - `car-booking-status` and `car-cancel` check and cancel rental-car reservations made here. Read [rental cars](references/cars.md) before any rental-car command; the flight sections below do not apply to cars.
 
 - Before a user-facing search, read [Flight Booking](/opt/muse/skills/flight-booking/SKILL.md), which compares flight sources and builds the flight list. Read [checkout](/opt/muse/assets/booking/references/checkout.md) once the user picks a flight to book, not before searching. [Flight Tracking](/opt/muse/skills/flight-tracking/SKILL.md) uses Duffel only for the fare check on a booked trip. Duffel does not report live flight status.
