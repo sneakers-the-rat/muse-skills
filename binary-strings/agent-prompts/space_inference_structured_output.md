@@ -484,6 +484,19 @@ harness = "hybrid_selector"
 "watermelon-v2" = { weights = "hatch-6.2" }
 "watermelon-cron-v2" = { weights = "hatch-6.2" }
 "watermelon-fast-v0" = { weights = "hatch-6.2" }
+# MAGI serves the subs-fast v1-v4 browser names from 5.17 weights.
+"watermelon-fast-v1" = { weights = "hatch-6.2" }
+"watermelon-browser-fast-v1" = { weights = "avocado-5.17" }
+"watermelon-cron-fast-v1" = { weights = "hatch-6.2" }
+"watermelon-fast-v2" = { weights = "hatch-6.2" }
+"watermelon-browser-fast-v2" = { weights = "avocado-5.17" }
+"watermelon-cron-fast-v2" = { weights = "hatch-6.2" }
+"watermelon-fast-v3" = { weights = "hatch-6.2" }
+"watermelon-browser-fast-v3" = { weights = "avocado-5.17" }
+"watermelon-cron-fast-v3" = { weights = "hatch-6.2" }
+"watermelon-fast-v4" = { weights = "hatch-6.2" }
+"watermelon-browser-fast-v4" = { weights = "avocado-5.17" }
+"watermelon-cron-fast-v4" = { weights = "hatch-6.2" }
 # MAGI serves the 5.16 v2 names from 5.17 weights.
 "avocado-5.16-v2" = { weights = "avocado-5.17", local_inference = true }
 "avocrono-5.16-v2" = { weights = "avocado-5.17", local_inference = true }
@@ -913,6 +926,90 @@ provider = "ipnext"
 category = "internal"
 model = "subs-fast"
 lanes = { main = "watermelon-fast-v0", browser = "avocado-5.17-v4", cron = "watermelon-cron-v0", voice = "avocado-9b-voice" }
+preview = true
+mask_explicit_selection_identity = true
+roles = ["big_boy"]
+setup.base = "ipnext/watermelon-v0"
+setup.artifact_routing = "selected_main"
+setup.compaction_memory_flush_use_main = true
+setup.cron_browser_uses_default = true
+setup.overrides = [
+  { purpose = "MainChat" },
+  { purpose = "BrowserAgent" },
+  { purpose = "BrowserMain", tier = "browser" },
+  { purpose = "BrowserVisualGesture", tier = "browser" },
+]
+
+[[models]]
+id = "ipnext/subs-fast-v1"
+display_name = "subs-fast v1"
+provider = "ipnext"
+category = "internal"
+model = "subs-fast-v1"
+lanes = { main = "watermelon-fast-v1", browser = "watermelon-browser-fast-v1", cron = "watermelon-cron-fast-v1", voice = "avocado-9b-voice" }
+preview = true
+mask_explicit_selection_identity = true
+roles = ["big_boy"]
+setup.base = "ipnext/watermelon-v0"
+setup.artifact_routing = "selected_main"
+setup.compaction_memory_flush_use_main = true
+setup.cron_browser_uses_default = true
+setup.overrides = [
+  { purpose = "MainChat" },
+  { purpose = "BrowserAgent" },
+  { purpose = "BrowserMain", tier = "browser" },
+  { purpose = "BrowserVisualGesture", tier = "browser" },
+]
+
+[[models]]
+id = "ipnext/subs-fast-v2"
+display_name = "subs-fast v2"
+provider = "ipnext"
+category = "internal"
+model = "subs-fast-v2"
+lanes = { main = "watermelon-fast-v2", browser = "watermelon-browser-fast-v2", cron = "watermelon-cron-fast-v2", voice = "avocado-9b-voice" }
+preview = true
+mask_explicit_selection_identity = true
+roles = ["big_boy"]
+setup.base = "ipnext/watermelon-v0"
+setup.artifact_routing = "selected_main"
+setup.compaction_memory_flush_use_main = true
+setup.cron_browser_uses_default = true
+setup.overrides = [
+  { purpose = "MainChat" },
+  { purpose = "BrowserAgent" },
+  { purpose = "BrowserMain", tier = "browser" },
+  { purpose = "BrowserVisualGesture", tier = "browser" },
+]
+
+[[models]]
+id = "ipnext/subs-fast-v3"
+display_name = "subs-fast v3"
+provider = "ipnext"
+category = "internal"
+model = "subs-fast-v3"
+lanes = { main = "watermelon-fast-v3", browser = "watermelon-browser-fast-v3", cron = "watermelon-cron-fast-v3", voice = "avocado-9b-voice" }
+preview = true
+mask_explicit_selection_identity = true
+roles = ["big_boy"]
+setup.base = "ipnext/watermelon-v0"
+setup.artifact_routing = "selected_main"
+setup.compaction_memory_flush_use_main = true
+setup.cron_browser_uses_default = true
+setup.overrides = [
+  { purpose = "MainChat" },
+  { purpose = "BrowserAgent" },
+  { purpose = "BrowserMain", tier = "browser" },
+  { purpose = "BrowserVisualGesture", tier = "browser" },
+]
+
+[[models]]
+id = "ipnext/subs-fast-v4"
+display_name = "subs-fast v4"
+provider = "ipnext"
+category = "internal"
+model = "subs-fast-v4"
+lanes = { main = "watermelon-fast-v4", browser = "watermelon-browser-fast-v4", cron = "watermelon-cron-fast-v4", voice = "avocado-9b-voice" }
 preview = true
 mask_explicit_selection_identity = true
 roles = ["big_boy"]

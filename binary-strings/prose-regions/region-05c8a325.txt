@@ -1,0 +1,72 @@
+string or mapa quantity is a number of zero or morestruct variant}retry_allowedcheckout_spend_operation_idshopifybrowserduffelexpediaopentableinvalid merchant checkout terminal evidenceinvalid merchant checkout resource idbound merchant card evidence has invalid last four digitscheckout terminal evidence is unavailableinvalid checkout terminal evidencecheckout has no claimed merchant executionactive workflow recovery owner has no child agent idactive workflow recovery owner has no child message idIdeas workflow launch requires ideaActivationIdwallet creation replay has no retained requestmain_chatcancelledcreate_provider_refusedcreate_expiredcancellation_dispatchedcancellation_confirmedprovider_terminalprovider_replacement_requiredprovider_terminal_failureprovider_unsupported_statusinvalid checkout predecessor operation IDcheckout spend wallet create idempotency version is unsupportedcheckout spend expiry must be in the futurepredecessor_operation_idclient_task_keycheckout_request_idapproval_idcheckout-spend-idempotent-v2:checkout-spend-idempotent-v1:external.user_facingstatus
+coalesce((
+    select (
+    o.state = 'cancelled'
+    and o.recovery_epoch = 1
+    and merchant.provider in ('opentable', 'lugg', 'shopify')
+    and (o.wallet_provider = 'stripe-link' or (merchant.provider = 'shopify' and o.wallet_provider = 'shop-pay'))
+    and o.wallet_request_id is not null
+    and o.terminal_result->>'provider' = merchant.provider
+    and o.terminal_result @> '{"payload":{"kind":"payment_setup_cancelled","retry_allowed":true}}'::jsonb
+    and coalesce(o.terminal_result->'reference_id', 'null'::jsonb) = 'null'::jsonb
+    and coalesce(o.terminal_result->'decline_reason', 'null'::jsonb) = 'null'::jsonb
+    and (merchant.provider <> 'shopify' or o.terminal_result->>'order_evidence' = 'no_order_created')
+    and exists (
+        select 1 from runtime.checkout_spend_checkpoints c
+        where c.operation_id = o.operation_id
+          and c.provider = merchant.provider
+          and c.checkpoint_key = 'merchant_cancellation'
+          and c.external_id = o.wallet_request_id
+          and c.bound_at_ms is not null
+          and c.detail = '{"status":"canceled"}'::jsonb
+    )
+    and not exists (
+        select 1 from runtime.checkout_spend_checkpoints c
+        where c.operation_id = o.operation_id
+          and (c.provider <> merchant.provider
+            or (c.checkpoint_key = 'merchant_execution' and not coalesce((
+                merchant.provider = 'shopify'
+                and c.external_id = substring(o.client_task_key from length($UCP_PREFIX) + 1)
+                and c.bound_at_ms is not null
+                and (c.execution_observation is null
+                    or c.execution_observation->'kind'->'shopify_checkout_completed_v1' is null)
+                and c.detail->>'order_evidence' = 'no_order_created'
+            ), false)))
+    )
+    or (
+        o.state = 'declined'
+        and o.recovery_epoch = 1
+        and merchant.provider in ('opentable', 'lugg', 'shopify')
+        and o.wallet_provider = 'stripe-link'
+        and o.terminal_result->>'provider' = merchant.provider
+        and o.terminal_result->>'decline_reason' = 'payment_setup_failed'
+        and coalesce(o.terminal_result->'reference_id', 'null'::jsonb) = 'null'::jsonb
+        and coalesce(o.terminal_result->'cancellation_reason', 'null'::jsonb) = 'null'::jsonb
+        and not exists (
+            select 1 from runtime.checkout_spend_checkpoints c
+            where c.operation_id = o.operation_id
+        )
+    )
+    or (
+        o.state = 'declined'
+        and o.recovery_epoch = 1
+        and o.wallet_provider = 'stripe-link'
+        and o.wallet_request_id is not null
+        and o.terminal_result->>'provider' = split_part(o.client_task_key, ':', 1)
+        and o.terminal_result @> '{"decline_reason":"order_rejected","order_evidence":{"confirmed_retryable_failure":{}}}'::jsonb
+        and coalesce(o.terminal_result->'reference_id', 'null'::jsonb) = 'null'::jsonb
+    )
+    or (
+        o.state = 'declined'
+        and o.recovery_epoch = 1
+        and merchant.provider = 'shopify'
+        and o.terminal_result @> '{"provider":"shopify","order_evidence":"merchant_refused_payment"}'::jsonb
+    )
+    )
+    from (select case
+        when starts_with(o.client_task_key, $UCP_PREFIX) then 'shopify'
+        when split_part(o.client_task_key, ':', 1) = 'opentable' then 'opentable'
+        when split_part(o.client_task_key, ':', 1) = 'lugg' then 'lugg'
+    end as provider) merchant
+), false)
+$UCP_PREFIXmerchant checkout recovery evidence is ambiguousinvalid merchant checkout statemerchant checkout terminal evidence does not match its owner or statemerchant payment cancellation is unavailable for this operationinvalid merchant checkout lookup ownermerchant card evidence has an invalid owner or bindinglast4checkout execution evidence ownership is unavailableunknown or mismatched checkout operationcheckout terminal evidence belongs to another providercheckout execution evidence is unavailablecheckout observation does not belong to this provider and resourcecheckout execution observation conflicts with retained evidencecheckout execution observation requires an active bound operationOpenTable observation does not match the bound merchant cardcheckout execution claim is unexpectedly boundlaunch_occurrence_agent_idlaunch_occurrence_message_idlaunch_occurrence_tool_call_idmagi_workload_classrun_idlaunch_moderoot_agent_idparent_message_idlaunching_agent_idlaunching_message_idlaunching_tool_call_idsync_wait_deadline_attask_idresume_from_run_idworkflow_namedescriptionphases_jsonargs_jsonworkspace_rootscript_pathscript_sha256request_trace_jsonterminal_handoff_transportterminal_handoff_chat_context_jsonexecutor_idexecution_attemptheartbeat_atrecovery_countlast_recovery_reasonlast_recovered_aterrorfinal_resultterminal_handoff_message_idterminal_handoff_generationterminal_handoff_delivered_atterminal_handoff_dispositionterminal_handoff_attempt_countterminal_handoff_last_errorcreated_atstarted_atupdated_atcompleted_atchild_agent_idcall_idreplay_keyworkflow child owner conflict does not match the pending call identityworkflow child owner conflict contains a partial identityactive workflow agent call contains an invalid child owner identityactive workflow agent call has no exact child ownerunowned workflow agent stop lost its exact CAS without a lifecycle winneroccurrence_alias_fingerprintworkflow launch occurrence alias is bound to a different request contractworkflow launch contract fingerprint must be lowercase SHA-256 hexasynchronous workflow launch cannot carry a synchronous wait deadlinesynchronous workflow launch requires an immutable wait deadlineIdeas activation reuse requires a synchronous workflow launchIdeas activation reuse cannot replace an explicit workflow resumebrowser wallet request belongs to a different providerwallet spend request has no provable exact BrowserTask ownerwallet spend request is owned by a different BrowserTaskwallet command task revision must be positivebrowser_task_idwallet funding is being retired; creation replay is closedwallet approval is already bound to different creation factswallet creation replay is no longer activewallet terminalization requires an open spend requestPayPal reported an observation, but credential issuance still requires reconciliationTryFlatten polled after completionMap must not be polled after it returned `Poll::Ready`Ready polled after completiona Display implementation returned an error unexpectedlyErroroperation_idwallet_providerwallet_request_idoriginal_request_trace_jsoncheckout_attributionterminal_resultrecovery_epochexpires_at_mscreated_at_msupdated_at_mscheckpoint_keyexternal_iddetailexecution_observationclaimed_at_msbound_at_msdescription() is deprecated; use Display
