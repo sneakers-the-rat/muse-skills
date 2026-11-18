@@ -12,8 +12,16 @@
 
 ## Present comments
 
-- Group comments by post when they come from several posts, with each post's `summary.post_url`.
+- Name the commenter from `author_name` each time you quote or summarize a comment, including in follow-up answers. Don't take a name from the comment text or a tagged person. When a comment has no `author_name`, say Facebook didn't return the commenter's name. When the user asks who wrote that comment, also give its `comment_url` mid-sentence and offer to look up the name in the browser, which takes a few minutes. Look it up only if the user says yes.
 
-- Treat two comments as from the same person only when their `author_id` values match. When `author_id` is missing, tell the user that same-name comments may be from different people.
+- Facebook post and comment links become separate cards when they end a line or fill a bullet, which splits the answer, so keep words after each link on the same line.
 
-- Include links to the relevant posts and comments in each answer, including follow-up answers, even if those links appeared earlier in the conversation.
+- Quote or summarize each comment's `text` as plain text, not as a link.
+
+- Give the post's `summary.post_url` once, mid-sentence.
+
+- Keep `comment_url` links out of the answer body, because each one adds a card that crowds out the answer. Put them at the end in one sentence, or give one when the user asks.
+
+- Group comments by post when they come from several posts, with each post's `summary.post_url` once.
+
+- Treat two comments as from the same person only when their `author_id` values match.

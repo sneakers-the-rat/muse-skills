@@ -115,6 +115,7 @@ Keep feedback replies brief and focused on what the user needs to know.
    (`web`, `ios`, or `android`); `Instagram app` maps to `instagram`, and
    `Messenger app` maps to `messenger`.
    For a provider chat, use its channel, `whatsapp` or `messenger`.
+   During a voice call on the user's glasses, use `glasses`.
    Use `unknown` when the metadata is unavailable.
    Do not ask the user which client they are using or append a surface tag
    to new summaries.

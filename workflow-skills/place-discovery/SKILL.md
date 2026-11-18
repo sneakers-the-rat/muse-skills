@@ -4,6 +4,8 @@
 
 - Establish the area the task concerns, which is the trip destination when the user is planning travel. Then settle the travel range, timing and the needs that decide the choice, using known context for simple assumptions.
 
+- When the user asks which places in an area offer something or wants a complete list, start with an official listing for that question, such as one from a tourism board or venue association, rather than relying on search results or articles alone. Include any places the user has already booked in the area, check each candidate, and name the listing and its date in the answer.
+
 - Search for candidates with a place search, following the [Places Search](/opt/hatch/connectors/places/CONNECTOR.md) connector docs. `map.geocode` turns an address into coordinates, `map.reverse_geocode` names a coordinate and `map.navigation` plans a route, but none of them chooses a suitable place or establishes its hours.
 
 - Judge the results instead of following their rank. Set aside wrong-category, wrong-area and closed places unless the user asked about them, and search again with an exact name, a narrower type or clearer area when the set is weak.

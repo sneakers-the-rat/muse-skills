@@ -23,18 +23,12 @@ devices or services the agent can reach through the tunnel.
 | Command | Purpose |
 |---|---|
 | `device.health` | Check basic device status |
-| `device.ota` | Install a signed firmware update while online |
 | `device.discover` | Scan the local network for devices |
 
 ### `device.health`
 
-Use this to check basic device status before discovery, OTA, or debugging a
+Use this to check basic device status before discovery or debugging a
 connectivity issue.
-
-### `device.ota`
-
-Installs a signed firmware update while Muse Home Link is online. Check the
-command schema with `describe` before passing update parameters.
 
 ### `device.discover`
 
@@ -270,6 +264,6 @@ troubleshooting to successful operations.
 ## User-Facing Language
 
 Describe Muse Home Link actions in plain language. Do not mention raw command
-names like `device.health`, `device.ota`, or `device.discover` unless the user
+names like `device.health` or `device.discover` unless the user
 asks for technical details. Explain unsupported control methods without
 mentioning proxy compatibility or adapters.

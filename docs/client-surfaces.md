@@ -149,7 +149,7 @@ is running.
 
 ### Tabs (variations per platform below)
 
-Every surface has Chat, Feed, Ideas, Goals, and Library. Chat search exists on every surface (see Chat search below). Web also answers a direct /artifacts URL.
+Every surface has Chat, Feed, Ideas, Goals, and Library. Chat search exists on every surface (see Chat search below). Web also answers a direct /artifacts URL. Dictation (speaking a message with the composer) also exists on every surface.
 
 - **Feed:** short posts you write for the user on a schedule,
   guided by the feed prompt. A brand-new reader's feed opens with a fixed

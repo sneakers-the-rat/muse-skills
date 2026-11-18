@@ -1,0 +1,95 @@
+successerrorcompletedfaileddb_readhatch_db_spaces::spaces::user_state::participation::ShareParticipationStatecore::option::Option<sqlx_core::types::json::Json<hatch_db_spaces::spaces::audit_reviews::ArtifactAuditReview>>core::option::Option<sqlx_core::types::json::Json<hatch_db_spaces::spaces::share_disclosure::ShareDisclosureReview>>sqlx_core::types::json::Json<alloc::vec::Vec<hatch_db_spaces::shell::tab_order::NavigationTab>>sqlx_core::types::json::Json<hatch_protocol_types::artifact_capabilities::ArtifactCapabilityManifest>hatch_db_spaces::spaces::templates::SpaceKindpostgres write admission failedsecurity_reviewed_sourcecontent_reviewed_stateauthorityauthority_truncatedcontentArtifactAuditConversationturnsArtifactAuditTurnevent_seqassistantArtifactAuditVerdictevidence_id}write_admissionwritepostgres write completed slowlypostgres write failedpostgres write deferred; caller retains custodyretrying idempotent postgres writeone-shot postgres write invoked more than onceartifact_idselect artifact_id::text as artifact_id
+                         from spaces.file_artifact_identities
+                         where slug = $1insert into spaces.file_artifact_identities (slug)
+                         values ($1)
+                         on conflict (slug) do update
+                             set slug = excluded.slug
+                         returning artifact_id::text as artifact_idselect slug, artifact_id::text as artifact_id
+                         from spaces.file_artifact_identities
+                         where slug = any($1::text[])insert into spaces.action_invocations
+                     (invocation_id, space_slug, space_display_name, action, transport,
+                      invoked_at_text, invoked_at_unix_ms, invoked_at, args_preview, status,
+                      source_kind, source_ref, trigger_ref)
+                     values ($1, $2, $3, $4, $5, $6, $7,
+                             coalesce($10, now()), $8, $9, $11, $12, $13)
+                     on conflict (invocation_id) do nothingin_flightselect invocation_id, space_slug, action, transport, status, invoked_at_unix_ms,
+                            settled_at_unix_ms, duration_ms, args_preview, result_preview, error,
+                            stream_protocol_messages, stream_data_messages,
+                            source_kind, source_ref, trigger_ref
+                     from spaces.action_invocations
+                     where space_slug = $1 and invocation_id = $2
+                     limit 1succeededcancelledselect invocation_id, space_slug, action, transport, status, invoked_at_unix_ms,
+                            settled_at_unix_ms, duration_ms, args_preview, result_preview, error,
+                            stream_protocol_messages, stream_data_messages,
+                            source_kind, source_ref, trigger_ref
+                     from spaces.action_invocations
+                     where invocation_id = $1
+                     limit 1select invocation_id, action, status, invoked_at_unix_ms
+                     from spaces.action_invocations
+                     where space_slug = $1 and invocation_id = $2
+                     limit 1select invocation_id, space_slug, action, transport, status, invoked_at_unix_ms,
+                            settled_at_unix_ms, duration_ms, args_preview, result_preview, error,
+                            stream_protocol_messages, stream_data_messages,
+                            source_kind, source_ref, trigger_ref
+                     from spaces.action_invocations
+                     order by global_seq desc
+                     limit $1select invocation_id, space_slug, action, transport, status, invoked_at_unix_ms,
+                            settled_at_unix_ms, duration_ms, args_preview, result_preview, error,
+                            stream_protocol_messages, stream_data_messages,
+                            source_kind, source_ref, trigger_ref
+                     from spaces.action_invocations
+                     where source_kind = $1
+                     order by invoked_at_unix_ms desc, invocation_id desc
+                     limit $2select invocation_id, action, transport, status,
+                                invoked_at_unix_ms, settled_at_unix_ms, duration_ms,
+                                (result_preview is not null) as has_result_preview,
+                                (error is not null) as has_error,
+                                stream_protocol_messages, stream_data_messages
+                         from spaces.action_invocations
+                         order by global_seq desc
+                         limit $1select
+                space_slug,
+                space_root_path,
+                construction_status,
+                status_updated_at::text as status_updated_at,
+                (extract(epoch from status_updated_at) * 1000)::bigint as status_updated_at_unix_ms
+             from (
+                select
+                    space_slug,
+                    coalesce(space_root_path, '') as space_root_path,
+                    btrim(construction_status) as construction_status,
+                    coalesce(
+                        case
+                            when pg_input_is_valid(
+                                nullif(btrim(construction_updated_at_text), ''),
+                                'timestamp with time zone'
+                            )
+                            then nullif(btrim(construction_updated_at_text), '')::timestamptz
+                        end,
+                        updated_at,
+                        created_at
+                    ) as status_updated_at
+                 from spaces.spaces
+                 where btrim(coalesce(construction_status, '')) in ('constructing', 'updating')
+                   and kind = 'space'
+             ) stale
+             where status_updated_at < now() - ($1::bigint * interval '1 second')
+             order by status_updated_at asc,
+               space_slug ascupdate spaces.spaces
+             set construction_status = $2,
+                 construction_updated_at_text = $3,
+                 updated_at_text = $3,
+                 updated_at = coalesce($4, now())
+             where space_slug = $1
+               and btrim(coalesce(construction_status, '')) in ('constructing', 'updating')
+               and coalesce(
+                    case
+                        when pg_input_is_valid(
+                            nullif(btrim(construction_updated_at_text), ''),
+                            'timestamp with time zone'
+                        )
+                        then nullif(btrim(construction_updated_at_text), '')::timestamptz
+                    end,
+                    updated_at,
+                    created_at
+               ) < now() - ($5::bigint * interval '1 second')file_artifact_identity_by_slugensure_file_artifact_identityfile_artifact_identities.ids_for_slugsactions.claim_invokedactions.find_invocationactions.prune_settled_beforeactions.find_invocation_by_idactions.find_invocation_statusactions.list_recent_invocationsactions.list_recent_by_source_kindactions.list_recent_invocation_provenancerecovery.list_stale_constructionsspace slugrecovery.mark_stale_construction_faileddatabase write admission gate closedadmission_timeoutmid > lencalled `Result::unwrap()` on an `Err` valueinvocation_idspace_slugactiontransportstatusinvoked_at_unix_mssettled_at_unix_msduration_msargs_previewsource_kindsource_reftrigger_refresult_previewstream_protocol_messagesstream_data_messageshas_result_previewhas_errorclone_of_slugShareParticipationStatevariant identifiera sequencestruct ArtifactAuditTurnstruct ArtifactAuditVerdictstruct ArtifactAuditReviewConfigurationInvalidArgumentIoTlsRowNotFoundTypeNotFoundtype_nameColumnIndexOutOfBoundsindexlenColumnNotFoundColumnDecodesourceEncodeDecodeAnyDriverErrorPoolTimedOutPoolClosedWorkerCrashedMigrateInvalidSavePointStatementBeginFaileda Display implementation returned an error unexpectedlyErrordescription() is deprecated; use Display

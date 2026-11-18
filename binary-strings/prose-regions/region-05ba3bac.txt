@@ -1,0 +1,685 @@
+
+SELECT created_at
+FROM runtime.events
+WHERE transcript_surface = 'main_chat'
+  AND visibility = 'public'
+  AND role = 'user'
+  AND event_name = 'message.user'
+  AND source NOT IN (
+    'runtime.action',
+    'runtime.audio_transcript',
+    'runtime.avatar_backfill',
+    'runtime.cancellation',
+    'runtime.device_sync',
+    'runtime.device_sync_handoff',
+    'runtime.external_sync',
+    'runtime.filesystem',
+    'runtime.media_upload',
+    'runtime.monitoring',
+    'runtime.onboarding',
+    'runtime.reaction',
+    'runtime.skill_invalidation',
+    'runtime.subagent_progress',
+    'scheduler.cron',
+    'security.safety',
+    'security.sentinel'
+  )
+ORDER BY event_seq DESC
+LIMIT 1
+unknown connectioninsert into agent.connections
+                     (connection_id, provider, address, display_name, muse_id, agent_name,
+                      audience, active, rules_revision, person_paths, group_path,
+                      search_document, created_at_ms, updated_at_ms, rules_changed_at_ms)
+                     values ($1,$2,$3,$4,$5,$6,$7,$8,1,$9,$10,
+                             to_tsvector('simple', $4 || ' ' || coalesce($6, '')),$11,$11,$12)
+                     on conflict (connection_id) do nothingselect audience, active from agent.connections where connection_id=$1 for updateinsert into agent.connection_rules (connection_id,rule_id,title,summary,description,source_message_id,audience,created_at_ms,updated_at_ms) select exists (
+                                select 1 from chat_private.peer_conversations conversation
+                                join peer.circles circle using (circle_id)
+                                where conversation.chat_id=$1 and circle.worker_disconnected
+                            )delete from agent.connection_rules where connection_id=$1update agent.connections set regular_checkins=true,
+                            checkins_revision=checkins_revision+1 where connection_id=$1update agent.connection_rules set audience=$2 where connection_id=$1update agent.connection_messages set state='cancelled',
+                            feedback='The conversation or its participants changed.', outcome_notified=false, updated_at_ms=$2
+                            where connection_id=$1 and state='queued'update agent.connections set provider=$2, address=$3, display_name=$4,
+                         muse_id=$5, agent_name=$6, audience=$7, active=$8,
+                         search_document=to_tsvector('simple', $4 || ' ' || coalesce($6, '')),
+                         updated_at_ms=$9 where connection_id=$1 and
+                         (provider, address, display_name, muse_id, agent_name, audience, active)
+                         is distinct from ($2,$3,$4,$5,$6,$7,$8)connection_id, provider, address, display_name, muse_id, agent_name, audience, active, rules_revision, (regular_checkins OR (provider='peer' AND checkins_revision=0)) AS regular_checkins, checkins_revision, person_paths, group_pathselect rules_revision,rules_changed_at_ms,rules_changed_source_message_id,audience from agent.connections where connection_id=$1 and active for updateselect count(*) from agent.connection_rule_sources s
+                     join unnest($2::uuid[],$3::text[]) as requested(rule_id,source_message_id)
+                       on s.rule_id=requested.rule_id and s.source_message_id=requested.source_message_id
+                     where s.connection_id=$1select rule_id,title,summary,description,source_message_id,audience from agent.connection_rules where connection_id=$1 and rule_id=any($2)A newer sharing instruction already appliesthe rules changed, read them again before editingsharing rule not founddelete from agent.connection_rules where connection_id=$1 and rule_id=any($2) on conflict(connection_id,rule_id) do update set title=excluded.title,summary=excluded.summary,description=excluded.description,source_message_id=excluded.source_message_id,audience=excluded.audience,updated_at_ms=excluded.updated_at_msupdate agent.connections set rules_changed_at_ms=greatest(rules_changed_at_ms,$2), rules_changed_source_message_id=$3 where connection_id=$1insert into agent.connection_rule_sources (connection_id,rule_id,source_message_id) connection_idthe new connection is missingthe previous connection is missingselect rules_revision,audience from agent.connections where connection_id=$1 and active for updateselect rule_id,title,summary,description,source_message_id,audience from agent.connection_rules where connection_id=$1 and rule_id=$2select w.group_id, w.group_name, w.group_state, i.input_json from agent.chat_workers w left join lateral (select g.input_json from agent.group_inputs g where g.group_id = w.group_id and g.disposition <> $2 order by g.sequence desc limit 1) i on true where w.group_id = $1shared_historyselect exists(select 1 from agent.chat_workers where group_id = $1 and active)group room is not activeSELECT seq, turn_developer_context FROM context_item_resume_projection WHERE agent_id = $1 AND seq = ANY($2) AND turn_developer_context IS NOT NULL ORDER BY seqINSERT INTO context_item_resume_projection (agent_id, seq, context_item_id, created_at, message_source) SELECT ci.agent_id, ci.seq, ci.context_item_id, extract(epoch from ci.created_at)::bigint, ci.message_source FROM context_items ci WHERE ci.agent_id = $1 AND ci.seq = ANY($2) ON CONFLICT (agent_id, seq) DO NOTHINGUPDATE context_item_resume_projection p SET turn_developer_context = input.text, updated_at = now() FROM unnest($2::bigint[], $3::text[]) AS input(seq, text) WHERE p.agent_id = $1 AND p.seq = input.seq AND p.turn_developer_context IS NULLSELECT seq, turn_developer_context, provenance_json FROM context_item_resume_projection WHERE agent_id = $1 AND seq = ANY($2) AND turn_developer_context IS NOT NULL ORDER BY seqSELECT kind, model, session_id FROM agents WHERE id = $1 LIMIT 1SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLYSELECT NULLIF(trim(session_id), '') AS session_id, model FROM agents WHERE kind = 'root' AND id = $1 LIMIT 1UPDATE agents SET updated_at = $1, model = $2 WHERE id = $3INSERT INTO chat_preferences (id, active_root_id) VALUES ($1, $2)SELECT "verbose", usage_mode FROM chat_preferences WHERE id = $1UPDATE chat_preferences SET "verbose" = $1, usage_mode = $2 WHERE id = $3DELETE FROM agent_compactions WHERE agent_id = $1
+UPDATE agent_compactions
+SET summary = $1,
+    details_json = $2,
+    has_replacement_history = $3
+WHERE id = (
+    SELECT id
+    FROM agent_compactions
+    WHERE agent_id = $4
+      AND has_replacement_history
+    ORDER BY id DESC
+    LIMIT 1
+)
+  AND agent_id = $4
+  AND checkpoint_seq = $5
+update agent.delegate_requests set state = $2
+                where request_id = $1 and state in ('pending','running','completed')idparent_idworkerdepthagent_typemodelsession_id
+SELECT items_json, revision, updated_at_ms, continuation_key,
+       continuation_generation, continuation_reminders
+FROM runtime.agent_todo_snapshots
+WHERE conversation_id = $1 AND agent_identity = $2
+
+UPDATE runtime.agent_todo_snapshots
+SET continuation_reminders = $5
+WHERE conversation_id = $1 AND agent_identity = $2
+  AND continuation_key = $3 AND continuation_generation = $4
+  AND continuation_reminders < $5
+
+INSERT INTO runtime.agent_todo_snapshots
+  (conversation_id, agent_identity, items_json, revision, updated_at_ms,
+   continuation_key, continuation_generation, continuation_reminders)
+VALUES ($1, $2, $3, 1, (extract(epoch from now()) * 1000)::bigint, $4, 1, 0)
+ON CONFLICT (conversation_id, agent_identity) DO UPDATE SET
+  items_json = excluded.items_json,
+  revision = agent_todo_snapshots.revision + 1,
+  updated_at_ms = excluded.updated_at_ms,
+  continuation_key = excluded.continuation_key,
+  continuation_generation = CASE
+    WHEN agent_todo_snapshots.continuation_key = excluded.continuation_key
+    THEN agent_todo_snapshots.continuation_generation
+    ELSE agent_todo_snapshots.continuation_generation + 1 END,
+  continuation_reminders = CASE
+    WHEN agent_todo_snapshots.continuation_key = excluded.continuation_key
+    THEN agent_todo_snapshots.continuation_reminders ELSE 0 END
+RETURNING revision
+
+UPDATE runtime.agent_todo_snapshots
+SET continuation_key = $4,
+    continuation_generation = CASE WHEN continuation_key IS DISTINCT FROM $4
+        THEN continuation_generation + 1 ELSE continuation_generation END,
+    continuation_reminders = CASE WHEN continuation_key IS DISTINCT FROM $4
+        THEN 0 ELSE continuation_reminders END
+WHERE conversation_id = $1 AND agent_identity = $2 AND revision = $3
+RETURNING continuation_key, continuation_generation, continuation_reminders
+select child_agent_id, created_at, metadata_json from subagent_spawns
+                             where agent_type in (
+                               'spaces_builder', 'spaces_builder_lite',
+                               'spaces_builder_edit', 'spaces_builder_lite_edit'
+                             )
+                               and metadata_json is not null
+                             order by created_at desc, child_agent_id desc
+                             limit $1select child_agent_id, created_at, metadata_json from subagent_spawns
+                             where agent_type in (
+                               'spaces_builder', 'spaces_builder_lite',
+                               'spaces_builder_edit', 'spaces_builder_lite_edit'
+                             )
+                               and metadata_json is not null
+                               and (created_at, child_agent_id) < ($2, $3)
+                             order by created_at desc, child_agent_id desc
+                             limit $1select * from agent.chat_worker_requests where request_id=$1select request_id, created_at_ms from agent.chat_worker_requests where chat_id=$1 and generation=$2 and worker_agent_id=$3 and instruction <> '' order by created_at_ms desc, request_id desc limit 1select instruction = '' from agent.chat_worker_requests where chat_id=$1 and generation=$2 and worker_agent_id=$3 and state <> 'cancelled' and coalesce(result_json,'') not like $4 order by created_at_ms desc,request_id desc limit 1select agent_id,generation,active from agent.chat_workers where group_id=$1 for updateactivegenerationchat worker owner changedSELECT EXISTS(SELECT 1 FROM agent.connections WHERE connection_id=$1 AND active)The work's connection is no longer activeINSERT INTO agent.connection_work (connection_id,work_id,coordinator,request_id)
+                     SELECT $1,work_id,$3,$4 FROM unnest($2::uuid[]) AS work_id
+                     ON CONFLICT (connection_id,work_id) DO NOTHINGSELECT count(*) FROM agent.connection_work WHERE connection_id=$1 AND work_id=ANY($2) AND request_id=$3This connection work has already been assignedupdate agent.chat_worker_requests set state='completed' where worker_agent_id=$1 and result_submission_id=$2 and state='reported'update agent.chat_worker_requests set state='cancelled' where chat_id=$1 and state in ('pending','running','reported','completed')select * from agent.chat_worker_requests where request_id=$1 for updatecancelledupdate agent.chat_worker_requests set state='reported',result_json=$2,result_submission_id=$3 where request_id=$1worker result already settledworker request is no longer currentselect * from agent.chat_worker_requests where chat_id=$1 and state in ('pending','running','reported','completed') order by created_at_ms,request_idselect instruction, created_at_ms from agent.chat_worker_requests
+                 where chat_id = $1 and generation = $2 and owner_agent_id = $3 and instruction <> ''
+                   and origin_json::jsonb ->> 'tracking_follow_up' is null
+                   and origin_json::jsonb ->> 'connection_research' is null
+                   and origin_json::jsonb ->> 'space_edit' is null
+                 order by created_at_ms desc limit 1update agent.chat_worker_requests set state=$2,
+                delivered_at_ms=case when $2='delivered' then coalesce(delivered_at_ms,$3) else delivered_at_ms end
+                where request_id=$1 and state in ('pending','running','reported','completed')select case
+                    when exists(select 1 from agent.group_replies p
+                        where p.group_id=q.chat_id and p.enqueued = false
+                        and starts_with(p.delivery_key, 'group:' || q.chat_id || ':' || q.result_submission_id || ':'))
+                    or exists(select 1 from chat_private.deliveries u
+                        where u.chat_id=q.chat_id and u.state in ('pending', 'dispatching')
+                        and starts_with(u.delivery_key, 'group:' || q.chat_id || ':' || q.result_submission_id || ':'))
+                    or exists(select 1 from agent.connection_messages m
+                        where m.connection_id::text=q.chat_id
+                        and m.producer_id=q.result_submission_id
+                        and m.state='proposed'
+                        and m.updated_at_ms > $2)
+                    then 'pending'
+                    else coalesce(d.state, case when r.submission_id is null then 'not_required' else 'pending' end)
+                end
+                from agent.chat_worker_requests q
+                left join agent.group_replies r on r.group_id=q.chat_id and r.submission_id=q.result_submission_id
+                left join chat_private.deliveries d on d.delivery_key=r.delivery_key
+                where q.request_id=$1 and q.state='completed'select * from agent.chat_worker_requests where chat_id=$1 and generation=$2 and worker_agent_id=$3 and instruction <> '' and state in ('running','reported','completed','delivered') order by created_at_ms desc,request_id desc limit 64
+SELECT
+  GREATEST(
+    (SELECT COALESCE(MAX(seq), -1) FROM context_items WHERE agent_id = $1),
+    (SELECT COALESCE(MAX(seq), -1) FROM context_item_resume_projection WHERE agent_id = $1),
+    COALESCE((SELECT handoff_context_high_water_seq FROM agent.agents WHERE agent_id = $1), -1),
+    (SELECT COALESCE(MAX(root_seq), -1) FROM agent.companion_trace_imports WHERE root_agent_id = $1),
+    (SELECT COALESCE(MAX(producer_seq), -1) FROM agent.companion_trace_imports WHERE producer_agent_id = $1),
+    COALESCE((SELECT settled_seq FROM agent.companion_trace_sources WHERE producer_agent_id = $1), -1)
+  ) AS max_item_seq,
+  COALESCE((SELECT prompt_floor_seq FROM agents WHERE id = $1), -1)
+    AS prompt_floor_seq,
+  (SELECT COALESCE(MAX(checkpoint_seq), -1)
+     FROM agent_compactions
+     WHERE agent_id = $1
+       AND checkpoint_seq IS NOT NULL
+       AND has_replacement_history)
+    AS checkpoint_seq
+max_item_seq-- Can this root's import find a row? The feed reads only pending rows that have
+-- a context item and belong to the root's realtime voice agents; this drops its
+-- other checks, so it can only answer yes too often. The first three conditions
+-- repeat migration 0402's pending index predicate so PostgreSQL can use it.
+-- Start from the few pending rows, one agent key lookup per owner: a root keeps
+-- every call agent it ever had, and no index covers presentation_root_session_id.
+-- Both OFFSET 0 fences keep that order whatever the pending row estimate is.
+SELECT EXISTS (
+    SELECT 1
+    FROM (
+        SELECT DISTINCT p.agent_id
+        FROM context_item_resume_projection p
+        WHERE p.provenance_json IS NOT NULL
+          AND p.public_import_exempt IS NOT TRUE
+          AND p.public_import_done_provenance_md5 IS DISTINCT FROM md5(p.provenance_json)::uuid
+          AND p.context_item_id IS NOT NULL
+        OFFSET 0
+    ) pending
+    CROSS JOIN LATERAL (
+        SELECT 1
+        FROM agents a
+        WHERE a.id = pending.agent_id
+          AND a.presentation_root_session_id = $1
+          AND a.id <> $1
+          AND a.kind = 'root' AND a.depth = 0 AND a.agent_type = 'realtime_voice'
+        OFFSET 0
+    ) producer
+) AS pending_with_item
+public voice import probeSELECT COALESCE(MAX(event_seq), -1) FROM runtime.events WHERE parent_agent_id = $1transaction_beginsequence_locktarget_high_watersource_high_waterfeed_queryreply_prefixpersistenceprojectioncommittotalitem_jsoncreated_atreply_prefix_projectedproducer_agent_idproducer_context_seqmessage_sourceclient_context_jsonclient_context_projectedprovenance_projected-- Runs after a root import, in its transaction: stamp each pending call row
+-- whose message the public root now holds. Today's feed would skip exactly
+-- these rows forever, so later imports may stop reading them. The stamp is
+-- the md5 read here; a concurrent provenance rewrite leaves it stale, which
+-- keeps that row pending.
+WITH public_root AS MATERIALIZED (
+    SELECT id, COALESCE(prompt_floor_seq, -1) AS prompt_floor_seq
+    FROM agents
+    WHERE id = $1
+),
+-- Only pending rows matter here, so start from their owners, as in the
+-- import probe.
+producers AS MATERIALIZED (
+    SELECT producer.id, producer.after_seq
+    FROM public_root
+    CROSS JOIN (
+        SELECT DISTINCT p.agent_id
+        FROM context_item_resume_projection p
+        WHERE p.provenance_json IS NOT NULL
+          AND p.public_import_exempt IS NOT TRUE
+          AND p.public_import_done_provenance_md5
+              IS DISTINCT FROM md5(p.provenance_json)::uuid
+        OFFSET 0
+    ) pending
+    CROSS JOIN LATERAL (
+        SELECT a.id,
+               CASE WHEN pg_input_is_valid(
+                   a.spawn_metadata_json::jsonb #>> '{realtime_voice,root_seed_context_seq}',
+                   'bigint'
+               ) THEN GREATEST(
+                   (a.spawn_metadata_json::jsonb #>> '{realtime_voice,root_seed_context_seq}')::bigint,
+                   -1
+               ) ELSE -1 END AS after_seq
+        FROM agents a
+        WHERE a.id = pending.agent_id
+          AND a.presentation_root_session_id = public_root.id
+          AND a.id <> public_root.id
+          AND a.kind = 'root' AND a.depth = 0
+          AND a.agent_type = 'realtime_voice'
+          AND a.spawn_metadata_json::jsonb #> '{realtime_voice,prompt_floor_seq}'
+              = to_jsonb(public_root.prompt_floor_seq)
+        OFFSET 0
+    ) producer
+),
+pending AS MATERIALIZED (
+    SELECT candidate.agent_id, candidate.seq, candidate.provenance_md5,
+           candidate.message_id
+    FROM producers
+    CROSS JOIN LATERAL (
+        SELECT p.agent_id, p.seq, md5(p.provenance_json)::uuid AS provenance_md5,
+               agent.resume_projection_message_id_v1(
+                   p.provenance_json
+               ) AS message_id
+        FROM context_item_resume_projection p
+        WHERE p.agent_id = producers.id
+          AND p.seq > producers.after_seq
+          AND p.provenance_json IS NOT NULL
+          AND p.public_import_exempt IS NOT TRUE
+          AND p.public_import_done_provenance_md5
+              IS DISTINCT FROM md5(p.provenance_json)::uuid
+        OFFSET 0
+    ) candidate
+),
+-- Each stamp rewrites its row and every index entry, so one import stamps at
+-- most 256 rows; a backlog stays pending (fully checked) for later imports.
+held AS MATERIALIZED (
+    SELECT pending.agent_id, pending.seq, pending.provenance_md5
+    FROM pending
+    -- LIMIT 1 keeps this a per-row index probe; as EXISTS, PostgreSQL can
+    -- hash every root row through the message ID extractor instead.
+    CROSS JOIN LATERAL (
+        SELECT 1
+        FROM context_item_resume_projection seen
+        WHERE seen.agent_id = $1
+          AND seen.provenance_json IS NOT NULL
+          -- Same one-value range fence as the feed's consumed probes.
+          AND md5(agent.resume_projection_message_id_v1(
+              seen.provenance_json
+          ))::uuid BETWEEN md5(pending.message_id)::uuid
+                       AND md5(pending.message_id)::uuid
+          AND agent.resume_projection_message_id_v1(
+              seen.provenance_json
+          ) = pending.message_id
+        LIMIT 1
+    ) root_holds
+    WHERE pending.message_id IS NOT NULL
+    LIMIT 256
+)
+UPDATE context_item_resume_projection p
+SET public_import_done_provenance_md5 = held.provenance_md5
+FROM held
+WHERE p.agent_id = held.agent_id AND p.seq = held.seq
+invalid_scope-- Runs after a complete root import, in its transaction: a row of the root's
+-- realtime voice agents that is still pending was neither imported nor already
+-- held, so the feed's rules skip it. Once its agent has no live session ($2)
+-- and the row has not changed for $3 seconds, nothing can make it importable:
+-- unfinished, suppressed or excluded replies and other roles' messages. Leaving
+-- it pending would keep every later import probe true. The batch bound keeps a
+-- large backlog from holding the import past its statement timeout; later
+-- imports take the rest.
+WITH batch AS MATERIALIZED (
+    -- Pending rows first, as in the import probe.
+    SELECT stale.agent_id, stale.seq
+    FROM (
+        SELECT DISTINCT p.agent_id
+        FROM context_item_resume_projection p
+        WHERE p.provenance_json IS NOT NULL
+          AND p.public_import_exempt IS NOT TRUE
+          AND p.public_import_done_provenance_md5 IS DISTINCT FROM md5(p.provenance_json)::uuid
+        OFFSET 0
+    ) pending
+    CROSS JOIN LATERAL (
+        SELECT a.id
+        FROM agents a
+        WHERE a.id = pending.agent_id
+          AND a.presentation_root_session_id = $1
+          AND a.id <> $1
+          AND a.kind = 'root' AND a.depth = 0 AND a.agent_type = 'realtime_voice'
+          AND NOT (a.id = ANY($2::text[]))
+        OFFSET 0
+    ) producer
+    CROSS JOIN LATERAL (
+        SELECT p.agent_id, p.seq
+        FROM context_item_resume_projection p
+        WHERE p.agent_id = producer.id
+          AND p.updated_at < now() - make_interval(secs => $3)
+          AND p.provenance_json IS NOT NULL
+          AND p.public_import_exempt IS NOT TRUE
+          AND p.public_import_done_provenance_md5 IS DISTINCT FROM md5(p.provenance_json)::uuid
+        OFFSET 0
+    ) stale
+    LIMIT 1000
+)
+UPDATE context_item_resume_projection p
+SET public_import_exempt = true
+FROM batch
+WHERE p.agent_id = batch.agent_id AND p.seq = batch.seq
+loaded public voice history-- Exempt one batch of rows written outside every import producer range: seed
+-- copies at or below a call's bound, Companion and root history, and every
+-- other agent's rows. They can never become import candidates (agent kind,
+-- depth, type and spawn metadata never change), so the pending index stays
+-- limited to call rows the root has not taken yet.
+WITH pending_agents AS MATERIALIZED (
+    SELECT DISTINCT p.agent_id
+    FROM context_item_resume_projection p
+    WHERE p.provenance_json IS NOT NULL
+      AND p.public_import_exempt IS NOT TRUE
+      AND p.public_import_done_provenance_md5
+          IS DISTINCT FROM md5(p.provenance_json)::uuid
+),
+-- Parse spawn metadata once per agent. NULL: no row is in a producer range.
+-- Like the feed, a call produces only while its prompt floor matches its
+-- root's; floors only advance, so a call from before a clear never does again.
+ranges AS MATERIALIZED (
+    SELECT pending_agents.agent_id,
+           CASE WHEN a.kind = 'root' AND a.depth = 0
+                     AND a.agent_type = 'realtime_voice' THEN CASE
+               WHEN NOT pg_input_is_valid(a.spawn_metadata_json, 'jsonb') THEN -1
+               WHEN root.id IS NULL
+                    OR a.spawn_metadata_json::jsonb #> '{realtime_voice,prompt_floor_seq}'
+                       IS DISTINCT FROM to_jsonb(COALESCE(root.prompt_floor_seq, -1))
+                   THEN NULL
+               WHEN pg_input_is_valid(
+                   a.spawn_metadata_json::jsonb #>> '{realtime_voice,root_seed_context_seq}',
+                   'bigint'
+               ) THEN GREATEST(
+                   (a.spawn_metadata_json::jsonb #>> '{realtime_voice,root_seed_context_seq}')::bigint,
+                   -1
+               )
+               ELSE -1
+           END END AS producer_after_seq
+    FROM pending_agents
+    LEFT JOIN agents a ON a.id = pending_agents.agent_id
+    LEFT JOIN agents root
+      ON root.id = a.presentation_root_session_id AND root.id <> a.id
+),
+batch AS MATERIALIZED (
+    SELECT candidate.agent_id, candidate.seq
+    FROM ranges
+    -- Probe only the rows below each producer range, never the call rows
+    -- inside it that stay pending until the root takes them.
+    CROSS JOIN LATERAL (
+        SELECT p.agent_id, p.seq
+        FROM context_item_resume_projection p
+        WHERE p.agent_id = ranges.agent_id
+          AND p.seq <= COALESCE(ranges.producer_after_seq, 9223372036854775807)
+          AND p.provenance_json IS NOT NULL
+          AND p.public_import_exempt IS NOT TRUE
+          AND p.public_import_done_provenance_md5
+              IS DISTINCT FROM md5(p.provenance_json)::uuid
+        LIMIT $1
+    ) candidate
+    LIMIT $1
+)
+UPDATE context_item_resume_projection p
+SET public_import_exempt = true
+FROM batch
+WHERE p.agent_id = batch.agent_id AND p.seq = batch.seq
+select revision, content from agent.side_chat_discretion where chat_id = $1select chat_id from agent.side_chat_discretion order by chat_idselect revision, content, last_operation_id
+                     from agent.side_chat_discretion where chat_id = $1 for updatelast_operation_idupdate agent.side_chat_discretion
+                     set revision = $2, content = $3, last_operation_id = $4, updated_at_ms = $5
+                     where chat_id = $1delete from agent.side_chat_discretion_clearances where chat_id = $1delete from agent.side_chat_discretion where chat_id = $1insert into agent.side_chat_discretion
+                     (chat_id, revision, content, created_at_ms, updated_at_ms)
+                     values ($1, 1, $2, $3, $3) on conflict(chat_id) do nothingselect exists(select 1 from agent.side_chat_discretion_clearances where chat_id=$1 and draft_sha256=$2 and revision=$3 and binding_owner=$4)select revision from agent.side_chat_discretion where chat_id = $1 for updatedelete from agent.side_chat_discretion_clearances where chat_id = $1 and reviewed_at_ms < $2insert into agent.side_chat_discretion_clearances (chat_id, draft_sha256, revision, binding_owner, reviewed_at_ms) values ($1,$2,$3,$4,$5) on conflict(chat_id,draft_sha256) do update set revision=excluded.revision, binding_owner=excluded.binding_owner, reviewed_at_ms=excluded.reviewed_at_msselect metadata_json::jsonb->>'call_id' from runtime.work_items
+                     where agent_id=$1 and terminalized_at is null
+                       and metadata_json::jsonb->>'call_id'=any($2)
+                     union
+                     select spawn_call_id from agent.subagent_spawns
+                     where parent_agent_id=$1 and spawn_call_id=any($2)select context_item_id, seq,
+                        extract(epoch from created_at)::bigint as created_at,
+                        message_source, item_json
+                 from agent.context_items where agent_id=$1 and call_id=any($2)
+                   and item_kind in ('tool_call','tool_output') order by seqambiguous durable tool call identityambiguous durable tool output identitytool recovery projection mismatchreasoninterrupted_without_durable_resultexternal_effect_may_have_occurredruntime_tool_outputunknown_after_restartautomatic_replay_allowedselect e.chat_id, q.instruction
+                    from chat_private.company_conversations e
+                    join agent.chat_worker_requests q on q.request_id=e.approved_request_id
+                    where e.phase in ('active','sending','reported')
+                      and q.owner_agent_id = $1
+                    order by e.created_at_ms descselect e.chat_id, e.phase, q.instruction,
+                      coalesce((select n.instruction = '' from agent.chat_worker_requests n
+                        where n.chat_id = e.chat_id and n.state <> 'cancelled'
+                          and coalesce(n.result_json,'') not like $2
+                        order by n.created_at_ms desc, n.request_id desc limit 1), false)
+                    from chat_private.company_conversations e
+                    join agent.chat_worker_requests q on q.request_id=e.approved_request_id
+                    where e.phase in ('active','sending','reported')
+                      and q.owner_agent_id = $1
+                    order by e.created_at_ms descset transaction isolation level repeatable read, read onlyselect exists(select 1 from chat_private.company_conversations e
+                join chat_private.deliveries d on d.delivery_key=e.last_delivery_key
+                where e.chat_id=$1 and e.phase='sending' and d.state='uncertain')select input_json::jsonb->>'company_status' from agent.group_inputs
+                where group_id=$1 and input_json::jsonb->>'company_status' in
+                  ('sign_in_requested','sign_in_unavailable','signed_in','sign_in_declined')
+                order by sequence desc limit 1sign_in_requestedselect e.chat_id from chat_private.company_conversations e
+                join agent.chat_worker_requests q on q.request_id=e.approved_request_id
+                where q.state <> 'delivered' order by e.created_at_ms,e.chat_idselect exists(select 1 from chat_private.company_conversations e
+                join chat_private.deliveries d on d.delivery_key=e.last_delivery_key
+                where e.chat_id=$1 and d.state='dispatching')select e.chat_id, q.instruction
+                    from chat_private.company_conversations e
+                    join agent.chat_worker_requests q on q.request_id=e.approved_request_id
+                    where e.phase in ('active','sending','reported')SELECT parent_agent_id, child_depth FROM subagent_spawns WHERE child_agent_id = $1SELECT child_agent_id, parent_agent_id, child_depth FROM subagent_spawns WHERE child_agent_id = ANY($1)SELECT metadata_json FROM subagent_spawns WHERE child_agent_id = $1SELECT metadata_json FROM subagent_spawns WHERE child_agent_id = $1 FOR UPDATEspace_generation_funnel_summary_projectionagent.subagent_spawns.metadata_jsonUPDATE subagent_spawns SET metadata_json = $1 WHERE child_agent_id = $2SELECT child_agent_id, completed_at, created_at, metadata_json FROM subagent_spawns WHERE completed_at IS NOT NULL AND agent_type IN ('spaces_builder', 'spaces_builder_edit')BEGIN ISOLATION LEVEL READ COMMITTED; SET LOCAL statement_timeout = '250ms'; SET LOCAL lock_timeout = '50ms'SELECT EXISTS (SELECT 1 FROM agent.agents WHERE id = $1)
+DELETE FROM agent.volatile_context_pins
+WHERE agent_id = $1
+  AND variant_hash <> 'handoff_policy'
+  AND (prompt_floor_seq <> $2 OR checkpoint_seq <> $3)
+
+INSERT INTO agent.volatile_context_pins
+  (agent_id, variant_hash, variant_json, prompt_floor_seq, checkpoint_seq, body_hash)
+VALUES ($1, $2, $3, $4, $5, $6)
+ON CONFLICT (agent_id, variant_hash) DO UPDATE SET
+  variant_json = excluded.variant_json,
+  prompt_floor_seq = excluded.prompt_floor_seq,
+  checkpoint_seq = excluded.checkpoint_seq,
+  body = NULL,
+  body_hash = excluded.body_hash,
+  created_at = now()
+
+SELECT variant_json, body
+FROM agent.volatile_context_pins
+WHERE agent_id = $1 AND prompt_floor_seq = $2 AND checkpoint_seq = $3
+  AND variant_hash <> 'handoff_policy'
+  AND (body_hash IS NULL OR body IS NOT NULL)
+select group_id from agent.chat_workers where group_id=$1 for updateupdate agent.worker_input_requests set state='cancelled' where group_id=$1 and state in ('awaiting_response','resume_pending')select exists(select 1 from agent.context_items
+                 where agent_id = $1 and seq = $2 and role = 'user')select agent_id, seq from agent.context_items
+                 where agent_id = $1 and item_kind = 'tool_call' and call_id = $2
+                 order by seq limit 2with evidence as (
+                   select agent_id, context_item_id, seq, created_at, message_source, item_json,
+                          call_id, item_kind
+                   from agent.context_items
+                   where agent_id = $1 and call_id = any($2::text[])
+                     and item_kind in ('tool_call', 'tool_output')
+                 ), ranked as (
+                   select evidence.*, row_number() over (
+                     partition by call_id, item_kind order by seq) as evidence_rank
+                   from evidence
+                 )
+                 select agent_id, context_item_id, seq, extract(epoch from created_at)::bigint as created_at,
+                        message_source, item_json
+                 from ranked where evidence_rank <= 2 order by seqUPDATE agent.companion_trace_sources SET settled_seq = GREATEST(settled_seq, (SELECT COALESCE(MAX(seq), -1) FROM context_items WHERE agent_id = $1)) WHERE producer_agent_id = $1SET TRANSACTION ISOLATION LEVEL REPEATABLE READseqSELECT EXISTS (SELECT 1 FROM agents p JOIN agents r ON r.id = $2 WHERE p.id = $1 AND p.agent_type = 'companion:voice' AND p.depth = 0 AND p.presentation_root_session_id = r.id AND r.kind = 'root' AND r.agent_type IS NULL AND NULLIF(TRIM(r.session_id), '') IS NOT NULL AND COALESCE(r.prompt_floor_seq, -1) = $3)Companion trace owner changed during spawnINSERT INTO agent.companion_trace_sources (producer_agent_id, root_agent_id, root_prompt_floor_seq) VALUES ($1, $2, $3)SELECT EXISTS (SELECT 1 FROM agent.companion_trace_sources s JOIN agents r ON r.id = s.root_agent_id WHERE s.producer_agent_id = $1 AND s.root_agent_id = $2 AND s.root_prompt_floor_seq = COALESCE(r.prompt_floor_seq, -1))SELECT agent_id, seq FROM context_items WHERE agent_id = ANY($1) AND call_id = $2 AND item_kind = 'tool_call' UNION ALL SELECT agent_id, seq FROM context_items WHERE agent_id = ANY($1) AND call_id = $2 AND item_kind = 'tool_output'
+WITH batch AS MATERIALIZED (
+    SELECT source.producer_agent_id,
+           COALESCE((
+               SELECT item.seq
+               FROM context_items item
+               WHERE item.agent_id = source.producer_agent_id
+               ORDER BY item.seq DESC
+               LIMIT 1
+           ), -1) AS high_water
+    FROM agent.companion_trace_sources source
+    JOIN agents producer ON producer.id = source.producer_agent_id
+    WHERE NOT source.recovery_sealed
+      AND ($1::text IS NULL OR source.producer_agent_id > $1)
+      AND producer.agent_type = 'companion:voice'
+      AND producer.depth = 0
+    ORDER BY source.producer_agent_id
+    LIMIT 256
+), settled AS (
+    UPDATE agent.companion_trace_sources source
+    SET settled_seq = GREATEST(source.settled_seq, batch.high_water),
+        recovery_sealed = true
+    FROM batch
+    WHERE source.producer_agent_id = batch.producer_agent_id
+    RETURNING source.producer_agent_id
+)
+SELECT producer_agent_id FROM batch ORDER BY producer_agent_id
+
+INSERT INTO subagent_progress_tool_events (
+  child_agent_id,
+  parent_agent_id,
+  parent_message_id,
+  tool_name,
+  tool_description,
+  tool_status,
+  tool_result_preview,
+  run_id,
+  created_at,
+  delivered_at
+)
+SELECT $1, latest.parent_agent_id, latest.parent_message_id, $2, $3, $4, $5, $6, $7,
+       CASE WHEN $8 THEN $7 ELSE NULL END
+FROM (
+  SELECT parent_agent_id, parent_message_id
+  FROM subagent_spawns
+  WHERE child_agent_id = $1
+  ORDER BY created_at DESC
+  LIMIT 1
+) AS latest
+WHERE TRIM(latest.parent_message_id) <> ''
+
+INSERT INTO subagent_progress_message_events (
+  child_agent_id,
+  parent_agent_id,
+  parent_message_id,
+  message_text,
+  created_at,
+  delivered_at
+)
+SELECT $1, latest.parent_agent_id, latest.parent_message_id, $2, $3, NULL
+FROM (
+  SELECT parent_agent_id, parent_message_id
+  FROM subagent_spawns
+  WHERE child_agent_id = $1
+  ORDER BY created_at DESC
+  LIMIT 1
+) AS latest
+WHERE TRIM(latest.parent_message_id) <> ''
+UPDATE subagent_progress_tool_events SET delivered_at =  WHERE delivered_at IS NULL AND event_id IN (, )
+SELECT child_agent_id
+FROM subagent_progress_tool_events
+WHERE delivered_at IS NULL
+ORDER BY event_id ASC
+LIMIT $1
+UPDATE subagent_progress_message_events SET delivered_at = 
+SELECT child_agent_id
+FROM subagent_progress_message_events
+WHERE delivered_at IS NULL
+ORDER BY event_id ASC
+LIMIT $1
+
+SELECT 1::bigint
+FROM subagent_monitor_decisions
+WHERE coordinator_agent_id = $1
+  AND parent_message_id = $2
+  AND decision_kind = 'notify_main_agent'
+  AND (tool_result_json::jsonb ->> 'action') = 'notify_main_agent'
+  AND (tool_result_json::jsonb ->> 'outcome') = 'delivered'
+  AND (tool_result_json::jsonb ->> 'handoff_message_id') = $3
+LIMIT 1
+
+SELECT
+  COALESCE(SUM(input_tokens), 0)::bigint AS input_tokens,
+  COALESCE(SUM(output_tokens), 0)::bigint AS output_tokens
+FROM agent_message_token_usage
+
+SELECT
+  COALESCE(SUM(input_tokens), 0)::bigint AS input_tokens,
+  COALESCE(SUM(output_tokens), 0)::bigint AS output_tokens
+FROM agent_message_token_usage
+WHERE agent_id = $1
+
+WITH subagent_progress_count AS (
+  SELECT COUNT(*)::bigint AS count
+  FROM subagent_progress_tool_events
+  WHERE child_agent_id = $1
+    AND tool_status = 'started'
+),
+runtime_projection_count AS (
+  SELECT COUNT(*)::bigint AS count
+  FROM runtime.tool_calls AS tc
+  JOIN runtime.events AS e
+    ON e.event_seq = tc.event_seq
+  WHERE e.agent_id = $1
+)
+SELECT CASE
+  WHEN subagent_progress_count.count > 0 THEN subagent_progress_count.count
+  ELSE runtime_projection_count.count
+END
+FROM subagent_progress_count, runtime_projection_count
+
+SELECT
+  COALESCE(SUM(u.input_tokens), 0)::bigint AS input_tokens,
+  COALESCE(SUM(u.output_tokens), 0)::bigint AS output_tokens
+FROM agent_message_token_usage AS u
+JOIN agent_ancestors AS ca
+  ON ca.descendant_id = u.agent_id
+WHERE ca.ancestor_id = $1
+
+INSERT INTO agent_message_token_usage (agent_id, message_id, input_tokens, output_tokens, created_at)
+VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT(agent_id, message_id) DO UPDATE SET
+  input_tokens = excluded.input_tokens,
+  output_tokens = excluded.output_tokens
+
+SELECT follow_up_message_id, agent_id, exec_session_id, tool_call_id,
+       boot_generation, delivery_json, interrupted_at, created_at
+FROM agent.background_exec_obligations
+WHERE agent_id = $1 AND exec_session_id = $2
+SELECT NOT EXISTS (SELECT 1 FROM agent.agents WHERE agent_id = $1 AND status NOT IN ('shutdown', 'not_found'))
+UPDATE agent.background_exec_obligations
+SET delivery_json = $6
+WHERE follow_up_message_id = $1 AND agent_id = $2
+  AND exec_session_id = $3 AND boot_generation = $4
+  AND delivery_json = $5
+SELECT agent_id FROM agent.message_mailbox WHERE submission_id = $1
+DELETE FROM agent.background_exec_obligations
+WHERE follow_up_message_id = $1 AND agent_id = $2
+
+INSERT INTO agent.background_exec_obligations (
+  follow_up_message_id, agent_id, exec_session_id, tool_call_id,
+  boot_generation, delivery_json
+) VALUES ($1, $2, $3, $4, $5, $6)
+ON CONFLICT (follow_up_message_id) DO NOTHING
+
+UPDATE agent.background_exec_obligations
+SET interrupted_at = COALESCE(interrupted_at, $2)
+WHERE follow_up_message_id = $1
+RETURNING interrupted_at
+
+SELECT follow_up_message_id, agent_id, exec_session_id, tool_call_id,
+       boot_generation, delivery_json, interrupted_at, created_at
+FROM agent.background_exec_obligations
+WHERE boot_generation <> $1
+  AND ($2::text IS NULL OR follow_up_message_id > $2)
+ORDER BY follow_up_message_id
+LIMIT $3
+
+SELECT follow_up_message_id, agent_id, exec_session_id, tool_call_id,
+       boot_generation, delivery_json, interrupted_at, created_at
+FROM agent.background_exec_obligations
+WHERE agent_id = $1 AND boot_generation <> $2
+ORDER BY follow_up_message_id
+SELECT EXISTS (SELECT 1 FROM agent.subagent_spawns
+                         WHERE public_forget_confirmed_at IS NOT NULL
+                           AND public_forget_confirmed_at <  AND public_forget_confirmed_at >= 
+SELECT root_session_id, session_id, reason, due_at_ms, created_at_ms, updated_at_ms
+FROM agent.session_memory_capture_deadlines
+ORDER BY due_at_ms ASC, root_session_id ASC
+
+DELETE FROM agent.session_memory_capture_deadlines
+WHERE root_session_id = $1
+  AND due_at_ms = $2
+  AND reason = $3
+
+INSERT INTO agent.session_memory_capture_deadlines (
+  root_session_id, session_id, reason, due_at_ms, created_at_ms, updated_at_ms
+) VALUES ($1, $2, $3, $4, $5, $6)
+ON CONFLICT(root_session_id) DO UPDATE SET
+  session_id = CASE
+    WHEN excluded.reason = 'side_chat_archive'
+      OR (
+        agent.session_memory_capture_deadlines.reason <> 'side_chat_archive'
+        AND excluded.due_at_ms >= agent.session_memory_capture_deadlines.due_at_ms
+      )
+    THEN excluded.session_id
+    ELSE agent.session_memory_capture_deadlines.session_id
+  END,
+  reason = CASE
+    WHEN excluded.reason = 'side_chat_archive'
+      OR (
+        agent.session_memory_capture_deadlines.reason <> 'side_chat_archive'
+        AND excluded.due_at_ms >= agent.session_memory_capture_deadlines.due_at_ms
+      )
+    THEN excluded.reason
+    ELSE agent.session_memory_capture_deadlines.reason
+  END,
+  due_at_ms = CASE
+    WHEN excluded.reason = 'side_chat_archive'
+      OR (
+        agent.session_memory_capture_deadlines.reason <> 'side_chat_archive'
+        AND excluded.due_at_ms >= agent.session_memory_capture_deadlines.due_at_ms
+      )
+    THEN excluded.due_at_ms
+    ELSE agent.session_memory_capture_deadlines.due_at_ms
+  END,
+  updated_at_ms = excluded.updated_at_ms
+€

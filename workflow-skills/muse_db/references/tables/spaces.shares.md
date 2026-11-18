@@ -56,7 +56,11 @@ Artifact sharing settings and publication state.
 
 - `template_sha256` uses `text` and is nullable.
 
-  Manifest digest of the template package deployed with this share; null when the share cannot be copied.
+  Unused since spaces.templates; always null. Whether a Space can be copied is its row there.
+
+- `published_sources_sha256` uses `text` and is nullable.
+
+  Digest over the sources a publication kept for template copies and over that publication's published_manifest_sha256; null when no publication kept any.
 
 ## Keys and relationships
 

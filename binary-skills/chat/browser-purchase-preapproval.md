@@ -3,6 +3,8 @@
 Use `permissions.preapprove` for one browser payment or order through an eligible
 connected wallet card, including Link and Shop Pay,
 or a payment method the merchant saved for the <!-- personal-muse-only:start -->user<!-- personal-muse-only:end --><!-- group-muse-only:start -->group<!-- group-muse-only:end -->.
+A connected wallet with a usable payment method is required even for merchant-saved
+payment. Otherwise the tool returns `wallet_setup_required` with the setup step.
 Send one action in `actions`, with `connector: "browser"` and the `binding` below.
 A Shopify UCP checkout completed in this turn or cron run also pays under this
 approval when its `checkout create`, `checkout get` or `checkout update` output
@@ -109,8 +111,9 @@ suited to the current conversation.
    checkout in this turn. For a scheduled purchase, use the setup
    steps below while <!-- personal-muse-only:start -->the user is<!-- personal-muse-only:end --><!-- group-muse-only:start -->members are<!-- group-muse-only:end --> present; do not wait for the buying condition.
 
-For any outcome besides `approved`, stop setup and remove any purchase cron
-created for it. Explain the approval outcome and next step. After a denial,
+If the outcome is not `approved`, stop purchase setup. Remove only a cron created
+for a new purchase. Explain the outcome and follow the tool's next step before
+retrying. After a denial,
 <!-- personal-muse-only:start -->
 ask whether the user wants to change something, continue, or stop unless they already gave direction after declining.
 Retry preapproval when the user asks to continue or confirms a correction.
@@ -130,15 +133,14 @@ does not select that route.
 <!-- group-muse-only:end -->
 Use approval at checkout when <!-- personal-muse-only:start -->the user explicitly chooses<!-- personal-muse-only:end --><!-- group-muse-only:start -->members explicitly choose<!-- group-muse-only:end --> it. Otherwise,
 offer that route only after repeated technical failures prevent completing
+preapproval or paying under it. Denials and wallet setup requirements do not qualify.
 <!-- personal-muse-only:start -->
-preapproval or paying under it. A user denial is not a technical failure.
 Explain why checkout approval is needed and that the user must be available
 to approve payment. Switch to alerts without buying only when the user
 chooses that.
 <!-- personal-muse-only:end -->
 <!-- group-muse-only:start -->
-preapproval or paying under it. A member's denial is not a technical
-failure. Explain why checkout approval is needed and that a member must be
+Explain why checkout approval is needed and that a member must be
 available to approve payment in the group. Switch to alerts without buying
 only when members choose that.
 <!-- group-muse-only:end -->

@@ -4,7 +4,7 @@
 
 - [Restaurant Reservations](/opt/muse/skills/restaurant-reservations/SKILL.md) compares OpenTable with the restaurant's own route and other platforms.
 
-- Run one OpenTable call at a time. Parallel calls, background calls, batches and shell or Python retry loops are not supported.
+- Run bookings, changes and cancellations one at a time. Background calls, batches and shell or Python retry loops are not supported.
 
 ## Connect
 

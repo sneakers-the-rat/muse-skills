@@ -1,0 +1,47 @@
+activation_idwrite_admissionwritepostgres write completed slowlypostgres write failedpostgres write deferred; caller retains custodyretrying idempotent postgres writeone-shot postgres write invoked more than once
+with carrier_fields as (
+  select e.message_id,
+         f.field_path,
+         f.scalar_type,
+         f.scalar_value,
+         coalesce(f.text_value, f.scalar_value) as field_value
+  from runtime.events e
+  join runtime.event_payload_fields f on f.event_seq = e.event_seq
+  where e.message_id = any($1)
+    and e.event_name = 'message.user'
+    and (
+      f.field_path = '/reply_to_target/activation_mode'
+      or f.field_path = '/reply_to_target/selected_item_ids'
+      or f.field_path ~ '^/reply_to_target/selected_item_ids/[0-9]+$'
+    )
+)
+select message_id,
+       max(field_value) filter (
+         where field_path = '/reply_to_target/activation_mode'
+       ) as stored_activation_mode,
+       coalesce(
+         array_agg(field_value order by
+           substring(field_path from '([0-9]+)$')::integer
+         ) filter (
+           where field_path ~ '^/reply_to_target/selected_item_ids/[0-9]+$'
+             and nullif(btrim(field_value), '') is not null
+         ),
+         '{}'::text[]
+       ) as selected_item_ids,
+       coalesce(bool_or(
+         field_path = '/reply_to_target/selected_item_ids'
+         and scalar_type = 'array'
+         and scalar_value = '[]'
+       ), false) as explicit_empty_selection
+from carrier_fields
+group by message_id
+message_idstored_activation_modeselected_item_idsexplicit_empty_selection
+select state, count(*)::bigint as delivery_count
+from chat_private.deliveries
+where created_at_utc >= $1
+  and created_at_utc <= $2
+  and delivery_kind in ('background_reply', 'scheduler_cron')
+  and payload_json::jsonb ->> 'kind' = 'reply'
+  and payload_json::jsonb #>> '{request_trace,product_activation_id}' = $3
+group by state
+statedelivery_countselect title, summary, build_summary, install_markdown from ideas.ideas where idea_id = $1select idea_item_id, title, summary, instructions, build_plan_markdown from ideas.idea_items where idea_id = $1 and idea_item_id = any($2) order by position asc, idea_item_id asctitlesummarybuild_summaryselect job_id, source_path, schedule_expr, last_status, created_at::text as created_at from scheduler.jobs where created_at >= $1 and created_at <= $2 order by created_at desc limit $3

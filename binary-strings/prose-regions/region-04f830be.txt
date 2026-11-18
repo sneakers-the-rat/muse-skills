@@ -1,0 +1,47 @@
+a browser result id matched a file that is not browser product resultsunsupported connector shopping typea browser result is not verified in stocka selected id matched more than one shopping results sourceinvalid connector shopping cardFacebook Marketplacesellerfailed to parse a product search results file as JSONexternal_linkuser runtime config resolve did not settle in time; serving the experiment-free fallback config for this turndeletedhttp://localhost/hatch/check_gatekeepersGatekeeper response omitted requested gate; using defaultGatekeeper response was invalid; using defaultGatekeeper check failed; using defaultlive connector inventory socket unavailable; omitting connector statuslive connector inventory unavailable; omitting connector status/ideas/data-connectionsPoppy blocked-site config unavailable; keeping the last listread preapproved purchaseunexpected preapproved purchase responseowner-mail execution registrationowner-mail send authority revoked; continuing with ordinary permissionsruntime egress context registrationkeyed working still kept its placeholder deskkeyed video exceeds its frame limitchroma output replaced before validationstream=codec_type,codec_name,codec_tag_string,profile,level,pix_fmt,width,height,avg_frame_rate,bit_rate,channelsmobile audio video output must be MP4.video-mobile-0:a:0?-vfscale='if(gte(iw,ih),min(iw,1920),min(iw,1080))':'if(gte(iw,ih),min(ih,1080),min(ih,1920))':force_original_aspect_ratio=decrease:force_divisible_by=2,pad=ceil(iw/2)*2:ceil(ih/2)*2-fpsmax30-presetmedium23libx2648M16M-profile:v4.0yuv420p-tag:vmobile audio video output was replacedfile.size
+    select
+        node_id,
+        coalesce(display_name, node_id) as display_name,
+        platform,
+        enabled_permissions_json,
+        commands_json,
+        data_sources_json,
+        version,
+        device_family,
+        model_id,
+        metadata_json,
+        is_wakeup_supported,
+        delivery_app,
+        invoke_protocol,
+        -- Sentinel rejects a pairing identity with a space; created_at::text has one.
+        coalesce(
+            paired_at_text,
+            to_char(created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')
+        ) as paired_at,
+        coalesce(last_seen_at_text, last_seen_at::text, created_at::text) as last_seen_at,
+        status,
+        pairing_status
+    from device.nodes
+pairing_status <> 'revoked'select e.id, e.group_key, e.occurred_at, e.ingested_at, e.ttl_seconds, e.content_hints,
+        case when $2 then e.payload else '{}'::jsonb end as payload,
+        e.expires_at as context_expires_at, s.source_domain,
+        s.id as context_source_id, s.source_key, e.dedupe_key, e.payload_kind,
+        coalesce(e.occurred_at,e.ingested_at) as source_at,
+        r.suggestion_id, r.generation, r.subject_id as connector_subject,
+        (r.current and a.generation = r.generation) as connector_current,
+        m.facts as mailbox_facts, m.recorded_at as mailbox_recorded_at,
+        m.responded_seen_at as mailbox_responded_seen_at,
+        d.ingest_id, d.producer_id as device_id, d.source as device_source,
+        d.received_at_text, d.received_at_unix_ms
+        from context.events e join context.sources s on s.id = e.source_id
+        left join self_improvement.connector_context_records r on r.event_id = e.id
+        left join self_improvement.connector_sync_accounts a
+          on a.connector = r.connector and a.account_id = r.account_id
+        left join self_improvement.connector_mailbox_state m
+          on $2 and m.connector = r.connector and m.account_id = r.account_id
+          and m.generation = r.generation and m.source_id = r.subject_id
+        left join ingest.device_context_records dc on dc.event_id = e.id
+        left join ingest.data_source_events d on d.ingest_id = dc.ingest_id
+          and s.source_domain = 'device_sync'
+        where e.id = any($1) and (e.expires_at is null or e.expires_at > statement_timestamp())
+        order by array_position($1, e.id)source_domainoccurred_atsource_atttl_secondspayloaddedupe_keygroup_keypayload_kindingested_atcontent_hintscontext_source_idconnector_currentingest_iddevice_iddevice_sourcesource_keysmscontext_expires_atpoppy/blocked_sitesSELECT COALESCE(sql, '') AS sql FROM sqlite_master WHERE name NOT LIKE 'sqlite\_%' ESCAPE '\' ORDER BY type, nameSELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite\_%' ESCAPE '\' AND name NOT LIKE '\_\_%' ESCAPE '\' ORDER BY name"" || '

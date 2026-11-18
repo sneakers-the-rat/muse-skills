@@ -1,0 +1,1 @@
+%Y-%m_legacy-goal-notescalled `Result::unwrap()` on an `Err` 

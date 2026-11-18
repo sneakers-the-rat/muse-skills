@@ -106,11 +106,11 @@
 
 ## Present results
 
-- Link each post, comment, person and listing you mention with its returned URL, including in follow-up answers, so the user can open it. Facebook sometimes returns `facebook.com/profile.php?id=123` or `//facebook.com/...`, so add `https://` to make the link clickable.
+- Link each post, person and listing you mention with its returned URL, including in follow-up answers, so the user can open it. Present comments as the [reading comments guide](/opt/hatch/connectors/facebook_cli/references/reading-comments.md) says. Facebook sometimes returns `facebook.com/profile.php?id=123` or `//facebook.com/...`, so add `https://` to make the link clickable.
 
 - Refer to people by name with their `vanity_url` or `profile_url`. IDs such as `profile_id`, `fb_user_id`, `friend_id`, `owner_id` and `author_id` are internal.
 
-- Show post times from `post_created_at.user_local`, or `source_record_created_at.user_local` for group posts. Show each quoted comment's time and link it with its `comment_url`, and show reactions by type, such as 3 Love, 2 Like and 1 Wow, with the post link.
+- Show post times from `post_created_at.user_local`, or `source_record_created_at.user_local` for group posts. Show each quoted comment's time, and show reactions by type, such as 3 Love, 2 Like and 1 Wow, with the post link.
 
 - When the user asks for recent, latest or lately, state the date range you used, such as posts from the past 7 days.
 
@@ -120,7 +120,7 @@
 
 - Resolve "the second post" or "that one" from earlier results. When "my post" doesn't say which, ask whether they mean the most recent one, a date or a topic.
 
-- When identifying people across several posts, link the posts, comments or reactions that show it.
+- When identifying people across several posts, link the posts that show it, and give comment links as the reading comments guide says.
 
 ## Protect the people in the data
 

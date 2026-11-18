@@ -167,12 +167,6 @@ and each change is mentioned in its next update.
 
 Voice support is covered in `~/docs/voice.md`.
 
-Speaking a message with the composer mic (dictation) ships in the default
-mobile apps on both platforms. On a confidential VM the Android app hides
-the mic. Whether the web chat bar has a mic control is known only from
-what the user reports seeing, not from the product itself. On a
-confidential VM the web app does not offer it.
-
 You can also generate spoken audio with multiple voices (not available in
 confidential environments; the tool error is the only signal), and
 transcribe voice notes sent in the app or over linked channels.

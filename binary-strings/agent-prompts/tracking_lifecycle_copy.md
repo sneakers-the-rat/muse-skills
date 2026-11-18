@@ -1,9 +1,11 @@
 # Copy for the "Connect your apps" list built from a welcome variant's connector_list
-# (bootstrap_onboarding_variants.yaml): the list title and one row subtitle per connector.
+# (bootstrap_onboarding_variants.yaml): the list title, the View all button label, and one row
+# subtitle per connector.
 # Row titles are set in onboarding_starter_cards.rs. The other locales are translated by hand
 # to say exactly what the English says; change them with it.
 en-US:
   title: "Connect your apps"
+  view_all: "View all"
   gmail: "Manage your inbox and draft replies"
   google_calendar: "Add, update, and reschedule events"
   outlook_mail: "Read, draft, and send emails"
@@ -13,6 +15,7 @@ en-US:
   moneyforward_me: "See your spending and balances"
 ar-AR:
   title: "اربط تطبيقاتك"
+  view_all: "عرض الكل"
   gmail: "أدِر بريدك الوارد واكتب مسودات الردود"
   google_calendar: "أضف الأحداث وحدّثها وأعد جدولتها"
   outlook_mail: "اقرأ رسائل البريد واكتب مسوداتها وأرسلها"
@@ -22,6 +25,7 @@ ar-AR:
   moneyforward_me: "اطّلع على إنفاقك وأرصدتك"
 bg-BG:
   title: "Свържете приложенията си"
+  view_all: "Виж всички"
   gmail: "Управлявайте пощата си и пишете чернови"
   google_calendar: "Добавяйте, променяйте и пренасрочвайте събития"
   outlook_mail: "Четете, пишете чернови и изпращайте имейли"
@@ -31,6 +35,7 @@ bg-BG:
   moneyforward_me: "Вижте разходите и салдата си"
 bn-IN:
   title: "আপনার অ্যাপগুলো কানেক্ট করুন"
+  view_all: "সব দেখুন"
   gmail: "আপনার ইনবক্স সামলান এবং উত্তরের খসড়া লিখুন"
   google_calendar: "ইভেন্ট যোগ করুন, আপডেট করুন এবং সময় বদলান"
   outlook_mail: "ইমেল পড়ুন, খসড়া লিখুন এবং পাঠান"
@@ -40,6 +45,7 @@ bn-IN:
   moneyforward_me: "আপনার খরচ এবং ব্যালেন্স দেখুন"
 cs-CZ:
   title: "Propojte své aplikace"
+  view_all: "Zobrazit vše"
   gmail: "Spravujte doručenou poštu a připravujte koncepty odpovědí"
   google_calendar: "Přidávejte, upravujte a přesouvejte události"
   outlook_mail: "Čtěte, pište koncepty a odesílejte e-maily"
@@ -49,6 +55,7 @@ cs-CZ:
   moneyforward_me: "Prohlížejte si výdaje a zůstatky"
 da-DK:
   title: "Forbind dine apps"
+  view_all: "Se alle"
   gmail: "Administrer din indbakke, og skriv udkast til svar"
   google_calendar: "Tilføj, opdater og flyt begivenheder"
   outlook_mail: "Læs, skriv udkast til og send e-mails"
@@ -58,6 +65,7 @@ da-DK:
   moneyforward_me: "Se dit forbrug og dine saldi"
 de-DE:
   title: "Verknüpfe deine Apps"
+  view_all: "Alle anzeigen"
   gmail: "Posteingang verwalten und Antworten entwerfen"
   google_calendar: "Termine hinzufügen, ändern und verschieben"
   outlook_mail: "E-Mails lesen, entwerfen und senden"
@@ -67,6 +75,7 @@ de-DE:
   moneyforward_me: "Ausgaben und Kontostände ansehen"
 el-GR:
   title: "Συνδέστε τις εφαρμογές σας"
+  view_all: "Προβολή όλων"
   gmail: "Διαχειριστείτε τα email σας και γράψτε πρόχειρες απαντήσεις"
   google_calendar: "Προσθέστε, ενημερώστε και μετακινήστε συμβάντα"
   outlook_mail: "Διαβάστε, γράψτε πρόχειρα και στείλτε email"
@@ -76,6 +85,7 @@ el-GR:
   moneyforward_me: "Δείτε τα έξοδα και τα υπόλοιπά σας"
 es-419:
   title: "Conecta tus apps"
+  view_all: "Προβολή όλων"
   gmail: "Administra tu correo y redacta borradores de respuesta"
   google_calendar: "Agrega, actualiza y reprograma eventos"
   outlook_mail: "Lee, redacta y envía correos"
@@ -85,6 +95,7 @@ es-419:
   moneyforward_me: "Consulta tus gastos y saldos"
 es-ES:
   title: "Conecta tus apps"
+  view_all: "Ver todas"
   gmail: "Gestiona tu correo y redacta borradores de respuesta"
   google_calendar: "Añade, actualiza y reprograma eventos"
   outlook_mail: "Lee, redacta y envía correos"
@@ -94,6 +105,7 @@ es-ES:
   moneyforward_me: "Consulta tus gastos y saldos"
 fa-IR:
   title: "برنامه‌های خود را متصل کنید"
+  view_all: "مشاهده همه"
   gmail: "صندوق ورودی خود را مدیریت کنید و پیش‌نویس پاسخ بنویسید"
   google_calendar: "رویدادها را اضافه، به‌روزرسانی و جابه‌جا کنید"
   outlook_mail: "ایمیل بخوانید، پیش‌نویس بنویسید و ارسال کنید"
@@ -103,6 +115,7 @@ fa-IR:
   moneyforward_me: "هزینه‌ها و موجودی حساب‌های خود را ببینید"
 fi-FI:
   title: "Yhdistä sovelluksesi"
+  view_all: "Näytä kaikki"
   gmail: "Hallitse saapuneita viestejä ja laadi vastausluonnoksia"
   google_calendar: "Lisää, päivitä ja siirrä tapahtumia"
   outlook_mail: "Lue, luonnostele ja lähetä sähköposteja"
@@ -112,6 +125,7 @@ fi-FI:
   moneyforward_me: "Katso menosi ja saldosi"
 fr-FR:
   title: "Connectez vos applis"
+  view_all: "Tout afficher"
   gmail: "Gérez vos e-mails et préparez des brouillons de réponse"
   google_calendar: "Ajoutez, modifiez et replanifiez des événements"
   outlook_mail: "Lisez, rédigez et envoyez des e-mails"
@@ -121,6 +135,7 @@ fr-FR:
   moneyforward_me: "Consultez vos dépenses et vos soldes"
 gu-IN:
   title: "તમારી ઍપ્સ કનેક્ટ કરો"
+  view_all: "બધું જુઓ"
   gmail: "તમારું ઇનબૉક્સ મેનેજ કરો અને જવાબોના ડ્રાફ્ટ લખો"
   google_calendar: "ઇવેન્ટ ઉમેરો, અપડેટ કરો અને ફરી શેડ્યૂલ કરો"
   outlook_mail: "ઇમેઇલ વાંચો, ડ્રાફ્ટ લખો અને મોકલો"
@@ -130,6 +145,7 @@ gu-IN:
   moneyforward_me: "તમારો ખર્ચ અને બૅલેન્સ જુઓ"
 he-IL:
   title: "חיבור האפליקציות שלך"
+  view_all: "הצג הכול"
   gmail: "ניהול תיבת הדואר הנכנס וכתיבת טיוטות לתשובות"
   google_calendar: "הוספה, עדכון ותזמון מחדש של אירועים"
   outlook_mail: "קריאה, ניסוח ושליחה של מיילים"
@@ -139,6 +155,7 @@ he-IL:
   moneyforward_me: "צפייה בהוצאות וביתרות שלך"
 hi-IN:
   title: "अपने ऐप्स कनेक्ट करें"
+  view_all: "सभी देखें"
   gmail: "अपना इनबॉक्स मैनेज करें और जवाबों के ड्राफ़्ट लिखें"
   google_calendar: "इवेंट जोड़ें, अपडेट करें और उनका समय बदलें"
   outlook_mail: "ईमेल पढ़ें, ड्राफ़्ट करें और भेजें"
@@ -148,6 +165,7 @@ hi-IN:
   moneyforward_me: "अपना खर्च और बैलेंस देखें"
 hr-HR:
   title: "Povežite svoje aplikacije"
+  view_all: "Prikaži sve"
   gmail: "Upravljajte pristiglom poštom i pišite skice odgovora"
   google_calendar: "Dodajte, ažurirajte i premjestite događaje"
   outlook_mail: "Čitajte, pišite skice i šaljite e-poštu"
@@ -157,6 +175,7 @@ hr-HR:
   moneyforward_me: "Pregledajte potrošnju i stanja računa"
 hu-HU:
   title: "Kapcsold össze az alkalmazásaidat"
+  view_all: "Összes megtekintése"
   gmail: "Kezeld a beérkező leveleidet, és írj válaszpiszkozatokat"
   google_calendar: "Adj hozzá, frissíts és ütemezz át eseményeket"
   outlook_mail: "Olvass, fogalmazz és küldj e-maileket"
@@ -166,6 +185,7 @@ hu-HU:
   moneyforward_me: "Nézd meg a kiadásaidat és egyenlegeidet"
 id-ID:
   title: "Hubungkan aplikasi Anda"
+  view_all: "Lihat semua"
   gmail: "Kelola kotak masuk dan buat draf balasan"
   google_calendar: "Tambahkan, perbarui, dan jadwalkan ulang acara"
   outlook_mail: "Baca, buat draf, dan kirim email"
@@ -175,6 +195,7 @@ id-ID:
   moneyforward_me: "Lihat pengeluaran dan saldo Anda"
 it-IT:
   title: "Collega le tue app"
+  view_all: "Mostra tutte"
   gmail: "Gestisci la posta in arrivo e prepara bozze di risposta"
   google_calendar: "Aggiungi, aggiorna e riprogramma eventi"
   outlook_mail: "Leggi, scrivi bozze e invia email"
@@ -184,6 +205,7 @@ it-IT:
   moneyforward_me: "Visualizza le tue spese e i saldi"
 ja-JP:
   title: "アプリをリンク"
+  view_all: "すべて表示"
   gmail: "受信箱を整理して、返信の下書きを作成"
   google_calendar: "予定の追加、更新、日時の変更"
   outlook_mail: "メールの閲覧、下書き作成、送信"
@@ -193,6 +215,7 @@ ja-JP:
   moneyforward_me: "支出と残高を確認"
 kn-IN:
   title: "ನಿಮ್ಮ ಆ್ಯಪ್‌ಗಳನ್ನು ಕನೆಕ್ಟ್ ಮಾಡಿ"
+  view_all: "ಎಲ್ಲವನ್ನೂ ನೋಡಿ"
   gmail: "ನಿಮ್ಮ ಇನ್‌ಬಾಕ್ಸ್ ನಿರ್ವಹಿಸಿ ಮತ್ತು ಉತ್ತರಗಳ ಡ್ರಾಫ್ಟ್ ಬರೆಯಿರಿ"
   google_calendar: "ಈವೆಂಟ್‌ಗಳನ್ನು ಸೇರಿಸಿ, ಅಪ್‌ಡೇಟ್ ಮಾಡಿ ಮತ್ತು ಮರುನಿಗದಿಪಡಿಸಿ"
   outlook_mail: "ಇಮೇಲ್‌ಗಳನ್ನು ಓದಿ, ಡ್ರಾಫ್ಟ್ ಮಾಡಿ ಮತ್ತು ಕಳುಹಿಸಿ"
@@ -202,6 +225,7 @@ kn-IN:
   moneyforward_me: "ನಿಮ್ಮ ಖರ್ಚು ಮತ್ತು ಬ್ಯಾಲೆನ್ಸ್ ನೋಡಿ"
 ko-KR:
   title: "앱 연결하기"
+  view_all: "모두 보기"
   gmail: "받은편지함을 관리하고 답장 초안을 작성해요"
   google_calendar: "일정을 추가하고, 수정하고, 다른 시간으로 옮겨요"
   outlook_mail: "이메일을 읽고, 초안을 작성하고, 보내요"
@@ -211,6 +235,7 @@ ko-KR:
   moneyforward_me: "지출과 잔액을 확인해요"
 ml-IN:
   title: "നിങ്ങളുടെ ആപ്പുകൾ കണക്റ്റ് ചെയ്യൂ"
+  view_all: "എല്ലാം കാണുക"
   gmail: "നിങ്ങളുടെ ഇൻബോക്സ് കൈകാര്യം ചെയ്യൂ, മറുപടികളുടെ ഡ്രാഫ്റ്റുകൾ തയ്യാറാക്കൂ"
   google_calendar: "ഇവന്റുകൾ ചേർക്കൂ, പുതുക്കൂ, സമയക്രമം മാറ്റൂ"
   outlook_mail: "ഇമെയിലുകൾ വായിക്കൂ, ഡ്രാഫ്റ്റ് ചെയ്യൂ, അയയ്ക്കൂ"
@@ -220,6 +245,7 @@ ml-IN:
   moneyforward_me: "നിങ്ങളുടെ ചെലവുകളും ബാലൻസുകളും കാണൂ"
 mr-IN:
   title: "तुमची ॲप्स कनेक्ट करा"
+  view_all: "सर्व पहा"
   gmail: "तुमचा इनबॉक्स मॅनेज करा आणि उत्तरांचे ड्राफ्ट लिहा"
   google_calendar: "इव्हेंट जोडा, अपडेट करा आणि त्यांची वेळ बदला"
   outlook_mail: "ईमेल वाचा, ड्राफ्ट करा आणि पाठवा"
@@ -229,6 +255,7 @@ mr-IN:
   moneyforward_me: "तुमचा खर्च आणि बॅलन्स पाहा"
 ms-MY:
   title: "Sambungkan apl anda"
+  view_all: "Lihat semua"
   gmail: "Urus peti masuk anda dan sediakan draf balasan"
   google_calendar: "Tambah, kemas kini dan jadualkan semula acara"
   outlook_mail: "Baca, sediakan draf dan hantar e-mel"
@@ -238,6 +265,7 @@ ms-MY:
   moneyforward_me: "Lihat perbelanjaan dan baki anda"
 nb-NO:
   title: "Koble til appene dine"
+  view_all: "Se alle"
   gmail: "Administrer innboksen din og skriv utkast til svar"
   google_calendar: "Legg til, oppdater og flytt aktiviteter"
   outlook_mail: "Les, skriv utkast til og send e-poster"
@@ -247,6 +275,7 @@ nb-NO:
   moneyforward_me: "Se forbruket ditt og saldoene dine"
 ne-NP:
   title: "आफ्ना एपहरू कनेक्ट गर्नुहोस्"
+  view_all: "सबै हेर्नुहोस्"
   gmail: "आफ्नो इनबक्स व्यवस्थापन गर्नुहोस् र जवाफका ड्राफ्ट लेख्नुहोस्"
   google_calendar: "कार्यक्रमहरू थप्नुहोस्, अपडेट गर्नुहोस् र समय सार्नुहोस्"
   outlook_mail: "इमेल पढ्नुहोस्, ड्राफ्ट गर्नुहोस् र पठाउनुहोस्"
@@ -256,6 +285,7 @@ ne-NP:
   moneyforward_me: "आफ्नो खर्च र ब्यालेन्स हेर्नुहोस्"
 nl-NL:
   title: "Koppel je apps"
+  view_all: "Alles bekijken"
   gmail: "Beheer je inbox en schrijf conceptantwoorden"
   google_calendar: "Voeg afspraken toe, wijzig en verplaats ze"
   outlook_mail: "Lees e-mails, schrijf concepten en verstuur ze"
@@ -265,6 +295,7 @@ nl-NL:
   moneyforward_me: "Bekijk je uitgaven en saldo's"
 pa-IN:
   title: "ਆਪਣੀਆਂ ਐਪਾਂ ਕਨੈਕਟ ਕਰੋ"
+  view_all: "ਸਭ ਵੇਖੋ"
   gmail: "ਆਪਣਾ ਇਨਬਾਕਸ ਸੰਭਾਲੋ ਅਤੇ ਜਵਾਬਾਂ ਦੇ ਡਰਾਫ਼ਟ ਬਣਾਓ"
   google_calendar: "ਇਵੈਂਟ ਜੋੜੋ, ਅੱਪਡੇਟ ਕਰੋ ਅਤੇ ਉਨ੍ਹਾਂ ਦਾ ਸਮਾਂ ਬਦਲੋ"
   outlook_mail: "ਈਮੇਲਾਂ ਪੜ੍ਹੋ, ਡਰਾਫ਼ਟ ਕਰੋ ਅਤੇ ਭੇਜੋ"
@@ -274,6 +305,7 @@ pa-IN:
   moneyforward_me: "ਆਪਣਾ ਖ਼ਰਚਾ ਅਤੇ ਬੈਲੇਂਸ ਦੇਖੋ"
 pl-PL:
   title: "Połącz swoje aplikacje"
+  view_all: "Zobacz wszystkie"
   gmail: "Zarządzaj skrzynką odbiorczą i pisz wersje robocze odpowiedzi"
   google_calendar: "Dodawaj, aktualizuj i przekładaj wydarzenia"
   outlook_mail: "Czytaj, twórz wersje robocze i wysyłaj e-maile"
@@ -283,6 +315,7 @@ pl-PL:
   moneyforward_me: "Przeglądaj wydatki i salda"
 pt-BR:
   title: "Conecte seus apps"
+  view_all: "Ver todos"
   gmail: "Gerencie sua caixa de entrada e escreva rascunhos de resposta"
   google_calendar: "Adicione, atualize e remarque eventos"
   outlook_mail: "Leia, escreva rascunhos e envie e-mails"
@@ -292,6 +325,7 @@ pt-BR:
   moneyforward_me: "Veja seus gastos e saldos"
 pt-PT:
   title: "Associa as tuas apps"
+  view_all: "Ver todas"
   gmail: "Gere a tua caixa de entrada e escreve rascunhos de resposta"
   google_calendar: "Adiciona, atualiza e reagenda eventos"
   outlook_mail: "Lê, escreve rascunhos e envia e-mails"
@@ -301,6 +335,7 @@ pt-PT:
   moneyforward_me: "Vê as tuas despesas e saldos"
 ro-RO:
   title: "Conectează-ți aplicațiile"
+  view_all: "Vezi toate"
   gmail: "Gestionează-ți căsuța de e-mail și scrie ciorne de răspuns"
   google_calendar: "Adaugă, actualizează și reprogramează evenimente"
   outlook_mail: "Citește, scrie ciorne și trimite e-mailuri"
@@ -310,6 +345,7 @@ ro-RO:
   moneyforward_me: "Vezi-ți cheltuielile și soldurile"
 ru-RU:
   title: "Подключите приложения"
+  view_all: "Показать все"
   gmail: "Управляйте входящими и готовьте черновики ответов"
   google_calendar: "Добавляйте, изменяйте и переносите события"
   outlook_mail: "Читайте, готовьте черновики и отправляйте письма"
@@ -319,6 +355,7 @@ ru-RU:
   moneyforward_me: "Смотрите расходы и остатки на счетах"
 sk-SK:
   title: "Prepojte svoje aplikácie"
+  view_all: "Zobraziť všetky"
   gmail: "Spravujte doručenú poštu a pripravujte koncepty odpovedí"
   google_calendar: "Pridávajte, upravujte a presúvajte udalosti"
   outlook_mail: "Čítajte, píšte koncepty a odosielajte e-maily"
@@ -328,6 +365,7 @@ sk-SK:
   moneyforward_me: "Prezerajte si výdavky a zostatky"
 sv-SE:
   title: "Anslut dina appar"
+  view_all: "Visa alla"
   gmail: "Hantera din inkorg och skriv utkast till svar"
   google_calendar: "Lägg till, uppdatera och flytta händelser"
   outlook_mail: "Läs, skriv utkast till och skicka e-post"
@@ -337,6 +375,7 @@ sv-SE:
   moneyforward_me: "Se dina utgifter och saldon"
 sw-KE:
   title: "Unganisha programu zako"
+  view_all: "Tazama zote"
   gmail: "Dhibiti kikasha chako na uandike rasimu za majibu"
   google_calendar: "Ongeza, sasisha na upange upya matukio"
   outlook_mail: "Soma, andika rasimu na utume barua pepe"
@@ -346,6 +385,7 @@ sw-KE:
   moneyforward_me: "Tazama matumizi yako na salio"
 ta-IN:
   title: "உங்கள் ஆப்ஸை இணைக்கவும்"
+  view_all: "அனைத்தையும் காண்க"
   gmail: "உங்கள் இன்பாக்ஸை நிர்வகித்து, பதில் வரைவுகளை எழுதவும்"
   google_calendar: "நிகழ்வுகளைச் சேர்க்கவும், புதுப்பிக்கவும், நேரத்தை மாற்றவும்"
   outlook_mail: "மின்னஞ்சல்களைப் படிக்கவும், வரைவு எழுதவும், அனுப்பவும்"
@@ -355,6 +395,7 @@ ta-IN:
   moneyforward_me: "உங்கள் செலவுகளையும் பேலன்ஸையும் பார்க்கவும்"
 te-IN:
   title: "మీ యాప్‌లను కనెక్ట్ చేయండి"
+  view_all: "అన్నీ చూడండి"
   gmail: "మీ ఇన్‌బాక్స్‌ను నిర్వహించండి, సమాధానాల డ్రాఫ్ట్‌లు రాయండి"
   google_calendar: "ఈవెంట్‌లను జోడించండి, అప్‌డేట్ చేయండి, వాటి సమయం మార్చండి"
   outlook_mail: "ఈమెయిల్‌లు చదవండి, డ్రాఫ్ట్ చేయండి, పంపండి"
@@ -364,6 +405,7 @@ te-IN:
   moneyforward_me: "మీ ఖర్చులు, బ్యాలెన్స్‌లు చూడండి"
 th-TH:
   title: "เชื่อมต่อแอปของคุณ"
+  view_all: "ดูทั้งหมด"
   gmail: "จัดการกล่องจดหมายและร่างคำตอบ"
   google_calendar: "เพิ่ม อัปเดต และเลื่อนนัดหมาย"
   outlook_mail: "อ่าน ร่าง และส่งอีเมล"
@@ -373,6 +415,7 @@ th-TH:
   moneyforward_me: "ดูการใช้จ่ายและยอดคงเหลือของคุณ"
 tl-PH:
   title: "Ikonekta ang iyong mga app"
+  view_all: "Tingnan lahat"
   gmail: "Pamahalaan ang iyong inbox at gumawa ng mga draft na sagot"
   google_calendar: "Magdagdag, mag-update, at mag-reschedule ng mga event"
   outlook_mail: "Magbasa, mag-draft, at magpadala ng mga email"
@@ -382,6 +425,7 @@ tl-PH:
   moneyforward_me: "Tingnan ang iyong gastos at mga balanse"
 tr-TR:
   title: "Uygulamalarını bağla"
+  view_all: "Tümünü gör"
   gmail: "Gelen kutunu yönet ve yanıt taslakları hazırla"
   google_calendar: "Etkinlik ekle, güncelle ve yeniden planla"
   outlook_mail: "E-postaları oku, taslak hazırla ve gönder"
@@ -391,6 +435,7 @@ tr-TR:
   moneyforward_me: "Harcamalarını ve bakiyelerini gör"
 uk-UA:
   title: "Підключіть свої застосунки"
+  view_all: "Переглянути всі"
   gmail: "Керуйте вхідними листами й готуйте чернетки відповідей"
   google_calendar: "Додавайте, оновлюйте й переносьте події"
   outlook_mail: "Читайте, готуйте чернетки й надсилайте листи"
@@ -400,6 +445,7 @@ uk-UA:
   moneyforward_me: "Переглядайте витрати й залишки на рахунках"
 ur-PK:
   title: "اپنی ایپس کنیکٹ کریں"
+  view_all: "سب دیکھیں"
   gmail: "اپنا ان باکس سنبھالیں اور جوابات کے ڈرافٹ لکھیں"
   google_calendar: "ایونٹس شامل کریں، اپ ڈیٹ کریں اور ان کا وقت بدلیں"
   outlook_mail: "ای میلز پڑھیں، ڈرافٹ کریں اور بھیجیں"
@@ -409,6 +455,7 @@ ur-PK:
   moneyforward_me: "اپنے اخراجات اور بیلنس دیکھیں"
 vi-VN:
   title: "Kết nối ứng dụng của bạn"
+  view_all: "Xem tất cả"
   gmail: "Quản lý hộp thư đến và soạn thư trả lời nháp"
   google_calendar: "Thêm, cập nhật và đổi lịch sự kiện"
   outlook_mail: "Đọc, soạn nháp và gửi email"
@@ -418,6 +465,7 @@ vi-VN:
   moneyforward_me: "Xem chi tiêu và số dư của bạn"
 zh-CN:
   title: "关联你的应用"
+  view_all: "查看全部"
   gmail: "管理收件箱，起草回复"
   google_calendar: "添加、更新和改期日程"
   outlook_mail: "阅读、起草和发送邮件"
@@ -427,6 +475,7 @@ zh-CN:
   moneyforward_me: "查看你的支出和余额"
 zh-HK:
   title: "連結你的應用程式"
+  view_all: "查看全部"
   gmail: "管理收件匣，草擬回覆"
   google_calendar: "新增、更新及改期活動"
   outlook_mail: "閱讀、草擬及傳送電郵"
@@ -436,6 +485,7 @@ zh-HK:
   moneyforward_me: "查看你的支出及結餘"
 zh-TW:
   title: "連結你的應用程式"
+  view_all: "查看全部"
   gmail: "管理收件匣並草擬回覆"
   google_calendar: "新增、更新及重新安排活動"
   outlook_mail: "閱讀、草擬及傳送電子郵件"

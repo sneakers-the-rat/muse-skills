@@ -49,7 +49,7 @@
 /opt/hatch/bin/tessie-api request --method POST --path '/VIN/PATH' --query key=value --json-body '{"key":"value"}'
 ```
 
-- `request` reaches any path on the Tessie API, with repeated `--query key=value` and an optional `--json-body`. GET requests follow the read permission and other methods follow write approval.
+- `request` reaches any path on the Tessie API, with repeated `--query key=value` and an optional `--json-body`. GET requests follow the read permission and other methods follow write approval. Use POST for command and wake endpoints.
 
 - While "View vehicle status and location" is set to Deny or Ask, raw GET requests are refused with `data_class_excluded`.
 
