@@ -1,6 +1,6 @@
 # Wearable playback
 
-- Use this only for a spoken request on a call to start music, a podcast, an episode or an audiobook, when the device carrying the call lists `music_fulfillment` in its device catalog. For anything else, follow the [Spotify docs](../CONNECTOR.md).
+- Use this only for a spoken request on a call to start music, a podcast, an episode or an audiobook, when the device carrying the call lists `music_fulfillment` in its device catalog. For anything else, follow the [Spotify docs](../CONNECTOR.md). New playback on a device that plays music itself also resolves its item as Resolve the item below describes.
 
 - That device plays only Spotify. If the caller asks for another service or source, such as Apple Music, Audible or music stored on the device, say that only Spotify plays there for now, offer to play it on Spotify and run no command.
 
