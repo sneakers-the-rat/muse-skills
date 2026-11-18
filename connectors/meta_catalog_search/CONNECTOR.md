@@ -200,6 +200,8 @@ jq -r '
 
 - Some results also carry `seller_type` (`brand_direct`, `authorized_retailer`, `new_item_marketplace`, `secondhand_marketplace` or `gray_market`), `seller_quality` (`elite`, `good`, `acceptable`, `poor`, `not_a_seller` or `unrated`) and `shopify_product_id`.
 
+- Reverse image search results may carry `visual_similarity` (`visually_identical`, `visually_similar`). `visually_identical` is a near-exact match to the query photo and likely to be the same product. `visually_similar` has strong visual similarity but is not identical to the query photo. It may be the same product photographed from a different angle, a variant of it, or a different product.
+
 - Compare prices and budgets with `sale_price` when present, otherwise `price`, keeping the currency and exact variant together. Treat a missing field as unknown. A products's details can change, so confirm the variant and stock as the next section describes, and treat any delivery estimate or total as unconfirmed until checkout.
 
 ## Confirm a variant

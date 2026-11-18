@@ -60,6 +60,8 @@ users threads get --params '{"userId":"me","id":"<thread_id>","format":"full"}'
 
 - Read one message with `+read`, headers alone with `users messages get` and a whole conversation with `users threads get`. Read bodies only for the messages that matter.
 
+- Read several related messages in one call by repeating `--id` in `+read`, up to 20 per call. Each message still costs 20 units.
+
 - `+read` lists the sender, recipients, subject and date first, then the attachments, with filenames, types, sizes, MIME part IDs and download references but no file contents, and puts the body last. Bcc is visible only on messages the user sent. `attachments_coverage` and `body_coverage` describe what was captured, and an incomplete inventory does not prove there are no attachments. A part listed under `unavailable_body_parts` was not read; save it with its download reference when it has one. A part without one cannot be saved here, but for one marked `non_utf8`, `users messages get` with `"format":"raw"` may still show its text.
 
 - Each `+read` saves a Markdown copy under `~/workspace/email/gmail/` and returns its `message_file` path. When `body_text_inline_complete` or `attachments_inline_complete` is false, read that file with `muse.read` using `offset` and `limit`, or search it with `rg`, before concluding anything from the omitted part.

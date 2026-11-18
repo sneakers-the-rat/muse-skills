@@ -247,6 +247,12 @@
 /opt/hatch/bin/instagram-cli profile-banner --account-id <user_own_fbid> --action add
 ```
 
+<!-- instagram-ads-profile-prep-only:start -->
+## Prepare the profile for Instagram ads
+
+- For bio and profile-link preparation, follow [profile preparation](references/ads-profile-prep.md).
+<!-- instagram-ads-profile-prep-only:end -->
+
 ## Archive content
 
 - Archive posts, Reels or active stories owned by the selected account only when the user explicitly asks. Archiving asks for approval each time unless the user allowed it for the current task.
@@ -415,6 +421,8 @@ EDITOR_JSON='[
 - Never show FBIDs, opaque IDs, cursors, Unix timestamps or implementation terms to the user. Use usernames, display names and plain descriptions, and keep IDs inside tool calls.
 
 ## Related skills
+
+- [Advertising Campaigns](/opt/muse/skills/advertising-campaigns/SKILL.md)
 
 - [Shopping](/opt/muse/skills/shopping/SKILL.md)
 

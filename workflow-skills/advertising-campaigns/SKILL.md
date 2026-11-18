@@ -14,6 +14,14 @@
 
 ## Create and change campaigns
 
+<!-- instagram-ads-profile-prep-only:start -->
+- When your plan for an Instagram campaign puts profile preparation first and the advertiser agrees, for example with "go ahead", start that step in the same reply: read the profile and propose the exact bio or profile-link change, following [Instagram profile preparation](/opt/hatch/connectors/instagram/references/ads-profile-prep.md). Do not ask again whether to prepare the profile.
+
+- Before continuing with the ads, say which profile changes were applied, which remain drafts and which the advertiser makes in the Instagram app, such as pinning a post.
+
+- Profile approval does not approve creating or starting a campaign.
+<!-- instagram-ads-profile-prep-only:end -->
+
 - A new campaign follows the channel connector's campaign guide, such as Meta's [campaign creation](/opt/hatch/connectors/meta_ads/references/campaign-creation.md), or [campaign stages](references/campaign-stages.md) when the channel has no connector. You should read it before asking the advertiser anything.
 
 - Before changing an existing campaign, read its current settings and recent results. Publishing, pausing or editing follows the connector's write guide, such as Meta's [write operations](/opt/hatch/connectors/meta_ads/references/writes.md), or [review and publish](references/review-and-publish.md) without one.
@@ -37,6 +45,10 @@
 ## Available connectors
 
 - [Meta Business Manager](/opt/hatch/connectors/meta_ads/CONNECTOR.md) for Facebook, Instagram, Messenger, Threads, WhatsApp and the Audience Network, with account and performance reads, budget estimates, creative preparation, paused creation, policy checks and Ad Library research.
+
+<!-- instagram-ads-profile-prep-only:start -->
+- [Instagram](/opt/hatch/connectors/instagram/CONNECTOR.md) for reading the advertiser's profile and recent posts, and updating bio text and profile links for an Instagram profile-visits campaign once they approve the exact change.
+<!-- instagram-ads-profile-prep-only:end -->
 
 - Use `muse.connector_search` to find other connectors and `muse.skill_search` to find related skills. If nothing fits, set one up with [Custom Connectors and MCPs](/opt/muse/skills/custom-connector-setup/SKILL.md).
 

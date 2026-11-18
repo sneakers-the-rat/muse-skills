@@ -72,7 +72,7 @@
 /opt/hatch/bin/duffel book --offer-id OFFER --booking-json JSON --seat 1:1:28B --seat 2:1:28C
 ```
 
-- `book` revalidates before any payment request. Its single approval covers the itinerary, travelers, seats and fees, fare terms, total, the first-time profile, a one-time virtual card, 3DS and immediate ticketing. Any change to the flight, fare, date, passengers, services or total needs a fresh approval.
+- `book` revalidates before any payment request. Its single approval covers the itinerary, travelers, seats and fees, fare terms, total, the first-time profile, a one-time virtual card, 3DS and immediate ticketing. When the card shows an "Authorized up to" amount, the airline's final total may be charged up to that amount if it settles slightly above the approved total after the order is sent. Any change to the flight, fare, date, passengers, services or total before payment needs a fresh approval.
 
 - `book` reads the live offer itself, including one whose quote expired, and the approval card shows its current total and fare terms. When they differ from what was last quoted, the card says what changed. If Duffel no longer sells the offer, `book` returns `offer_unavailable` with `next_step: search_again`: search the same route and dates again and let the user choose, since a different flight is a new purchase for them to pick.
 

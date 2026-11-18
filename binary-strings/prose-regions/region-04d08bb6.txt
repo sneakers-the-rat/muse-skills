@@ -1,0 +1,156 @@
+__compaction_cancelled__browser slot controller is unavailablebrowser interaction service unavailablebrowser submission is no longer activebrowser stop was not confirmedspecialist submission requiredspecialist invocation requiredSELECT activity_thread_id, action_index FROM activity_monitor_thread_actions WHERE action_id = $1 LIMIT 1
+SELECT status, finish_status
+FROM activity_monitor_threads
+WHERE activity_thread_id = $1
+LIMIT 1
+FOR UPDATE
+
+SELECT a.activity_thread_id
+FROM activity_monitor_agent_threads a
+JOIN activity_monitor_threads g ON g.activity_thread_id = a.activity_thread_id
+WHERE a.agent_id = $1
+  AND g.status = $2
+LIMIT 1
+FOR UPDATE OF g
+
+UPDATE activity_monitor_threads
+SET status = $2,
+    finished_at = NULL,
+    finish_message = NULL,
+    finish_status = NULL,
+    finish_status_reason = NULL
+WHERE activity_thread_id = $1
+
+SELECT COALESCE(MAX(action_index), 0) + 1
+FROM activity_monitor_thread_actions
+WHERE activity_thread_id = $1
+activity_thread_id is required when no current activity_thread is set
+INSERT INTO activity_monitor_thread_actions (
+    action_id, activity_thread_id, action_index, agent_id, agent_depth, icon, title, subtitle, report, status, created_at
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+ON CONFLICT(action_id) DO UPDATE SET
+    activity_thread_id = excluded.activity_thread_id,
+    action_index = excluded.action_index,
+    agent_id = excluded.agent_id,
+    agent_depth = COALESCE(excluded.agent_depth, activity_monitor_thread_actions.agent_depth),
+    icon = excluded.icon,
+    title = excluded.title,
+    subtitle = excluded.subtitle,
+    report = excluded.report,
+    status = excluded.status,
+    created_at = LEAST(activity_monitor_thread_actions.created_at, excluded.created_at)
+RETURNING action_index, action_seq, action_id, activity_thread_id, agent_id, agent_depth, icon, title, subtitle, report, status, created_at, nextval(pg_get_serial_sequence('activity.activity_monitor_thread_actions', 'action_seq'))::bigint AS write_ordinal
+action_seqwrite_ordinal
+SELECT action_index, action_seq, action_id, activity_thread_id, agent_id, agent_depth, icon, title, subtitle, report, status, created_at
+FROM activity_monitor_thread_actions
+WHERE activity_thread_id = $1
+ORDER BY action_index ASC, action_seq ASC
+
+SELECT action_index, action_id, activity_thread_id, agent_id, agent_depth, icon, title, subtitle, report, status, created_at
+FROM activity_monitor_thread_actions
+WHERE action_id = $1
+LIMIT 1
+
+SELECT action_index, action_id, activity_thread_id, agent_id, agent_depth, icon, title, subtitle, report, status, created_at
+FROM (
+    SELECT
+        action_index,
+        action_id,
+        activity_thread_id,
+        agent_id,
+        agent_depth,
+        icon,
+        title,
+        subtitle,
+        report,
+        status,
+        created_at,
+        action_seq AS insertion_order
+    FROM activity_monitor_thread_actions
+    WHERE activity_thread_id = $1
+    ORDER BY action_index DESC, insertion_order DESC
+    LIMIT $2
+)
+ORDER BY action_index ASC, insertion_order ASC
+
+SELECT user_message_id
+FROM activity_monitor_carrier_user_messages
+WHERE carrier_message_id = $1
+  AND ($2::text IS NULL OR root_agent_id IS NULL OR root_agent_id = $2)
+ORDER BY link_seq ASC
+
+SELECT b.activity_thread_id
+FROM activity_monitor_message_threads b
+WHERE b.message_id = $1
+
+SELECT b.activity_thread_id
+FROM activity_monitor_message_threads b
+JOIN activity_monitor_threads g ON g.activity_thread_id = b.activity_thread_id
+WHERE b.message_id = $1
+  AND g.status = $2
+
+SELECT activity_thread_id, name, subtitle, icon, emoji, status, created_at, finished_at, finish_message,
+       finish_status, finish_status_reason, activity_thread_kind, space_slug, status_title,
+       expected_finish_description
+FROM activity_monitor_threads
+WHERE activity_thread_id = $1
+
+INSERT INTO activity_monitor_threads (
+    activity_thread_id, name, subtitle, status_title, icon, emoji, activity_thread_kind, space_slug,
+    expected_finish_description, status, created_at, finished_at, finish_message
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NULL, NULL)
+fail_openfailed to hydrate latest public runtime user timezone cachemail validator unavailablerecovery owner validator is not configuredfailed to load parent message source map for spawn inheritancefailed to load parent client context for spawn inheritancefailed to load parent reply prefixes for spawn inheritancefailed to load parent transcript provenance for spawn inheritancesafety quarantine could not finish copied-context cleanupactivity feed store requires HatchStoragebrowser tab is not heldbrowser invocation chain has no rootsaved_credentials_recentpeer sharing guidance has no active turncould not load this conversation's memory contextsystem_prompt_compose/feed/stepsubagent_context_snapshotcomplete preparation context is unavailable; retry the loadprompt_envelope_finalizecompany_conversation.startconnectionvolatile_context_pin_reusehistory_projection_renderprompt_item_normalizationprompt_runtime_context_build/group_chat/conversation/platform_name/self_improvement/step/self_improvement/objective_id/background_worker/contextstanding_user_context/packet/request_metadata/source_accessResearchSourceAccessmuse_network_identitydenied_domainssource_labelscatalog_source_labelslinked_domainsproject_context_snapshottool_history_snapshotprompt_history_metadatalatest_user_timezone_lookupgoal_creation_data_connectionsnudgesmaterialize_submissionprompt_optionsskill_snapshottool_snapshotrequest_overlayclient_context_snapshotdevice_snapshotgoals_snapshothistory_projectioncompaction_decisionprovider_request_readyrecovery_phase_deferredapproval_checkpoint_parkedperiodic_memory_flush_recovery_failedstorage unavailable for delivery recoveryproduct_entity_iddelivery checkpoint changed during contract recoverybrowser task has no pending purchase lookupadmission_agent_queue_waitadmission_agent_submission_sendMuse's browser first joined its session with this company and loaded the page through it, so nothing else was sent.Muse's browser tried to join its session with this company, which reloaded the page, so nothing else was sent.refused_before_dispatchunexpected browser responsecheckpointIf the report only hands back a captured checkout, follow the handoff below without asking for input or continuing browser payment preparation. Resolve any separately reported login need or blocker under your normal instructions first. When checkout is captured for Muse, no purchase was made: leave the checkout tab open and finish with `browser.report`, `status: needs_input` and `reason: payment`, to hand checkout to Muse for UCP. Continue website checkout in the same task only if Muse explicitly instructed you to continue website checkout without another capture, or the handoff is unresolved. Report any blocker that prevents that continuation.
+memory flush inference stream timed outloading saved turn context timed outsaving turn context timed outruntimebrowser_task_queue_admitteddaemonschedulerverify activity feed tableavatar-state: authoritative DB row missingbrowser task settlement requires HatchStoragebrowser task starting settlement timed outThe originating conversation is unavailableexecution has no durable chat ownerannotationsbrowser task is not runningdance catalog transport failedhttp_errortransport_errordance catalog request timed outtimeoutmail storage unavailableharnessnamed_profilebrowser task queue requires HatchStorageworker identity missingworker storage missingworker turn missingunknown worker identity/feed/run_id/feed/step/step_idvariantpurchase storage unavailabletool_call_attemptedavatar completion storage unavailableDancing avatar video generation is already running. Wait for this request to finish before requesting more.The avatar changed. Request generation again for the current avatar.Dancing avatar videos are unavailable for the current avatar.Choose an avatar before generating dancing avatar videos.jpgpngthe look has no stillsaved avatar base image is unavailablehalloween_costumecontains a traversal componentis outside the workspacewas not foundis not a fileworkspace is unavailableavatar_reference_path_rejectedavatar_reference_not_foundavatar_reference_workspace_unavailablecannot be read as a look: it must be a WebP, PNG, JPEG, or GIF image of at most 5 MBavatar_reference_unreadablewidget presentation failedstate_loadclaimpoppybrowser caller submission is unavailableid_malformedid_unknowntab_closedaction_invalidsign_in_records_unavailablesign_in_page_unreadablesign_in_fields_unavailablesaved_logins_unavailablesign_in_consent_failedsecure_entry_failedsign_in_fill_failedcheckout_records_unavailablepurchase_receipt_failedcheckout_save_failedseat_restore_failedsession_attach_failedaction_admission_failedtab_hold_check_faileddispatch_failedtab_registry_failedview_projection_failedseat_checkpoint_failedgoals_prompt_snapshotrelationship_routes_loaddevice_list_paireddevice_section_rendermotion state retained during activationbrowser_task_idbrowser_task_cold_start_contextcold browser owner has no saved launch contextprivacy_identifier_eventchallenge guide did not loadThe requested challenge guide is unavailable. Other guides may still load.reportbrowser report recipient is missingbrowser tabs were not closedproduct_results_pathspecialist invocation changedstoppedbrowser session join failedThe browser could not read this page's audiobrowser site cooldown refusal text unavailableconnection_work_prompt_snapshotselect n.nspname::text, c.relname::text
+               from pg_catalog.pg_class c
+               join pg_catalog.pg_namespace n on n.oid = c.relnamespace
+               join unnest($1::text[], $2::text[])
+                    as probe(table_schema, table_name)
+                 on n.nspname = probe.table_schema
+                and c.relname = probe.table_name
+              where c.relkind in ('r', 'p')
+                and has_table_privilege(
+                      c.oid,
+                      'SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER')select exists (
+                   select 1
+                   from pg_catalog.pg_attribute a
+                   join pg_catalog.pg_class c on c.oid = a.attrelid
+                   join pg_catalog.pg_namespace n on n.oid = c.relnamespace
+                   where n.nspname = $1
+                     and c.relname = $2
+                     and a.attname = $3
+                     and a.attnum > 0 and not a.attisdropped
+                     and c.relkind in ('r', 'p', 'v', 'f')
+                     and not pg_catalog.pg_is_other_temp_schema(n.oid)
+                     and (pg_catalog.pg_has_role(c.relowner, 'USAGE')
+                          or pg_catalog.has_column_privilege(
+                            c.oid, a.attnum, 'SELECT, INSERT, UPDATE, REFERENCES'))
+                 )select exists (
+                   select 1 from pg_catalog.pg_indexes
+                   where schemaname = $1 and indexname = $2
+                 )select e.enumlabel
+                 from pg_catalog.pg_type t
+                 join pg_catalog.pg_namespace n on n.oid = t.typnamespace
+                 join pg_catalog.pg_enum e on e.enumtypid = t.oid
+                 where n.nspname = $1 and t.typname = $2select max(version)::bigint
+                 from public._sqlx_migrations
+                 where success = truestream_owner_message_idlocked mailbox successor row has no agent identitylocked mailbox successor row has no custody stateaction_id is requiredtitle is requiredreport is requiredroot carrier_message_id is requiredroot carrier root_agent_id is requiredagent_id is requiredfailed to read activity thread action from storefailed to read activity monitor carrier/user mappingfailed to read activity thread binding for messagesubtitle is requiredfailed to read activity thread snapshot with actionsfailed to read activity thread actionsstartedverdictcancelledpendingreview_not_completedfinished checkout has no resultpending_initinterruptederrorednot_foundworkerruntime.peer_discretion_policycheckout.getcheckout.createcheckout.updatecheckout.completecheckout.cancelorder.getcart.createcart.updatecart.cancelphasesfactscredential_provider_coderesponse id does not match the requested avatar idbackground_workersturnspurchase_requests.attach_approvalselect p.schedule_id, p.state, p.browser_lineage_id,
+    p.browser_lineage_id is not null and (p.active_browser_task_id is not null or exists(
+        select 1 from runtime.browser_tasks t
+        where (t.task_id = p.browser_lineage_id or t.continuation_root_task_id = p.browser_lineage_id)
+          and t.status in ('queued', 'starting', 'running', 'user_controlled', 'parked_outcome')))
+    from runtime.purchase_requests p where p.purchase_id = $1purchase_requests.assign_browser_windowpurchase_id, schedule_id, approval_id, state, active_browser_task_id, active_checkout_id, funding_approval_id, browser_lineage_id, created_atpurchase_requests.getpurchase_requestsserialize manifestmanifest.jsonUDS HTTP request path must start with '/'browser_tasksbrowser.invocationbrowser.invocation_for_agentacquired connection, but time to acquire exceeded slow thresholdacquired connectionuser_state.touch_recentthe conversation was cleared during handoff preparationthe voice call was replaced during handoff preparationcompanion authorization provider is unavailablethe original conversation is unavailablevoice agent is not the live call's realtime voice for this rootthe voice call has closed<unattributed>sessiongoals.prompt_snapshot_bodiesgoals.prompt_snapshot_treeexternal_party.retiredbrowser.begin_invocationinvalid browser workflowbrowser.task_invocationsbrowser.open_invocationsbrowser.handoff_suppressedbrowser.load_contextbrowser.save_contextbrowser context belongs to another seatseeding from subagent session transcript historysubagent session transcript unavailable for spawn inheritance; using persisted prompt history fallbackfailed to load parent subagent transcript history for spawn inheritance; using persisted prompt history fallbackfailed to load parent reply prefixes for spawn inheritance; ideas storage unavailablesafety quarantine could not delete a copied Companion rowsafety quarantine removed copied voice contextucpreferenceunexpected browser observationtab_inventoryrereadbrowser call retriedretry_reasonretry_backoffbrowser report products were left outbrowser report product image urls were not all read from pageschallengepartial_base_gonepixels_missingview_readpaired browser screenshot was unavailabletask_runningA helper's answer was removed from this conversation because our safety classifiers flagged it as a potential violation of our safety policy. You cannot see what was removed; do not try to recover or re-create it. Do not continue the specific request you delegated to that helper, whether by delegating it again, rephrasing it, using a tool or helper, or answering from your own knowledge. If the user asks for it again, including in different words, concisely decline to engage with that topic and suggest another; do not agree to answer it. Requests on other subjects are evaluated independently.handoff_quarantinefailed to persist the quarantine tombstonefailed to delete a quarantined Companion rowsafety quarantine deleted the handoff's canonical rowsfailed to delete the quarantined handoff's canonical rowsquarantined_handoff_absorbedsafety_quarantinesafety quarantine removed a message from the conversationA tool call and its result were removed from this conversation because our safety classifiers flagged them as a potential violation of our safety policy. You cannot see what was removed; do not try to recover or re-create it. Do not continue the specific request you were working on when that call was made, whether by repeating the call, rephrasing it, using a tool or helper, or answering from your own knowledge. If the user asks for it again, including in different words, concisely decline to engage with that topic and suggest another; do not agree to answer it. Requests on other subjects are evaluated independently.tool_quarantinesafety quarantine swept compacted durable rowsfailed to sweep compacted durable rows for a quarantined callquarantined_pair_absorbedsafety quarantine removed a tool call from the conversationfailed to drop compaction checkpointssafety quarantine dropped absorbed compaction checkpointsquarantine checkpoint scrub raced a newer checkpoint; relying on the pruned window it was built fromquarantine checkpoint scrub failedresumed researcher has no parent; restart notice skippedresumed researcher has no spawn row; restart notice skippedfailed to load the resumed researcher's spawn row; restart notice skipped## Resumed After Restartweb_builder_runtime_media_guidance
+
+
+runtime.injected_context_changepin_handoff_policyhandoff_policy_pinbrowser.invocation_rootbrowser.use_tabbrowser.tab_holderbrowser seat is missingbrowser.task_tabsbrowser.assign_tab_aliasesauthd_recent_credentialsauthd socket unsetsaved credentials unavailable for prompt assemblysaved credentials omitted after a failed loadsaved credentials omitted after a timed-out loadpeer sharing guidance turn is no longer currentpeer sharing guidance turn changed before recordingfailed to serialize prompt context snapshot metadatachat identity unavailable for system promptforeground_rootconnection.list:workflow_catalog:conversation_context_v1:relationship_routes_v1:handoff_shared_policy_v1prompt_assemblyroot_projectproject context omitted after empty, failed, or timed-out snapshot loadsession_historylatest user client timezone lookup timed out for timestamp contextlatest_user_messageclient context snapshot omitted because no applicable user context was availableeffective_user_timezonelive data connection inventory unavailable for goal creationsession/audio_transcript_guidance.mdBegin your reply with a brief summary of what they said, then respond normally. If the transcript is no longer relevant to the conversation, call `muse.nothing_to_do` instead of replying.linuxdevice_storedevice section omitted after empty, failed, or timed-out snapshot loadgoals_storegoals section omitted after policy, empty, failed, or timed-out snapshot loadsession/claude_parallel_tool_guidance.mdWhen multiple tool calls are independent, emit all of them in the same response instead of serializing them across multiple turns.
+
+Good parallel cases:
+- Fetch several unrelated URLs at once.
+- Run multiple independent searches that answer different parts of the request.
+- Combine read-only tools when no call depends on another call's output.
+
+Do not parallelize when one tool call needs another tool's result first:
+- Search, then fetch the specific URL you found.
+- Read a file, then edit that file based on the read result.
+- Run a command, then inspect its output before deciding the next command.
+
+Prefer one response with multiple independent tool calls over several sequential tool-only responses.
