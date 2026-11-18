@@ -1,0 +1,135 @@
+session/proactive_follow_up_cue.md<!-- personal-muse-only:start -->During this user turn<!-- personal-muse-only:end --><!-- group-muse-only:start -->While answering this member's message<!-- group-muse-only:end -->, save worthwhile follow-through with `tracking.create` and `proactivity_follow_up: true`, or record the next step on the existing item with `tracking.create_entry`. Later background handoffs use ordinary Tracking without this flag.
+side_chatsubagent.spawnartifact.list_actionsartifact.invoke_actionFollow the user's instructions.tracking.set_statussession/tracking_context_section_preamble.mdSubstantial work the main agent keeps track of, manages, or follows up on for the <!-- personal-muse-only:start -->user<!-- personal-muse-only:end --><!-- group-muse-only:start -->group<!-- group-muse-only:end --> over time.
+session/tracking_active_section_preamble.mdThese are your currently active tracked items; close an item with `tracking.set_status` set to `completed` when <!-- personal-muse-only:start -->user<!-- personal-muse-only:end --><!-- group-muse-only:start -->a member's<!-- group-muse-only:end --> confirmation, the end of its relevant timeline, or other evidence shows that the whole responsibility has finished.
+Close the tracked item proactively when the evidence shows it is finished, without waiting for <!-- personal-muse-only:start -->the user<!-- personal-muse-only:end --><!-- group-muse-only:start -->a member<!-- group-muse-only:end --> to explicitly ask you to close it.
+failed to load goals prompt snapshot; rendering empty goals sectiongoals prompt snapshot timed out; rendering empty goals sectionrelationship connection context unavailablerelationship connection context timed outmemory/people/memory/groups/mdconnection context unavailablePROACTIVE_PREFERENCES.mdfailed to load paired-device prompt snapshot; omitting devices sectionpaired-device prompt snapshot timed out; omitting devices sectionSELECT e.event_seq FROM runtime.events e JOIN runtime.event_payload_fields f ON f.event_seq = e.event_seq WHERE COALESCE(NULLIF(TRIM(e.agent_id), ''), e.parent_agent_id) = $1 AND event_name IN ('message.user', 'message.assistant') AND f.field_path = '/metadata/context_seq' AND NULLIF(COALESCE(f.text_value, f.scalar_value), '')::bigint = ANY($2)/metadata/exclude_from_context_window/metadata/context_exclusion/reason/metadata/context_exclusion/ts_msINSERT INTO event_payload_fields (event_seq, field_path, scalar_type, scalar_value)  ON CONFLICT (event_seq, field_path) DO UPDATE SET scalar_type = excluded.scalar_type, scalar_value = excluded.scalar_value, text_value = NULL
+SELECT json_build_object(
+         'accepted_ordinal', accepted_ordinal,
+         'state', state,
+         'checkpoint_custody', checkpoint_custody,
+         'submission_json', submission_json
+       )::text
+FROM agent.message_mailbox
+WHERE agent_id = $1
+  AND state IN ('accepted', 'attached')
+ORDER BY accepted_ordinal, submission_id
+FOR UPDATE
+SELECT payload_json FROM runtime_restart_checkpoints WHERE agent_id = $1
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = 'executing',
+    stream_owner_message_id = $3,
+    attached_at = now()
+WHERE submission_id = $1
+  AND agent_id = $2
+  AND state = 'accepted'
+  AND stream_owner_message_id IS NULL
+
+SELECT agent_id, state, stream_owner_message_id, submission_json,
+       accepted_ordinal
+FROM agent.message_mailbox
+WHERE submission_id = $1
+FOR UPDATE
+tracked mailbox successor unexpectedly lost custodymessage mailbox successor promotion cannot overtake an older priority peer
+UPDATE agent.message_mailbox
+SET state = CASE WHEN $4 THEN 'completed' ELSE 'aborted' END,
+    checkpoint_custody = coalesce(checkpoint_custody, 'executing'),
+    terminalized_at = now()
+WHERE agent_id = $1
+  AND stream_owner_message_id = $2
+  AND submission_id = ANY($3)
+  AND state = 'attached'
+
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = 'executing',
+    stream_owner_message_id = $2,
+    attached_at = coalesce(attached_at, now())
+WHERE agent_id = $1
+  AND submission_id = ANY($3)
+  AND (
+    (state = 'accepted' AND stream_owner_message_id IS NULL)
+    OR (state = 'attached' AND stream_owner_message_id = $2)
+  )
+
+UPDATE agent.message_mailbox
+SET checkpoint_custody = 'queued'
+WHERE agent_id = $1
+  AND stream_owner_message_id = $2
+  AND submission_id = ANY($3)
+  AND state = 'attached'
+
+UPDATE agent.message_mailbox
+SET state = CASE
+      WHEN state = 'attached' AND $2 THEN 'completed'
+      ELSE 'aborted'
+    END,
+    terminalized_at = now()
+WHERE agent_id = $1
+  AND state IN ('accepted', 'attached')
+
+SELECT accepted_ordinal, submission_json FROM agent.message_mailbox
+WHERE agent_id = $1 AND state = 'accepted'
+  AND accepted_ordinal < $2 AND accepted_ordinal > $3
+ORDER BY accepted_ordinal LIMIT 128
+
+INSERT INTO agent.volatile_context_pins
+  (agent_id, variant_hash, variant_json, prompt_floor_seq, checkpoint_seq, body)
+SELECT $1, $2, $3, $4, $5, NULL
+WHERE EXISTS (SELECT 1 FROM agent.agents WHERE id = $1)
+ON CONFLICT (agent_id, variant_hash) DO UPDATE SET
+  variant_json = excluded.variant_json,
+  prompt_floor_seq = excluded.prompt_floor_seq,
+  checkpoint_seq = excluded.checkpoint_seq,
+  created_at = now()
+
+SELECT COALESCE(a.prompt_floor_seq, -1) AS prompt_floor_seq,
+       COALESCE(c.checkpoint_seq, -1) AS checkpoint_seq
+FROM agent.agents AS a
+LEFT JOIN LATERAL (
+    SELECT checkpoint_seq
+    FROM agent.agent_compactions
+    WHERE agent_id = $1
+      AND has_replacement_history
+    ORDER BY id DESC
+    LIMIT 1
+) AS c ON c.checkpoint_seq > COALESCE(a.prompt_floor_seq, -1)
+WHERE a.id = $1
+checkpoint_seqSELECT pg_advisory_xact_lock(hashtextextended('activity-monitor-root-carrier:' || $1, 0))
+WITH lineage(message_id) AS (
+    SELECT $1::text
+    UNION
+    SELECT user_message_id
+    FROM activity_monitor_carrier_user_messages
+    WHERE carrier_message_id = $1
+      AND (root_agent_id IS NULL OR root_agent_id = $2)
+    UNION
+    SELECT $3::text
+    WHERE $3 IS NOT NULL AND $4
+)
+INSERT INTO activity_monitor_message_threads (
+    message_id, activity_thread_id, created_at, updated_at
+)
+SELECT message_id, $5, $6, $6
+FROM lineage
+ON CONFLICT(message_id) DO UPDATE SET
+    activity_thread_id = excluded.activity_thread_id,
+    updated_at = excluded.updated_at
+WHERE activity_monitor_message_threads.activity_thread_id
+    IS DISTINCT FROM excluded.activity_thread_id
+
+SELECT activity_thread_id
+FROM activity_monitor_message_threads
+WHERE message_id = $1
+LIMIT 1
+
+INSERT INTO activity_monitor_agent_threads (agent_id, activity_thread_id, created_at, updated_at)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT(agent_id) DO UPDATE SET
+    activity_thread_id = excluded.activity_thread_id,
+    updated_at = excluded.updated_at
+WHERE activity_monitor_agent_threads.activity_thread_id IS DISTINCT FROM excluded.activity_thread_id
+activity_monitor_upsert_activity_thread_actionactivity_monitor_list_thread_actionsactivity_monitor_action_by_idactivity_monitor_list_recent_thread_actionsactivity_monitor_carrier_user_messagesactivity_monitor_message_thread_lookupactivity_monitor_read_threadactivity_monitor_create_activity_threadupdate runtime.browser_invocations set suspended_state = 'running'
+                 where invocation_id = $1 and suspended_state = 'waiting_child'select owner_agent_id, root_session_id
+        from runtime.browser_tasks where task_id = $1 and status = 'running' for updateselect epoch, control_revision from runtime.browser_executions
+        where task_id = $1 and planner_agent_id = $2 for updatebrowser seat changedbrowser service authority changedbrowser invocation authority changeddatabase write admission gate closedadmission_timeoutassert_table_existstable_presence.querydefault reference avatar activatedavatar reset: the avatar kept changing while it checked for the defaultkept avatar imagewardrobe avatar worn againbundled look imagebundled look activatedmain avatar imageavatar activated image-first (no clips yet)Tracking and commitmentsGoalsMemory changesConnected sources and devicesbrowser task history source has no durable launch identity; disabling cold rehydrationself_ratings must be an objectcommandphone_numbera delegate carried this card pickNo research directory is available for this mission; put the full detail in your `finish_research` summary.&Your research directory is intact at `À,` with these files from before the restart: À€“

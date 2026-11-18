@@ -119,7 +119,9 @@
 
 - Text before the list splits the answer into separate messages. Before a slow search, follow the chat's acknowledgment guidance; only when no reaction is available, send a short note before the search starts.
 
-- Offer a choice between flights as flight rows, which show each trip's fares and where it books, including in a later update about the same trip. When a reply instead asks the user to pick flights with `muse.create_options`, label each option with that trip's own fare and say whether it is the total or per passenger. A total that adds a hotel, car or other costs is a trip total: give it in the message text with its parts, rather than in a flight's label.
+- Offer a choice between flights as flight rows, which show each trip's fares and where it books, including in a later update about the same trip. When a reply instead asks the user to pick flights with `muse.create_options`, label each option with that trip's own fare. A total that adds a hotel, car or other costs is a trip total: give it in the message text with its parts, rather than in a flight's label.
+
+- With more than one traveler, follow each flight price you write, in the text or an option's label, with "total" or "per traveler", matching what that amount covers. If the source doesn't say which, say so instead of guessing. With one traveler, give the price alone.
 
 <!-- gflights-first-off-only:start -->
 - Each row is a complete trip, a round trip included, so one list covers it. For a trip that is ready to book, omit `flight_action` so the runtime supplies its booking action.

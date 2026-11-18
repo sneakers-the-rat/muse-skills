@@ -49,6 +49,33 @@
 
 - Run `flightaware --help` for the full command list, including aircraft owner and type lookups, route and count queries and advanced search. Run `flightaware COMMAND --help` for filters and pagination, such as `--max-pages` and `--cursor`.
 
+<!-- flight-compensation-only:start -->
+## Check compensation
+
+- `compensation check` decides which passenger-rights laws cover one journey and what each pays: EU261, UK261, Canada's APPR and Israel's Aviation Services Law, plus whether a US refund is owed. Give the booked legs of one direction of one booking in order, each as `IDENT@YYYY-MM-DD` with the local departure date, or as an `fa_flight_id`.
+
+```sh
+/opt/hatch/bin/flightaware compensation check TP201@2026-03-14 --passengers 2
+/opt/hatch/bin/flightaware compensation check UA90@2026-03-14 UA1144@2026-03-14 --flown UA90@2026-03-14 --flown UA1520@2026-03-14
+```
+
+- It reads each leg's record, airports and operating airline, and measures lateness at the final destination's gate against FlightAware's current schedule. Pass `--booked-departure` and `--booked-arrival` with the ticket's times when the schedule changed after booking, `--flown` once per leg actually taken after a cancellation or missed connection, `--actual-arrival` when the traveler reached the destination another way, and `--carrier-size` for a Canadian flight when the airline's APPR size is known.
+
+- When a flight number matches several flights that day, the error lists their `fa_flight_id` values. Run it again with the traveler's.
+
+- Each entry under `laws` says whether the law `covers` the journey and why (`basis`), with a `verdict` (`likely`, `needs_facts`, `not_eligible` or `not_yet`, and for `us_refund` either `refund_if_not_flown` or `none`), a `reason`, the `amount` per passenger and in total, `claim_by` or `deadline`, `exemptions` and `facts_to_confirm`. `likely` repeats the laws whose amount the record supports, and `notes` flags codeshares, conflicting cancellation data and a schedule baseline that may differ from the ticket.
+
+- `coverage_uncertain` marks a law that applies only if the disrupted flight's airline or route qualifies, as on a journey that only connects through the EU. `journey.outcome` is `arrived`, `cancelled`, `elsewhere` (a diversion, or a last flight that ended at another airport), `missed_connection`, `missing_times` (the record lacks an arrival time the verdict needs) or `not_arrived`, and `amount.per_passenger_if_doors_open_in_next_band` gives the other amount when the doors-open time could cross a payout line.
+
+- Each verdict is `expired` instead when the law's claim period has passed. An APPR amount waits on the airline's size when it is unknown: `amount.per_passenger_if_small_airline` gives the small-airline amount.
+
+- `compensation screen --history PATH` reads the `## Flights` lines of a travel history file. For each booking's legs it lists `laws` that reach them from their airports and the airlines in their flight numbers, and `possible_laws` that apply only if an airline they cover operated the flight, since booking mail may show only the selling airline's number. A candidate still needs its dates and a `compensation check`.
+
+- `compensation record --law LAW --status STATUS` logs where a claim stands for reporting, with `--total` and `--currency` for the amount and `--passengers` for the travelers. It records no flight or traveler, and it changes nothing at the airline.
+
+- [Flight compensation](/opt/muse/skills/flight-tracking/references/compensation.md) says when to check, how to tell the traveler and how to file a claim.
+<!-- flight-compensation-only:end -->
+
 ## File a flight intent
 
 - `create-flight-intent IDENT --body-json JSON` changes FlightAware state. Run it only when the user clearly asks for it, and confirm the exact dated flight with the user first whenever the request leaves any doubt. Read its `--help` for the body fields.

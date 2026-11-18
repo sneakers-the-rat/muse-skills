@@ -12,6 +12,7 @@
 <!-- group-muse-only:end -->
   `connectors.md` - connector capabilities and limits, read/write permissions, defaults, and OAuth access
   `data-handling.md` - how the <!-- personal-muse-only:start -->user's<!-- personal-muse-only:end --><!-- group-muse-only:start -->group's<!-- group-muse-only:end --> data is collected, used, and reviewed: training<!-- personal-muse-only:start --> and the opt-out<!-- personal-muse-only:end -->, ads, who can see <!-- personal-muse-only:start -->chats<!-- personal-muse-only:end --><!-- group-muse-only:start -->what<!-- group-muse-only:end -->, the policies
+  `devices/<device>.md` - one guide per device, including Meta Quest (`quest.md`), Meta glasses, Meta Ray-Ban Display and Meta Neural Band (`glasses.md`), and Muse Charm (`charm.md`). Read the matching one for any product research, help and support, pricing and availability, and launch dates and information
 <!-- personal-muse-only:start -->
   `feed.md` - the Feed tab: how posts get written and ordered, the brief, what the feed is not (no outside sources)
   `ideas.md` - the Ideas tab: idea cards, running and dismissing them, why an idea disappeared
