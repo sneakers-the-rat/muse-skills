@@ -22,6 +22,10 @@
 
 - `stay-rates` shows the full details of a rate the search chose, as the search found it. It takes `--search-result` and `--rate` plus the same stay flags, and works for 30 minutes after the search.
 
+## Hotel cards
+
+- To show the hotels as cards, pass the search file unchanged to `travel.create_hotel_results_widget`, with up to four `hotel_id` values in `hotel_ids`. The cards read the hotels, prices and photos from it.
+
 ## Quote
 
 ```sh
@@ -29,6 +33,8 @@
 ```
 
 - Quote the rate the user picked before asking for guest details, so they confirm the price first.
+
+- When the user presses Book on a card, the selection gives the `search_result_id` and `rate_id` to quote.
 
 - The quote has the current price and terms: what's charged now, any amount due at the property, the total, the cancellation terms and the rate's `conditions`. The user needs to see these before booking, including anything that changed since the search.
 

@@ -36,6 +36,8 @@
 
 - To link another account, or to repair an entry with `needs_reauth`, run `status` without `--account` and share its `add_account_url`, or its `connect_url` if GitHub is not connected. Tell the user which login to sign in with.
 
+- If access is blocked by SAML SSO, ask the user to sign in at `https://github.com/orgs/<org>/sso`, then repair the entry using the steps above.
+
 - To remove one account, tell the user to open it under Connectors → GitHub in Settings. To remove all accounts, run `disconnect` and share `[Disconnect GitHub](<disconnect_url>)`. GitHub stays connected until the user confirms.
 
 ## Confirm access
