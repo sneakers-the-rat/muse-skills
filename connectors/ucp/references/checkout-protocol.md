@@ -34,7 +34,7 @@
 
 - For each selected catalog product, keep the `product.id` and the top-level `checkout_token` string from the product-details response that confirmed its variant. Run `/opt/hatch/bin/shopping product-details --product-id <product_id>` only for a product you have no response for. The token is signed and tells the checkout which merchant and variant to use, so a changed copy fails verification.
 
-- A product whose product-details response has no top-level `checkout_token`, or reports a `checkout.rail` other than `shopify_ucp`, cannot be checked out directly, so offer browser checkout from its product URL.
+- A product whose product-details response has no top-level `checkout_token`, or reports a `checkout.rail` other than `shopify_ucp` or `ucp_direct`, cannot be checked out directly, so offer browser checkout from its product URL. A `ucp_direct` (Nike) checkout refused with "Nike checkout is not enabled for this user" isn't available to this user, so offer browser checkout the same way. Any other `not_supported` names its own reason.
 
 ## Keep an optional cart
 
@@ -61,11 +61,12 @@
 - If the selected route is PayPal or a merchant-saved payment method, do not create a UCP checkout. Continue website checkout instead. For a captured cart, continue the original browser task without capturing again.
 
 - Otherwise, use a connected wallet without asking the user:
+  - For a `ucp_direct` (Nike) checkout, create the checkout before offering or starting any wallet setup: a user outside Nike checkout is refused at creation with "Nike checkout is not enabled for this user", and then gets browser checkout without being asked to set up a wallet. Skip Shop Pay: Nike takes card credentials only, so use Link.
   - Call `wallet.list_payment_methods` with `provider: "shop-pay"`. Use Shop Pay when its `status` is `connected`.
   - When Shop Pay is not connected, do not share its `next_action.markdown` yet. Call `wallet.list_payment_methods` with `provider: "stripe-link"`, and use Link when its `status` is `connected`.
   - When neither wallet is connected, ask with `muse.create_options` and wait, offering to set up Shop Pay or Link. Then share only the chosen wallet's `next_action.markdown`, as its connector docs describe.
 
-- Before creating the checkout, set up the chosen wallet and choose its card as that wallet's connector docs describe. If the user declines that setup, or it cannot finish, offer the other wallet with `muse.create_options` and wait.
+- Before creating the checkout (after it, for a `ucp_direct` checkout), set up the chosen wallet and choose its card as that wallet's connector docs describe. If the user declines that setup, or it cannot finish, offer the other wallet with `muse.create_options` and wait.
 
 - Offer only Shop Pay and Link. Both pay without Muse seeing the card number. When the user declines both, tell them Muse pays only through Shop Pay or Link and leave the purchase unfinished.
 

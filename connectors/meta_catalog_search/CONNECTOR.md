@@ -219,7 +219,7 @@ variant_results=$(mktemp "${TMPDIR:-/tmp}/shopping-variant.XXXXXX")
 
 ## Check the purchase route
 
-- Route on product details, not on checkout flags. A product uses UCP checkout when its product-details response has a `checkout_token` and a `checkout.rail` of `shopify_ucp`, whatever its flags say. Both fields sit at the top level of the response, beside `product`, not inside it. A `checkout_token` on any other rail does not use UCP checkout.
+- Route on product details, not on checkout flags. A product uses UCP checkout when its product-details response has a `checkout_token` and a `checkout.rail` of `shopify_ucp` or `ucp_direct` (Nike), whatever its flags say. Both fields sit at the top level of the response, beside `product`, not inside it. A `checkout_token` on any other rail does not use UCP checkout.
 
 - Read the [UCP](/opt/hatch/connectors/ucp/CONNECTOR.md) docs before using that route. Other products use the Shopping skill's browser checkout.
 

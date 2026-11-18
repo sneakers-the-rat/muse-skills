@@ -38,13 +38,15 @@ and `cancel_reservation` ask for approval in Muse every time. A structured
 
 - Pass requested driver or item notes through the fields in the current schema.
 
-- Before placing the order, tell the user that Grab may send a verification notification. Ask them to open the Grab app and approve it if prompted.
+- Before calling `complete_checkout`, tell the user that every GrabMart order requires approval in the Grab app. Explain that confirming in Muse sends the request; they must then open Grab and approve it to complete the order.
 
 - Place the order with `complete_checkout` after the user explicitly agrees to the latest summary, passing the session total as `confirmedTotal`. The approval card shows only the session ID and total, so identify the store, items, total and delivery address before the call.
 
-- The order is placed only when the session is `COMPLETED` and its order is not `AWAITING_USER_ACTION`; that status waits for the user to finish in the Grab app, so give them `order.links.app`.
+- The order is placed only when the session is `COMPLETED` and its order is not `AWAITING_USER_ACTION`.
 
-- If `complete_checkout` times out or the result is unclear, remind the user to approve any pending verification in the Grab app. Wait about 20 seconds, then check the same session with `get_checkout` and any returned order with `get_order`. Recheck for up to 2 minutes. If the outcome remains unclear, say so and ask the user to check the Grab app. Do not retry placement automatically. A timeout alone does not confirm failure or that no charge occurred.
+- For pending or unclear placement, ask the user to check Grab and approve any pending request. Share a returned app link if available. Automatically recheck the same session with `get_checkout` and any returned order with `get_order` about every 20 seconds for up to 5 minutes. `READY` without an order or issue remains unresolved; keep checking within that cap. Stop on confirmed placement or a reported failure, then report the latest status or issue.
+
+- Do not retry `complete_checkout` automatically. A timeout alone does not confirm failure or that no charge occurred.
 
 - Use `get_order` for status. To find an order from an earlier chat, call `list_my_orders`. Cancel with `cancel_order` only while `canCancel` is true and the user has confirmed. The card shows only the order ID, so right before the call name the order and its ID.
 

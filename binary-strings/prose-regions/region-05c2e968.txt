@@ -1,0 +1,82 @@
+chat_worker_mailbox.recentchat_worker_mailbox.unreadchat_worker_mailbox.sent_pagechat_worker_mailbox.mark_readchat_worker_mailbox.acceptmailbox message exceeds one MiBchat_worker_mailbox.shared_historysubagent_final_responsemark_subagent_results_seensubagent_active_count_all_rootsparent_message_id_for_child_agentmark_subagent_results_undeliverablesubagent_live_exists_for_agent_typesubagent_agent_ids_for_parent_messagestale completed-unseen subagent prune limitprune_stale_completed_unseen_subagentschild_statusparent_statusprune_reason
+SELECT COUNT(*)
+FROM agents AS a
+WHERE a.parent_id = $1
+  AND a.kind = 'subagent'
+  AND a.status NOT IN ('completed', 'errored', 'shutdown', 'interrupted', 'not_found')
+
+SELECT COUNT(*)
+FROM agents AS a
+JOIN agent_ancestors AS ca
+  ON ca.descendant_id = a.id
+WHERE ca.ancestor_id = $1
+  AND a.id <> $1
+  AND a.kind = 'subagent'
+  AND a.status NOT IN ('completed', 'errored', 'shutdown', 'interrupted', 'not_found')
+subagent_active_count_for_parent_agent
+SELECT
+  COALESCE(SUM(CASE WHEN sp.completed_at IS NULL THEN 1 ELSE 0 END), 0) AS global_active_count,
+  COALESCE(SUM(CASE WHEN sp.parent_message_id = $2 AND sp.completed_at IS NULL THEN 1 ELSE 0 END), 0) AS task_active_count,
+  COALESCE(SUM(CASE WHEN sp.parent_message_id = $2 AND sp.completed_at IS NOT NULL THEN 1 ELSE 0 END), 0) AS task_recent_count,
+  COALESCE(SUM(CASE WHEN sp.parent_message_id = $2 AND sp.completed_at IS NOT NULL AND sp.seen_at IS NULL
+    AND (sp.handoff_state_json -> 'undeliverable_result' ->> 'completed_at') IS DISTINCT FROM sp.completed_at::text
+    THEN 1 ELSE 0 END), 0) AS task_unseen_count
+FROM subagent_spawns AS sp
+WHERE sp.parent_agent_id = $1
+
+SELECT
+  COALESCE(SUM(CASE WHEN sp.completed_at IS NULL THEN 1 ELSE 0 END), 0) AS global_active_count,
+  COALESCE(SUM(CASE WHEN sp.parent_message_id = $2 AND sp.completed_at IS NULL THEN 1 ELSE 0 END), 0) AS task_active_count,
+  COALESCE(SUM(CASE WHEN sp.parent_message_id = $2 AND sp.completed_at IS NOT NULL THEN 1 ELSE 0 END), 0) AS task_recent_count,
+  COALESCE(SUM(CASE WHEN sp.parent_message_id = $2 AND sp.completed_at IS NOT NULL AND sp.seen_at IS NULL
+    AND (sp.handoff_state_json -> 'undeliverable_result' ->> 'completed_at') IS DISTINCT FROM sp.completed_at::text
+    THEN 1 ELSE 0 END), 0) AS task_unseen_count
+FROM subagent_spawns AS sp
+JOIN agent_ancestors AS ca
+  ON ca.descendant_id = sp.parent_agent_id
+WHERE ca.ancestor_id = $1
+subagent_task_scope_counts_for_parent_agentglobal_active_counttask_active_counttask_recent_counttask_unseen_countunseen completed subagent limitunseen_completed_subagent_child_idsstale_completed_unseen_subagent_prune_candidates_existrequest_turn_range  AND (metadata.status IS NULL OR metadata.status != 'archived')
+  AND metadata.status = 'archived'
+startup checkpoint reduction startedinstalled reduced startup checkpoint; omitted history remains in storagestartup checkpoint reduction failedrecover_oversized_prompt_seedstartup prompt seed exceeds the recovery read budgetoversized_startup_history_recoveryinsert into agent.mail_tasks
+            (task_id, conversation_id, generation, source_id, authorization_json,
+             authorization_updates_json, revision, status, checkpoint_json, created_at_ms, updated_at_ms)
+            values ($1, $2, $3, $4, $5, '[]', 0, 'active', $6, $7, $7)
+            on conflict (conversation_id, source_id) do nothingselect task_id, generation, authorization_json from agent.mail_tasks
+            where conversation_id = $1 and source_id = $2authorization_jsontask_idmail task source was reused with different authorityforbid_runtime_restart_checkpoint_replayappend_runtime_restart_checkpoint_pending_submissionroot_follow_up_terminal_settlement_actionselect case when pg_try_advisory_xact_lock_shared(hashtextextended($1, 0))
+         then pg_try_advisory_xact_lock_shared(hashtextextended($2, 0)) else false endselect pg_try_advisory_xact_lock_shared(hashtextextended($1, 0))chat reset is in progresschat creation overlaps retirementselect exists(select 1 from chat_private.retired_chat_ids where chat_id = $1)select pg_advisory_xact_lock(hashtextextended($1, 0))select pg_advisory_xact_lock_shared(hashtextextended($1, 0))insert into chat_private.retired_chat_ids(chat_id) values ($1)
+         on conflict(chat_id) do nothingselect exists(select 1 from chat.chats where chat_id = $1)chat owner is absent or being retiredselect worker_kind, source_ref, status, worker_agent_id, worker_generation,
+                worker_started_at, execute_message_id, resolve_message_id,
+                handoff_message_id, last_error_stage, updated_at
+         from runtime.execute_resolve_runs where run_id = $1worker_kindsource_refinsert into runtime.mail_processing_activity (
+           run_id, environment_id, mailbox_id, message_id, run_status,
+           started_at, finished_at, updated_at, agent_id, worker_generation,
+           execute_message_id, resolve_message_id, handoff_message_id, failure_stage,
+           origin, actions_json
+         ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
+                   'owner_email', '[]'::jsonb)
+         on conflict (run_id) do update set
+           run_status = excluded.run_status,
+           finished_at = coalesce(mail_processing_activity.finished_at, excluded.finished_at),
+           updated_at = greatest(mail_processing_activity.updated_at, excluded.updated_at),
+           handoff_message_id = excluded.handoff_message_id,
+           failure_stage = excluded.failure_stage
+         where mail_processing_activity.environment_id = excluded.environment_id
+           and mail_processing_activity.mailbox_id = excluded.mailbox_id
+           and mail_processing_activity.message_id = excluded.message_id
+           and mail_processing_activity.agent_id is not distinct from excluded.agent_id
+           and mail_processing_activity.worker_generation = excluded.worker_generationworker_started_atworker_agent_idexecute_message_idresolve_message_idhandoff_message_idmail processing activity owner does not match runselect chat_id from chat.chats where chat_id > $1 order by chat_id limit 128delete from chat.chats where chat_id = any($1)select conversation_id from chat_private.peer_conversations
+         where conversation_id in (
+           select conversation_id from chat_private.peer_conversations where chat_id = any($1)
+           union select conversation_id from chat_private.peer_conversations where requester_chat_id = any($1))
+         order by conversation_id for updateupdate chat_private.peer_conversations
+         set requester_chat_id = null, requester_unavailable = true
+         where requester_chat_id = any($1)chat_private.publication_turnschat_private.publicationsupdate peer.outbox set state = case
+           when state = 'pending' and attempts = 0 then 'superseded' else 'uncertain' end,
+           last_error_class = 'chat_owner_deleted'
+         where state in ('pending', 'dispatching') and conversation_id in (
+           select conversation_id from chat_private.peer_conversations where chat_id = any($1)
+           union all select conv_id from chat_private.peer_remote_conversations where chat_id = any($1))update chat_private.deliveries set state = 'failed',
+           last_error = 'chat owner deleted before dispatch',
+           terminal_at_utc = extract(epoch from clock_timestamp())::bigint,
+           updated_at_utc = extract(epoch from clock_timestamp())::bigint
+         where chat_id = any($1) and state = 'pending'chat_private.peer_conversationschat_private.peer_remote_conversationschat_private.reactionschat_private.message_deletionschat_private.transport_projectionschat_private.bindingschat_private.binding_authorizationschat.message_bindingsstate in ('pending', 'delivering')self_improvement.conversation_follow_up_attemptsstate = 'pending'

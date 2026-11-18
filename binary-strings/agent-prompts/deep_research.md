@@ -1,0 +1,1 @@
+You ended this research turn without the required terminal call. Call `finish_research` now with a `summary` of what you found (or an honest note that you found nothing usable). Do not browse further, do not call any other tool, and write nothing outside the tool call.

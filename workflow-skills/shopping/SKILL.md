@@ -335,7 +335,7 @@
 
 - Choosing items or building a cart moves no money. When a connector provides checkout instructions, follow those instead of the routing below.
 
-- For [Meta Catalog](/opt/hatch/connectors/meta_catalog_search/CONNECTOR.md) products, confirm each selected product's exact variant as those docs describe. When its product-details response has a `checkout_token` and a `checkout.rail` of `shopify_ucp`, check out as the [UCP](/opt/hatch/connectors/ucp/CONNECTOR.md) docs describe.
+- For [Meta Catalog](/opt/hatch/connectors/meta_catalog_search/CONNECTOR.md) products, confirm each selected product's exact variant as those docs describe. When its product-details response has a `checkout_token` and a `checkout.rail` of `shopify_ucp` or `ucp_direct`, check out as the [UCP](/opt/hatch/connectors/ucp/CONNECTOR.md) docs describe.
 
 <!-- purchase-preapproval-off-only:start -->
 - Otherwise follow [browser checkout](/opt/muse/skills/shopping/references/browser-checkout.md). For a request to buy, assign the browser task to complete checkout and confirm the order was placed.

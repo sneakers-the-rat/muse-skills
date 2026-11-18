@@ -1,0 +1,103 @@
+healthd client unavailablejob_iduseopen chat delivery storage while awaiting settlementreload chat delivery while awaiting settlementSELECT activity_thread_id, action_index FROM activity_monitor_thread_actions WHERE action_id = $1 LIMIT 1
+SELECT status, finish_status
+FROM activity_monitor_threads
+WHERE activity_thread_id = $1
+LIMIT 1
+FOR UPDATE
+
+SELECT a.activity_thread_id
+FROM activity_monitor_agent_threads a
+JOIN activity_monitor_threads g ON g.activity_thread_id = a.activity_thread_id
+WHERE a.agent_id = $1
+  AND g.status = $2
+LIMIT 1
+FOR UPDATE OF g
+
+UPDATE activity_monitor_threads
+SET status = $2,
+    finished_at = NULL,
+    finish_message = NULL,
+    finish_status = NULL,
+    finish_status_reason = NULL
+WHERE activity_thread_id = $1
+
+SELECT COALESCE(MAX(action_index), 0) + 1
+FROM activity_monitor_thread_actions
+WHERE activity_thread_id = $1
+activity_thread_id is required when no current activity_thread is set
+INSERT INTO activity_monitor_thread_actions (
+    action_id, activity_thread_id, action_index, agent_id, agent_depth, icon, title, subtitle, report, status, created_at
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+ON CONFLICT(action_id) DO UPDATE SET
+    activity_thread_id = excluded.activity_thread_id,
+    action_index = excluded.action_index,
+    agent_id = excluded.agent_id,
+    agent_depth = COALESCE(excluded.agent_depth, activity_monitor_thread_actions.agent_depth),
+    icon = excluded.icon,
+    title = excluded.title,
+    subtitle = excluded.subtitle,
+    report = excluded.report,
+    status = excluded.status,
+    created_at = LEAST(activity_monitor_thread_actions.created_at, excluded.created_at)
+RETURNING action_index, action_seq, action_id, activity_thread_id, agent_id, agent_depth, icon, title, subtitle, report, status, created_at, nextval(pg_get_serial_sequence('activity.activity_monitor_thread_actions', 'action_seq'))::bigint AS write_ordinal
+action_seqwrite_ordinal
+SELECT action_index, action_seq, action_id, activity_thread_id, agent_id, agent_depth, icon, title, subtitle, report, status, created_at
+FROM activity_monitor_thread_actions
+WHERE activity_thread_id = $1
+ORDER BY action_index ASC, action_seq ASC
+
+SELECT action_index, action_id, activity_thread_id, agent_id, agent_depth, icon, title, subtitle, report, status, created_at
+FROM activity_monitor_thread_actions
+WHERE action_id = $1
+LIMIT 1
+
+SELECT action_index, action_id, activity_thread_id, agent_id, agent_depth, icon, title, subtitle, report, status, created_at
+FROM (
+    SELECT
+        action_index,
+        action_id,
+        activity_thread_id,
+        agent_id,
+        agent_depth,
+        icon,
+        title,
+        subtitle,
+        report,
+        status,
+        created_at,
+        action_seq AS insertion_order
+    FROM activity_monitor_thread_actions
+    WHERE activity_thread_id = $1
+    ORDER BY action_index DESC, insertion_order DESC
+    LIMIT $2
+)
+ORDER BY action_index ASC, insertion_order ASC
+
+SELECT user_message_id
+FROM activity_monitor_carrier_user_messages
+WHERE carrier_message_id = $1
+  AND ($2::text IS NULL OR root_agent_id IS NULL OR root_agent_id = $2)
+ORDER BY link_seq ASC
+
+SELECT b.activity_thread_id
+FROM activity_monitor_message_threads b
+WHERE b.message_id = $1
+
+SELECT b.activity_thread_id
+FROM activity_monitor_message_threads b
+JOIN activity_monitor_threads g ON g.activity_thread_id = b.activity_thread_id
+WHERE b.message_id = $1
+  AND g.status = $2
+
+SELECT activity_thread_id, name, subtitle, icon, emoji, status, created_at, finished_at, finish_message,
+       finish_status, finish_status_reason, activity_thread_kind, space_slug, status_title,
+       expected_finish_description
+FROM activity_monitor_threads
+WHERE activity_thread_id = $1
+
+SELECT status, finish_status
+FROM activity_monitor_threads
+WHERE activity_thread_id = $1
+LIMIT 1
+path not foundresolve pathpath escapes mount rootpath already existsalready_existscreate parent directoryinvalid_jsongroup account missingbound group receiptgroup receipt bindinglistedexiststimed out while writing egress approval mirror requesttimed out while reading egress approval mirror responseread chat connection settingsenabledinference-proxy returned an invalid model selection routedelivery attempt count is too largeinvalid Sentinel base URLvoice approval decision client is disabledpeerd mirror status read timed out/mirror/statusfailed to serialize localized activity.updated payload; falling back to canonical framepresentation-suppressed:explicit chat event seqIdeas composer owner run is missingcompleted startup quota rejection has no eventnegative startup quota rejection event sequencecompleted startup quota rejection event is absent`DateTime + TimeDelta` overflowedterminalization_deferredwallet_provider_unavailableStripe LinkPayPalpresentation owner unavailablepresentation origin unavailablepresentation input unavailableruntime turn presentation policy unavailable at deliveryverify activity feed tableavatar-state: authoritative DB row missingnegative cancellation event sequencecontext item sequence space is exhaustedcommitted cancellation has no context sequencestartup quota rejection payload is not an objectstartup quota rejection metadata is not an object{}the avatar state registry is unavailablechannel identity media unavailableidea activation origin has no providerunregistered conversation binding providerworkspace/user/media_library/browser_screenshots/Let's do it!User-visible message submitted when the user starts executing an Idea cardread file artifact stateread artifact placementread saved artifact stateread share linkread saved artifactsaved_space<none>stream owner has no chatEmojiTaglinecomplimentary_subscriptionepoch-scoped widget presentation could not load its root sessionwidget presentation belongs to a stale conversation epochruntimemain_chatfailed to persist delta.presentation eventpersist_widget shopping_results payload requires productstimeoutshopping presentation requires meaningful fallback textread artifact before content reviewhash current artifact content for reviewhitread artifact after waiting for content reviewreview artifact contentkept_refusalskipped_transientskipped_provenancepersist guarded artifact content reviewpersist artifact content reviewcurrent build changed before content review was saveddiscarded stale content review warm-up verdictwrittenpayment_option_unavailableThis checkout lists no card saved at the merchantMerchant Cardrecord idea dedupresolve embedding near-dup candidateresolve fingerprint bandview ideaview canonical idearesolve canonical on not-foundlist ideas by idsresolve idea source before mintingrefresh superseded idea contentattach idea sourceupsert idea sourceview idea by sourceshopping_results_v2node_card.notification_opt_ininvalid reaction epochinvalid reaction follow-upinvalid reaction binding epochpublication has no chat ownerinvalid publication tracepublication owner does not match its transcript/metadata/message_kindpublication has no execution ownerinvalid publication authorityinvalid message deletion epoch/internal/home-quotaedge admission failedviewer token response was unreadableviewer token mint failed/hatch/share/v2/preview/shared artifact not foundsucceededcheckpoint_parkedcron worker parked at a retained checkpointdelivery_retainedcron worker handed delivery to the exact-run scheduler retry ownerrecovery_evidence_unavailablecron worker deferred because recovery evidence is unavailablephase_storage_unavailablecron worker deferred because phase storage is unavailableread shared Spaceread shared Space statepeer_spaceread connection collaboratorsmuse:decode artifact sharingread artifact sharingread connection contacts
+space_build_completedresolve inbound side chatactivate inbound chatletterShared idea lookup returned an invalid responseshared_idea_upstream_invalidshared idea WWW response was invalidshared idea payload was invalidinvalid payloadstage shared idea failedincomplete responsedeniedopen invitationavatar image is outside the home directorypeer DM conversation has no peer musepeer circle conversation has no circle idpngjpgworkspace/space_onlychat.sendchat.read_historyartifact.useartifact.build_threadcron.createcron.listtool.executefile.sharefile.readmemory.querybrowser.run_isolatedspace.sharespace.editpairing is still recoveringresource_selector

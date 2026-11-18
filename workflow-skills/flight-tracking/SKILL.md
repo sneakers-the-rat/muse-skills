@@ -26,6 +26,8 @@
 
 - Record the booking and source fingerprints, the traveler relationship and count, the as-booked itinerary, the paid total and currency, the fare terms, the current facts, the last comparison and any pending fare candidate, the last notified facts and fingerprints, failure counts and the ids of the jobs that exist.
 
+- Keep a top-level `trip` object current on every write: `first_departure_at` and `last_arrival_at` are RFC 3339 times with offsets from the current itinerary across every leg, and `cancelled` is `true` once a cancellation with no replacement is confirmed. Ideas reads this object to find trips that still need a stay or car booked, so it describes the whole trip rather than the next leg.
+
 - Never store full messages, raw provider output, names, ticket numbers, identity documents, contact or payment details, loyalty numbers, Known Traveler Numbers or CLEAR identifiers.
 
 ## Schedule monitoring
@@ -58,7 +60,7 @@
 
 - Apply a validated amendment or rebooking to the same owner. Update the current facts, keep the as-booked baseline, clear a pending fare candidate the change invalidates and add one activity. Compare provider timestamps so an older confirmation never undoes a newer amendment.
 
-- When a cancellation is confirmed and no replacement exists, stop all of the trip's monitoring jobs.
+- When a cancellation is confirmed and no replacement exists, set `trip.cancelled` to `true` and stop all of the trip's monitoring jobs.
 
 - After the final leg lands, complete a Tracking owner with `tracking.set_status`, which retires its goal-owned jobs. For a user goal, remove the trip's monitoring jobs with `cron.remove` and leave the goal itself to the user.
 
