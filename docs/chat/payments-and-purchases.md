@@ -22,8 +22,7 @@ unsupported-method guidance below.
 
 After setup, list the methods again. Continue the same browser task, answering
 its waiting question with `answer_to` when present. Include the details supplied
-while waiting. Pass `wallet` only for an explicit provider or method preference,
-as below. For direct checkout, resume through its connector's instructions.
+while waiting. For direct checkout, resume through its connector's instructions.
 
 ## Assign the purchase
 
@@ -79,27 +78,12 @@ request, such as a new commitment, and send their answer the same way.
 No user can answer in scheduled or proactive work or in a task a web artifact
 started. There, tell the browser to leave the purchase unfinished when it
 needs a decision outside the request, and name the open choice in your final
-message. The payment choice carries over unless you change it with `wallet`
-as below. Payments require the user's checkout approval unless an existing
+message. Payments require the user's checkout approval unless an existing
 approval or provider policy covers the purchase.
 
-Naming a wallet in `task` does not select it. For a purchase without preapproval,
-set `wallet` in `browser.browse` for an explicit wallet provider preference from the user, including a preference
-in memory or their shopping profile, only when that provider is available.
-When they name only a provider, pass just
-`provider`, including when answering a browser question. The runtime selects a payment method and handles any required payment approval. Do not ask for a card choice in chat before
-proceeding. Payment approval lets the user choose among the selected wallet's
-payment methods. Without preapproval, change providers through `browser.browse.wallet`; checkout
-must prepare payment approval for that provider.
+Use or save an ongoing wallet preference only when the user explicitly states one.
+Do not offer to set or change a default wallet.
 
-For a purchase without preapproval, when the user chose a particular payment method, include its exact `payment_method_id`
-from `wallet.list_payment_methods` in `wallet` and name its returned label in
-`task`. Do not reproduce the payment sheet as another chat approval.
-When the user prefers a method saved by the merchant, include that preference
-in the task. For a new task, leave `wallet` unset; to change an existing payment
-choice, use `wallet: null`. Without an explicit wallet preference, omit `wallet`
-and leave payment out of `task`. Checkout pays with a method saved by the
-merchant before a connected wallet, and handles payment approval.
 When the user requests a method Wallet cannot supply, such as Apple Pay
 or Google Pay, offer Wallet first: the usable connected wallet, or one secure
 setup action. Assign takeover only after the user declines Wallet or the browser
@@ -111,24 +95,23 @@ The result's `card_picked` names the payment method approved in that interface,
 including when funding failed. Use that identity when explaining a failure;
 it may differ from the method you proposed. It does not prove a charge or an order.
 
-Updates and answers keep the current payment choice when
-you omit `wallet`, including a method picked in payment approval. When changing
-how to pay, use a wallet object to change the provider or payment-method choice, or `wallet: null`
-to switch to a merchant-saved method or browser takeover. Renew a preapproval
-before changing its bound wallet preference; an unbound approval needs no renewal.
-
 A merchant logo does not prove that a route is supported. Preserve an exact
 user choice; do not silently replace it with a default. When the workflow
 reports missing information, provide already established values together or
 present its remaining secure action.
 
-Send a Wallet setup offer on its own, except for a saved-card CVV choice on a
+When Wallet setup blocks payment, send its offer on its own, except for a saved-card CVV choice on a
 purchase without preapproval. Suggest
 another way to pay for that CVV choice or after the user declines setup, the wallet
 connection fails, the wallet refuses payment or is over its spend limit, the
 wallet integration does not support this checkout, the merchant declines the
-card, or the checkout takes no card entry. When wallet payment has definitively failed or cannot pay this checkout,
-ask the user about another wallet or offer browser takeover. The checkout uses
+card, or the checkout takes no card entry. When wallet payment has definitively
+failed or cannot pay this checkout and no order was placed, offer another
+connected wallet that can pay or browser takeover. If none can pay, follow
+Wallet's setup guidance for an eligible alternative, or offer takeover when no
+setup is available. After the user chooses a wallet, continue the same task
+with its provider in `wallet`. When the failed payment replaced a saved
+card that needed a CVV, offer takeover to enter that CVV. The checkout uses
 `payment_route: takeover` to prepare checkout as far as the assigned details
 allow. It then returns the prepared cart and remaining steps through its final
 report. Offer the user the live browser to enter payment and complete the
@@ -186,8 +169,8 @@ already gave direction after declining. Answer the pending question with
 stop. Their reply does not replace payment approval. If the browser instead
 reports that the checkout ended with a decline, tell the user that attempt
 did not place an order. When the merchant declines the card, tell the user
-and suggest taking over the browser to pay another way, as above. Do not
-retry or switch methods on your own. When an earlier order may have gone
+and offer another way to pay, as above. Do not retry or switch methods
+without the user's answer. When an earlier order may have gone
 through, find out before it is submitted again.
 Payment cancellation, release of a hold, order cancellation and refund are
 distinct operations.

@@ -64,7 +64,12 @@
   - For a `ucp_direct` (Nike) checkout, create the checkout before offering or starting any wallet setup: a user outside Nike checkout is refused at creation with "Nike checkout is not enabled for this user", and then gets browser checkout without being asked to set up a wallet. Skip Shop Pay: Nike takes card credentials only, so use Link.
   - Call `wallet.list_payment_methods` with `provider: "shop-pay"`. Use Shop Pay when its `status` is `connected`.
   - When Shop Pay is not connected, do not share its `next_action.markdown` yet. Call `wallet.list_payment_methods` with `provider: "stripe-link"`, and use Link when its `status` is `connected`.
+<!-- shop-pay-wallet-setup-off-only:start -->
   - When neither wallet is connected, ask with `muse.create_options` and wait, offering to set up Shop Pay or Link. Then share only the chosen wallet's `next_action.markdown`, as its connector docs describe.
+<!-- shop-pay-wallet-setup-off-only:end -->
+<!-- shop-pay-wallet-setup-on-only:start -->
+  - When neither wallet is connected, offer to set up Shop Pay: share its `next_action.markdown`, as its connector docs describe.
+<!-- shop-pay-wallet-setup-on-only:end -->
 
 - Before creating the checkout (after it, for a `ucp_direct` checkout), set up the chosen wallet and choose its card as that wallet's connector docs describe. If the user declines that setup, or it cannot finish, offer the other wallet with `muse.create_options` and wait.
 
@@ -180,14 +185,9 @@
 
 ### Continue in the browser
 
-- Choose the task this way: `next_action.browser_task_id` when the output has one, otherwise the original `shopify_cart.browser_task_id` for a captured checkout, otherwise `task_id: "new"`. Open the exact checkout or escalation URL from the output. Name the wallet by provider ID and the card by its masked label in the brief, never the opaque payment-method ID. The browser task does not call wallet tools or discuss other payment routes, and the trusted checkout tool revalidates the exact selected card against a fresh wallet read before it creates the approval.
+- Continue `next_action.browser_task_id` when present, otherwise the original `shopify_cart.browser_task_id` for a captured checkout, otherwise start a new browser task. Open the exact checkout or escalation URL from the output.
 
-```json
-{
-  "task_id": "<next_action.browser_task_id, the captured cart's browser_task_id, or new>",
-  "task": "<request in the user's words>. Open <exact Shopify checkout URL> for <selected products>. Use provider <shop-pay or stripe-link> with saved card <masked label>. Use these choices for every item: <variants and quantities>. Ask only for missing required purchase choices. Complete the purchase after the payment decision. Shipping preference: <deadline, budget or speed, or none>."
-}
-```
+- Leave `wallet` and payment instructions unset unless the user explicitly chose a wallet or the purchase approval specifies one.
 
 - Continue the purchase as `/opt/muse/skills/shopping/references/browser-checkout.md` describes.
 
@@ -304,6 +304,8 @@
 ```
 
 - Summarize the order status, products, merchant, final amount, delivery estimate and the returned confirmation link, without raw JSON, internal IDs, buyer contact details or the shipping address.
+
+- A confirming result may include `optional_wallet_offer.brief`; carry it with the purchase result.
 
 - After a successful native completion, follow **Check order status** below to read the placed order and include its merchant order link in the completion summary. If that read fails, the successful completion still confirms the purchase: summarize its available fields, keep any returned confirmation link, and explain that current order details could not be read. Never repeat checkout to recover order details or a missing link.
 

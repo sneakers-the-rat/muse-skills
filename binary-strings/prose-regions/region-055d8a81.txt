@@ -1,0 +1,1071 @@
+AI Generateddirectories must not be emptyfs.media native find failed, falling back to recursive walkspacesnode_modulescodex-clitmpbuildtargetenv__pycache__site-packagesworkspace/self_improvementworkspace/profile-imagesworkspace/user/notesworkspace/user/filesworkspace/user/media_library/browser_screenshotsworkspace/user/media_library/web_imagesfind for media scan returned non-zero status with partial outputmissing source or destinationpath contains protected goal internal filesrenames are not allowed inside the media sync directoryoverwrite requires a regular file sourcedestination already existsoverwrite requires a regular file destinationstat rename destinationrenamefind for recents scan returned non-zero status with partial outputUSER.mdIDENTITY.mdSOUL.mdMEMORY.mdHEARTBEAT.mdstat artifact meta.jsonread artifact meta.jsonread artifact search rootindex.htmlstat artifact index.htmlread artifact dir for output filepath is not a filewrite temporary filesync temporary filefailed to stat paired delete pathfailed to delete paired pathartifact.deletion_startedartifact.deletion_failedremove artifact directoryartifact.deletion_succeededartifact.deletion_skippedobfuscated_idworkspace/user/media_library/video.thumbnailsattempting to destroy shared artifactJARVIS_STEFI_PROXY_SOCKJARVIS_STEFI_PROXY_SOCK not set, skipping shared artifact destroyfailed to build stefi client for artifact destroydestroyed shared artifact via stefistefi artifact destroy faileddirectory not emptyremove file.tombstonesmetadata.jsonno deployed artifact found in meta.json (missing obfuscated_id)artifact.destroy_urldestroy/hatch/share_artifactfollow_up_queue_deliverycredits restored but the follow-up delivery worker could not be kickedspace_preview_repairspace preview repair: handler not registeredspace preview repair: handler registry unavailablespace_preview_missingspace preview repair: runtime work store unavailablequeued Space preview repairspace preview repair: seeding failedspace preview repair: catalog read failed on viewIdea catalog sharing context read failedIdea share variant projection read failedIdea share revision projection read failedIdea direct sharing read failedIdea publication hold read failedpeer_profile_photo_refreshcould not seed owner photo refreshcould not restore owner photo checkpointresolve DM conversation for grant noticeresolve DM conversation for relationship confirmationcontrol.relationship_confirmationcould not settle a Space invitation's activitywaitinginvitation_receivedspace_invitation_receivedload peer relationship for SAS confirmationload peer SAS confirmation replayreconcile peer SAS confirmation replaypairingacquire exact-link SAS confirmation leasepeerd SAS confirmation lease is shorter than the required commit bound/v1/peer/sign-relationship-confirmationsign peer relationship confirmation via authddecode signed relationship confirmationparse signed relationship confirmationverify authd relationship confirmationauthd relationship confirmation notice id does not match signed tupleauthd relationship confirmation does not match requested tuplefailed to release SAS confirmation leasefailed to reconcile replayed SAS confirmation leasestandalone/mirror/streamapplication/x-ndjsonadmission snapshot upload stalledclient rendering snapshot read failed; keeping lifts inline this turn
+INSERT INTO requests (
+  request_id, root_request_id, parent_request_id, request_origin,
+  transcript_surface, root_work_class
+)
+VALUES ($1, $2, $3, $4, $5::runtime.transcript_surface, $6)
+ON CONFLICT (request_id) DO UPDATE SET
+  root_request_id = COALESCE(requests.root_request_id, excluded.root_request_id),
+  parent_request_id = COALESCE(requests.parent_request_id, excluded.parent_request_id),
+  request_origin = CASE
+    WHEN requests.request_origin = 'internal.runtime_replay' THEN excluded.request_origin
+    ELSE requests.request_origin
+  END,
+  transcript_surface = excluded.transcript_surface,
+  root_work_class = CASE
+    WHEN requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing'
+      THEN excluded.root_work_class
+    ELSE requests.root_work_class
+  END
+WHERE (requests.root_request_id IS NULL AND excluded.root_request_id IS NOT NULL)
+   OR (requests.parent_request_id IS NULL AND excluded.parent_request_id IS NOT NULL)
+   OR (requests.request_origin = 'internal.runtime_replay'
+       AND excluded.request_origin <> 'internal.runtime_replay')
+   OR requests.transcript_surface IS DISTINCT FROM excluded.transcript_surface
+   OR (requests.root_work_class = 'internal' AND excluded.root_work_class = 'user_facing')
+call_idoutput
+INSERT INTO tool_outputs (event_seq, call_id, status, output_text, error_text, created_at)
+VALUES ($1, $2, $3, $4, $5, to_timestamp($6::double precision / 1000.0))
+ON CONFLICT (event_seq) DO UPDATE SET
+  call_id = excluded.call_id,
+  status = excluded.status,
+  output_text = excluded.output_text,
+  error_text = excluded.error_text
+arguments
+INSERT INTO tool_calls (event_seq, call_id, tool_name, status, arguments_json, created_at)
+VALUES ($1, $2, $3, 'started', $4, to_timestamp($5::double precision / 1000.0))
+ON CONFLICT (call_id) DO UPDATE SET
+  event_seq = excluded.event_seq,
+  tool_name = excluded.tool_name,
+  status = excluded.status,
+  arguments_json = excluded.arguments_json
+
+INSERT INTO chat_event_derived_write_backlog (event_seq, resources_json)
+VALUES ($1, $2)
+ON CONFLICT (event_seq) DO UPDATE SET
+  resources_json = excluded.resources_json,
+  updated_at = now()
+
+UPDATE events
+SET display_text_ready = $2,
+    reply_target_message_id = $3,
+    payload_json = $4
+WHERE event_seq = $1
+UPDATE chat_private.peer_conversations SET requester_chat_id = NULL
+         WHERE conversation_id = $1 AND requester_revision = $2
+           AND requester_chat_id = $3 AND NOT requester_unavailable
+           AND chat_id = $5
+           AND EXISTS (SELECT 1 FROM agent.agents
+                       WHERE id = $4 AND session_id = $3)peer handoff disagrees with its asking-chat claimpeer handoff requester changed before admissionSELECT session_id, COALESCE(prompt_floor_seq, -1) AS prompt_floor_seq,
+                kind = 'root' AND parent_agent_id IS NULL
+                AND ephemeral IS DISTINCT FROM TRUE
+                AND status NOT IN ('shutdown', 'not_found') AS eligible
+         FROM agent.agents WHERE agent_id = $1 FOR UPDATEstartup_root_changedSELECT EXISTS(SELECT 1 FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND accepted_ordinal < $2)startup mailbox promotion cannot overtake an earlier accepted input
+SELECT accepted_ordinal, submission_json FROM agent.message_mailbox
+WHERE agent_id = $1 AND state = 'accepted'
+  AND accepted_ordinal < $2 AND accepted_ordinal > $3
+ORDER BY accepted_ordinal LIMIT 128
+
+SELECT payload_json
+FROM agent.runtime_restart_checkpoints
+WHERE agent_id = $1
+FOR UPDATE
+message mailbox attachment cannot overtake an older priority peer
+INSERT INTO agent.runtime_restart_checkpoints (
+  agent_id, mode, recovery_class, recovery_owner_id, execution_config_json,
+  payload_json, created_at, updated_at
+) SELECT $1, $2, $3, $4, $5, $6, $7, $7
+WHERE EXISTS (
+  SELECT 1
+  FROM agent.agents
+  WHERE agent_id = $1
+    AND status NOT IN ('shutdown', 'not_found')
+)
+ON CONFLICT (agent_id) DO NOTHING
+SELECT EXISTS (SELECT 1 FROM agent.agents WHERE agent_id = $1 AND status NOT IN ('shutdown', 'not_found'))conversation epoch
+INSERT INTO agent.message_mailbox (
+  submission_id, agent_id, conversation_epoch, submission_kind,
+  routing_scope, state, checkpoint_custody, stream_owner_message_id,
+  submission_json, transcript_event_seq, attached_at
+) VALUES (
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+  CASE WHEN $6 = 'attached' THEN now() ELSE NULL END
+)
+ON CONFLICT (submission_id) DO NOTHING
+RETURNING accepted_ordinal, accepted_at
+startup mailbox promotion requires its previously accepted input
+SELECT agent_id, conversation_epoch, submission_kind, routing_scope,
+       state, stream_owner_message_id, submission_json,
+       transcript_event_seq, accepted_ordinal, accepted_at
+FROM agent.message_mailbox
+WHERE submission_id = $1
+FOR UPDATE
+update chat.message_bindings set admitted_at = coalesce(admitted_at, now())
+                    where jarvis_message_id = $1 and chat_id = $2 and binding_epoch = $3 and transport = $4binding epochconversation_epochsubmission_kindrouting_scope
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = $5,
+    stream_owner_message_id = $2,
+    submission_json = $3,
+    transcript_event_seq = coalesce($4, transcript_event_seq),
+    attached_at = now()
+WHERE submission_id = $1
+  AND state = 'accepted'
+  AND stream_owner_message_id IS NULL
+mailbox stream ownerselect a.account_id from chat_private.accounts a
+             join chat_private.binding_authorizations b on b.provider = a.provider and b.account_id = a.account_id
+             where b.provider = $1 and b.binding_id = $2
+               and a.connection_id = $3 and not a.revoked for share of adirect input has no captured binding epochaccount_retiredselect connection_id, generation, transport_json, delivery_target
+             from chat_private.binding_authorizations
+             where provider = $1 and binding_id = $2 and chat_id = $3
+               and account_id = $4 and external_kind = 'direct' and participation = 'active'
+             for shareaccount_authorization_retiredtransport_jsontransport_authorization_absentgenerationdelivery_targetselect provider, epoch from chat_private.bindings
+         where chat_id = $1 and not revoked for sharetransport_authorization_changedbinding_retiredepochactivity_monitor_list_assigned_agentsactivity_monitor_list_thread_actionsactivity_monitor_list_recent_thread_actionsactivity_monitor_read_threaddatabase write admission gate closedadmission_timeoutassert_table_existstable_presence.queryagent_status broadcast presence statuscapture new heartbeat occurrence languagescheduler source path holder lookup failedx-hatch-verified-noise-shared-agentfile edits require owner scopex-hatch-voice-pick-surfacecredit-watcher available plans fetch failedserialize subscription.quota payloadsubscription_quota_httpsubscription + credit status fetched through credit watcherexact ceremony proof unavailable for owner request pageunknown migrationhttp://stefi-proxy/hatch/fb/ads/detailsstefi_ads_details_failedStefi ads_details is rate limitedads_account_not_connectedNo linked Facebook account for Ads detailsads_details_not_foundAds entity is not visible to the viewerlat must be a finite number between -90 and 90long must be a finite number between -180 and 180the in-VM connector OAuth flowpeer_muserule_id must be 1 to 64 letters, digits, or '-'startup_not_readythe daemon is still recovering; retry shortlycron definition sync failed after HTTP task deletemanualfailed to open scheduler DB for task schedule labelsfailed to load scheduler DB state for task schedule labelsfailed to refresh latest public runtime user timezone cache for task schedules/tmp/jarvis-eval/sidecar.jsonlactivity.logrejected fs subscription pathdue-occurrence coalesce check failed; seeding immediate occurrence anywaySELECT payload_json FROM runtime_restart_checkpoints WHERE agent_id = $1 FOR UPDATESELECT submission_json, octet_length(submission_json)::bigint AS serialized_bytes
+         FROM agent.message_mailbox
+         WHERE agent_id = $1 AND state = 'accepted' AND submission_id <> $2startup_queue_fulltext/markdown; charset=utf-8private, no-cacheside-chatsdirDISCRETION.mdDISCRETION.md already existsprovide exactly one of text or data_base64private upload ended before its completed lengthprovide between 1 and 100 entriespaths must not be empty/fs/raw/media/rawattachment; filename="DISCRETION.md"/fs/thumbnailserved a shown video before its Photos rewrite finishedAccept-Encodingattachmentmessage0thumbnail not yet generatedno thumbnail available for this file type10thumbnail generation queue fullthumbnail not ready within the miss wait5thumbnail generation startedimage/webpFile-Titlecomplimentary_subscription_disabledcomplimentary subscription redemption is unavailablecomplimentary subscription redemption returned no active subscriptioncomplimentary_subscription_redeemedexclude_from_context_windowsxs_id and candidate_id are requiredSxS response is stale, unavailable, or was lost during restartcandidate_id is not a candidate for this SxS responsethe alternate SxS candidate is not ready`chat_id` is required for `/api/chats/fork`HTTP session fork failed; rechecking target writability before responding`chat_id` is required for `/api/chats/delete`/api/chats/delete`chat_id` is required for `/api/chats/rename`app_idsessions.listsessions.searchquery cannot be empty`id` cannot be emptyfailed to open scheduler DB for task usagefailed to load task runs for task usagemaintenance_occurrencemaintenance_attemptrequest_generationgeneric_maintenancejitter_offset_secsjitter_window_secswindow_start_at_utcwindow_end_at_utcmaintenance occurrence collided with terminalized work itemuse the original file preview for this draftinvalid file path encodingapproval image previews require authenticated owner accessapproval image previews require owner scopeinlineSELECT event_seq, event_name, source, role::text AS role,
+                    visibility::text AS visibility, message_id, agent_id,
+                    parent_agent_id, parent_message_id, reply_to_message_id,
+                    transcript_surface::text AS transcript_surface, payload_json,
+                    request_id, root_request_id, parent_request_id,
+                    extract(epoch from created_at)::bigint AS created_at
+             FROM runtime.events WHERE idempotency_key = $1SELECT ci.item_json, ci.message_source,
+                        extract(epoch from ci.created_at)::bigint AS created_at,
+                        p.client_context_json
+                 FROM agent.context_items ci
+                 LEFT JOIN agent.context_item_resume_projection p
+                   ON p.agent_id = ci.agent_id AND p.seq = ci.seq
+                 WHERE ci.agent_id = $1 AND ci.seq = $2failed to release the telemetry snapshot slot; the next create may be starvedspooled VM log snapshot for a bug reportinstagramthreadsavatar_sharelocal_mapoptionimage_optionsnavigationdiscovery_pool_idea_idletterhotel_resultsshopping_cartshared_spacepeer_conversationspace_build_completednode_cardinternal_link_action_cardgeneric_listexternal_linkimageaudioslidesforeground_rootpeer_chat_rootgroup_chat_rootexternal_party_chat_rootcompany_conversation_rootmail_conversationdelegate_main_requestworkflow_subagentspaces_builderspaces_builder_litespaces_builder_editspaces_builder_python_editbrowser_taskdeep_researchideas_builderspace_taskself_improvement_stepflight_tracking_steppeer_sync_stepfeed_workflow_stepephemeral_agent_stepscheduler_cron_executescheduler_cron_resolveexecute_resolve_workersystem_cron_productvoice_delegaterealtime_voicecompaniondeveloperassistantcalled `Result::unwrap()` on an `Err` valueimpressionclickengagementfeedback_upfeedback_downassertion failed: self.is_char_boundary(new_len)connecteddisconnectedconfirm_neededfile_sharedlink_sharedspace_sharedspace_share_acceptedspace_access_requestedspace_edit_requestedspace_edit_sentpeer.contact_updatedpeer.activity_addedinterruptedcompactsmlgimage_thumbvideo-defaultlg-jpegmicro-jpegonlineout_of_creditsneeds_approvalcompactingrespondingwaiting_for_subagentsworkingworkerafter_inferenceawaiting_approvalafter_tool_dispatchcreatedrenamedunarchiveddeletedpinnedupdatecontact_listconnections_activityevent_stream_connectedinbound_dropphoto_routeopportunisticcomplete_when_awakeobjectiveproactive_notificationflight_trackingvoice_persistencewebhook_fetchstartup_reconcileloop_reconcilemutation_reconcileOPTIONSGETPUTDELETETRACECONNECTPATCH/result/chat_eventschat_history_large_responseno_session_idprimary_chatnot_owner_whatsapp_routeundefined country categorymarketplace country must be an uppercase two-letter codemarketplace category requires a registered Jarvis titleinvalid or reserved marketplace categoryunsupported marketplace schema or sizepending_initrunningerroredawaiting_peeralready_pairedno_linknot_requestedtimed_outsteady_phasecadence_then_splayoverdue_catchupretryimmediate12new_user_turnprimary_onlyalternate_erroralready_ended...preemptible_retryabledisconnect requires all four valid relationship binding fields or noneinternal_wakerequestedlink_busydialeddial_failedfull_cadence_phasechat_history_rows_shortenedimagesvideosunknown_relationshipceremony_unavailabletransport_unavailabletrustedsymlinkother
+INSERT INTO events (
+  event_kind, event_name, request_id, root_request_id, parent_request_id,
+  transcript_surface, visibility, source, role, chat_kind, stream_lane,
+  message_id, parent_message_id, reply_to_message_id, reply_target_message_id,
+  parent_agent_id, agent_id, idempotency_key, display_text_ready, payload_json,
+  chat_context_json, created_at
+)
+VALUES ($1::runtime.event_kind, $2, $3, $4, $5, $6::runtime.transcript_surface,
+        $7::runtime.visibility, $8, $9::runtime.message_role, $10, $11,
+        $12, $13, $14, $15, $16, $17, $18, $19,
+        $20, $21, to_timestamp($22::double precision / 1000.0))
+ON CONFLICT (idempotency_key) WHERE idempotency_key IS NOT NULL DO NOTHING
+RETURNING event_seq
+
+INSERT INTO events (
+  event_seq, event_kind, event_name, request_id, root_request_id, parent_request_id,
+  transcript_surface, visibility, source, role, chat_kind, stream_lane,
+  message_id, parent_message_id, reply_to_message_id, reply_target_message_id,
+  parent_agent_id, agent_id, idempotency_key, display_text_ready, payload_json,
+  chat_context_json, created_at
+)
+VALUES ($1, $2::runtime.event_kind, $3, $4, $5, $6, $7::runtime.transcript_surface,
+        $8::runtime.visibility, $9, $10::runtime.message_role, $11, $12,
+        $13, $14, $15, $16, $17, $18, $19, $20,
+        $21, $22, to_timestamp($23::double precision / 1000.0))
+ON CONFLICT (event_seq) DO NOTHING
+RETURNING event_seq
+task_statustool_donetool_start/session/start/session/fork/session/unarchive/session/pin/session/unpin/session/delete/session/list/session/list/{id}/session/search/session/has-unread-threads/session/rename/channels/link/chat/send/chat/history/chat/unread-count/chat/{thread_id}/seen/chat/search/chat/message/chat/history-window/chat/subscribe/chat/stream/chat/cancel/chat/resume/chat/stream-events/chat/delete-message/chat/delete-turnchannelis_side_chatchatshas_unread_threads/connectors/connectors/homepage/fs/library/fs/search/fs/media/fs/stats/fs/reads/fs/write/fs/mkdir/fs/delete/fs/rename/fs/recents/fs/export/fs/upload/fs/upload/status/fs/raw/{*path}/fs/thumbnail/{*path}/media/raw/{*path}daemon_peers_photoRead a peer's current profile photoReturns at most 32768 bytes of JPEG from the local cache or its verified stored copy, only while matching the contact's current signed descriptor, or an unpaired contact's last one. When neither holds it and the contact's Muse has a live link, asks the peer over that link and waits up to 3 seconds; never dials or fetches a URL. Missing or superseded photos return 404; responses are private and no-store.Current peer JPEG thumbnail.daemon_peers_avatarRead a peer's current Muse avatar stillReturns at most 131072 bytes of JPEG from the local cache or its verified stored copy, only while matching the contact's current signed Muse avatar descriptor, or an unpaired contact's last one. When neither holds it and the contact's Muse has a live link, asks the peer over that link and waits up to 3 seconds; never dials or fetches a URL. Missing or superseded avatars return 404; responses are private and no-store.Current peer Muse avatar JPEG./peers/{muse}/photo/{sha256}/peers/{muse}/avatar/{sha256}daemon_subscription_quotaGet subscription quota (deprecated)Deprecated compatibility endpoint. Returns the credit-enforcement snapshot and best-effort subscription metadata; it will be removed in a future release.Subscriptiondaemon_subscription_callbackHandle subscription callbackProcesses a subscription completion callback.subscription_sourcecredit_sourcedaemon_subscription_available_plansGet available subscription credit plansReturns currently available paid credit plans.credit-watcher available plans fallback/subscription/callback/subscription/quota/subscription/available-plans/subscription/check-complimentary/subscription/redeem-complimentarydaemon_peers_requestsList current provisional relationship requestsDark until every request-read prerequisite in docs/api/peers.md (Routes, request-handler paragraph) is verified and a separate status-policy change advertises it: the current operation policy returns peer_operation_unavailable before entering this handler, even if the peer gate is on. Once advertised, this owner-authenticated ServiceDaemon Noise read returns one bounded page of current unexpired signed relationship generations, newest first by immutable (relationship_started_at_ms, relationship_generation_id). Direction is the owner's request direction, the inverse of the stored invitation-authorship role. A bounded expiry reconciliation precedes the page; an unfinished sweep returns retryable 503, never a partial success. A ready ceremony requires a matching daemon cache and bounded exact peerd admission proof; peerd unavailability reports unavailable. Safety codes, invite bearers, routing, and grant secrets are omitted. This read advertises no pairing, safety-code, decline, or withdraw actions.Peerspeer_requests_reconcilingexpired relationship requests are being reconciled; retry shortly/peers/requestsdaemon_vm_migrations_latestLatest VM migrationReturns the newest completed RV migration this VM imported, or `migration: null` when it was never migrated or the owner marked that migration seen. An older unseen migration is never returned. `connectors_disconnected` lists the connectors the migration left behind; `null` means unknown and must not be shown as none.VM migrationsdaemon_vm_migrations_mark_seenMark a VM migration seenRecords that the owner has seen this migration's summary, so `GET /vm-migrations/latest` stops returning it on every device. Repeating it keeps the first time. 404 when this VM has no such migration./vm-migrations/latest/vm-migrations/{migration_id}/seen_inspect/actions_streammissing authenticated owner identityinsufficient space to build a VM log snapshotno VM logs have been retained yetvm_log_retention_unavailableVM log retention is not active on this VMbug report log not foundrequest_id must be a canonical lowercase UUIDv4vm_log_snapshot_unavailabledaemon_debug_bug_report_logs_createCreate a dummy VM bug-report log fileMaterializes a 35 MiB placeholder plaintext file in daemon-private storage and returns an opaque handle plus authenticated Noise download path.Systemdaemon_debug_bug_report_logs_downloadDownload a dummy VM bug-report log fileStreams the generated placeholder plaintext file for the authenticated owner. Supports single byte ranges (`Accept-Ranges: bytes`, `206`, `Content-Range`, `416`).Dummy bug-report log download stream./debug/bug-report-logsdaemon_ads_detailsResolve one ads entity's details for chip click-inViewer-authorized lookup of a single ad account, campaign, ad set, or ad through the Stefi FB-tier proxy. Returns a tagged `{type, data}` envelope with canonical identity plus verbatim snapshot facts. New clients request `section=core` first and lazily request metrics, charts, or hierarchy; omitting section preserves the legacy full response. Missing fields stay missing rather than being invented. Opening a chip never wakes the agent.Ads`hierarchy_child_ids` requires `section=hierarchy`each `hierarchy_child_ids` value must be a numeric Ads id of at most 128 bytes`hierarchy_child_ids` values must be uniqueStefi ads_details returned inconsistent section metadataentity_typeentity_idStefi ads_details response must be a JSON objectStefi ads_details returned a mismatched entitydelivery_statusdirect_urlimage_urlperformance_chartschildren_total_countparentincluded_sectionsis_child_enrichment_included/ads/detailsdaemon_update_user_locationUpdate user locationAccepts the latest device location sample. Live location is served from the client data-source cache; the former daemon-owned append-only ledger under workspace/nodes was retired because nothing read it. A sample that names a `geofence_id` with an enter, dwell, or exit trigger is matched against the daemon's geofence registry and may hand that place's brief to the follow-up queue (an exit only for a region the user set themselves)./update-user-locationdaemon_ac_oauth_callbackHandle Account Center OAuth callback (deprecated)Deprecated compatibility endpoint. Always returns 410 Gone; use the in-VM connector OAuth flow.OAuth/ac_oauth/callback/peers/requests/{relationship_generation_id}/sas/peers/requests/{relationship_generation_id}/sas/confirm/peers/requests/{relationship_generation_id}/confirmunknown peer contactpeer_rule_not_foundpeer_contact_not_verifiedpeer_rules_changedpeer_rules_unavailablepeer transport is temporarily unavailable; retry the same intentpeer_preset_unavailableinvite_create_request_conflictinvite_create_request_generation_unsupportedinvite_create_request_terminalpeer_invite_generation_unsupportedpeer_relationship_generation_conflictThe exact live SAS for one relationship generationResumes an eligible unfinished pairing if its session is missing, with paced retries. Returns the ceremony only when an unexpired durable contact, daemon cache, and peerd's bounded exact live lookup agree on generation, link, and ceremony. Definite absence, including a session still reconnecting, is 404; peerd unavailability (including an older peerd without the lookup) is 503. Recovery never supplies owner consent or reuses a previous session's safety code. The operation requires the existing peer GK and startup pairing capability.daemon_peers_list_inboxList pairing invitations delivered on Muse that wait for the ownerAt most 32 unexpired delivered invitations, one per invitation, soonest expiry first, each with its delivery id, sender name, offered level, the inviter's Muse ID, and the invitation link the chat card carries. The link is a bearer secret for the owner's client. 503 peer_operation_unavailable when pairing is unavailable (the gate invites/open uses).daemon_peers_listList paired peer contactsOne bounded page of peer contacts, newest durable contact row first by immutable creation time and Muse id. Contacts whose relationship ended (`unpaired`) are omitted; a later relationship with the same Muse lists it again. Each item includes safe display, pairing status, trust preset, local-confirmation state, timestamps, the attestation badge, and an optional current cached profile-photo descriptor while the peer plane is enabled. Routing, key, token, and raw safety-code material are omitted. Continue with the opaque next_cursor and do not construct or modify it.daemon_peers_list_rulesList a contact's sharing rulesThe verified contact's sharing instructions. Each has a stable rule_id, title, short display-only summary, and complete description. Rules have no category or special Everything marker. The connection-details endpoint also returns the revision used for edits.daemon_peers_confirm_sasConfirm the SAS code for a peerRecords one replay-safe local confirmation for the exact relationship generation and Noise ceremony. The prepared initial grant remains inactive until a matching signed remote confirmation arrives; only bilateral completion verifies the contact and activates authority. The operation requires the existing peer GK, a standard VM, and startup pairing capability.invite_id must be base64daemon_peers_delete_ruleDelete one of a contact's sharing rulesRemoves the native rule identified by its UUID and increments the connection's rules revision. Pending messages reviewed against the earlier revision cannot send. Unknown rules return 404 peer_rule_not_found.daemon_peers_list_grantsList grants this VM has issued to peersOne bounded page in creation order. By default only unrevoked grants are returned; include_revoked=true selects the complete history. A next_cursor is bound to that filter and must be round-tripped unchanged.daemon_peers_mint_inviteIdempotently signs a generation-scoped V3 connection invite under the required canonical create_request_id and returns its relationship_generation_id, authd-authored request timestamps, and magic-link fragment. An exact live request replay returns the original durable invitation. Reusing the id with different intent returns invite_create_request_conflict. A live V1 row returns invite_create_request_generation_unsupported. If the invitation was claimed, revoked, or expired, invite_create_request_terminal requires a new create_request_id. New invitations use the restricted wire baseline and start without sharing rules. Legacy trusted and collaborator input values are normalized to restricted. Any other preset returns peer_preset_unavailable. Success requires an acknowledged ordinary mirror publication.daemon_peers_open_invitePost an opened pairing invitation link to the owner's main chatVerifies the invitation link as connection.invite acceptance does (V2, unexpired, not the owner's own) and decides it against the owner's contact with the inviter exactly as accepting does, then posts one pairing_launcher accept card into the owner's main chat, with fallback_text for clients that do not render the kind. A newer invitation replaces a stale or unfinished request with the same inviter, and reopening a link whose accept failed or stopped part way posts (finds) its card again so accepting can retry. Nothing is accepted. One card per invitation: repeat opens return posted without a second card. Returns status posted, already_paired (nothing posted; muse_id names the inviter's Muse), expired (also when this invitation's own request ended or was removed), or invalid; an invalid that accepting would refuse because of the existing contact adds reason (pending_request, link_predates_disconnect, identity_changed) and the inviter's muse_id. A space-only invitation adds space {host_muse, space_id, name, granted} with posted and already_paired. One from someone the owner is already paired with posts its card too (posted; accepting the link claims that Space from its host), unless the owner already holds that Space, which answers already_paired with space.granted true. The link is never echoed. An optional session_id names the owner's WhatsApp chat to post into: while abra_hatch_whatsapp_peer_pairing is on, the server resolves it (400 when malformed, 404 when unknown or hidden) and, when its current provider-bound route is the owner's own WhatsApp chat, posts the WhatsApp accept card there instead; a Space invitation, or a chat whose client does not take the card, still posts into the main chat. presented_in says where the card went: whatsapp or app (also when nothing was posted).peer_relationship_not_foundthe relationship generation is unknowndaemon_peers_unpairUnpair a peerLocal disconnect validates all four optional relationship binding fields before grant mutation and rejects stale intent. It revokes grants, atomically unpairs and archives the DM, and returns the actual generation/revision with status unpaired; exact terminal replay is read-only. Transport cleanup is best effort and already-submitted or in-flight messages may finish. The audit ledger is retained.peer_inbox_unavailabledaemon_peers_list_invitesList pairing invites, including claim provenanceOne bounded page of invitations, newest first by immutable creation time and invitation id so current requests precede terminal history. Each item includes claim and revocation provenance. Continue with the opaque next_cursor and do not construct or modify it.no live safety-code ceremony for this relationshipdaemon_peers_accept_inviteAccept a pairing invite fragment from another VMVerifies a generation-scoped V2 invite, atomically adopts it as an incoming pending contact with restricted reciprocal trust, and dials the pairing link. V1 is rejected with peer_invite_generation_unsupported; stale and expired requests are ended first; a newer invitation supersedes a half-finished request with the same inviter and an ended request is replaced, while a verified contact, a live request this side already confirmed, a newer live request, a removal recorded after the link was signed, a changed identity, or the same generation with the wrong direction returns peer_relationship_generation_conflict without mutation or dial. Signed offers of any owner-selectable preset are accepted; the reciprocal side stays restricted, and any other offer returns peer_preset_unavailable. Returns the durable generation and revision after ordinary mirror acknowledgement and dial initiation. Accepting an invitation delivered through Send on Muse, or a link that offers only restricted, also records the owner's confirmation of the inviter: this VM confirms that generation's ceremony as soon as it is live, with no further client call. Bilateral SAS confirmation completes verification. A space-only invitation signs its exact Space, returned as space {host_muse, space_id, name, granted}; granted is true only once this owner holds a live share of exactly that Space. Accepting a space-only invitation from a contact already paired with this owner keeps that relationship unchanged (its generation and revision are returned) and sends the host a single-use claim, which shares the signed Space once if the invitation is still live and the Space unchanged. Returns pending_remote_confirmation (true while the relationship still waits for the inviter; show connected only once verified) and presented_in. An optional session_id names the owner's WhatsApp chat the accept came from: while abra_hatch_whatsapp_peer_pairing is on, the server resolves it (400 when malformed, 404 when unknown or hidden) and, when its current provider-bound route is the owner's own WhatsApp chat and the invitation is not reviewed in Muse, records that chat with the relationship generation, posts the waiting line there while the inviter must confirm, and announces the verified connection there; presented_in is then whatsapp. Otherwise it accepts as before and presented_in is app.daemon_peers_decline_inboxDecline a pairing invitation delivered on MuseEnds the waiting request and every other delivery of the same invitation and drops their stored invitation. Nothing else changes and the inviter is never told; the client then declines the delivery on the Hatch server. Returns declined, already_ended (accepted, declined, or expired before; nothing changes), or unknown. Idempotent. 503 peer_operation_unavailable when pairing is unavailable (the gate invites/open uses).daemon_peers_deliver_inboxHand the VM a pairing invitation delivered on MuseThe owner's client passes one pending Send on Muse invitation from the Hatch server. The VM verifies it as invites/open verifies a link (V2, unexpired, an owner-selectable offer, not the owner's own) and decides it against the owner's contact with the inviter as accepting does, records it once per delivery_id, and posts one pairing_launcher accept card per invitation into the main chat. Idempotent per delivery_id: a repeat answers from the stored state and posts nothing new. Returns accepted=true (the client marks the delivery delivered) or accepted=false with rejection invalid, expired, already_paired (with the inviter's muse_id), or declined (the client declines it). The invitation is never echoed or logged. 503 peer_operation_unavailable when pairing is unavailable (the gate invites/open uses), startup_not_ready while the daemon recovers; retryable 503 peer_inbox_unavailable when local state cannot be read or written.daemon_peers_list_activityList the owner's Connections activityOne page of the owner's Connections activity, newest first, without dismissed rows: requests received, Space invitations received, requests accepted, connections, confirmations needed, Spaces a contact shared, and files a contact's Muse sent (file_ref, once state is available, is a home-relative path read with GET /fs/raw). Each item has activity_id, kind, muse_id, at_ms, and the kind's own fields at the top level. The owner's own sent shares (*_share_sent) are left out unless include_sent=true. Rows are kept 30 days. Continue with the opaque next_cursor.daemon_peers_revoke_inviteRevoke one still-unclaimed pairing inviteRevocation is idempotent: the first revocation and exact replays return accepted=true. A completed claim wins a concurrent cancellation and returns non-retryable invite_already_claimed; an unknown id returns non-retryable 404 when existing peer state admits this containment route. This management operation remains available while peer transport is disabled.daemon_peers_confirm_requestConfirm the person who claimed the owner's invitationRecords the owner's confirmation of the person who claimed one of the owner's invitations, for this relationship generation and the claimant's pinned muse key. It works while the other Muse is offline. When a live safety-code ceremony exists it is confirmed at once; otherwise this Muse confirms each later ceremony with that key on its own. Returns state confirmed_local, verified, or awaiting_peer. Repeating it is safe. 404 peer_relationship_not_found for an unknown generation; 409 peer_request_not_waiting when it isn't a claim waiting for the owner, and 409 peer_relationship_expired when the request expired. The operation requires the existing peer GK and startup pairing capability.recipient_name must not contain control charactersdaemon_peers_dismiss_activityDismiss one Connections activity rowHides the row from later activity pages. Dismissing again succeeds; an unknown id returns 404 peer_activity_not_found.peer_relationship_expiredthe relationship request expired; create a new requestsas_confirm_request_conflictSAS confirmation conflicts with an existing request or ceremonyrecipient_account must be a decimal account iddaemon_peers_reset_conversationReset one peer conversationOwner-only dogfood reset of a verified contact's 1:1 conversation. Stops its work, deletes its transcript and worker context, and creates a fresh conversation for the same relationship generation. Preserves current native sharing rules and their source evidence. Old pending messages and approvals cannot send from the new conversation. Send the chat being reset as chat_session_id for an exactly-once retry. Requires reset_conversation admission. A non-verified contact returns peer_contact_not_verified.peer_request_not_waitingthe request is not waiting for the owner's confirmationconfirm peer requestList invitation links the owner opened that wait for the ownerAt most 32 unexpired invitation links the owner opened (POST /api/peers/invites/open) and has not accepted, soonest expiry first, each with its opened_id (the handle its invitation_received activity item carries), the inviter's self-reported name and Muse name, signed photo hash, Muse ID, and the invitation link the chat card carries. The link is a bearer secret for the owner's client. An invitation leaves once accepted, once its Send on Muse delivery is declined, or once it expires. 503 peer_operation_unavailable when pairing is unavailable (the gate invites/open uses); retryable 503 peer_invite_open_unavailable when local state cannot be read.peer_contact_changedthe peer relationship changed; reload and try againpeer_conversation_busythe peer relationship changed; refresh before disconnectingdaemon_peers_register_invite_deliveryRegister the Send on Muse delivery that carried an invitationRecords the Hatch server's delivery_id for the Send on Muse delivery that carried one of this owner's unclaimed, live invitations. Registration settles the sender's delivery state and Connections search; it never confirms a claim, which waits for the owner unless the invitation is bound to the claimer's muse key. Idempotent for the same delivery_id. Unknown invitations return 404; claimed, revoked, or expired invitations, or a different delivery_id, return a nonretryable 409.sas_ceremony_unavailablethe SAS ceremony is stale or no longer confirmableinvite_delivery_conflictthe invitation already has a different deliverythe invitation expiredthe invitation was revoked/peers/peers/invites/peers/invites/accept/peers/invites/open/peers/invites/opened/peers/invites/{invite_id}/peers/invites/{invite_id}/delivery/peers/inbox/peers/activity/peers/activity/{activity_id}/dismiss/peers/inbox/deliver/peers/inbox/decline/peers/{muse}/rules/peers/{muse}/rules/{rule_id}/peers/{muse}/grantsdaemon_tasks_listList tasksReturns schedule definitions. Optional presentation-only `title` may be absent; clients fall back to `id`, which every task action uses. The onboarding feature tour has no saved title and gets one in the request locale. Each record carries an optional typed `cadence` derived from the same parse as `schedule_key`; its wall-clock `time` is in the record's `timezone`. Older VMs omit `cadence`. An optional `usage` gives what the task's latest finished runs cost, in millionths of the recurring allowance: the mean per run and, except for one-off and disabled tasks, that mean times the runs a day the current schedule makes, and whether a week at that rate counts as high usage. It is absent until a run has been priced.Tasksdaemon_tasks_runsList task runsReturns task run history.daemon_task_deleteDelete taskDeletes a user-scheduled task by job id: archives its definition and reconciles the scheduler. System crons cannot be deleted.daemon_task_run_createQueues an immediate run for a scheduler task. Optional Accept-Language is frozen on this occurrence and does not change later automatic runs./tasks/tasks/{job_id}/tasks/{job_id}/run/tasks/runsRedTeamdaemon_redteam_get_mocksAPI endpoint to get the current tool mocks applied by red teamers.daemon_redteam_apply_mocksAPI endpoint to let frontend apply mocked configurations for tools to enable red teaming.
+        After application, the mocked tools hit a shim rather than the real binaries.daemon_redteam_clear_mocksAPI endpoint to disable the tool mocking for red teaming. Restores tools to hitting their real underlying binaries.daemon_redteam_sidecar_tailTail mock sidecarAPI endpoint to get the trailing N JSONL entries from the mock sidecar for red teamers.#!/usr/bin/env python3
+"""Universal mock binary for eval tool responses.
+
+Dispatched via symlinks: argv[0] determines the tool name.
+Reads response config beside the staged mock tree. Candidate-routed invocations
+instead take their config path, operation groups, and selection from root-owned
+state under /run so command input cannot alter dispatch ownership.
+Auto-logs every invocation to $JARVIS_EVAL_SIDECAR.
+
+Modes:
+  subcommand (default) — argv[1] selects response entry
+  intercept            — regex-match argv[1:], pass-through on miss
+  sequence             — track call count, advance response list
+  rules                — evaluate match_args / match_env / default conditions
+"""
+
+import hashlib
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+
+_BINARY_CANDIDATES_KEY = "_binary_candidates"
+_SELECTION_FILE = "mock-binary-candidates.tsv"
+_TRUSTED_CANDIDATE_STATE_DIR = Path("/run/hatch/eval-binary-candidates")
+_TRUSTED_CANDIDATE_STATE_PATH = _TRUSTED_CANDIDATE_STATE_DIR / "state.json"
+# The runner publishes a cell-only mock's config beside its runtime-cell copy
+# instead of in the agent's home (JarvisVMCore._CELL_ONLY_MOCK_CONFIG_SUFFIX).
+_CELL_MOCK_DIR = Path("/run/hatch/eval-native-mocks")
+_PRODUCT_BIN_DIR = Path("/opt/hatch/bin")
+_HELP_TOKENS = {"--help", "-h"}
+_LONG_OPTION_RE = re.compile(r"--[a-z][a-z0-9-]*")
+_VALUE_OPTION_RE = re.compile(r"(?:--[a-z][a-z0-9-]*|-[A-Za-z0-9])")
+
+
+def _tool_name() -> str:
+    return Path(sys.argv[0]).name
+
+
+def _trusted_candidate_state() -> dict | None:
+    if not _TRUSTED_CANDIDATE_STATE_PATH.exists():
+        return None
+    try:
+        state = json.loads(_TRUSTED_CANDIDATE_STATE_PATH.read_text())
+    except (OSError, json.JSONDecodeError) as exc:
+        print(
+            f"Error: trusted eval binary-candidate state is unreadable: {exc}",
+            file=sys.stderr,
+        )
+        sys.exit(125)
+    config_path = state.get("mock_config_path") if isinstance(state, dict) else None
+    groups = state.get(_BINARY_CANDIDATES_KEY) if isinstance(state, dict) else None
+    if (
+        not isinstance(config_path, str)
+        or not Path(config_path).is_absolute()
+        or not isinstance(groups, dict)
+        or not groups
+    ):
+        print(
+            "Error: trusted eval binary-candidate state is malformed",
+            file=sys.stderr,
+        )
+        sys.exit(125)
+    return state
+
+
+def _candidate_groups(config: dict) -> object:
+    state = _trusted_candidate_state()
+    if state is not None:
+        return state[_BINARY_CANDIDATES_KEY]
+    return config.get(_BINARY_CANDIDATES_KEY)
+
+
+def _config_path() -> Path:
+    state = _trusted_candidate_state()
+    if state is not None:
+        return Path(state["mock_config_path"])
+    invoked = Path(sys.argv[0])
+    if not invoked.is_absolute():
+        resolved = shutil.which(sys.argv[0])
+        if resolved:
+            invoked = Path(resolved)
+    parent = invoked.parent.resolve()
+    # Agent exec sets MOCK_CONFIG to the home config whenever ~/.redteam-bin
+    # exists, and a cell-only mock's config is no longer there.
+    if parent == _PRODUCT_BIN_DIR:
+        cell_config = _CELL_MOCK_DIR / f"{invoked.name}.mock-config.json"
+        if cell_config.is_file():
+            return cell_config
+    legacy_override = os.environ.get("MOCK_CONFIG")
+    if legacy_override:
+        return Path(legacy_override)
+    # Derive the staged response config from the installed mock path. Environment
+    # variables are agent-controlled command input and cannot select dispatch
+    # rules for candidate cases because trusted state takes precedence.
+    if parent == _PRODUCT_BIN_DIR:
+        return Path("/home/hatch/mock-config.json")
+    if parent.name in {"bin", ".redteam-bin"}:
+        parent = parent.parent
+    return parent / "mock-config.json"
+
+
+def _load_config() -> dict:
+    with _config_path().open() as f:
+        return json.load(f)
+
+
+def _load_binary_candidate_selection(config: dict) -> dict[str, str]:
+    configured_groups = config.get(_BINARY_CANDIDATES_KEY)
+    if configured_groups is None:
+        return {}
+    state = _trusted_candidate_state()
+    if state is None:
+        print(
+            "Error: trusted eval binary-candidate state is unavailable",
+            file=sys.stderr,
+        )
+        sys.exit(125)
+    groups = state[_BINARY_CANDIDATES_KEY]
+    if configured_groups != groups:
+        print(
+            "Error: trusted eval binary-candidate groups do not match mock config",
+            file=sys.stderr,
+        )
+        sys.exit(125)
+    selection_path = _TRUSTED_CANDIDATE_STATE_PATH.parent / _SELECTION_FILE
+    try:
+        lines = selection_path.read_text().splitlines()
+    except OSError as exc:
+        print(
+            f"Error: eval binary-candidate selection is unavailable: {exc}",
+            file=sys.stderr,
+        )
+        sys.exit(125)
+    selection: dict[str, str] = {}
+    for line in lines:
+        parts = line.split("\t")
+        if len(parts) != 2 or not all(parts):
+            print(
+                "Error: eval binary-candidate selection is malformed",
+                file=sys.stderr,
+            )
+            sys.exit(125)
+        name, selected = parts
+        if name in selection:
+            print(
+                f"Error: duplicate eval binary-candidate group {name!r}",
+                file=sys.stderr,
+            )
+            sys.exit(125)
+        selection[name] = selected
+    if not isinstance(groups, dict) or set(selection) != set(groups):
+        print(
+            "Error: eval binary-candidate selection does not match mock config",
+            file=sys.stderr,
+        )
+        sys.exit(125)
+    return selection
+
+
+def _long_value_options(args: list[str], value_options: set[str]) -> set[str]:
+    """Return constrained long options using an explicit value-taking grammar."""
+    options: set[str] = set()
+    index = 0
+    while index < len(args):
+        argument = args[index]
+        option = argument.split("=", 1)[0]
+        if _LONG_OPTION_RE.fullmatch(option):
+            options.add(option)
+        if option in value_options and "=" not in argument:
+            index += 2
+        else:
+            index += 1
+    return options
+
+
+def _option_constraint(
+    group: dict, *, group_name: str, field: str
+) -> set[str]:
+    raw = group.get(field, [])
+    if (
+        not isinstance(raw, list)
+        or any(
+            not isinstance(option, str)
+            or _LONG_OPTION_RE.fullmatch(option) is None
+            for option in raw
+        )
+        or len(set(raw)) != len(raw)
+        or (field in group and not raw)
+    ):
+        print(
+            f"Error: eval binary-candidate group {group_name!r} has invalid {field}",
+            file=sys.stderr,
+        )
+        sys.exit(125)
+    return set(raw)
+
+
+def _value_option_constraint(group: dict, *, group_name: str) -> set[str]:
+    raw = group.get("value_options")
+    if (
+        not isinstance(raw, list)
+        or not raw
+        or any(
+            not isinstance(option, str)
+            or _VALUE_OPTION_RE.fullmatch(option) is None
+            for option in raw
+        )
+        or len(set(raw)) != len(raw)
+    ):
+        print(
+            f"Error: eval binary-candidate group {group_name!r} has invalid "
+            "value_options",
+            file=sys.stderr,
+        )
+        sys.exit(125)
+    return set(raw)
+
+
+def _enforce_binary_candidate(
+    config: dict, selection: dict[str, str], tool: str, args: list[str]
+) -> bool:
+    """Enforce owner selection and report an admitted exact capability probe."""
+    groups = _candidate_groups(config)
+    if groups is None:
+        return False
+    if not isinstance(groups, dict):
+        print("Error: eval binary-candidate groups are malformed", file=sys.stderr)
+        sys.exit(125)
+    args_str = " ".join(args)
+    matching_probe_groups: list[str] = []
+    matching_groups: list[str] = []
+    matching_subcommand_groups: list[str] = []
+    tool_is_secondary_candidate = False
+    for name, group in groups.items():
+        if not isinstance(group, dict):
+            print(
+                f"Error: eval binary-candidate group {name!r} is malformed",
+                file=sys.stderr,
+            )
+            sys.exit(125)
+        match_args = group.get("match_args")
+        if not isinstance(match_args, str) or not match_args:
+            print(
+                f"Error: eval binary-candidate group {name!r} has no match_args",
+                file=sys.stderr,
+            )
+            sys.exit(125)
+        required_any_options = _option_constraint(
+            group, group_name=name, field="required_any_options"
+        )
+        forbidden_options = _option_constraint(
+            group, group_name=name, field="forbidden_options"
+        )
+        if required_any_options & forbidden_options:
+            print(
+                f"Error: eval binary-candidate group {name!r} has overlapping "
+                "required and forbidden options",
+                file=sys.stderr,
+            )
+            sys.exit(125)
+        constrained_options = required_any_options | forbidden_options
+        if constrained_options:
+            value_options = _value_option_constraint(group, group_name=name)
+            missing_value_options = constrained_options - value_options
+            if missing_value_options:
+                print(
+                    f"Error: eval binary-candidate group {name!r} value_options "
+                    "omit constrained options",
+                    file=sys.stderr,
+                )
+                sys.exit(125)
+            present_options = _long_value_options(args, value_options)
+        else:
+            if "value_options" in group:
+                print(
+                    f"Error: eval binary-candidate group {name!r} has value_options "
+                    "without an option constraint",
+                    file=sys.stderr,
+                )
+                sys.exit(125)
+            present_options = set()
+        option_shape_matches = (
+            not required_any_options or bool(required_any_options & present_options)
+        ) and not bool(forbidden_options & present_options)
+        probe_args = group.get("probe_args")
+        if (
+            not isinstance(probe_args, list)
+            or not probe_args
+            or any(not isinstance(argument, str) for argument in probe_args)
+            or probe_args[-1] not in _HELP_TOKENS
+        ):
+            print(
+                f"Error: eval binary-candidate group {name!r} has invalid probe_args",
+                file=sys.stderr,
+            )
+            sys.exit(125)
+        candidates = group.get("candidates")
+        if (
+            not isinstance(candidates, list)
+            or not candidates
+            or any(not isinstance(candidate, str) for candidate in candidates)
+        ):
+            print(
+                f"Error: eval binary-candidate group {name!r} has invalid candidates",
+                file=sys.stderr,
+            )
+            sys.exit(125)
+        if tool not in candidates:
+            continue
+        tool_is_secondary_candidate |= candidates.index(tool) > 0
+        subcommand = probe_args[:-1]
+        if args[: len(subcommand)] == subcommand:
+            matching_subcommand_groups.append(name)
+        if (
+            len(args) == len(probe_args)
+            and args[:-1] == subcommand
+            and args[-1] in _HELP_TOKENS
+        ):
+            matching_probe_groups.append(name)
+        if option_shape_matches and re.search(match_args, args_str):
+            matching_groups.append(name)
+    if matching_probe_groups:
+        selected_tools = {selection.get(name) for name in matching_probe_groups}
+        if None in selected_tools or len(selected_tools) != 1:
+            print(
+                "Error: eval binary-candidate probe groups select conflicting owners "
+                f"for this help path: {matching_probe_groups!r}",
+                file=sys.stderr,
+            )
+            sys.exit(125)
+        if selected_tools != {tool}:
+            print("error: unrecognized subcommand", file=sys.stderr)
+            sys.exit(2)
+        return True
+    if not matching_groups:
+        if matching_subcommand_groups:
+            print(
+                "Error: eval binary-candidate operation matches a declared "
+                "subcommand but no operation group: "
+                f"{matching_subcommand_groups!r}",
+                file=sys.stderr,
+            )
+            sys.exit(125)
+        if tool_is_secondary_candidate:
+            print("error: unrecognized subcommand", file=sys.stderr)
+            sys.exit(2)
+        return False
+    selected_tools = {selection.get(name) for name in matching_groups}
+    if None in selected_tools or len(selected_tools) != 1:
+        print(
+            "Error: eval binary-candidate groups select conflicting owners for "
+            f"this operation: {matching_groups!r}",
+            file=sys.stderr,
+        )
+        sys.exit(125)
+    if selected_tools != {tool}:
+        print("error: unrecognized subcommand", file=sys.stderr)
+        sys.exit(2)
+    return False
+
+
+def _argument_fields(args: list[str]) -> dict[str, str]:
+    fields: dict[str, str] = {}
+    i = 0
+    while i < len(args):
+        argument = args[i]
+        if argument.startswith("--") and "=" in argument:
+            key, value = argument[2:].split("=", 1)
+            fields[key.replace("-", "_")] = value
+            i += 1
+        elif argument.startswith("--") and i + 1 < len(args):
+            fields[argument[2:].replace("-", "_")] = args[i + 1]
+            i += 2
+        else:
+            i += 1
+    return fields
+
+
+def _sidecar_log(tool: str, args: list[str]) -> None:
+    sidecar = os.environ.get("JARVIS_EVAL_SIDECAR") or "/tmp/jarvis-eval/sidecar.jsonl"
+    os.makedirs(os.path.dirname(sidecar), exist_ok=True)
+
+    entry: dict = {
+        "tool": tool,
+        "subcommand": args[0] if args else None,
+        "args": args,
+        "ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+
+    # Auto-parse --key value pairs into structured fields
+    entry.update(_argument_fields(args))
+
+    with open(sidecar, "a") as f:
+        f.write(json.dumps(entry) + "\n")
+
+
+_SHA256_TEMPLATE = re.compile(r"\{\{sha256:(?P<field>[A-Za-z0-9_]+)\}\}")
+
+
+def _render_template(template: str, args: list[str]) -> str:
+    fields = _argument_fields(args)
+
+    def replace(match: re.Match[str]) -> str:
+        field = match.group("field")
+        value = fields.get(field)
+        if not value:
+            print(
+                f"Error: response template requires non-empty --{field.replace('_', '-')}",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+    return _SHA256_TEMPLATE.sub(replace, template)
+
+
+def _config_relative_path(config_dir: str, value: str, *, field: str) -> Path:
+    relative = Path(value)
+    if relative.is_absolute() or ".." in relative.parts:
+        print(f"Error: {field} must be a safe relative path", file=sys.stderr)
+        sys.exit(2)
+    root = Path(config_dir).resolve()
+    resolved = (root / relative).resolve()
+    if not resolved.is_relative_to(root):
+        print(f"Error: {field} escapes the mock config directory", file=sys.stderr)
+        sys.exit(2)
+    return resolved
+
+
+def _materialize_response_files(
+    response_cfg: dict, config_dir: str, args: list[str]
+) -> None:
+    entries = response_cfg.get("materialize_files", [])
+    if not isinstance(entries, list):
+        print("Error: materialize_files must be a list", file=sys.stderr)
+        sys.exit(2)
+    for index, entry in enumerate(entries):
+        if not isinstance(entry, dict):
+            print(
+                f"Error: materialize_files[{index}] must be an object",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        source_value = entry.get("source")
+        destination_template = entry.get("destination_template")
+        if not isinstance(source_value, str) or not isinstance(
+            destination_template, str
+        ):
+            print(
+                f"Error: materialize_files[{index}] requires source and "
+                "destination_template strings",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        source = _config_relative_path(
+            config_dir, source_value, field=f"materialize_files[{index}].source"
+        )
+        destination = _config_relative_path(
+            config_dir,
+            _render_template(destination_template, args),
+            field=f"materialize_files[{index}].destination_template",
+        )
+        if not source.is_file():
+            print(
+                f"Error: response materialization source does not exist: {source}",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        temporary = destination.with_name(f".{destination.name}.tmp-{os.getpid()}")
+        try:
+            shutil.copyfile(source, temporary)
+            os.replace(temporary, destination)
+        finally:
+            temporary.unlink(missing_ok=True)
+
+
+def _emit_response(response_cfg: dict | str, config_dir: str, args: list[str]) -> None:
+    """Write the configured response to stdout/stderr and exit."""
+    if isinstance(response_cfg, str):
+        print(response_cfg)
+        sys.exit(0)
+
+    exit_code = response_cfg.get("exit_code", 0)
+
+    _materialize_response_files(response_cfg, config_dir, args)
+
+    if "file" in response_cfg:
+        file_path = os.path.join(config_dir, response_cfg["file"])
+        with open(file_path) as f:
+            content = f.read()
+        stream = sys.stderr if response_cfg.get("stderr") else sys.stdout
+        stream.write(content)
+        sys.exit(exit_code)
+
+    if "stdout" in response_cfg:
+        print(response_cfg["stdout"])
+
+    if "stdout_template" in response_cfg:
+        template = response_cfg["stdout_template"]
+        if not isinstance(template, str):
+            print("Error: stdout_template must be a string", file=sys.stderr)
+            sys.exit(2)
+        print(_render_template(template, args))
+
+    if "stderr" in response_cfg:
+        print(response_cfg["stderr"], file=sys.stderr)
+
+    sys.exit(exit_code)
+
+
+def _auto_help(tool_cfg: dict, tool: str) -> None:
+    """Generate help text from config keys."""
+    mode = tool_cfg.get("mode", "subcommand")
+    description = tool_cfg.get("description", "")
+    responses = tool_cfg.get("responses", {})
+
+    if mode == "subcommand":
+        print(f"Usage: {tool} <command> [OPTIONS]\n")
+        if description:
+            print(f"{description}\n")
+        if responses:
+            print("Available commands:")
+            for name in sorted(responses):
+                if name != "default":
+                    print(f"  {name}")
+    elif mode == "intercept":
+        print(f"Usage: {tool} [ARGS...]\n")
+        if description:
+            print(f"{description}\n")
+    elif mode == "sequence":
+        print(f"Usage: {tool} [ARGS...]\n")
+        if description:
+            print(f"{description}\n")
+    elif mode == "rules":
+        print(f"Usage: {tool} <command> [OPTIONS]\n")
+        if description:
+            print(f"{description}\n")
+    else:
+        print(f"Usage: {tool} [ARGS...]\n")
+        if description:
+            print(f"{description}\n")
+
+    print()
+    sys.exit(0)
+
+
+def _state_dir() -> Path:
+    d = Path("/tmp/jarvis-eval/mock-state")
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def _handle_subcommand(tool_cfg: dict, args: list[str], config_dir: str) -> None:
+    responses = tool_cfg.get("responses", {})
+    if not args:
+        if "default" in responses:
+            _emit_response(responses["default"], config_dir, args)
+        print(
+            f"Error: no subcommand provided. Available: {', '.join(sorted(responses))}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    subcmd = args[0]
+    if subcmd in responses:
+        _emit_response(responses[subcmd], config_dir, args)
+
+    # Try prefix matching
+    matches = [k for k in responses if k.startswith(subcmd)]
+    if len(matches) == 1:
+        _emit_response(responses[matches[0]], config_dir, args)
+
+    if "default" in responses:
+        _emit_response(responses["default"], config_dir, args)
+
+    print(
+        f"Error: unknown subcommand '{subcmd}'. Available: {', '.join(sorted(responses))}",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+
+def _handle_intercept(tool_cfg: dict, args: list[str], config_dir: str) -> None:
+    responses = tool_cfg.get("responses", {})
+    args_str = " ".join(args)
+
+    for pattern, response in responses.items():
+        if re.search(pattern, args_str):
+            _emit_response(response, config_dir, args)
+
+    # Pass-through to real binary
+    real_binary = tool_cfg.get("passthrough")
+    if real_binary:
+        real_path = _resolve_passthrough_binary(real_binary)
+        if real_path:
+            sys.exit(_run_passthrough(real_path, args))
+
+    if "default" in responses:
+        _emit_response(responses["default"], config_dir, args)
+
+    print(f"Error: no matching pattern for args: {args_str}", file=sys.stderr)
+    sys.exit(1)
+
+
+def _run_passthrough(real_path: str, args: list[str]) -> int:
+    # A passthrough fixture finds its case data through this path, which need
+    # not be in the agent's home.
+    env = {**os.environ, "HATCH_EVAL_MOCK_CONFIG": str(_config_path())}
+    return subprocess.run([real_path] + args, capture_output=False, env=env).returncode
+
+
+def _resolve_passthrough_binary(binary_name: str) -> str | None:
+    redteam_bin_dir = os.environ.get("JARVIS_REDTEAM_BIN_DIR")
+    if not redteam_bin_dir:
+        return shutil.which(binary_name)
+
+    path_entries = os.environ.get("PATH", "").split(os.pathsep)
+
+    # Avoids infinite recursion where redteam mocking scenario finds the mock shim again
+    path_minus_redteam_directory = os.pathsep.join(
+        entry for entry in path_entries if entry != redteam_bin_dir
+    )
+
+    return shutil.which(binary_name, path=path_minus_redteam_directory)
+
+
+def _handle_sequence(
+    tool_cfg: dict, tool: str, config_dir: str, args: list[str]
+) -> None:
+    responses = tool_cfg.get("responses", [])
+    if not responses:
+        sys.exit(0)
+
+    state_file = _state_dir() / f"{tool}.count"
+    count = int(state_file.read_text()) if state_file.exists() else 0
+    idx = min(count, len(responses) - 1)
+    state_file.write_text(str(count + 1))
+    _emit_response(responses[idx], config_dir, args)
+
+
+def _handle_rules(
+    tool_cfg: dict,
+    args: list[str],
+    config_dir: str,
+    *,
+    pure_help: bool = False,
+) -> None:
+    rules = tool_cfg.get("responses", [])
+    args_str = " ".join(args)
+    env = os.environ
+
+    for rule in rules:
+        # Exact candidate probes use only explicitly marked responses. Those
+        # responses never participate in ordinary or action-shaped dispatch.
+        candidate_probe_rule = rule.get("candidate_probe") is True
+        if pure_help != candidate_probe_rule:
+            continue
+        # Per-rule disabled toggle: skip without contributing to matching.
+        if rule.get("disabled"):
+            continue
+        if "match_args" in rule:
+            pattern = rule["match_args"]
+            if not re.search(pattern, args_str):
+                continue
+        elif pure_help:
+            continue
+        if "match_env" in rule:
+            match = True
+            for k, v in rule["match_env"].items():
+                if not re.search(v, env.get(k, "")):
+                    match = False
+                    break
+            if not match:
+                continue
+        _emit_response(rule.get("response", rule), config_dir, args)
+
+    if pure_help:
+        print(
+            "Error: admitted eval binary-candidate probe has no explicit response",
+            file=sys.stderr,
+        )
+        sys.exit(125)
+
+    # Fall through to default (also honor per-rule disabled here).
+    for rule in rules:
+        if rule.get("disabled") or rule.get("candidate_probe") is True:
+            continue
+        if rule.get("default"):
+            _emit_response(rule.get("response", rule), config_dir, args)
+
+    sys.exit(0)
+
+
+def main() -> None:
+    tool = _tool_name()
+    args = sys.argv[1:]
+    trusted_state = _trusted_candidate_state()
+    try:
+        config = _load_config()
+    except FileNotFoundError:
+        # Preserve the legacy top-level help fallback when an ordinary mock has
+        # no response config. Candidate-routed invocations remain fail-closed.
+        if trusted_state is None:
+            _sidecar_log(tool, args)
+            if args and args[0] in _HELP_TOKENS:
+                print(f"Usage: {tool} [SUBCOMMAND] [OPTIONS]")
+                sys.exit(0)
+        raise
+    except (OSError, json.JSONDecodeError):
+        # Legacy mocks historically ledgered the attempted invocation before
+        # surfacing config read/parse failures. Candidate state remains
+        # fail-closed and pre-ledger.
+        if trusted_state is None:
+            _sidecar_log(tool, args)
+        raise
+
+    if trusted_state is None:
+        # A candidate config without immutable state is rejected before the
+        # ledger. Ordinary mocks retain their previous config and dispatch flow.
+        if config.get(_BINARY_CANDIDATES_KEY) is not None:
+            _load_binary_candidate_selection(config)
+        candidate_probe = False
+        _sidecar_log(tool, args)
+    else:
+        selection = _load_binary_candidate_selection(config)
+        candidate_probe = _enforce_binary_candidate(config, selection, tool, args)
+        if not candidate_probe:
+            _sidecar_log(tool, args)
+
+    # Handle top-level --help / -h. An admitted candidate subcommand probe is
+    # dispatched below only to an explicitly marked candidate-probe response.
+    if args and args[0] in _HELP_TOKENS:
+        tool_cfg = config.get(tool, {})
+        _auto_help(tool_cfg, tool)
+
+    tool_cfg = config.get(tool)
+    if tool_cfg is None:
+        print(f"Error: no mock config for tool '{tool}'", file=sys.stderr)
+        sys.exit(1)
+
+    # Per-tool disabled toggle: behave as if the tool is unmocked. If a
+    # passthrough binary is configured, fall through to it; otherwise
+    # surface a clear error so the agent sees that the tool was not
+    # actually mocked.
+    if tool_cfg.get("disabled"):
+        real_binary = tool_cfg.get("passthrough")
+        if real_binary:
+            # Use the recursion-safe resolver (strips JARVIS_REDTEAM_BIN_DIR from
+            # PATH). Plain shutil.which would find the staged `.redteam-bin` shim
+            # symlink instead of the real binary and re-launch the shim.
+            real_path = _resolve_passthrough_binary(real_binary)
+            if real_path:
+                sys.exit(_run_passthrough(real_path, args))
+        print(f"Error: mock for tool '{tool}' is disabled", file=sys.stderr)
+        sys.exit(1)
+
+    config_dir = str(_config_path().parent)
+
+    mode = tool_cfg.get("mode", "subcommand")
+
+    if mode == "subcommand":
+        _handle_subcommand(tool_cfg, args, config_dir)
+    elif mode == "intercept":
+        _handle_intercept(tool_cfg, args, config_dir)
+    elif mode == "sequence":
+        _handle_sequence(tool_cfg, tool, config_dir, args)
+    elif mode == "rules":
+        _handle_rules(tool_cfg, args, config_dir, pure_help=candidate_probe)
+    else:
+        print(f"Error: unknown mock mode '{mode}'", file=sys.stderr)
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
+#!/usr/bin/env python3JARVIS_EVAL_SIDECAR/usr/bin/python3.12/usr/bin/python3.11.redteam-binMOCK_CONFIG/redteam/mocks/redteam/mocks/sidecardaemon_activity_listList activityReturns the activity feed snapshot. Continue with cursor=next_cursor and unchanged capabilities, or use the legacy timestamp before parameter. With ACTIVITY_FEED_GOALS and ACTIVITY_FEED_GOAL_ACTIONS_LAZY, monitor-owned goals include at most 10 metadata-only steps, goal_action_count, and goal_actions_has_more. Fetch all steps and reports through the goal action endpoints. Manual details remain opaque.daemon_activity_detailGet activityReturns one activity feed entry by activity thread id.daemon_activity_status_updateUpdate activity statusAccepts an activity status command by activity thread id./activity/activity/{activity_id}/activity/{activity_id}/status/activity/log/identity/subscribe/skills/subscribe/spaces/subscribe/themes/subscribe/fs/subscribe/activity/subscribe/elided/fieldsoriginal_bytesupstream_unavailablecomplimentary subscription redemption is temporarily unavailablecomplimentary_offer_unavailablecomplimentary subscription offer is unavailabledaemon_subscription_redeem_complimentaryRedeem the viewer's complimentary subscription offerRedeems the complimentary grant Stefi advertises on `GET /hatch/subscription` as `complimentary_offer`. The request carries no operands; Stefi derives every grant parameter and re-checks eligibility, so a viewer with no offer or existing access is refused upstream. Requires the `hatch_complimentary_subscription_jarvis_enabled` Gatekeeper.daemon_chat_sxs_selectSelect a Side-by-Side responseSelects a candidate for an active Side-by-Side response. The primary candidate may be selected immediately and keeps the transcript unchanged; the alternate candidate may be selected only after it is ready, and selecting it persists the alternate as the turn's canonical assistant response in the transcript (model context follows unless the turn already left the live prompt window). Repeating the selected candidate is idempotent, while selecting the other candidate after resolution conflicts.this SxS response was already resolved to another candidatedaemon_chats_forkFork a chatForks the main/root session into a target persistent session, or returns the existing writable fork. An existing archived owner-created target returns 409 read_only_session.Chatsdaemon_chats_startStart a chatStarts a fresh persistent root session, or returns the existing writable chat. An existing archived owner-created target returns 409 read_only_session.daemon_chats_deleteDelete a chatDeletes a non-primary root session and its associated runtime state.daemon_chats_renameRename a chatUpdates the persisted thread title for an existing public root session.daemon_chats_resolveResolve an account's chatResolves an account side chat on both standard and confidential VMs. Supports Instagram, Threads, Messenger, and Facebook numeric app IDs. Messenger and Facebook share one channel; account_id is format-validated but ignored. Instagram and Threads require account_id and resolve one channel per app and account. Reuses the existing channel or creates it atomically when absent. Requires owner access. Preserves archive state and sends no messages. Use the returned chat_id for onboarding, subscription, history, and sends.read_only_sessionthis conversation is view-only`title` cannot be emptydaemon_chats_listList sessionsLists active root chats by default; pass `view=archived` to return archived chats instead. Rows include `archived` and `pinned` from chat metadata while `status` remains the runtime agent lifecycle, plus `unread_count` derived from the persisted seen marker using the same semantics as `chats/unread-count`. Channel chats, including native app chats, come first by recency, followed by regular pinned chats in server-maintained manual order and regular unpinned chats by recency. Channel chats can span multiple pages. The canonical /chats/list route defaults to 50 chats per page; follow next_cursor for the complete view. The legacy /session/list route retains a full snapshot when limit and any non-empty cursor are omitted; providing either opts into cursor pagination.daemon_chats_searchSearch sessionsSearches active and archived thread titles and public thread messages by default; pass `view=active` or `view=archived` to filter. Results include `archived` and `pinned` from session metadata while `status` remains the runtime agent lifecycle, plus `unread_count`; channel chats, including native app chats, come first by recency, followed by regular pinned chats in manual order and regular unpinned chats by recency. `snippet` uses matching message context when available.daemon_chats_list_oneFetch a chat list itemReturns the same inventory row shape used by `GET /api/chats/list` for one public root session id, including archived sessions.daemon_chats_has_unread_threadsCheck unread threadsReturns whether any active non-primary public thread currently has unread badgeable assistant messages.Agentic feature tourtasks.onboarding_tour.titleTitle of the daily onboarding feature tour in the list of upcoming scheduled taskssearch.destinations.kind.fileType label under a file's title in search resultssearch.destinations.kind.goalType label under a goal's title in search resultsSpacesearch.destinations.kind.spaceType label under the title of one of the user's own Spaces in search resultsCommandType label under a navigation destination, such as Feed or Settings, in search resultssearch.destinations.command.settingsSearch result title that opens the app's settingsShared spacesearch.destinations.kind.shared_spaceType label under the title of a Space that someone else shared with the user, in search resultsUnable to record the connection after consent.consent.callback.record_unavailableConsent callback reason when recording a consent-only connector connection failsUnable to verify the connection status after consent.consent.callback.verify_unavailableConsent callback reason when the provider connection status cannot be verifieddaemon_shoppingFetch canonical shopping product or listing detailsWith connector=<id> from a connector product's provider, product_id is that connector's native id and the read goes to the connector, whose manifest must declare shopping product_details (Walmart today). The connector projects its details onto the same payload: product id, name, url, description, brand, seller_name, optional seller_url (an HTTPS page for the seller; no connector reports one yet), stock_status, images, rating, current_price and original_price in minor units, selected_variant_info, variant_groups whose option product_ids and related_products ids are native ids of the same connector, and no eligibility. The server adds product.shipping_information_label, a localized line shown under the price and present only when known (today "Free shipping on Walmart+" for an item that ships free to Walmart+ members), and product.actions, the page's buttons in display order: {type: add_to_cart} and {type: buy_now} when the connector can add the item to its cart and, for buy_now, check that cart out, and {type: open_url, label, url} for the item's page. Clients ignore unknown action types. It requires the connector to be available and connected, ignores currency, and returns 502 connector_product_details_failed, or 429 product_details_busy when no read slot frees within 20 seconds.daemon_shopping_eventsHandle a shopping action and queue its public agent replyclicked_checkout_cart requires a saved shopping_cart widget_id and displayed_cart with captured_at and optional retailer_name from the fresh cart response. Product and citation selectors are rejected. The saved widget selects the provider; displayed_cart is untrusted context, not freshness proof or order approval. Only registered, available checkout providers are admitted. The click delegates checkout assistance through the owning skill, with the existing purchase-click foreground provenance and final approval requirements. Acceptance queues a turn, not an order. clicked_update_cart requires a saved shopping_cart widget_id, the same displayed_cart, and cart_quantities: 1 to 50 unique {product_id, quantity} lines naming live cart line ids and their new quantities from 0 (remove) to 99. Only a connector declaring cart and edit_cart is admitted. It queues a turn in which the agent sets those quantities through the connector doc under the connector's cart approvals, with no foreground web authority. Accepts a clicked_purchase event and enqueues a visible follow-up in the selected session. Exactly one product_id or product_url supplies the product reference; the click is purchase intent, not payment approval. Recognized Instacart HTTPS origins route to the owning connector skill when available on the VM's channel; otherwise they retain the browser-product handoff. In the connector handoff, a URL-only click does not establish the selected item or authorize buying an existing cart; the agent clarifies missing selections before acting. A subsequently unavailable skill or unsupported operation does not fall through to generic browser checkout. An accepted click also registers turn-scoped foreground web authority for the follow-up turn it creates, so eligible credential-free web reads and browser page navigation that would otherwise be a plain ask proceed without an approval card; explicit denies, credentialed requests, SSRF checks, and checkout consent remain authoritative. clicked_purchase with connector plus a connector-native product_id (and optional variant_product_id) is Buy now on a connector product's details page: only a connector whose manifest declares product_details, cart and agentic checkout, and whose cart checkout the daemon registers, is admitted (Walmart). The runtime adds one unit to that connector's cart and, once a fresh cart read verifies it, queues a turn to check out the whole cart; otherwise the turn reports the addition and checkout does not start. clicked_add_to_cart instead requires a saved widget_id and product_id, message_id and citation_id from a public assistant message in the selected chat, or connector and a connector-native product_id for a details page that names no saved card (connectors declaring product_details and cart whose additions the runtime runs). Mixed/incomplete targets and product_url are rejected. The saved product supplies the provider, optional retailer and action. Optional variant_product_id, accepted only when the product's connector advertises capabilities.add_to_cart_variants, names the variant the user picked, such as a size or color; the agent reads that item's details before adding it. It requires the provider rollout and owning connector availability gates. Connector widgets follow their owning skill's channel availability and manifest restrictions, without an additional widget-only channel check. Declared employee restrictions remain enforced. Add to cart registers the same turn-scoped screened-read authority; connector mutations and checkout retain their own authorization. Instacart and Walmart additions execute and verify through the connector before queueing a reply-only confirmation turn whose status is verified, retailer_mismatch, unavailable (nothing was added, such as an item the merchant cannot sell now) or unverified. They continue after an HTTP disconnect, serialize cart writers, and never switch retailers or automatically repeat an uncertain write. The response acknowledges an agent turn, not a completed cart mutation. Each accepted event starts a new turn; clients must not automatically retry an uncertain response.assistant_nameCheck out with {assistant_name}shopping.product_details.buy_cta.check_out_withPrimary button on a product details sheet that starts checkout for the product through the user's assistant; assistant_name is a proper nameStart checkoutshopping.product_details.buy_cta.start_checkoutPrimary button on a product details sheet that begins checkout for the product; phrased as starting checkout, not completing a purchasemembershipFree shipping on {membership}shopping.product_details.shipping_information.membership_free_shippingShipping line under the price on a product details sheet for an item that ships free to members of the merchant's membership program; membership is a program name such as Walmart+Buy nowshopping.product_details.buy_cta.buy_nowPrimary button on a product details sheet that starts buying the productView on {merchant}shopping.product_details.view_on_merchantAccessible name of a product details button that opens the product on the merchant's website; merchant is a store name such as WalmartBuy with {assistant_name}shopping.product_details.buy_cta.buy_withPrimary button on a product details sheet that starts buying the product through the user's assistant; assistant_name is a proper nameshopping.listing.locationLabel for the seller-provided location of a Marketplace listingCheck outshopping.product_details.buy_cta.check_outPrimary button on a product details sheet that starts checkout for the productConditionshopping.listing.conditionLabel for the seller-provided condition of a Marketplace listingdaemon_onboarding_tasksList onboarding agent tasksReturns a checked-in, server-curated starter task catalog. Each catalog task runs one Idea from the bundled Ideas catalog when it is selected on `POST /onboarding/complete`. When the user arrived from a feed card that names an Idea, that Idea's task comes first; if no task runs a public catalog Idea, a task for it is added at the top with id `idea:<catalog id>` and no connector groups. When the card names no Idea and the lookup sent its headline, a task with id `card` is added at the top instead: its title is that headline, its summary is empty, and selecting it sends the card's prompt as the user's message after completion. In every case, that first task carries `from_card`, `facebook` or `instagram`, naming the app the card was on, when the card lookup named it. No other task has the field. Tasks can include connector prerequisite groups, so clients render required or optional connector setup without hardcoding that contract. A task that needs a connector also carries a flat `connector_id` (the `GET /connectors` id of the first choice of its first required group) so clients can surface and start their native connect flow for it directly.Bootstrap/onboarding/tasksavatar_unavailableavatar_id is no longer available; refresh onboarding identity optionsinvalid marketplace ID or wallet placementoversized or duplicate marketplace listJARVIS_CONNECTOR_MARKETPLACE_COUNTRY_OVERRIDEEnter your mailbox email address and app password. Muse finds your server settings automatically.connectors.credential_form.imap_email.descriptionDescription for the IMAP app-password setup formSomething went wrong during account setup. Try again.connectors.credential_form.imap_email.error.unknownGeneric IMAP setup error shown for an unknown enrollment error codeApp passwordconnectors.credential_form.imap_email.password.labelPassword field label on the IMAP app-password setup formEmail addressconnectors.credential_form.imap_email.username.labelUsername field label on the IMAP app-password setup formCreate an iCloud app-specific passwordconnectors.credential_form.imap_email.help_link.icloud.labelHelp link label for creating an iCloud app-specific passwordAccount name (optional)connectors.credential_form.imap_email.display_name.labelOptional account-name field label on the IMAP app-password setup formEnter an app passwordconnectors.credential_form.imap_email.password.placeholderPassword field placeholder on the IMAP app-password setup formyou@example.comconnectors.credential_form.imap_email.username.placeholderUsername field placeholder on the IMAP app-password setup formCheck the email address and app password and try again.connectors.credential_form.imap_email.error.invalid_requestIMAP setup error shown for invalid enrollment inputAccount setup is busy right now. Try again in a moment.connectors.credential_form.imap_email.error.validation_busyIMAP setup error shown when validation capacity is unavailableThis connector changed while setup was running. Start setup again.connectors.credential_form.imap_email.error.connector_changedIMAP setup error shown when the connector changes during validationconnectors.credential_form.imap_email.display_name.placeholderOptional account-name field placeholder on the IMAP app-password setup formYour provider did not accept these credentials. Check your mailbox address and app password.connectors.credential_form.imap_email.error.credentials_rejectedIMAP setup error shown when the provider rejects the supplied credentialsYour provider could not be reached. Check your connection and try again.connectors.credential_form.imap_email.error.provider_unreachableIMAP setup error shown when the provider is temporarily unreachableAutomatic setup does not support this provider.connectors.credential_form.imap_email.error.unsupported_providerIMAP setup error shown when automatic setup cannot configure the providerYour provider could not complete setup. Try again or check the app password.connectors.credential_form.imap_email.error.provider_protocol_errorIMAP setup error shown when provider protocol setup failsThis mailbox is already connected.connectors.credential_form.imap_email.error.account_already_connectedIMAP setup error shown when the mailbox is already linkedCreate an app password in your email provider's security settings. Use that password here instead of your main account password.connectors.credential_form.imap_email.help_textHelp text for the IMAP app-password setup formdaemon_connector_getGet a connectorReturns one server-assembled connector by its canonical id (e.g. `gmail`, `outlook_mail`, `custom.foo`). Returns 404 when the id is unknown or not user-visible.Connectorsdaemon_connectors_listList connectorsReturns one server-assembled connector per user-visible connector (verified + custom). Internal connectors are filtered out server-side. The default `settings` surface returns the full catalog; `surface=onboarding` returns the curated first-run catalog. Shop Pay reports its live connection state and remains excluded from onboarding. Branch on `state` before `management_kind`. Supplying any of `limit`, `cursor`, `category`, or `q` selects paged marketplace mode (settings surface only; blank `cursor` and `q` are ignored): `category` and `q` (at most 200 characters) select and filter the result set, the page size defaults to 20. Search matches case-insensitive substrings in rendered names while preserving the existing order. The response adds `category`, first-page `featured` (for configured categories or bundled `productivity`, `social`, `health`, and `business` without `q`) and `next_cursor`. Featured rows are excluded from the regular connector pages throughout the cursor chain. Published configuration resolves category IDs, localized titles, membership, and ranking by account country. Bundled defaults use manifest membership and ordering.yaml ranks. Verified connectors without a manifest category are excluded from global unfiltered browsing, but remain in global search. Search excludes stripe-link, shop-pay, and paypal; Connected also excludes them for the separate Wallet tab, even when their manifest category is absent. Connected also lists the companies Muse is signed in to through the Personal Agent Protocol (`group: optimized_sites`). `category=wallet` lists Link by Stripe, Shop Pay, and gate-enabled PayPal, with the same visibility and localization rules when browsed without `q`. Wallet loads provider state only for the selected page, uses no custom source, and has no Featured or homepage preview. Visible wallets remain in the legacy unpaged list. A cursor minted under another config/country revision or locale, or whose anchor left the result set, returns `400` with code `cursor_expired`. Required custom lookup failures return `500` in paged mode; only the legacy unpaged list omits custom rows on failure.More access to your accountconnector.poppy.settings.more_accessSettings row for a company website that asked for more access to the user's account there than they granted, shown when the company gave no description of that accessAccessconnector.poppy.settings.access_headingHeading in Settings over what Muse may do with the user's account at a company website, listing access the company asked for that the user has not granted yetcompanyMuse can use your account at {company}.connector.poppy.consent.uses_your_accountFirst line of the sheet shown before the user signs in to their account at a company; company is the company's nameapproval_image_unavailableapproval image service unavailableinvalid_approval_imageapproval image could not be verifiedYour Muse's email was deletedemail.mailbox.restriction.taken_down.titleTitle of the Muse Mail notice shown after the assistant's email address was disabled for a policy violation; Muse is the product name of the assistantWe detected something that goes against our policies. You can create a new email address.email.mailbox.restriction.taken_down.bodyBody of the Muse Mail notice shown after the assistant's email address was disabled for a policy violation; the user can create a new address for the assistantCreate an emailemail.mailbox.restriction.taken_down.actionButton on the deleted Muse Mail notice that starts setting up a new email address for the assistant{assistant} can't send emails until you change the sender name associated with this email.email.mailbox.restriction.sender_name.bodyNotice in Muse Mail when the assistant's email address may not send until the user changes its sender name, the name recipients see; assistant is the assistant's nameYour Muse can't send emails until you change the sender name associated with this email.email.mailbox.restriction.sender_name.body.unnamed_assistantNotice in Muse Mail when the assistant's email address may not send until the user changes its sender name, the name recipients see; shown when the assistant has no name; Muse is the product name of the assistantYour Muse's email is pausedemail.mailbox.restriction.sender_name.titleTitle of the Muse Mail notice shown while the assistant's email address may not send until the user changes its sender name; Muse is the product name of the assistantemail.mailbox.restriction.sender_name.actionButton on the paused Muse Mail notice that opens the page for changing the name recipients see on the assistant's emailsevent hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/peer_requests.rs:150hatch_server::daemon::http_api::routes::peer_requestshatch_daemon_http_client::daemon::http_api::routes::peer_requestshatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/peer_requests.rsevent hatch-engine/crates/hatch-daemon-http-client/src/daemon/../../../hatch-server/src/daemon/http_api/health_delete_listener.rs:108hatch_server::daemon::http_api::health_delete_listenerhatch_daemon_http_client::daemon::http_api::health_delete_listenerhatch-engine/crates/hatch-daemon-http-client/src/daemon/../../../hatch-server/src/daemon/http_api/health_delete_listener.rsevent hatch-engine/crates/hatch-daemon-http-client/src/daemon/../../../hatch-server/src/daemon/http_api/present_widget_listener.rs:147hatch_server::daemon::http_api::present_widget_listenerhatch_daemon_http_client::daemon::http_api::present_widget_listenerhatch-engine/crates/hatch-daemon-http-client/src/daemon/../../../hatch-server/src/daemon/http_api/present_widget_listener.rsevent hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/peers.rs:388hatch_daemon_http_client::daemon::http_api::routes::peershatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/peers.rsevent hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/connectors/tailscale.rs:34hatch_server::daemon::http_api::routes::connectors::tailscaleerrhatch_daemon_http_client::daemon::http_api::routes::connectors::tailscalehatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/connectors/tailscale.rsevent hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/subscription/redeem_complimentary.rs:44hatch_server::daemon::http_api::routes::subscription::redeem_complimentaryhatch_daemon_http_client::daemon::http_api::routes::subscription::redeem_complimentaryhatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/subscription/redeem_complimentary.rsevent hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/subscription/redeem_complimentary.rs:39event hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/tasks.rs:399hatch_server::daemon::http_api::routes::taskshatch_daemon_http_client::daemon::http_api::routes::taskshatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/tasks.rsevent hatch-engine/crates/hatch-daemon-http-client/src/daemon/../../../hatch-server/src/daemon/http_api/health_delete_listener.rs:201armevent hatch-engine/crates/hatch-daemon-http-client/src/daemon/../../../hatch-server/src/daemon/http_api/health_delete_listener.rs:359event hatch-engine/crates/hatch-daemon-http-client/src/daemon/../../../hatch-server/src/daemon/http_api/health_delete_listener.rs:99event hatch-engine/crates/hatch-daemon-http-client/src/daemon/../../../hatch-server/src/daemon/http_api/health_delete_listener.rs:87event hatch-engine/crates/hatch-daemon-http-client/src/daemon/../../../hatch-server/src/daemon/http_api/present_widget_listener.rs:353event hatch-engine/crates/hatch-daemon-http-client/src/daemon/../../../hatch-server/src/daemon/http_api/present_widget_listener.rs:122event hatch-engine/crates/hatch-daemon-http-client/src/daemon/../../../hatch-server/src/daemon/http_api/present_widget_listener.rs:135event hatch-engine/crates/hatch-daemon-http-client/src/daemon/../../../hatch-server/src/daemon/http_api/present_widget_listener.rs:103event hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/subscription.rs:570hatch_server::daemon::http_api::routes::subscriptionhatch_daemon_http_client::daemon::http_api::routes::subscriptionhatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/subscription.rsevent hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/subscription.rs:379event hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/subscription.rs:401event hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/subscription.rs:518event hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/peer_requests.rs:215event hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/tasks.rs:569event hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/tasks.rs:341event hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/tasks.rs:362event hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/tasks.rs:435event hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/subscribe.rs:211hatch_server::daemon::http_api::routes::subscribehatch_daemon_http_client::daemon::http_api::routes::subscribehatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/subscribe.rsevent hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/connectors/tailscale.rs:106event hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/filesystem/raw.rs:244hatch_daemon_http_client::daemon::http_api::routes::filesystem::rawhatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/filesystem/raw.rsevent hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/filesystem/raw.rs:567event hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/subscription/redeem_complimentary.rs:48event hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/chats/creation.rs:157hatch_server::daemon::http_api::routes::chats::creationhatch_daemon_http_client::daemon::http_api::routes::chats::creationhatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/chats/creation.rsevent hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/bootstrap/avatar.rs:140hatch_server::daemon::http_api::routes::bootstrap::avataravatar_idhatch_daemon_http_client::daemon::http_api::routes::bootstrap::avatarhatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/bootstrap/avatar.rsevent hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/bootstrap/avatar.rs:108event hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/subscription.rs:584event hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/peer_requests.rs:260contextevent hatch-engine/crates/hatch-daemon-http-client/src/daemon/http_api/../../../../hatch-server/src/daemon/http_api/routes/peers.rs:1832hatch_server::daemon::http_api::routes::peersSubscriptionQuotaHttpResponsefile ended before the selected download lengththread_idseen_at_msunread_countoccurred_at_msreaction_emojidisplay_text_updated_at_msauthor The page holds fewer groups than requested because its rows reached the
+ page byte budget; `has_more` is true.size_limitedchat_events Monotonic per-chat transcript revision (the chat's public-stream
+ event-seq high-water mark, which a turn deletion's persisted marker
+ advances). Clients discard an in-flight history response whose
+ revision is older than the latest deletion event they applied.transcript_revisiontranscript_modechat_kindbefore_seqafter_seqinclude_first_unseenmax_bytesqueryall_sessionsbefore_row_idanchor_seqbefore_limitafter_limit Exactly 64 lowercase hexadecimal characters from the contact descriptor. Product-facing direction: incoming is a remote claim of my invitation. Defaults to 50. The server enforces a maximum of 100. Canonical, versioned cursor from this collection and direction. RFC 3339, when the import job started. Connector ids the source reported connected that the migration
+ dropped. `null` means unknown, never "none"; `[]` means none. Chat channels the migration disconnected, such as `whatsapp`, with the
+ same `null` and `[]` meanings. `null` when this VM was never migrated or the owner marked the newest
+ migration seen. Raw stable Ads id. One `act_` prefix is accepted and removed before
+ forwarding the canonical numeric id upstream. Owning ad account id. Required for campaigns, ad sets, and ads; ignored
+ for ad accounts so legacy chips carrying an unrelated hint remain usable. Optional independently hydrated section. Omission preserves the
+ legacy full-details response for older clients. Visible hierarchy rows that should receive the bounded expensive
+ enrichment. Repeated query parameters are accepted. Meters above sea level; recorded for the client's benefit only. Horizontal accuracy in meters. Widens server-side geofence matching
+ by at most a bounded amount; absent means exact. Set when the sample is a region-monitoring event for a geofence the
+ daemon armed (`geofence.set`), naming that geofence. Client-side label of the triggered region; informational. `enter`, `dwell`, or `exit`. An exit delivers only for a region the
+ user set themselves; the serendipity loop's regions ignore exits. `confirmed_local` when this side confirmed and waits for the other
+ side, `verified` once both sides confirmed, or `awaiting_peer` when the
+ other Muse isn't connected: the confirmation is kept, and this Muse
+ confirms on its own at the next link-up.additionalProperties Stable native rule UUID. Send it back to delete the rule. Complete sharing instructions; the summary is display-only. Read with the rules in one snapshot; send back as expected_revision when editing. Retained rules whose audience changed; omitted when all rules are current. Present while this active contact's signed photo is held locally, in
+ memory or the daemon's verified stored copy, so the photo route can
+ serve it. The contact's Muse avatar still, present while its signed bytes are
+ held locally like `profile_photo`; read it from
+ `/peers/{muse}/avatar/{sha256}`. The profile photo this active contact's signed identity commits to,
+ present whether or not its bytes are held yet. When `profile_photo`
+ is absent the bytes are being fetched from the peer and arrive with
+ `peer.contact_updated`; a copy the client already holds for this
+ `sha256` is the same signed image. The Muse avatar still this active contact's signed identity commits
+ to, with the same rules as `profile_photo_ref`. A contact's image descriptors, shared by `GET /api/peers` and the
+ connection directory's contact summary so both always agree. Every field
+ is absent while the peer gate is off. The contact's DM side chat being reset (its `chat_session_id` from
+ `GET /api/peers`). When it is no longer the live conversation, the
+ call is a replay: nothing is reset again and the response names the
+ live conversation. The contact's fresh DM side chat. Include revoked grants. The cursor is bound to this value. Page size. Defaults to 50 and cannot exceed 100. Opaque cursor returned by this same collection and filter. Bounded compatibility alias for predecessor clients. `own_muse` when this Muse published it, `peer_muse` when it arrived. Plain text, whitespace collapsed, at most 160 characters plus an ellipsis. The Hatch server's opaque id for this delivery: 1 to 256 bytes of
+ letters, digits, `-`, `_`, `.`, or `:`. The signed invitation, standard base64 (the mint response's
+ `invite_b64`) or unpadded base64url. A bearer secret: never echoed,
+ logged, or shown to the model. The sender's account name as the Hatch server knows it. When the Hatch server drops the delivery, in epoch milliseconds. True when the card is in the main chat (now or from an earlier
+ handover) or the owner already accepted this invitation: the client
+ marks the delivery delivered. False with `rejection` otherwise: the
+ client declines it. `invalid`, `expired`, `already_paired`, or `declined`; null when
+ accepted. The inviter's Muse ID, only with `already_paired`. The mailbox's opaque id; send it back to decline. The sender's name, or null. Lowercase hex SHA-256 of the inviter's profile photo as the verified
+ invitation signs it, or null. A client may fetch the photo by this
+ hash and must check the bytes against it before showing them. The level the invitation offers: `restricted` or `trusted`. A
+ space-only invitation reads `restricted` here. True when accepting shares one of the inviter's Spaces and nothing
+ else: the two Muses don't talk. The inviter's Muse ID. The invitation link to review and accept, as the chat card carries it.
+ A bearer secret for the owner's own client: never log or share it. The Space a space-only invitation is for; omitted for other
+ invitations. `declined`, `already_ended`, or `unknown`. Opaque `next_cursor` from the previous page. 1 to 100; default 50. Also return the owner's own sent shares (`feed_share_sent`,
+ `idea_share_sent`, `space_share_sent`, `goal_share_sent`,
+ `file_share_sent`). Default false: they are left out before paging. `request_received`, `invitation_received`,
+ `space_invitation_received`, `connected`, `confirm_needed`,
+ `file_shared`, `space_shared`, `space_edit_requested`, or
+ `space_edit_sent` (older VMs also wrote `request_accepted` beside
+ `connected`); clients ignore kinds they do not know. The contact's Muse ID. Exact ceremony returned beside the displayed safety code. Canonical client-stable UUID reused for an ambiguous retry. `confirmed_local` until the signed matching remote notice arrives;
+ `verified` after bilateral activation. `proposed` until bilateral confirmation, then `active`. The owner confirmed this person, who claimed one of the owner's
+ invitations, in this relationship generation (`POST
+ /peers/requests/{relationship_generation_id}/confirm`, a chat
+ confirmation, or `sas/confirm`). This Muse then confirms on its own
+ whenever the other Muse is reachable, so clients show that the request
+ waits for the other Muse instead of a Confirm action. Always false for
+ an invitation the owner accepted. peerd's verified attestation verdict for the counterpart's latest
+ link: a badge, never a gate. The verified contact's live 1:1 peer sidechat, or null. Unpairing
+ archives that conversation and a later relationship gets a new one, so
+ a terminal or re-paired generation never reports the old chat. The newest message the owner can already read in `chat_session_id`:
+ the shared transcript only. Absent with no chat or no shared message. Opaque cursor returned by this same collection. Canonical lowercase, hyphenated, non-nil UUID generated once by the
+ client and reused for retries of this exact intent. Retained for older clients. New invitations use `restricted` and start
+ without sharing rules. Legacy `trusted` and `collaborator` values are
+ accepted and normalized to this baseline. Name of the person the owner chose in Find someone. Stored only on
+ this invitation, never in the link. Labels the owner's confirmation of
+ whoever accepts; a matching account name never confirms the connection
+ by itself. Omit for a generic link. The client's opaque reference for who this invitation is for (for
+ example, a contact id in its own address book): at most 256 bytes
+ without control characters. Private to the owner, never in the link,
+ and part of the replay intent. Omit when there is none. Decimal Hatch account id of the chosen person, when the client knows
+ it (Find someone rows for onboarded people carry it). The invitation
+ signs it as its bound recipient account, so the recipient's Muse can
+ prove at claim time that it is the account the invitation was for;
+ it never gates the claim. At most 20 ASCII digits, part of the replay
+ intent. Omit when unknown. The slug of one of this owner's Spaces to share with the person once
+ they accept. The invitation is then minted `space_only`: the two Muses
+ never message each other, and the relationship exists to use shared
+ Spaces. Part of the replay intent. Omit for a connection invitation. With `space_slug`: what the share lets them do, `use` (default) or
+ `edit`. URL-fragment form for the magic link
+ (`https://muse.ai/peer/accept#<fragment>`). Standard padded base64 of the exact JPEG whose SHA-256 this invitation
+ signs as the owner's profile photo, so the owner's client can store it
+ by hash for recipients; null when the invitation signs no photo or
+ those bytes are no longer the owner's current photo. The `recipient_ref` the invitation was created with, or null. The Find someone `recipient_name` the invitation was created with, or
+ null for a generic link. The Send on Muse delivery registered for this invitation, or null. The decimal Hatch account id the invitation signed as its bound
+ recipient, or null for an unbound invitation. A replay of this
+ invitation's `create_request_id` must repeat exactly this value (or
+ omit it when null), so a client re-sharing a link sends this field
+ back rather than re-deriving an account from its current contact rows. The Hatch server's id for the Send on Muse delivery that carried this
+ invitation: 1 to 256 bytes of letters, digits, `.`, `_`, `:`, or `-`. The owner's WhatsApp chat `session_id` named. The app's main chat, or nothing was posted. Where an invitation request presented. The owner's WhatsApp chat the accept came from, as WA clients send it
+ to Connectors. The server resolves it; omitted, or not that chat,
+ accepts as before. The Space a space-only invitation is for; omitted for other
+ invitations. Accepting one from a contact already paired with this
+ owner keeps that relationship (its generation and revision are
+ returned) and asks the host for the Space. The relationship still waits for the inviter to confirm. A client
+ shows "connected" only once the relationship is verified. `whatsapp` when the waiting line and success message go to the
+ WhatsApp chat `session_id` named, otherwise `app`. The invitation link the app was opened with. A bearer secret: it is
+ never echoed, logged, or shown to the model. The owner's WhatsApp chat to post the accept card into, as WA clients
+ send it to Connectors. The server resolves it; omitted, or not that
+ chat, posts into the main chat as before. `posted`, `already_paired`, `expired`, or `invalid`. The inviter's Muse ID, with `already_paired` so the client can open
+ that pair, and with an `invalid` that has a `reason`. Why a valid invitation cannot be accepted now, only with `invalid`:
+ `pending_request` (another request with the inviter must finish or be
+ declined first), `link_predates_disconnect` (the relationship was
+ removed after this link was made; ask for a new one), or
+ `identity_changed` (disconnect the inviter first). The Space a space-only invitation is for, only with `posted` and
+ `already_paired`. Where the accept card went: `whatsapp` for the WhatsApp chat
+ `session_id` named, otherwise `app` (also when nothing was posted). The VM's opaque handle for the invitation; the `invitation_received`
+ activity item carries the same one. The inviter's self-reported name from the signed invitation, or null. The inviter's self-reported Muse name from the signed invitation, or null. Optional presentation label. Clients fall back to `id` when absent. Canonical recurrence descriptor from the cron definition. Next materialized run for clients that display an Upcoming timestamp. Concrete IANA timezone used by clients to display the next run and
+ `cadence` wall-clock fields. Disabled tasks have no scheduler row, so
+ it comes from the definition's own timezone. Typed recurrence, derived from the same parse as `schedule_key`, so
+ clients need not parse the key. Absent on older VMs. What the task's latest finished runs cost. Absent until a run has been
+ priced, and on confidential VMs. `runonce`: fire instant in epoch seconds. `interval`: seconds between runs. `daily`/`weekly`/`monthly`/`yearly`: 24-hour `HH:MM` wall clock in the
+ record's `timezone`. `weekly`: lowercase three-letter weekdays (`mon`..`sun`), Monday first. `monthly`/`yearly`: days of the month, ascending. `yearly`: months 1-12, ascending. Fields that do not apply to `kind` are omitted. Explanation for the immediate request. Reserved scheduler labels
+ `scheduled` and `retry` are stored with a `manual:` prefix; the response
+ returns the stored trigger reason. Archived definition file paths; a job id can match multiple files. True when `<JARVIS_HOME>/.redteam-bin` does not match the daemon's
+ applied state: it holds tool symlinks or foreign entries while no
+ apply is in force (hand-planted content, or an apply from a previous
+ daemon run), or an apply is in force but the staged symlinks or
+ `mock-config.json` no longer check out. Such content never reaches
+ tool PATH or env. Maximum number of trailing entries to return. Bounded by
+ [`SIDECAR_TAIL_MAX_LIMIT`]. Defaults to [`SIDECAR_TAIL_DEFAULT_LIMIT`]. True when the on-disk file was longer than `SIDECAR_MAX_READ_BYTES`
+ and we returned the tail of what we read — not the tail of the file. Opaque next_cursor from the previous response; mutually exclusive with before. The remaining request fields keep the existing chat operation contract.
+ chat_id is the only destination selector; native IDs are never selectors.chat_eventhas_olderhas_neweroldest_seqnewest_seq Exactly one of chat_id or all_chats=true is required.all_chatsstruct UploadStatusRequeststruct SubscriptionQuotaHttpResponsestruct SubscriptionCallbackHttpResponsestruct SubscriptionCallbackRequeststruct SubscriptionAvailablePlansRequeststruct CreateBugReportLogsRequeststruct AdsDetailsHttpRequeststruct ResetConversationHttpRequeststruct DeliverInboxHttpRequeststruct DeclineInboxHttpRequeststruct ConfirmSasHttpRequeststruct MintInviteHttpRequeststruct RegisterInviteDeliveryHttpRequeststruct AcceptInviteHttpRequeststruct OpenInviteHttpRequeststruct TaskRunCreateHttpRequeststruct ActivityListHttpParamsstruct NutritionHttpRequeststruct SubscribeRequeststruct FsSubscribeRequeststruct SxsSelectRequeststruct Documentstruct Categorystruct Homepagestruct CountryOverrideAuthorityUnprovenPermissionUnprovenInvalidCursorWorkLimitExceededInvalidStateTimeoutRuntimeUnavailableStorageErrorExpiredDuringReadPageLimitExceededDeviceUnavailableCoverageGapReadFailedhatch_daemon_http_foundation::response_compression::CompressibleRawTextFilehatch_daemon_http_client::daemon::http_api::client_compat::LegacyStreamCreationErrorpostedpending_requestlink_predates_disconnectConfigurationInvalidArgumentIoTlsRowNotFoundTypeNotFoundtype_nameColumnIndexOutOfBoundsindexlenColumnNotFoundColumnDecodeEncodeDecodeAnyDriverErrorPoolTimedOutPoolClosedWorkerCrashedMigrateInvalidSavePointStatementBeginFailedSerializationFailureLockedConnectionTransientConstraintMalformedOrCorruptTransientIoIoTransientIoErrorPoolTimeoutChannelClosedLimitExceededAdmissionDeferredQuickCheckUnknowna Display implementation returned an error unexpectedlyBUG: inner connection already taken!`Ready` polled after completioncannot serialize marketplace documentinvalid marketplace documentmarketplace document is too largeDbBackendErrorsqlstate_codeTextLengthMetadataOverflowJsonSerializationJsonValidationAgentStatusParseErrorvalue`DateTime + TimeDelta` overflowedStorageInvariantViolationfieldWriteAdmissionTimeoutDeviceHistoryInvalidInputChatRetiredAgentRetiredAdmissionAuthorityUnavailableHandoffIdentityConflictMailboxIdentityConflictsubmission_idHandoffPolicySupersededGoalParentMustBeTopLevelparent_goal_idInvalidGoalParentMessageInvalidPathMissingPublicBaseUrldescription() is deprecated; use Display

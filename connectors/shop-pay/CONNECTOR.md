@@ -6,11 +6,11 @@
 
 ## Check that Shop Pay is offered
 
-- For browser checkout, use Shop Pay only when the checkout agent reports it as eligible. A merchant's Shop Pay button starts its own sign-in and does not establish support for the wallet route.
+- For browser checkout, follow the checkout agent's payment instructions. A merchant's Shop Pay button starts its own sign-in and does not establish support for the wallet route.
 
 - For direct UCP checkout, offer Shop Pay as a route before the checkout is created, as the [UCP](/opt/hatch/connectors/ucp/CONNECTOR.md) docs describe.
 
-- Shop Pay pays checkouts in US dollars, Canadian dollars, Mexican pesos, euros, Singapore dollars, Japanese yen and British pounds. Use the checkout's stated currency and exact total; Japanese yen amounts have no fractional units.
+- Shop Pay pays direct UCP and native Shopify browser checkouts in supported currencies. Its virtual card route at other merchants pays only a purchase in US dollars that the merchant does not charge again later. Use the checkout's stated currency and exact total; Japanese yen amounts have no fractional units.
 
 ## Connect and choose a card
 
@@ -30,7 +30,7 @@
 
 ## Pay
 
-- In a browser checkout, the checkout agent pays through Shop Pay and obtains payment approval when required. Do not use the merchant's own Shop Pay button. Without purchase preapproval, its native route pays with a one-time token; on a supported card route it supplies card fields for the browser to enter after approval. Do not ask for a separate chat confirmation.
+- In a browser checkout, the checkout agent pays through Shop Pay and obtains payment approval when required. Do not use the merchant's own Shop Pay button. Its native route pays with a one-time token; on a supported card route it supplies card fields for the browser to enter after approval. Do not ask for a separate chat confirmation.
 
 - After an approval denial, follow the browser's question or final report. Continue only from the user's later direction and obtain fresh approval.
 
