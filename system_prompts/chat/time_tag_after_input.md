@@ -1,1 +1,1 @@
-blocks/shared/environment/computer.md
+subagent.spawn
