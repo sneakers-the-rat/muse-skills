@@ -1,0 +1,52 @@
+SELECT pg_advisory_xact_lock_shared(hashtextextended($1, 0))agent.volatile_context_pins.lifecycleSELECT pg_advisory_xact_lock(hashtextextended($1, 0))
+WITH owners AS MATERIALIZED (
+    SELECT DISTINCT agent_id COLLATE "C" AS agent_id
+    FROM unnest($1::text[]) AS input(agent_id)
+)
+SELECT pg_advisory_xact_lock(hashtextextended($2 || agent_id, 0))
+FROM owners ORDER BY agent_id COLLATE "C"
+agent.volatile_context_pins:SELECT agent_id FROM agent.agents WHERE agent_id = $1SELECT handoff_state_json -> $2::text AS state,
+                (extract(epoch FROM clock_timestamp()) * 1000)::bigint AS now_ms
+         FROM agent.subagent_spawns WHERE child_agent_id = $1 FOR UPDATEnow_msagent.subagent_spawns.handoff_state_jsonUPDATE agent.subagent_spawns
+         SET handoff_state_json = jsonb_set(COALESCE(handoff_state_json, '{}'::jsonb),
+                                           ARRAY[$2]::text[], $3::jsonb)
+         WHERE child_agent_id = $1insert into chat_private.publication_turns (execution_id, chat_id, disposition, phase)
+        select $1, $2, $3, $4 where pg_try_advisory_xact_lock_shared(hashtextextended($5, 0))
+        on conflict(execution_id) do nothing returning trueselect chat_id, phase, disposition from chat_private.publication_turns
+        where execution_id = $1 for updatechat_iddispositionpublication execution belongs to another chathttp://localhost/hatch/cvm_appeal/statusWITH requested AS (
+           SELECT * FROM unnest($1::text[], $2::bigint[]) AS r(goal_id, revision)
+         ), locked AS MATERIALIZED (
+           SELECT g.goal_id, g.connection_request_id, g.connection_revision,
+                  g.connection_follow_up_at, r.revision
+           FROM goals.goals g JOIN requested r USING (goal_id)
+           WHERE g.connection_id=$3 AND g.source='assistant_tracking'
+           ORDER BY g.goal_id FOR UPDATE OF g
+         ), claimed AS (
+           UPDATE goals.goals g
+           SET connection_follow_up_at=NULL, connection_request_id=$4,
+               connection_revision=g.connection_revision+1
+           FROM locked l WHERE g.goal_id=l.goal_id
+             AND g.status='active' AND l.connection_revision=l.revision
+             AND l.connection_follow_up_at <= now()
+             AND l.connection_request_id IS DISTINCT FROM $4
+           RETURNING g.goal_id
+         ) SELECT (SELECT count(*) FROM claimed) +
+                  (SELECT count(*) FROM locked WHERE connection_request_id=$4)A follow-up must name work from its conversationTracked work changed before the follow-up was queueddeleted sessions.updated events require an owner-visible deletion proofsession row unavailable for sessions.updated payloadfailed to hydrate sessions.updated payloadrefusing to publish a chat frame without an owning chatfailed to resolve public session id for streamed framedropped companion progress frame after its voice call changedunreadable legacy hook was not admittedinvalid legacy hook path was not admittedinvalid legacy hook was not admittedselect pg_advisory_xact_lock(4841544348435458)insert into context.ingest_attempts
+        (id, source_id, contributor_key, recorded_at, outcome,
+         submitted, inserted, duplicates, event_ids, error_code)
+        values ($1,$2,$3,clock_timestamp(),$4,$5,$6,$7,$8,$9)select last_append_position from context.sources where id = $1 for updateupdate context.sources set last_append_position = $2 where id = $1select id, (group_key is not distinct from $3
+            and payload_kind = $4
+            and occurred_at is not distinct from $5::timestamptz
+            and payload = $6 and content_hints = $7
+            and ttl_seconds is not distinct from $8) as matches
+         from context.events where source_id = $1 and dedupe_key = $2 for sharematchesinsert into context.events
+        (id, source_id, append_position, dedupe_key, group_key, payload_kind,
+         occurred_at, ingested_at, payload, content_hints, ttl_seconds, expires_at, group_id)
+        values ($1,$2,$3,$4,$5,$6,$7,statement_timestamp(),$8,$9,$10,
+            statement_timestamp() + $10::integer * interval '1 second',$11)delete from context.ingest_attempts where id in
+    (select id from context.ingest_attempts where recorded_at < now() - interval '7 days'
+     order by recorded_at, id limit 100)select pg_notify($1, '')hatch_context_committedinsert into context.sources
+    (id, source_domain, source_key, display_name, created_at, last_append_position)
+    values ($1, $2, $3, $4, clock_timestamp(), 0)
+    on conflict (source_domain, source_key) do nothingselect id, source_domain, source_key as key, display_name, created_at::text as created_at
+     from context.sources where source_domain = $1 and source_key = $2

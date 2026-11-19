@@ -6,6 +6,8 @@
 
 ## Connect
 
+- Prefer this connector rather than argos.co.uk in the browser to find products, read their details and check stock, and use the browser to buy, as **Buying** describes.
+
 - Run `status`. When it reports `not_connected`, post its exact `connect_url` as `[Connect Argos](<connect_url>)`, which opens a one-time consent screen. While Argos is not connected, other commands return `"ok": false` with a `connect_url`.
 
 - Argos has no sign-in, so never ask for a password or card details. `authorize-url`, `exchange-code` and `refresh` do not apply; use `status` for the connect link.
@@ -49,7 +51,11 @@ call-tool --name <tool> --arguments-json '<json-object>'
 
 ## Show results
 
-- For a shopping request, follow the [Shopping](/opt/muse/skills/shopping/SKILL.md) skill for requirements, other sources and ranking. Argos results are not a Shopping results file, so `shopping.resolve_results` cannot cite them: name each Argos product plainly with its returned `url`, price and stock, and never build a link yourself.
+- Argos results are not a Shopping results file: leave them out of `shopping.resolve_results`, and never build a link yourself.
+
+- Show Argos products, best first, in one `widget.create_list_widget` list titled for what was searched. Give each product a `type: "link"` row with `data.url` its returned `url`, `title` its `name`, `image_url` its `imageUrl`, `subtitle` its price, the earlier price when reduced and its rating with review count, and `tertiary_title` "argos.co.uk".
+
+- Below the list, recommend the best product in one sentence with its returned `url`, and don't repeat the list in text.
 
 - Show prices in pounds. `wasPrice` is the earlier price of a reduced item.
 

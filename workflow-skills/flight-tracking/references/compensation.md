@@ -3,21 +3,25 @@
 
 ## When to check
 
-- Check a journey when a tracked trip ends disrupted: a confirmed cancellation, a diversion, a missed connection, or a final arrival 2 hours 45 minutes or more late. The status job does this as described under **Scheduled runs**.
+- Check a journey of a tracked trip when it ends disrupted: a confirmed cancellation, a diversion, a missed connection, or an arrival at its final destination 2 hours 45 minutes or more late. Each journey of the trip is checked when it ends. The status job does this as described under **Scheduled runs**.
 
 - Check when the user asks whether an airline owes them money, compensation or a refund for a flight, or describes a flight that went wrong.
 
-- Check the flights in the travel history once per history build, as described under **Past flights in the travel history**.
+- Check the flights in the travel history when the user asks for it, and once per history build after that, as described under **Past flights in the travel history**.
 
 - Search the mailbox for flights older than the travel history only when the user asks for it.
 
 ## Check a journey
 
-- A journey is one direction of one booking: its legs in order, from the first departure to the final destination. Check an outbound and a return separately.
+- A journey is the legs of one booking, in order, from one place the traveler stays to the next. A connection is inside a journey and a stay ends it, so check an outbound, a return and each part of a multi-city trip separately.
+
+- Check a journey once it has ended: its last flight has landed or been cancelled. Check an upcoming one only when the airline has announced a change to it, since a retimed flight can already be owed a refund. FlightAware shows a flight from about two days before it leaves, and the check refuses one further ahead.
 
 - Take the legs, local departure dates, booked arrival time and traveler count from the trip's `flight.json` when Muse tracked it, and otherwise from the booking mail.
 
-- Run the [FlightAware](/opt/hatch/connectors/flightaware/CONNECTOR.md) `compensation check` with each booked leg. Add `--flown` for each leg the traveler took after a cancellation or missed connection, `--booked-departure` and `--booked-arrival` with the ticket's times when they differ from the current schedule, and `--passengers` with the travelers on the booking.
+- Run the [FlightAware](/opt/hatch/connectors/flightaware/CONNECTOR.md) `compensation check` with each booked leg. Add `--booked-departure` and `--booked-arrival` with the ticket's times when they differ from the current schedule, and `--passengers` with the travelers on the booking.
+
+- When a cancellation, a missed connection or a rebooking changed the flights the traveler took, add `--flown` for every leg they took, in order, including the booked legs they still flew. The check reads from that list which booked flights they were on.
 
 - For a flight to, from or within Canada, pass `--carrier-size small` when the operating airline is a small Canadian carrier and `large` for a large one. Left out, the check counts the large airlines it knows, such as the major Canadian, US and international carriers, as large, and for any other airline it asks for the size.
 
@@ -73,29 +77,37 @@
 
 - The travel email bootstrap writes a year of the user's bookings to `~/memory/travel/HISTORY.md`, with routes, airlines and flight numbers but only the month each booking's mail started.
 
+- Check these flights only on the user's request. When they ask, tell them in that conversation that the screen and the dated checks send the airports, airlines, flight numbers and dates of those bookings to FlightAware, which connects through Meta, so Meta can see them.
+
+- Then record the request and its date on the **Flight compensation** item, creating the item, and add the `flight-compensation-history` job as described under **Scheduled runs**.
+
+- A scheduled run stops here unless the **Flight compensation** item records the user's request.
+
 - Run `compensation screen --history ~/memory/travel/HISTORY.md`. It reads no mail and looks up only airports and airlines, and it lists the bookings whose routes a law could cover.
 
 - For each candidate, find the travel date and leg order in that booking's mail by searching the connected mailbox for its flight numbers from the booked month on, and read the confirmation or a later change. Then check each journey.
 
 - When a booking's laws are only under `possible_laws`, continue only if its confirmation shows a leg operated by an airline that law covers, in its "operated by" line.
 
-- Skip a candidate whose date the mail does not show rather than guessing one.
+- Skip a candidate whose date the mail does not show rather than guessing one. Skip one whose flights are still to come as well: the history lists bookings by when they were made, so it includes upcoming trips.
 
-- Mark the build in progress in the compensation state before screening, check off each journey as it is checked or skipped, and mark the build checked only once every candidate is done. When a lookup fails, keep the build in progress and move the `flight-compensation-history` job a day later with `cron.update`, so it resumes with the journeys still open. After three tries, mark the build checked and add one Tracking activity naming the journeys left unchecked.
+- When FlightAware has no flight for a journey's number and date, read the confirmation once more for the operating flight number and the departure date at the origin. If it still has none, count the journey as skipped.
+
+- Mark the build in progress in the compensation state before screening, check off each journey as it is checked or skipped, and mark the build checked only once every candidate is done. When a lookup is refused or answers with an error, keep the build in progress and move the `flight-compensation-history` job a day later with `cron.update`, so it resumes with the journeys still open. After three tries, mark the build checked and add one Tracking activity naming the journeys left unchecked.
 
 ## Scheduled runs
 
-- When a trip's status job sees the last leg land or a cancellation confirmed, run the journey check before completing the trip, and keep its notice fingerprint in that trip's `flight.json` like its other notices.
+- When a trip's status job sees the last leg of a journey land or its cancellation confirmed, run the journey check before moving to the next journey or completing the trip, and keep its notice fingerprint in that trip's `flight.json` like its other notices.
 
-- When a status job starts the travel history check and the **Flight compensation** item records no finished check of the history's build date, add the job `flight-compensation-history` to run once soon. A `cron.add` answer that the schedule already exists means another run claimed it. Run the past-flight check only in that job, so status jobs running at the same time cannot repeat it.
+- Add the job `flight-compensation-history` to run once soon when the user asks for the past-flights check, and when a status job starts the travel history check and the **Flight compensation** item records the user's request but no finished check of the history's build date. A `cron.add` answer that the schedule already exists means another run claimed it. Run the past-flight check only in that job, so status jobs running at the same time cannot repeat it.
 
-- The `flight-compensation-history` job finds or creates the **Flight compensation** item and follows **Past flights in the travel history**. It offers every likely claim it found in one message rather than one each, and each claim once by its fingerprint.
+- The `flight-compensation-history` job follows **Past flights in the travel history**, which stops it unless the **Flight compensation** item records the user's request. It offers every likely claim it found in one message rather than one each, and each claim once by its fingerprint.
 
 ## Keep the state
 
-- Keep the history screen's record and every filed claim under one **Flight compensation** Tracking item. Find it with `tracking.search`, and create it with `tracking.create` from the history job or when the first claim is filed.
+- Keep the user's request to check past flights, the history screen's record and every filed claim under one **Flight compensation** Tracking item. Find it with `tracking.search`, and create it with `tracking.create` when the user asks for the past-flights check or the first claim is filed.
 
-- Store the minimum in `~/workspace/goals/<goal-slug>/hidden_files/travel/compensation.json`: the checked history build date, the checked journeys by flight number and date, notified fingerprints, and each claim's airline, law, amount, status, filing date and follow-up job id. Keep booking references, names and payment details out of it.
+- Store the minimum in `~/workspace/goals/<goal-slug>/hidden_files/travel/compensation.json`: the date the user asked for the past-flights check, the checked history build date, the checked journeys by flight number and date, notified fingerprints, and each claim's airline, law, amount, status, filing date and follow-up job id. Keep booking references, names and payment details out of it.
 
 ## Older flights
 

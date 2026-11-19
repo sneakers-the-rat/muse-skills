@@ -1,0 +1,29 @@
+deletedINSERT INTO agents (agent_id, id, session_id, kind, parent_id, parent_agent_id, root_session_id, depth, created_at, updated_at, model, status, last_assistant_message, ephemeral, agent_type, presentation_root_session_id, spawn_metadata_json, originating_location_context_json)
+             VALUES ($1, $1, $2, $3, $4, $4, $5, $6, $7, $8, $9, $10, NULL, $11, $12, $13, $14, $15)
+INSERT INTO agent_ancestors (descendant_id, ancestor_id, distance)
+VALUES ($1, $1, 0)
+ON CONFLICT (descendant_id, ancestor_id) DO NOTHING
+
+INSERT INTO agent_ancestors (descendant_id, ancestor_id, distance)
+SELECT $1, ancestor_id, distance + 1
+FROM agent_ancestors
+WHERE descendant_id = $2
+ON CONFLICT (descendant_id, ancestor_id) DO NOTHING
+
+INSERT INTO agent_ancestors (descendant_id, ancestor_id, distance)
+VALUES ($1, $2, 1)
+ON CONFLICT (descendant_id, ancestor_id) DO NOTHING
+freshset transaction isolation level repeatable read, read onlyselect state_version,phase from chat_private.company_conversations where chat_id=$1sendingselect owner_agent_id,owner_chat_id,state from agent.chat_worker_requests where request_id=$1 and chat_id=$2 and worker_agent_id=$3 and generation=$4 for updatecompany conversation changed during close reviewcancelledclose owner task is no longer currentowner input changed during close reviewupdate agent.connection_messages set state='cancelled',updated_at_ms=$2 where connection_id=$1 and (state in ('proposed','awaiting_user','awaiting_muse') or (state='queued' and exists(select 1 from agent.group_replies r join chat_private.deliveries d on d.delivery_key=r.delivery_key where r.group_id=$3 and r.submission_id=agent.connection_messages.message_id::text and d.state='failed')))update agent.chat_worker_requests set state='cancelled' where chat_id=$1 and request_id<>$2 and state in ('pending','running','reported','completed')update chat_private.company_conversations set phase='completed',state_version=state_version+1,updated_at_ms=$2 where chat_id=$1update agent.chat_worker_requests set state='completed',result_json=$2,result_submission_id=$3 where request_id=$1WITH RECURSIVE lineage AS (
+                 SELECT parent_agent_id,parent_message_id,1 AS depth FROM agent.subagent_spawns
+                 WHERE child_agent_id=$1 AND agent_type IS NULL AND spawn_call_id IS NOT NULL
+                 UNION ALL
+                 SELECT s.parent_agent_id,s.parent_message_id,l.depth+1 FROM agent.subagent_spawns s
+                 JOIN lineage l ON s.child_agent_id=l.parent_agent_id
+                 WHERE l.depth<32 AND s.agent_type IS NULL AND s.spawn_call_id IS NOT NULL)
+                 SELECT parent_message_id FROM lineage WHERE parent_agent_id=$2 LIMIT 1select detail_json::text from runtime.maintenance_markers
+                     where marker_key = $1 for updateinsert into runtime.maintenance_markers (marker_key, detail_json)
+                     values ($1, jsonb_build_object('id', gen_random_uuid()::text, 'paired', $2))
+                     on conflict (marker_key) do update
+                     set completed_at = now(), detail_json = excluded.detail_json
+                     returning detail_json->>'id'INSERT INTO runtime.maintenance_markers (marker_key, detail_json) VALUES ('event_hook_admissions_v1', '{}') ON CONFLICT (marker_key) DO NOTHINGINSERT INTO runtime.event_hook_admissions (hook_id, revision, definition_sha256, script_sha256, enabled)  ON CONFLICT (hook_id) DO NOTHINGupdate runtime.browser_tasks set last_progress_at = now()
+                    where task_id = $1 and status = 'running'avatar music lookup failedretailer_nameskipping attachment signing after metadata build failed

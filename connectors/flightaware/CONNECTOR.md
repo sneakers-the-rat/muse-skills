@@ -52,16 +52,18 @@
 <!-- flight-compensation-only:start -->
 ## Check compensation
 
-- `compensation check` decides which passenger-rights laws cover one journey and what each pays: EU261, UK261, Canada's APPR and Israel's Aviation Services Law, plus whether a US refund is owed. Give the booked legs of one direction of one booking in order, each as `IDENT@YYYY-MM-DD` with the local departure date, or as an `fa_flight_id`.
+- `compensation check` decides which passenger-rights laws cover one journey and what each pays: EU261, UK261, Canada's APPR and Israel's Aviation Services Law, plus whether a US refund is owed. Give the booked legs of one journey on one booking in order, from one place the traveler stays to the next, each as `IDENT@YYYY-MM-DD` with the local departure date, or as an `fa_flight_id`.
 
 ```sh
 /opt/hatch/bin/flightaware compensation check TP201@2026-03-14 --passengers 2
 /opt/hatch/bin/flightaware compensation check UA90@2026-03-14 UA1144@2026-03-14 --flown UA90@2026-03-14 --flown UA1520@2026-03-14
 ```
 
-- It reads each leg's record, airports and operating airline, and measures lateness at the final destination's gate against FlightAware's current schedule. Pass `--booked-departure` and `--booked-arrival` with the ticket's times when the schedule changed after booking, `--flown` once per leg actually taken after a cancellation or missed connection, `--actual-arrival` when the traveler reached the destination another way, and `--carrier-size` for a Canadian flight when the airline's APPR size is known.
+- It reads each leg's record, airports and operating airline, and measures lateness at the final destination's gate against FlightAware's current schedule. Pass `--booked-departure` and `--booked-arrival` with the ticket's times when the schedule changed after booking, `--flown` once per leg the traveler actually took, booked ones included, when a cancellation, a missed connection or a rebooking changed their flights, `--actual-arrival` when the traveler reached the destination another way, and `--carrier-size` for a Canadian flight when the airline's APPR size is known.
 
 - When a flight number matches several flights that day, the error lists their `fa_flight_id` values. Run it again with the traveler's.
+
+- It reads FlightAware's record of each flight, which starts about two days before departure. A flight dated further ahead is refused without a lookup. Check a flight the airline retimed or cancelled once it is within those two days.
 
 - Each entry under `laws` says whether the law `covers` the journey and why (`basis`), with a `verdict` (`likely`, `needs_facts`, `not_eligible` or `not_yet`, and for `us_refund` either `refund_if_not_flown` or `none`), a `reason`, the `amount` per passenger and in total, `claim_by` or `deadline`, `exemptions` and `facts_to_confirm`. `likely` repeats the laws whose amount the record supports, and `notes` flags codeshares, conflicting cancellation data and a schedule baseline that may differ from the ticket.
 

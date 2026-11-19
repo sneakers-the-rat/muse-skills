@@ -34,7 +34,7 @@
 
 - `/opt/muse/assets/artifacts/scripts/recalc_xlsx.py` recalculates the workbook in place through headless LibreOffice and reports every formula error as JSON. Run it whenever the file contains formulas. It exits 0 even when it reports `errors_found`, so read the JSON, not the exit code.
 
-- `/opt/muse/assets/artifacts/scripts/validate_xlsx.py` reads the workbook back and checks archive integrity, sheet parts and populated-cell counts. Do not deliver a link while it fails. A CSV output gets no reader check.
+- `/opt/muse/assets/artifacts/scripts/validate_xlsx.py` reads the workbook back and checks archive integrity, sheet parts, populated-cell counts and that no cell carries two values. Do not deliver a link while it fails. A CSV output gets no reader check.
 
 ## Verify before delivery
 

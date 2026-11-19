@@ -37,7 +37,7 @@
 - The status job, `flight-status-<goal-slug>`, reads the next active leg from FlightAware on the cadence in the [FlightAware](/opt/hatch/connectors/flightaware/CONNECTOR.md) connector docs.
 
 <!-- flight-compensation-only:start -->
-- Write two compensation steps into the status job's body, and leave `/opt/muse/skills/flight-tracking/references/compensation.md` unread on runs where neither applies. When the last leg lands or a cancellation is confirmed and the trip ended in a cancellation, a diversion, a missed connection or a final arrival 2 hours 45 minutes or more late, read that reference and check the trip under its **Scheduled runs** before completing it. On the first run, when `~/memory/travel/HISTORY.md` exists, read the same section, start the travel history check it describes, and record in the trip state that it was started.
+- Write two compensation steps into the status job's body, and leave `/opt/muse/skills/flight-tracking/references/compensation.md` unread on runs where neither applies. A journey runs from one place the traveler stays to the next, connections included: the outbound, the return, a one-way trip or one part of a multi-city trip. When the last leg of a journey lands or its cancellation is confirmed, and that journey ended in a cancellation, a diversion, a missed connection or an arrival 2 hours 45 minutes or more late, read that reference, check the journey under its **Scheduled runs** and record it as checked in the trip state. On the first run, when `~/memory/travel/HISTORY.md` exists and the **Flight compensation** item records that the user asked for the past-flights check, read the same section, start the travel history check it describes, and record in the trip state that it was started.
 <!-- flight-compensation-only:end -->
 
 - The optional fare job, `flight-price-<goal-slug>`, requires Duffel to be returned by `muse.connector_search` before reading its docs or scheduling any calls. If it is unavailable or the lookup fails, continue with status monitoring and record the fare-coverage limitation in the trip's monitoring activity. Explain the limitation in a live conversation; background reconciliation records it without messaging the user. Do not call the CLI to test availability.
@@ -69,7 +69,7 @@
 - Apply a validated amendment or rebooking to the same owner. Update the current facts, keep the as-booked baseline, clear a pending fare candidate the change invalidates and add one activity. Compare provider timestamps so an older confirmation never undoes a newer amendment.
 
 <!-- flight-compensation-only:start -->
-- Before stopping or completing a trip that ended disrupted, as the status job's compensation step describes, check it under [Flight compensation](references/compensation.md).
+- Before moving past a journey that ended disrupted, or stopping or completing the trip, check that journey under [Flight compensation](references/compensation.md) as the status job's compensation step describes.
 <!-- flight-compensation-only:end -->
 
 - When a cancellation is confirmed and no replacement exists, set `trip.cancelled` to `true` and stop all of the trip's monitoring jobs.
@@ -81,7 +81,7 @@
 <!-- flight-compensation-only:start -->
 ## Check compensation
 
-- When the user asks whether an airline owes them money for a flight, follow [Flight compensation](references/compensation.md). It checks the laws that cover the journey, the past flights in the travel history, and how to file a claim with the user's approval.
+- When the user asks whether an airline owes them money for a flight, or asks to check their past flights, follow [Flight compensation](references/compensation.md). It checks the laws that cover the journey, the past flights in the travel history, and how to file a claim with the user's approval.
 <!-- flight-compensation-only:end -->
 
 ## Available connectors

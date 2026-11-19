@@ -1,0 +1,1 @@
+A `Pause` line in `## Pause and volume` is not in one of the exact forms, so the runtime holds nothing by it. Rewrite it in the exact form with `muse.edit` the next time you are in that file, keeping the user's words and dates.
