@@ -1,0 +1,95 @@
+canonical_context_item_idprojected_context_item_idcanonical_created_atprojected_message_sourcecanonical_message_sourcereply_prefixclient_context_projectedreply_prefix_projectedprovenance_projectedreply_to_targetspace_generation_funnel_summary_projectionattempt_budget_exhaustedrecovery_classrecovery_owner_idupdated_atmailbox_overlay_rowsexecution_config_jsonlive queue has no execution anchor but durable checkpoint has a replay headchat publication admission is closed while the daemon stopsfinish_statusfinish_status_reasonstatus_titleactivity_thread_kindspace_slugexpected_finish_descriptionfinished_atfinish_messageaction_idattachmentsturn deletion marker payload missing message_ids
+SELECT requested.seq AS context_seq,
+       projection.client_context_json,
+       COALESCE(projection.client_context_projected, FALSE) AS client_context_projected,
+       fallback.event_name,
+       fallback.source,
+       fallback.payload_json
+FROM unnest($2::bigint[]) AS requested(seq)
+LEFT JOIN agent.context_item_resume_projection AS projection
+  ON projection.agent_id = $1
+ AND projection.seq = requested.seq
+ AND $3
+LEFT JOIN LATERAL (
+  SELECT e.event_name, e.source, e.payload_json
+  FROM runtime.events AS e
+  WHERE projection.client_context_projected IS NOT TRUE
+    AND COALESCE(NULLIF(TRIM(e.agent_id), ''), e.parent_agent_id) = $1
+    AND (replace(e.payload_json, '\u0000', '\ufffd')::jsonb #>> '{metadata,context_seq}') = requested.seq::text
+    AND e.event_name IN ('message.user', 'message.internal')
+    AND e.payload_json IS NOT NULL
+  ORDER BY e.event_seq DESC
+  LIMIT 1
+) AS fallback ON TRUE
+ORDER BY requested.seq DESC
+
+WITH event_rows AS (
+SELECT e.reply_to_message_id,
+       e.message_id,
+       e.event_name,
+       e.source,
+       e.role::text AS role,
+       e.visibility::text AS visibility,
+       e.request_id,
+       e.root_request_id,
+       e.parent_request_id,
+       CASE
+         WHEN e.message_id LIKE 'assistant-msg-%'
+         THEN substring(e.message_id FROM char_length('assistant-msg-') + 1)
+         ELSE NULL
+       END AS message_execution_id,
+       NULL::text AS root_message_execution_id,
+       (replace(e.payload_json, '\u0000', '\ufffd')::jsonb #>> '{metadata,context_seq}')::bigint AS context_seq,
+       e.event_seq
+FROM runtime.events AS e
+WHERE COALESCE(NULLIF(TRIM(e.agent_id), ''), e.parent_agent_id) = $1
+  AND e.event_name IN ('message.user', 'message.assistant', 'message.internal')
+  AND (replace(e.payload_json, '\u0000', '\ufffd')::jsonb #>> '{metadata,context_seq}') = ANY($2)
+)
+SELECT event_rows.*, NULL::text AS imported_provenance_json
+FROM event_rows
+UNION ALL
+SELECT NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+       projection.seq, NULL, projection.provenance_json
+FROM agent.context_item_resume_projection AS projection
+WHERE projection.agent_id = $1
+  AND projection.seq = ANY($3)
+  AND projection.provenance_projected
+  AND NOT EXISTS (SELECT 1 FROM event_rows WHERE context_seq = projection.seq)
+ORDER BY context_seq DESC, event_seq DESC
+
+SELECT e.source, ci.seq AS context_seq
+FROM agent.context_items AS ci
+JOIN runtime.event_payload_fields AS ctx ON ctx.field_path = '/metadata/context_seq'
+  AND ctx.scalar_value = ci.seq::text
+JOIN runtime.events AS e ON e.event_seq = ctx.event_seq
+  AND COALESCE(NULLIF(TRIM(e.agent_id), ''), e.parent_agent_id) = ci.agent_id
+WHERE ci.agent_id = $1
+  AND e.event_name IN ('message.user', 'message.assistant', 'message.internal')
+  AND ci.seq = ANY($2)
+ORDER BY ci.seq DESC, e.event_seq DESC
+
+SELECT fallback.reply_to_message_id, requested.seq AS context_seq,
+       fallback.payload_json, fallback.event_seq,
+       CASE WHEN projection.reply_prefix_projected
+            THEN projection.reply_prefix END AS imported_reply_prefix
+FROM (SELECT DISTINCT unnest($2::bigint[]) AS seq) AS requested
+LEFT JOIN agent.context_item_resume_projection AS projection
+  ON projection.agent_id = $1 AND projection.seq = requested.seq
+LEFT JOIN LATERAL (
+    SELECT e.reply_to_message_id, e.payload_json, e.event_seq
+    FROM runtime.events AS e
+    WHERE projection.reply_prefix_projected IS NOT TRUE
+      AND COALESCE(NULLIF(TRIM(e.agent_id), ''), e.parent_agent_id) = $1
+      AND (replace(e.payload_json, '\u0000', '\ufffd')::jsonb #>> '{metadata,context_seq}') = requested.seq::text
+      AND e.event_name IN ('message.user', 'message.assistant', 'message.internal')
+      AND e.role = 'user'
+      AND e.payload_json IS NOT NULL
+      AND EXISTS (
+          SELECT 1 FROM agent.context_items ci
+          WHERE ci.agent_id = $1 AND ci.seq = requested.seq
+      )
+    ORDER BY e.event_seq DESC
+) AS fallback ON TRUE
+ORDER BY requested.seq DESC, fallback.event_seq DESC
+ActivePanelresourceIdresource_id visibility = 'internal'À&.transcript_surface = 'main_chat' AND È

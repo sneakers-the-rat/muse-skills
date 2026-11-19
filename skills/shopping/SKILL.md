@@ -345,7 +345,7 @@
 <!-- purchase-preapproval-on-only:end -->
 <!-- muse-promo-code-on-only:start -->
 
-- A product can carry a coupon: `pdp_coupon` in its details, a `variant_coupon_prices` row for another variant, or the `coupon` line in a Buy handoff or reply context. Its price assumes its promo code, when it has one, is applied at checkout. Its `offer_expires_at`, when present, is when the merchant's offer ends. Promo codes in `promo_offers` are untried candidates for checkout preparation, and any saving from one is only known after it's been attempted at checkout time.
+- A product can carry a coupon: `pdp_coupon` in its details, a `variant_coupon_prices` row for another variant, or the `coupon` line in a Buy handoff or reply context. Its price assumes its promo code, when it has one, is applied at checkout. Its `expires_at` is when the coupon price is next refreshed, not when the promo code expires. Its `offer_expires_at`, when present, is when the merchant's offer ends. Promo codes in `promo_offers` are untried candidates for checkout preparation, and any saving from one is only known after it's been attempted at checkout time.
 
 - A catalog product's card shows its coupon price when it has one. Catalog search results and product details carry that price in `pdp_coupon`, which the catalog search preview shows as `coupon_price`.
 
