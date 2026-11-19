@@ -8,8 +8,10 @@ Label AI-edited photos in previews. Use `muse.create_options` in the user's lang
   In touch-up and photo-picking steps, a message with options or a picker
   asks nothing else.
 
-Follow [Touch-ups](references/photo-touch-ups.md), or [Marketplace](references/marketplace-photos.md)
-  for listings.
+For listings, follow [Marketplace](references/marketplace-photos.md). For
+  anything else, first offer "Touch up photos" or "Save as-is", unless the user
+  already asked for edits, and stick with their choice unless they change it.
+  If they want touch-ups, follow [Touch-ups](references/photo-touch-ups.md).
 
 Finish choices first. Write a caption per photo and one for a carousel,
   using supplied facts. Hashtags and [other styles](references/other-styles.md)

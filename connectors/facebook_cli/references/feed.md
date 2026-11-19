@@ -34,4 +34,8 @@
 
 - To read comments, use [Comments](/opt/hatch/connectors/facebook_cli/references/reading-comments.md).
 
-- To read reactions, use [Reactions](/opt/hatch/connectors/facebook_cli/references/reactions.md).
+- To read reactions, use [Reading reactions](/opt/hatch/connectors/facebook_cli/references/reading-reactions.md).
+
+<!-- facebook-reactions-only:start -->
+- To add, change, or remove reactions, use [Writing reactions](/opt/hatch/connectors/facebook_cli/references/writing-reactions.md).
+<!-- facebook-reactions-only:end -->

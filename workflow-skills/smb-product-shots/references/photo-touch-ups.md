@@ -1,10 +1,12 @@
 # Touch-ups
 
-Ask if photos are missing. Product shots: edit in upload order; show each
-  photo's picker and wait for the user's choice before editing the next.
-  Marketplace: edit only the initial cover; leave other photos and later uploads
-  unedited. Copy originals with extensions into fresh photo folders:
-  `workspace/product-shots/` or `workspace/marketplace/`. Never overwrite.
+Ask if photos are missing. Load `widget` first. Edit uploaded photos one at a
+  time, in upload order: show each photo's versions together in one picker and
+  wait for the user to choose before starting the next. For Marketplace, edit
+  the cover and any later photos the user wants touched up, and leave the rest
+  as they are. Copy originals, with their extensions, into fresh photo folders
+  (`workspace/product-shots/` or `workspace/marketplace/`) and save edits as new
+  files.
 
 Use `media.generate_image`: originals, their folder as `output_dir`,
   `jpg` as `output_format`. Include in each image prompt, "Keep the item
@@ -32,8 +34,8 @@ Requested styles replace defaults. Keep website styles consistent.
   screenshot or get one photo from their store link. Use it as a second image
   for background and light only, never its item, logo or text.
 
-Load `widget`; show versions through `widget.create_image_picker_widget` that
-  turn, with `multi_select` on so the user can keep several. Use each
+Show versions in the same reply using `widget.create_image_picker_widget`,
+  with `multi_select` on so the user can pick several images. Use each
   version's returned `local_path` as its picker path; don't copy or rename
   edits. Name styles in order. For the default styles, fill all four slots:
   replace dropped versions with the backup, then the original, then square and
@@ -42,3 +44,11 @@ Load `widget`; show versions through `widget.create_image_picker_widget` that
   cropping when the item doesn't fit. For chosen or requested styles, show only
   those, replacing a rejected one with the backup or original.
   [Pick](picking-photos.md); don't retry.
+
+If the user asked for one style, show that version on its own rather than in
+  the picker.
+  Offer to keep it or see more styles, and say which style it is. If the user
+  keeps the current edit, that's their pick. If they want more, open the
+  picker with the first three default styles you haven't shown, in order, and
+  the original last. If you showed the original, end with the next fallback
+  instead.

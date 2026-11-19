@@ -158,8 +158,11 @@
 <!-- facebook-group-moderation-only:start -->
   - pending posts, membership and participation requests, and spam in Groups the user administers or moderates
 <!-- facebook-group-moderation-only:end -->
+<!-- facebook-reactions-only:start -->
+  - Reactions on posts, comments, and replies, made as the user's linked personal profile.
+<!-- facebook-reactions-only:end -->
 
-- Reactions and edits of posts or comments aren't available. Deletions of posts or comments<!-- facebook-group-moderation-only:start --> outside a Group's spam queue<!-- facebook-group-moderation-only:end --> aren't available<!-- facebook-pages-tranche2-only:start -->, except deleting comments on posts of Pages the user manages, listed above<!-- facebook-pages-tranche2-only:end -->, so suggest only the writes above.
+- Reactions<!-- facebook-reactions-only:start --> on anything not listed above<!-- facebook-reactions-only:end --> and edits of posts or comments aren't available. Deletions of posts or comments<!-- facebook-group-moderation-only:start --> outside a Group's spam queue<!-- facebook-group-moderation-only:end --> aren't available<!-- facebook-pages-tranche2-only:start -->, except deleting comments on posts of Pages the user manages, listed above<!-- facebook-pages-tranche2-only:end -->, so suggest only the writes above.
 
 - Personal<!-- facebook-group-posts-only:start --> and Group<!-- facebook-group-posts-only:end --> posts, comments, Page writes<!-- facebook-group-moderation-only:start -->, Group moderation<!-- facebook-group-moderation-only:end --> and Marketplace publishes, edits and deletes each show the user an approval card. Creating a draft listing uses the normal permission prompt, and saved-item changes are allowed by default.
 
@@ -169,7 +172,7 @@
 
 - [Reading posts](/opt/hatch/connectors/facebook_cli/references/reading-posts.md) (`post read`, `link-sharing decode-url`) and [writing posts](/opt/hatch/connectors/facebook_cli/references/writing-posts.md) (`post create`, `post audiences`, `post crossposting`). Read the writing guide before a personal<!-- facebook-group-posts-only:start --> or Group<!-- facebook-group-posts-only:end --> post<!-- facebook-profile-media-only:start --> or personal Reel<!-- facebook-profile-media-only:end -->.
 
-- [Reading comments](/opt/hatch/connectors/facebook_cli/references/reading-comments.md) (`post comments read`), [writing comments](/opt/hatch/connectors/facebook_cli/references/writing-comments.md) (`post comments add`) and [reactions](/opt/hatch/connectors/facebook_cli/references/reactions.md) (`post reactions read`). Read the writing guide before a comment or reply.
+- [Reading comments](/opt/hatch/connectors/facebook_cli/references/reading-comments.md) (`post comments read`), [writing comments](/opt/hatch/connectors/facebook_cli/references/writing-comments.md) (`post comments add`)<!-- facebook-reactions-only:start -->, [writing reactions](/opt/hatch/connectors/facebook_cli/references/writing-reactions.md) (`post reactions add|remove`)<!-- facebook-reactions-only:end --> and [reading reactions](/opt/hatch/connectors/facebook_cli/references/reading-reactions.md) (`post reactions read`). Read the writing comments guide before adding a comment or reply<!-- facebook-reactions-only:start -->, and the writing reactions guide before adding, changing, or removing a reaction<!-- facebook-reactions-only:end -->.
 
 - [Friends](/opt/hatch/connectors/facebook_cli/references/friends.md) (`me friends`, including interest searches with `--json-query` and birthdays), [profiles](/opt/hatch/connectors/facebook_cli/references/profile.md) (`profile info` and presenting profile details) and [timelines](/opt/hatch/connectors/facebook_cli/references/reading-timeline.md) (`timeline fetch` and paging). Read the profiles guide before presenting someone's profile details.
 

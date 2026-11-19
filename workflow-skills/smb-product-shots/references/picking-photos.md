@@ -1,14 +1,14 @@
 # Picking
 
-Offer "Keep original". Keep user order; clarify choices versus uploads.
+When you show the picker or numbered photos, also offer "Keep original",
+  unless the original is already one of them. Keep user order; clarify choices
+  versus uploads.
 
-After the user picks or keeps the original, offer "Done" or "Upload more
-  images" in that reply, not alongside the picker, so the user has a next
-  step. Product shots: Done continues remaining
-  photos; wait for uploads, then [edit new photos only](photo-touch-ups.md).
-  Marketplace: Done continues listing preparation with remaining photos unedited;
-  wait for new uploads, append them unedited, then continue listing preparation.
+After the user picks or keeps the original, product shots continue with the
+  remaining photos; when new photos arrive, [edit new photos only](photo-touch-ups.md).
+  Marketplace [continues the listing](marketplace-photos.md), including any
+  photos added later.
   Keep earlier choices and unfinished work.
 
-Without the picker, show the photos numbered and ask for the numbers in order.
-  Don't promise multiple grid selections.
+If the picker tool isn't available, number the photos and ask which ones the
+  user wants, in order. Don't promise multiple grid selections.

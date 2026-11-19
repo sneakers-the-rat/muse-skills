@@ -1,0 +1,68 @@
+update feed.run_steps
+     set status = $5,
+         output_json = case when $5 = 'succeeded' then $6 else output_json end,
+         error = $7,
+         finished_at_ms = $8,
+         updated_at_ms = $8
+     where run_id = $1 and step_id = $2 and attempt = $3
+       and agent_id is not distinct from $4
+       and status = 'running'i.idea_id, i.kind, i.title, i.summary, i.build_summary, i.rationale, i.category_label, i.date_label, i.audience, i.lane, i.prerequisite_notes, i.install_markdown, i.domain, i.dedup_key, i.expires_at::text as expires_at, i.generator, i.created_at::text as created_at, i.updated_at::text as updated_atSELECT bool_and(coalesce(i.indisvalid, false)) FROM unnest($1::text[]) AS n(name)
+                 LEFT JOIN pg_index i ON i.indexrelid=to_regclass(n.name)transaction.acquire_and_beginregistry_lockselect id, domains from context.subscriptions where subscription_key = $1 for updatesubscription.lookup_for_updateiddomainssources.enroll_previousinsert into context.subscriptions (id, subscription_key, domains) values ($1,$2,$3)subscription.insertupdate context.group_cursors g set lease_token=null, lease_expires_at=null, evidence_expires_at=null,
+                        window_position=null, batch_position=null, retry_at=null,
+                        available_position=coalesce((select max(e.append_position) from context.events e
+                          where e.source_id=g.source_id and e.group_id=g.group_id
+                          and e.append_position>g.acknowledged_position and e.append_position<=g.available_position
+                          and (e.expires_at is null or e.expires_at>statement_timestamp())
+                          and ($2 or e.content_hints && $3::text[])),g.acknowledged_position)
+                        where subscription_id=$1hints.reconcile_leasestransaction.commitsources.enroll_desiredupdate context.subscription_sources ss set active = ($2 or s.source_domain = any($3))
+                from context.sources s where ss.subscription_id = $1 and s.id = ss.source_idupdate context.group_cursors g set lease_token = null, lease_expires_at = null, evidence_expires_at = null
+                from context.subscription_sources ss where g.subscription_id = $1
+                and ss.subscription_id = g.subscription_id and ss.source_id = g.source_id and not ss.activeleases.invalidate_removedupdate context.subscriptions set domains = $2, updated_at = now() where id = $1 and domains <> $2coverage.updateUPDATE context_items ci SET data_fbids = ARRAY( SELECT DISTINCT f FROM unnest(COALESCE(ci.data_fbids, '{}'::bigint[]) || added.fbids) AS f ORDER BY f) FROM ( SELECT pair.context_item_id, array_agg(DISTINCT pair.fbid) AS fbids FROM unnest($1::bigint[], $2::bigint[]) AS pair(context_item_id, fbid) GROUP BY pair.context_item_id) AS added WHERE ci.context_item_id = added.context_item_id AND ci.data_summarized_at IS NULL AND ci.data_message_ids IS NULL AND ci.data_expires_at IS NULL AND NOT COALESCE(ci.data_fbids, '{}'::bigint[]) @> added.fbidsSELECT COALESCE(MAX(context_item_id), 0)::bigint FROM context_itemsSELECT context_item_id, call_id, data_fbids, data_summarized_at IS NOT NULL AS summarized FROM context_items WHERE data_fbids IS NOT NULL AND data_fbids && $1::bigint[] ORDER BY data_cleanup_checked_at ASC NULLS FIRST, context_item_id ASCcontext_item_idcall_iddata_fbidssummarizedWITH scanned AS MATERIALIZED ( SELECT COALESCE(ci.data_fbids, '{}'::bigint[])::text[] AS tagged, ARRAY( SELECT DISTINCT m.token[1] FROM regexp_matches( COALESCE(NULLIF(ci.text_content, ''), ci.item_json, ''), '(?<![0-9])([0-9]{12,19})(?![0-9])', 'g') AS m(token)) AS numbers FROM context_items ci WHERE ci.item_kind = 'tool_output' AND ci.data_summarized_at IS NULL AND ci.data_message_ids IS NULL AND ci.data_expires_at IS NULL AND ci.context_item_id > $1 AND ci.context_item_id <= $2), counted AS ( SELECT cardinality(tagged) AS tagged_count, cardinality(numbers) AS number_count, (SELECT count(*) FROM unnest(numbers) AS n WHERE n <> ALL(tagged)) AS untagged_count FROM scanned) SELECT count(*)::bigint AS rows_scanned, count(*) FILTER (WHERE untagged_count > 0)::bigint AS rows_with_untagged_numbers, COALESCE(sum(number_count), 0)::bigint AS numbers_in_text, COALESCE(sum(untagged_count), 0)::bigint AS numbers_untagged, COALESCE(sum(tagged_count), 0)::bigint AS fbids_tagged FROM countedrows_scannedrows_with_untagged_numbersnumbers_in_textfbids_taggedSELECT COALESCE((SELECT coverage_through_context_item_id FROM object_removal_drain_cursor WHERE singleton), 0)::bigint AS mark, COALESCE((SELECT MAX(context_item_id) FROM context_items), 0)::bigint AS max_idmax_idINSERT INTO object_removal_drain_cursor (singleton, coverage_through_context_item_id) VALUES (true, $1) ON CONFLICT (singleton) DO UPDATE SET coverage_through_context_item_id = excluded.coverage_through_context_item_idWITH wanted AS MATERIALIZED ( SELECT DISTINCT f::text AS fbid FROM unnest($1::bigint[]) AS f), tokens AS MATERIALIZED ( SELECT ci.context_item_id, ci.data_fbids, m.token[1] AS token FROM context_items ci CROSS JOIN LATERAL regexp_matches( COALESCE(NULLIF(ci.text_content, ''), ci.item_json, ''), '(?<![0-9])([0-9]{12,19})(?![0-9])', 'g') AS m(token) WHERE ci.item_kind = 'tool_output' AND ci.data_summarized_at IS NULL AND ci.data_message_ids IS NULL AND ci.data_expires_at IS NULL AND ci.context_item_id > $2 AND ci.context_item_id <= $3) SELECT t.context_item_id, array_agg(DISTINCT w.fbid::bigint) AS fbids FROM tokens t JOIN wanted w ON w.fbid = t.token WHERE NOT COALESCE(t.data_fbids, '{}'::bigint[]) @> ARRAY[w.fbid::bigint] GROUP BY t.context_item_idactivity_id, kind, muse_id, at_ms, dismissed, payload, dedupe_keyName not recordedselect domains from context.subscriptions where id = $1 for updateupdate context.subscriptions set last_polled_at = clock_timestamp() where id = $1select g.source_id, g.group_id, g.acknowledged_position,
+              coalesce(g.window_position, g.available_position) as through_position, ss.start_position
+            from context.group_cursors g join context.subscription_sources ss
+              on ss.subscription_id = g.subscription_id and ss.source_id = g.source_id
+            join context.sources s on s.id = g.source_id
+            where g.subscription_id = $1 and ss.active and g.acknowledged_position < g.available_position
+              and not (s.source_domain = any($2))
+              and (g.lease_expires_at is null or g.lease_expires_at <= clock_timestamp())
+              and (g.retry_at is null or g.retry_at <= clock_timestamp())
+            order by g.last_pulled_at nulls first, g.source_id, g.group_id limit 1 for update of gsource_idacknowledged_positionstart_positione.id, e.dedupe_key as key, e.group_key, e.payload_kind, e.content_hints,
+     e.occurred_at, e.ingested_at, e.ttl_secondsexpires_atappend_positionupdate context.group_cursors set acknowledged_position = $4,
+                window_position = null, batch_position = null, lease_token = null,
+                lease_expires_at = null, evidence_expires_at = null, retry_at = null, last_error = null,
+                last_pulled_at = clock_timestamp()
+                where subscription_id = $1 and source_id = $2 and group_id = $3select exists(select 1 from context.group_cursors g
+                join context.subscription_sources ss on ss.subscription_id = g.subscription_id and ss.source_id = g.source_id
+                join context.sources s on s.id = g.source_id
+                where g.subscription_id = $1 and ss.active and g.acknowledged_position < g.available_position
+                and not (s.source_domain = any($2)))select id, source_domain, source_key as key, display_name, created_at::text as created_at
+            from context.sources where id = $1update context.group_cursors set window_position = $4, batch_position = $5,
+            lease_token = $6, lease_expires_at = least(clock_timestamp() + $7 * interval '1 second', $8::timestamptz), evidence_expires_at = $8, last_pulled_at = clock_timestamp(), retry_at = null
+            where subscription_id = $1 and source_id = $2 and group_id = $3 returning lease_expires_atUnnamed chat`DateTime + TimeDelta` overfloweddispositionreconsider_atcandidatecreated_atheld_atcandidate_idcontext_store.initializeinference-proxy returned an invalid model selection routetimed out while writing egress approval mirror requesttimed out while reading egress approval mirror responseinternal_errorIdeas composer owner run is missingdecision_idsavatar-state: authoritative DB row missingrecord idea dedupresolve embedding near-dup candidateresolve fingerprint bandresolve idea source before mintingrefresh superseded idea contentattach idea sourceupsert idea sourceproactive reads grants unavailablelist host system cron definitionsconnect to host cron storewire_dailycontrolconnector_tiltfeed open-run admission collapse raced the run's terminalizationwebsocialconnectorsdeviceshealthscheduled_resume_projectionscheduledadhoc_useradhoc_agentadhoc_visitproactive_pulseingestagent_unitfeed activity signal unreadable; the caller folds its own polarity (a scheduled fire skips, an adhoc generation falls to the pulse lane)model_picksingletonfallback_errorfallback_step_failedpulseassignment_in_developer_messagepicker_connector_tiltadvertised_output_schemasucceededsummarization_unavailableStripe Link connection status is unavailableStripe Link connection status failed to startStripe Link connection status was invalidStripe Link connection inspection timed outStripe Link connection status timed outStripe Financial Insights permission was unavailableideas_locale_supersededIdeas generation was superseded by a language change.eval_fixturelimited_feedobjective execution gate is closeddiscovery_persistence_skippeddayindexshopping objective did not reportcancelledpreemptedIdeas locale refresh admission returned no occurrenceattemptsent_at_msconnectedbrand/run/hatch/proxy/stefi.sockinternal:catalog:proactive_notificationhatch_wai_clihatch_wai_cli deletions audit stderr pipe missinghatch_wai_cli deletions audit stdout pipe missingproactive_notifierideasfingerprintrequestedfeed_queue_stampsfeed_rerun_skippedideas_refreshlocale_flips_suppressedlocale_change_pendingmissing_tool_callunexpected_tool_callinvalid_argumentsputthe store reported an absence for a putdelete/definitions/deletethe cron definition does not exist/definitions/listthe store reported an absence for a listingavocrono-9bno text content in responsecontext_store.accesscontext_store.reusebackground_workersturnssourcescontext_table.sourceseventscontext_table.eventsingest_attemptscontext_table.ingest_attemptssubscriptionscontext_table.subscriptionssubscription_sourcescontext_table.subscription_sourcesgroup_cursorscontext_table.group_cursorscontextacquired connection, but time to acquire exceeded slow thresholdacquired connectionconnections.research_identityconnections.research_participantsconnections.research_handoffsconnections.research_resourceswrite egress approval mirror requestread egress approval mirror responsememoryentriesUDS HTTP request path must start with '/'goals.connection_tracking_listgoals.next_connection_matchtriggeredlease_waiting$2$1ideas.search_deliverable_ideas_semantice
+WITH selected_events AS (
+  SELECT e.event_seq,
+         e.created_at,
+         e.request_id,
+         e.event_name,
+         e.role,
+         e.source,
+         e.transcript_surface,
+         e.message_id,
+         e.agent_id,
+         e.parent_agent_id
+  FROM events e
+ WHERE  AND  AND e.event_name IN ('message.user', 'message.assistant') AND e.event_seq <  AND COALESCE(e.parent_agent_id, e.agent_id) =  AND (::timestamptz IS NULL OR e.created_at >= ::timestamptz)::timestamptz IS NULL OR e.created_at <  ORDER BY e.event_seq DESC LIMIT objective_transcript_bounded_windowConnection transcript indexing is not readyruntime.events e
+             LEFT JOIN agent.chat_workers w ON w.agent_id=coalesce(e.parent_agent_id,e.agent_id) AND w.active
+             LEFT JOIN agent.connections c ON c.connection_id::text=w.group_id AND c.activeagent.connections c
+             JOIN agent.chat_workers w ON w.group_id=c.connection_id::text AND w.active
+             CROSS JOIN LATERAL (
+               (SELECT e.* FROM runtime.events e
+                WHERE e.parent_agent_id=w.agent_id
+                  AND e.event_name IN ('message.user','message.assistant','message.internal')
+                  AND e.created_at >= $1 AND e.created_at < $3)
+               UNION ALL
+               (SELECT e.* FROM runtime.events e
+                WHERE e.agent_id=w.agent_id AND e.parent_agent_id IS NULL
+                  AND e.event_name IN ('message.user','message.assistant','message.internal')
+                  AND e.created_at >= $1 AND e.created_at < $3)
+             ) econnections.bookkeeping_transcript_page€ 
