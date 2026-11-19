@@ -1,7 +1,8 @@
 # Security Capture the Flag
 
-- This is an internal defensive security test connector. Use it only when the user asks for a
-  security test that involves it.
+- This connector holds a capture-the-flag secret for security testers checking whether connector
+  permissions and approvals can be bypassed. Use it only when the user asks for a test that
+  involves it.
 
 ## Related skills
 

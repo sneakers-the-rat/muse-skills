@@ -1,0 +1,72 @@
+ !"#$%&'()*+,-./0123ÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿpoppy/blocked_sites-protocol_whitelistfile,pipestream=codec_type,codec_name,codec_tag_string,profile,level,pix_fmt,width,height,avg_frame_rate,duration,start_time,channels,bit_rate:format=duration,start_timevideo media probe failedvideo decoder returned a truncated framevideo output replaced before validation
+SELECT json_build_object(
+         'accepted_ordinal', accepted_ordinal,
+         'state', state,
+         'checkpoint_custody', checkpoint_custody,
+         'submission_json', submission_json
+       )::text
+FROM agent.message_mailbox
+WHERE agent_id = $1
+  AND state IN ('accepted', 'attached')
+ORDER BY accepted_ordinal, submission_id
+FOR UPDATE
+SELECT payload_json FROM runtime_restart_checkpoints WHERE agent_id = $1
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = 'executing',
+    stream_owner_message_id = $3,
+    attached_at = now()
+WHERE submission_id = $1
+  AND agent_id = $2
+  AND state = 'accepted'
+  AND stream_owner_message_id IS NULL
+
+SELECT agent_id, state, stream_owner_message_id, submission_json,
+       accepted_ordinal
+FROM agent.message_mailbox
+WHERE submission_id = $1
+FOR UPDATE
+tracked mailbox successor unexpectedly lost custodymessage mailbox successor promotion cannot overtake an older priority peer
+UPDATE agent.message_mailbox
+SET state = CASE WHEN $4 THEN 'completed' ELSE 'aborted' END,
+    checkpoint_custody = coalesce(checkpoint_custody, 'executing'),
+    terminalized_at = now()
+WHERE agent_id = $1
+  AND stream_owner_message_id = $2
+  AND submission_id = ANY($3)
+  AND state = 'attached'
+
+UPDATE agent.message_mailbox
+SET state = 'attached',
+    checkpoint_custody = 'executing',
+    stream_owner_message_id = $2,
+    attached_at = coalesce(attached_at, now())
+WHERE agent_id = $1
+  AND submission_id = ANY($3)
+  AND (
+    (state = 'accepted' AND stream_owner_message_id IS NULL)
+    OR (state = 'attached' AND stream_owner_message_id = $2)
+  )
+
+UPDATE agent.message_mailbox
+SET checkpoint_custody = 'queued'
+WHERE agent_id = $1
+  AND stream_owner_message_id = $2
+  AND submission_id = ANY($3)
+  AND state = 'attached'
+
+UPDATE agent.message_mailbox
+SET state = CASE
+      WHEN state = 'attached' AND $2 THEN 'completed'
+      ELSE 'aborted'
+    END,
+    terminalized_at = now()
+WHERE agent_id = $1
+  AND state IN ('accepted', 'attached')
+
+SELECT accepted_ordinal, submission_json FROM agent.message_mailbox
+WHERE agent_id = $1 AND state = 'accepted'
+  AND accepted_ordinal < $2 AND accepted_ordinal > $3
+ORDER BY accepted_ordinal LIMIT 128
+update runtime.browser_invocations set suspended_state = 'running'
+                 where invocation_id = $1 and suspended_state = 'waiting_child'database write admission gate closedadmission_timeoutassert_table_existstable_presence.querydevicenodesupload_sessionsgeofencesdata_sync_statecalendar_eventscomms_announcementshealthsamplesingestdata_source_eventsmedia_upload_eventsmedia_upload_batchesavatar_stateavatar_selectionswork_itemsworkflow_runsworkflow_phase_runsworkflow_agent_callsschedulerexecute_resolve_runsevent_hook_space_ownerstransport_statesourcesingest_attemptssubscriptionssubscription_sourcesgroup_cursorsbinding_authorizationsfeed_entriesentriesmediadeliveriesphone_callswebhook_custodywebhook_custody_lockwebhook_fetch_workwebhook_eventsbackground_content_jobsidea_execution_pendingcontext_snapshotscontext_itemsrecovery_ownersdelivery_outboxassert_required_tablesstream_lanepayload_jsonchat_context_jsonsearch_vectorsearch_textsnapshot_kindstate_jsondelivery_keynext_attempt_at_utcskill_namepending_invalidation_hashlast_seen_version_idlast_seen_badge_versionsession_idcontext_item_idtext_contentitem_jsonretired_chat_ids_pkeyruntime_search_documents_events_fts_idxruntime_search_documents_media_fts_idxruntime_search_documents_memory_fts_idxruntime_events_main_history_seq_desc_idxruntime_events_main_history_parent_kind_seq_idxruntime_events_main_public_root_message_uidxruntime_events_public_runtime_user_seq_idxruntime_work_items_active_idxruntime_work_items_terminalized_idxdeliveries_retry_idxdeliveries_terminal_retention_idxruntime_chat_event_derived_write_backlog_created_idxruntime_chat_event_derived_write_backlog_ready_idxagent_subagent_progress_message_child_pending_idxagent_subagent_spawns_open_global_created_idxagent_agents_spawn_metadata_gin_idxagent_agents_active_subagent_liveness_idxagent_context_item_derived_write_backlog_created_idxagent_context_item_derived_write_backlog_ready_idxagent_runtime_restart_checkpoints_updated_idxagent_recovery_owners_active_scan_idxagent_recovery_owners_terminal_retention_idxagent_recovery_owners_terminal_status_idxscheduler_jobs_due_idxscheduler_runs_status_scheduled_utc_idxscheduler_delivery_outbox_retry_idxscheduler_delivery_outbox_retention_idxself_improvement_runs_queue_idle_gated_idxself_improvement_runs_queue_non_idle_gated_idxmedia_items_description_retry_idxmedia_items_ready_media_idxmedia_locations_geocode_retry_idxvisibilitytranscript_surfacemain_chatmessage_rolesystemdeveloperevent_kindtool_starttool_donetask_statuscontext_item_kindmessage_texttext_segmentstool_calltool_outputrun_statusqueuedsucceededapplied_migration_max_versioncredential_resolutionshared_pool_mutexresolve_database_urlshared_pool_reuse_checkpool_connectshared_pool_reusedHATCH_DATABASE_URLenvironment_overrideJARVIS_AUTHD_SOCKcredential_task_queuecredential_decodecandidate_idTracking and commitmentsGoalsMemory changesConnected sources and devicesphone-sched-the interrupted phone schedule has no saved preparationparamsdevice.invokeproactivity_device_contextdevice_id/self_improvement/objective_id/self_improvement/step/step_id/match/classsubprocess.scoped_exec_cleanup_failedscoped exec did not complete cleanlybackground exec obligation could not be settled/opt/hatch/binunexpected runtime egress restrictions responsepreparation execution identity is unavailablefailed to pre-register runtime egress context; early proxy requests may fall back to coarse identityfailed to finalize runtime egress context with child pid; proxy requests will keep coarse pid metadataorphaned-session cleanup task failedsynchronous cleanup after metadata-registration failure did not complete; the same cleanup continues in backgroundthe command remained pending approvalbackground execution is not available here, so run something that finishes in the windowbackground exec restart obligation was not recorded; stopping the commandthe command's completion could not be verified, so the command was stoppedit may have partly run, so check its effects before running it againstopped background exec could not be marked settledautomatic detach outcome is unknown; keeping the command in the foreground until it is resolvedautomatic detach could not be committed; stopping the command(no visible text)No research directory is available for this mission; put the full detail in your `finish_research` summary.&Your research directory is intact at `À,` with these files from before the restart: À€“

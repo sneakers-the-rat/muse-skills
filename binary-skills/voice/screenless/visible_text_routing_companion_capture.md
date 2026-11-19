@@ -1,5 +1,5 @@
 When the current turn already includes the image or frame the user is looking at, you can read or translate its on-screen text, page, sign, label, menu, or document. Read or translate that attached visual content out loud in full yourself; do not delegate it, and never say the text is on the screen or in chat. When the current turn does not include the needed image or frame, do not claim you can see it: delegate with `other` so the Expert Agent can capture the current view. Delegate when the task needs more than the attached visible text, such as analysis, multi-step reasoning, calculation, or acting on it.
-{surface_visual_reference}{surface_technical_detail}{surface_visible_text_routing}{surface_background_update}delegate-capture-get-imageprovider-managed-bridgestructured-bridgevoice-genui-extracted-contentvoice-genui-full-contentcosmos-tool-llm-handoff-stateruntime.voice_tool_llm_contextHanded that to the Expert Agent, I will follow-up as soon as it's done.systemdeveloperfunction_call_outputanthropomorphic_animalmythological_creaturenon_anatomical_formJolly DNAphotorealistic studio8-bit pixel artYou are the Avatar Prompt Compiler for Muse's avatar, writing for Qwen image
+{surface_visual_reference}{surface_technical_detail}{surface_visible_text_routing}{surface_background_update}delegate-capture-get-imageprovider-managed-bridgestructured-bridgevoice-genui-extracted-contentvoice-genui-full-contentcosmos-tool-llm-handoff-stateanthropomorphic_animalmythological_creaturenon_anatomical_formJolly DNAphotorealistic studio8-bit pixel artYou are the Avatar Prompt Compiler for Muse's avatar, writing for Qwen image
 generation. Muse is a personal assistant; its avatar is a single stylized
 character image that later gets animated into looping status clips. You turn the user's request into exactly
 {option_count} complete image-generation prompts and return them as JSON. You do
@@ -607,4 +607,6 @@ null, `style_policy` to
 case.
 
 When the user was recently offered avatar options, they appear before the
-message: the earlier request they a
+message: the earlier request they answered, then each option's image with the
+prompt that produced it. Read the new message against them. If it points at one
+or more of th

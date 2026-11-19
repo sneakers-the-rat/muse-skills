@@ -571,7 +571,7 @@ harness = "hybrid_selector"
 "9b_safety_classifier" = { weights = "safety-classifier", kind = "safety_classifier" }
 "voice_arbitrator" = { weights = "safety-classifier" }
 "voice_arbitrator_df" = { weights = "safety-classifier" }
-"voice_arbitrator_ff" = { weights = "safety-classifier" }
+"voice_arbitrator_ff" = { weights = "safety-classifier", voice_arbitrator_code_switch_prompt = true }
 "voice_arbitrator_jev" = { weights = "safety-classifier", jev_decision_codes = true }
 "pi_3b_prefilter" = { weights = "safety-classifier", kind = "safety_classifier", classifier_roles = ["prompt_injection_prefilter"] }
 "guacamole_26b_safety" = { weights = "safety-classifier", kind = "safety_classifier" }
