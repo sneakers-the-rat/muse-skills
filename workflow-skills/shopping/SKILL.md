@@ -4,6 +4,8 @@
 
 - When the user wants help choosing a gift, planning gifts for several people or drafting a wishlist, follow [gift planning](/opt/muse/skills/shopping/references/gift-planning.md).
 
+For connectors that return a ready-to-present shopping-results JSON file, follow that connector's widget instructions and pass that file as `path` to `shopping.create_shopping_results_widget`. This presents the native shopping card directly. Do not run restaurant or menu-item IDs through the retail product resolver or substitute an HTML widget when native presentation fails.
+
 ## Understand what the user needs
 
 <!-- product-search-improvements-off-only:start -->

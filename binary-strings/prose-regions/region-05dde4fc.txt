@@ -1,0 +1,34 @@
+write_admissionwritepostgres write completed slowlypostgres write failedpostgres write deferred; caller retains custodyretrying idempotent postgres writeone-shot postgres write invoked more than oncecompleted device upload session missing cached responseconcurrent device upload chunk conflict missinglocked active device full sync is missing its idactive reconciliation state is missing its acceptance expiryacquired connection, but time to acquire exceeded slow thresholdacquired connectionupload_sessions.delete_uploadupload_sessions.stage_chunkupload_sessions.load_sessionupload_sessions.cache_responseupload_sessions.cleanup_expiredupload_sessions.begin_finalizationupload_sessions.completed_responseupload_sessions.load_chunk_payloadsupload_sessions.in_progress_datatypeupload_sessions.release_finalizationregistry.get_deviceregistry.device_existsregistry.list_pairedregistry.revoke_devicerevoke_deviceregistry.upsert_deviceupsert_deviceregistry.get_device_metaregistry.update_last_seenregistry.get_device_familyregistry.list_device_indexregistry.mark_disconnectedmark_disconnectedregistry.list_device_namingpaired-device cache refresh after write was superseded by a newer writefailed to refresh paired-device cache after device write; invalidating cache so the next read re-queries Postgresregistry.record_health_sync_failureregistry.record_health_sync_successnotification_opt_in_offers.getnotification_opt_in_offers.put
+        insert into device.upload_sessions (
+            upload_session_id,
+            route_kind,
+            node_id,
+            request_id,
+            datatype,
+            sync_mode,
+            chunk_count,
+            status,
+            response,
+            created_at_text,
+            updated_at_text,
+            expires_at_text,
+            expires_at
+        )
+        values (
+            $1, $2, $3, $4, $5, null, $6, $7, null,
+            $8, $8, $9, coalesce($10, now())
+        )
+        on conflict (upload_session_id) do nothing
+        invoke_resultdevice upload chunk_countpartial
+        select
+            s.route_kind,
+            s.node_id,
+            s.request_id,
+            s.datatype,
+            s.chunk_count,
+            s.status,
+            s.response as response_json
+        from device.upload_sessions s
+        where s.upload_session_id = $1
+        for update of s
+        statusroute_kindnode_idrequest_idchunk_countcompletedfinalizing

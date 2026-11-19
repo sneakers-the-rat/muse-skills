@@ -52,7 +52,11 @@
 
 - [Duffel](/opt/hatch/connectors/duffel/CONNECTOR.md) for bookable fares from many airlines, with native booking and cancellation.
 
-- [Despegar](/opt/hatch/connectors/despegar/CONNECTOR.md) for read-only flight search, flexible-date suggestions, monthly trends and deals. It provides search and comparison without itinerary continuation links; explain that limit when the user selects a flight and stop before checkout, booking or payment.
+- [Despegar](/opt/hatch/connectors/despegar/CONNECTOR.md) for flight searches and comparisons, flexible dates, monthly trends and deals.
+
+<!-- despegar-checkout-only:start -->
+- Despegar can also generate a checkout link for the selected itinerary so the user can continue on Despegar.
+<!-- despegar-checkout-only:end -->
 
 - [Agoda](/opt/hatch/connectors/agoda/CONNECTOR.md) for flight searches and returned links to book on Agoda.
 

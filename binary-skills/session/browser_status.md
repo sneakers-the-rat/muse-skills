@@ -6,11 +6,24 @@
 No active browser tasks.
 <!-- no_tasks-only:end -->
 <!-- browsers-only:start -->
+<!-- choice_heading-only:start -->
 Browsers
+<!-- choice_heading-only:end -->
+<!-- root_choice_heading-only:start -->
+Available browsers
+<!-- root_choice_heading-only:end -->
 {browser_rows}
 <!-- choice_rule-only:start -->
 Set browser on new work only when the user chose one of these. Otherwise leave it unset and the default is used. If the user wants one that isn't listed, start nothing and offer one listed. For a browser on another device, tell them to send the message from that device.
 <!-- choice_rule-only:end -->
+<!-- root_choice_rule-only:start -->
+Choose the browser for each new task from these, for the user and their request. If the user wants one that isn't listed, start nothing and offer one listed. For a browser on another device, tell them to send the message from that device.
+Cloud browser environments: {cloud_networks}. Every new cloud browser task names one of these environments. A device browser takes no environment.
+<!-- root_choice_rule-only:end -->
+<!-- devices-only:start -->
+User's browsers:
+{device_rows}
+<!-- devices-only:end -->
 <!-- tasks-only:start -->
 
 <!-- tasks-only:end -->
