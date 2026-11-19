@@ -3,7 +3,7 @@
 
 ## When to check
 
-- Check a journey of a tracked trip when it ends disrupted: a confirmed cancellation, a diversion, a missed connection, or an arrival at its final destination 2 hours 45 minutes or more late. Each journey of the trip is checked when it ends. The status job does this as described under **Scheduled runs**.
+- Check a journey of a tracked trip when it ends disrupted: a confirmed cancellation, a diversion, a missed connection, or an arrival at its final destination 2 hours 45 minutes or more late. A cancellation counts when the airline cancelled the flight, not when the traveler cancelled or changed the booking. Each journey of the trip is checked when it ends. The status job does this as described under **Scheduled runs**.
 
 - Check when the user asks whether an airline owes them money, compensation or a refund for a flight, or describes a flight that went wrong.
 
@@ -15,11 +15,11 @@
 
 - A journey is the legs of one booking, in order, from one place the traveler stays to the next. A connection is inside a journey and a stay ends it, so check an outbound, a return and each part of a multi-city trip separately.
 
-- Check a journey once it has ended: its last flight has landed or been cancelled. Check an upcoming one only when the airline has announced a change to it, since a retimed flight can already be owed a refund. FlightAware shows a flight from about two days before it leaves, and the check refuses one further ahead.
+- Check a journey once it has ended: its last flight has landed or been cancelled. Check an upcoming one only when the airline has changed or cancelled it and it leaves within two days, since a retimed flight can already be owed a refund. FlightAware shows a flight from about two days before it leaves, so a change the airline announces earlier has nothing to check yet, and the check refuses a flight further ahead.
 
 - Take the legs, local departure dates, booked arrival time and traveler count from the trip's `flight.json` when Muse tracked it, and otherwise from the booking mail.
 
-- Run the [FlightAware](/opt/hatch/connectors/flightaware/CONNECTOR.md) `compensation check` with each booked leg. Add `--booked-departure` and `--booked-arrival` with the ticket's times when they differ from the current schedule, and `--passengers` with the travelers on the booking.
+- Run the [FlightAware](/opt/hatch/connectors/flightaware/CONNECTOR.md) `compensation check` with each booked leg as `IDENT@YYYY-MM-DD:AAA-BBB`: its flight number, local departure date and airports. One flight number can fly several sectors in a day, and the airports pick the traveler's. Add `--booked-departure` and `--booked-arrival` with the ticket's times when they differ from the current schedule, and `--passengers` with the travelers on the booking.
 
 - When a cancellation, a missed connection or a rebooking changed the flights the traveler took, add `--flown` for every leg they took, in order, including the booked legs they still flew. The check reads from that list which booked flights they were on.
 
@@ -30,6 +30,8 @@
 - `likely` lists the laws whose amount FlightAware's record supports. The airline still decides the cause first, and weather, air traffic control and other exempt causes can defeat the claim, so present the amount as likely owed rather than guaranteed.
 
 - For `needs_facts`, find what `facts_to_confirm` names in the booking mail or ask the traveler: when they heard about a cancellation, the flight they were rebooked on, or the time the doors opened. Then check again with `--flown`, `--actual-arrival` or `--booked-arrival`.
+
+- When `facts_to_confirm` asks whether a flight's delay is the traveler's, look in the booking mail for when and why they were rebooked. Moved off that flight for the earlier cancellation or missed connection, before it was delayed, its delay is not theirs and there is no claim on it. Still booked on it when it was delayed, the delay is theirs even if they then took another flight. That settles only this fact, and the other facts listed still decide the claim.
 
 - A law with `coverage_uncertain` applies only if the disrupted flight's airline or route qualifies, as on a journey that only connects through the EU. Find in the mail which flight caused the disruption, and present the claim as possible rather than likely.
 
@@ -46,6 +48,8 @@
 - Send one message per likely claim with the flight and date, what happened, the law, the amount per traveler and in total, the deadline and anything still uncertain, and offer to prepare the claim.
 
 - For a flight from the travel history, add that it applies if they took that flight, since booking mail does not prove the traveler flew.
+
+- Leave out a journey whose mail shows the traveler already claimed for it, whether the airline paid or refused.
 
 - Persist the claim's fingerprint in the compensation state before sending, so each claim is offered once.
 
@@ -69,7 +73,7 @@
 
 - Add one activity to the **Flight compensation** Tracking item when a claim is filed, with the airline, flight, law and amount. Schedule one follow-up job owned by that item for 30 days later, to check the mailbox for the airline's answer.
 
-- When the airline pays, record it, log `compensation record --status paid` with the total actually paid, and remove the follow-up job. Log `--status refused` when the airline refuses for good and `--status withdrawn` when the traveler drops the claim.
+- When the airline pays, record it, log `compensation record --status paid` with the total actually paid, and remove the follow-up job. Log `--status refused` when the airline refuses for good and `--status withdrawn` when the traveler drops the claim. Log these three only for a claim Muse filed: a payout or refusal the traveler had before then is not Muse's to count.
 
 - When it refuses or misses its deadline, tell the user the next step: the national enforcement body or an ADR body in the EU, an approved ADR scheme or the CAA in the UK, the Canadian Transportation Agency, small claims court in Israel, or a DOT complaint for an unpaid US refund. A refusal blaming extraordinary circumstances is worth challenging when the cause was a technical fault or the airline's own staff striking.
 
@@ -83,7 +87,7 @@
 
 - A scheduled run stops here unless the **Flight compensation** item records the user's request.
 
-- Run `compensation screen --history ~/memory/travel/HISTORY.md`. It reads no mail and looks up only airports and airlines, and it lists the bookings whose routes a law could cover.
+- Run `compensation screen --history ~/memory/travel/HISTORY.md --requested-on DATE` with the date the user asked, from the **Flight compensation** item. The screen refuses to run without it. It reads no mail and looks up only airports and airlines, and it lists the bookings whose routes a law could cover.
 
 - For each candidate, find the travel date and leg order in that booking's mail by searching the connected mailbox for its flight numbers from the booked month on, and read the confirmation or a later change. Then check each journey.
 

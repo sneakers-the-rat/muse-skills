@@ -56,7 +56,7 @@
 
 - Narrow with `--airlines` (comma-separated names or IATA codes), `--max-price` and `--refundable` only when the user set that limit. `--refundable` keeps only offers marked refundable before departure without a penalty, which is not the same as cancel anytime, and it counts offers with unstated refund terms in `refundable_unknown_excluded`. Those offers are unknown, not non-refundable.
 
-- Report the actual cabin and fare brand on each leg. Domestic First does not promise a lie-flat seat, and economy is a different product the user decides on.
+- Report the actual cabin and fare brand on each leg. Domestic First does not promise a lie-flat seat, and economy is a different product the user decides on. Fare brand names come from the airline's distribution feed and can differ from the names on its website. When the traveler asks for a fare by the airline's name, match it by what it includes, such as bags, seat selection, changes and refunds, and name the brand the offer uses.
 
 - Duffel's results leave out the airlines it can't sell, even on routes they fly. When an airline missing from the results could change the choice, such as one flying the route nonstop, and no browser search covered it, tell the user which airlines the results don't include.
 

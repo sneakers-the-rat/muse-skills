@@ -52,16 +52,16 @@
 <!-- flight-compensation-only:start -->
 ## Check compensation
 
-- `compensation check` decides which passenger-rights laws cover one journey and what each pays: EU261, UK261, Canada's APPR and Israel's Aviation Services Law, plus whether a US refund is owed. Give the booked legs of one journey on one booking in order, from one place the traveler stays to the next, each as `IDENT@YYYY-MM-DD` with the local departure date, or as an `fa_flight_id`.
+- `compensation check` decides which passenger-rights laws cover one journey and what each pays: EU261, UK261, Canada's APPR and Israel's Aviation Services Law, plus whether a US refund is owed. Give the booked legs of one journey on one booking in order, from one place the traveler stays to the next, each as `IDENT@YYYY-MM-DD:AAA-BBB` with the local departure date and the leg's airports, or as an `fa_flight_id`. The airports can be left out when the flight number flies one sector that day.
 
 ```sh
-/opt/hatch/bin/flightaware compensation check TP201@2026-03-14 --passengers 2
-/opt/hatch/bin/flightaware compensation check UA90@2026-03-14 UA1144@2026-03-14 --flown UA90@2026-03-14 --flown UA1520@2026-03-14
+/opt/hatch/bin/flightaware compensation check TP201@2026-03-14:LIS-EWR --passengers 2
+/opt/hatch/bin/flightaware compensation check UA90@2026-03-14:SFO-EWR UA1144@2026-03-14:EWR-BOS --flown UA90@2026-03-14:SFO-EWR --flown UA1520@2026-03-14:EWR-BOS
 ```
 
 - It reads each leg's record, airports and operating airline, and measures lateness at the final destination's gate against FlightAware's current schedule. Pass `--booked-departure` and `--booked-arrival` with the ticket's times when the schedule changed after booking, `--flown` once per leg the traveler actually took, booked ones included, when a cancellation, a missed connection or a rebooking changed their flights, `--actual-arrival` when the traveler reached the destination another way, and `--carrier-size` for a Canadian flight when the airline's APPR size is known.
 
-- When a flight number matches several flights that day, the error lists their `fa_flight_id` values. Run it again with the traveler's.
+- One flight number can fly several sectors in a day, and the leg's airports pick the traveler's. Without them, or when more than one flight could be that sector, the error lists the flights' `fa_flight_id` values. Run it again with the traveler's.
 
 - It reads FlightAware's record of each flight, which starts about two days before departure. A flight dated further ahead is refused without a lookup. Check a flight the airline retimed or cancelled once it is within those two days.
 
@@ -71,7 +71,7 @@
 
 - Each verdict is `expired` instead when the law's claim period has passed. An APPR amount waits on the airline's size when it is unknown: `amount.per_passenger_if_small_airline` gives the small-airline amount.
 
-- `compensation screen --history PATH` reads the `## Flights` lines of a travel history file. For each booking's legs it lists `laws` that reach them from their airports and the airlines in their flight numbers, and `possible_laws` that apply only if an airline they cover operated the flight, since booking mail may show only the selling airline's number. A candidate still needs its dates and a `compensation check`.
+- `compensation screen --history PATH --requested-on YYYY-MM-DD` reads the `## Flights` lines of a travel history file. It runs only for a past-flights check the user asked for and takes the date they asked, so it refuses without one. For each booking's legs it lists `laws` that reach them from their airports and the airlines in their flight numbers, and `possible_laws` that apply only if an airline they cover operated the flight, since booking mail may show only the selling airline's number. A candidate still needs its dates and a `compensation check`.
 
 - `compensation record --law LAW --status STATUS` logs where a claim stands for reporting, with `--total` and `--currency` for the amount and `--passengers` for the travelers. It records no flight or traveler, and it changes nothing at the airline.
 

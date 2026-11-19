@@ -4,7 +4,7 @@
 
 ## Loyalty numbers, credits and points
 
-- Status and mileage earning come from each traveler's loyalty number on the booking, wherever it is bought: in `loyalty_programme_accounts` on a Duffel booking, asked for with the traveler details when the travel profile lists the program, as Duffel's booking guide describes, or by booking signed in on the airline's website, as [browser booking](/opt/muse/assets/booking/references/browser-booking.md) describes. A traveler without the number at hand still books.
+- Status and mileage earning come from each traveler's loyalty number on the booking, wherever it is bought: in `loyalty_programme_accounts` on a Duffel booking, asked for with the traveler details under the conditions in Duffel's booking guide, or by booking signed in on the airline's website, as [browser booking](/opt/muse/assets/booking/references/browser-booking.md) describes. A traveler without the number at hand still books.
 
 - Credits and certificates the traveler holds are money, and member fares are cash prices: offer a known, unexpired one that applies to the chosen flight's airline with the chosen trip. Using it runs on the airline's website with the traveler's consent, as checkout describes.
 
@@ -29,7 +29,7 @@
 
 ## Review and book
 
-- When the user picks a flight, show the chosen trip in chat before collecting traveler details: every flight with its date, times and flight number, the cabin and fare brand, bags, change and refund terms, any proposed seats, and the total. Invite changes to seats, bags or the fare, carry the changes the seller supports into the booking, and explain any limit before continuing, such as a connector that sells a bag only as part of a fare that includes it.
+- When the user picks a flight, show the chosen trip in chat before collecting traveler details: every flight with its date, times and flight number, the cabin and the fare brand exactly as the offer names it, bags, change and refund terms, each proposed seat as a choice they can change or decline, and the total. Invite changes to seats, bags or the fare, carry the changes the seller supports into the booking, and explain any limit before continuing, such as a connector that sells a bag only as part of a fare that includes it.
 
 - If the chosen trip connects in a country other than the destination that has its own entry requirements, confirm in that same message that every traveler meets them, unless the conversation already shows it. Offer a comparable trip without that connection if someone doesn't.
 
@@ -39,6 +39,8 @@
 <!-- duffel-payment-readiness-only:end -->
 - Follow [checkout](/opt/muse/assets/booking/references/checkout.md) for the final refresh, worse terms, approval and an uncertain result. For a flight, look for changes to bags, airports and the operating carrier as well as the fare, seats and schedule.
 
-- The final review shows the exact itinerary, traveler count, cabin and fare brand, seats, bags, total, the loyalty program on each traveler's booking, any credits or points applied, the amount charged and the fare rules.
+- The final review shows the exact itinerary, traveler count, cabin and that same fare brand name, seats, bags, total, the loyalty program on each traveler's booking, any credits or points applied, the amount charged and the fare rules.
 
 - For flights, the confirmation is the airline's booking reference with the status of each ticket. A hold or pending ticketing is not a completed booking.
+
+- With the confirmation, when the user has a connected calendar, offer once to add each flight to it, with the flight number, airports, airport-local times and the booking reference, and add them when they accept, after checking that calendar for an event that already covers the flight, since Gmail adds flights on its own. Leave the offer out when no calendar is connected, when they declined it for this trip, or when they asked for no calendar entries.

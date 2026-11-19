@@ -69,7 +69,7 @@
 - Apply a validated amendment or rebooking to the same owner. Update the current facts, keep the as-booked baseline, clear a pending fare candidate the change invalidates and add one activity. Compare provider timestamps so an older confirmation never undoes a newer amendment.
 
 <!-- flight-compensation-only:start -->
-- Before moving past a journey that ended disrupted, or stopping or completing the trip, check that journey under [Flight compensation](references/compensation.md) as the status job's compensation step describes.
+- When a journey ended disrupted, check it under [Flight compensation](references/compensation.md) as the status job's compensation step describes, before moving past it or stopping or completing the trip. A booking the traveler cancelled or changed themselves is not a disruption. Leave out a journey whose flights are more than two days ahead: the check reads FlightAware's record of each flight, and there is none yet.
 <!-- flight-compensation-only:end -->
 
 - When a cancellation is confirmed and no replacement exists, set `trip.cancelled` to `true` and stop all of the trip's monitoring jobs.

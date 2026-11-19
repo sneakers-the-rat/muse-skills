@@ -38,7 +38,7 @@
 
 - The quote has the current price and terms: what's charged now, any amount due at the property, the total, the cancellation terms and the rate's `conditions`. The user needs to see these before booking, including anything that changed since the search.
 
-- A fee paid at the hotel, such as a resort fee, can appear only in `conditions` while `due_at_property` is zero, so the total may not include it.
+- A fee paid at the hotel, such as a resort fee, can appear only in `conditions` while the quote's hotel fees are zero (`due_at_property` for a pay-now rate, `fees_at_property` for a guarantee), so the total may not include it.
 
 - `ok: false` with a `code` means the rate can't be booked here, and `error` says why.
 

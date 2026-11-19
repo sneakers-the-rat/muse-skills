@@ -34,9 +34,9 @@
 
 - [Outlook Mail](/opt/hatch/connectors/outlook_mail/CONNECTOR.md) for existing confirmations, airline credits and loyalty details.
 
-- [Google Calendar](/opt/hatch/connectors/google_calendar/CONNECTOR.md) for date conflicts and existing travel.
+- [Google Calendar](/opt/hatch/connectors/google_calendar/CONNECTOR.md) for date conflicts, existing travel and adding booked flights.
 
-- [Outlook Calendar](/opt/hatch/connectors/outlook_calendar/CONNECTOR.md) for date conflicts and existing travel.
+- [Outlook Calendar](/opt/hatch/connectors/outlook_calendar/CONNECTOR.md) for date conflicts, existing travel and adding booked flights.
 
 - [Link by Stripe](/opt/hatch/connectors/stripe-link/CONNECTOR.md) for paying a Duffel booking or a website checkout with a one-time card.
 

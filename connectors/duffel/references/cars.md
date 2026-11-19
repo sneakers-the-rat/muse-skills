@@ -18,7 +18,7 @@
 
 - Read the output as it prints. It is compact JSON for a shortlist, and `tee` saves it unchanged for the native list. Use a new file name for each search and keep the file, unedited, until the list is created.
 
-- The output is `{ok, status, search_id, rates_total, rates_returned, suppliers, rates}`, where `rates_total` counts every rate Duffel returned before filters. Each entry of `rates` has `rate_id` (internal), `total_amount` and `total_currency`, `payment_type` (`postpaid`, `guarantee` or `prepaid`), `mileage` (`{type: "unlimited"}` or `{type: "limited", limit, unit}`), `supplier` (`name`, `logo_url`), `car` (`name`, `category`, `type`, `transmission`, `max_passengers`, `baggage` with `large` and `small`, `air_conditioning`, `fuel` and at most one image in `images`), `pickup_location` and `dropoff_location` (`name`, `access` as `in_terminal`, `shuttle`, `meet_and_greet` or `call_for_pickup`, `address`, `opening_hours` and up to two `additional_information` entries), and the local `pickup_date`, `pickup_time`, `dropoff_date` and `dropoff_time`. A field Duffel did not return is absent.
+- The output is `{ok, status, search_id, rates_total, rates_returned, suppliers, rates}`, where `rates_total` counts every rate Duffel returned before filters. Each entry of `rates` has `rate_id` (internal), `total_amount` and `total_currency`, `payment_type` (`postpaid`, `guarantee` or `prepaid`), `mileage` (`{type: "unlimited"}` or `{type: "limited", limit, unit}`), `supplier` (`name`, `logo_url`), `car` (`name`, `category`, `type`, `transmission`, `max_passengers`, `baggage` with `large` and `small`, `air_conditioning`, `fuel` and at most one image in `images`), `pickup_location` and `dropoff_location` (`name`, `access` as `in_terminal`, `shuttle`, `meet_and_greet` or `call_for_pickup`, `address`, `opening_hours` and up to two `additional_information` entries), the local `pickup_date`, `pickup_time`, `dropoff_date` and `dropoff_time`, and `expires_at`, the UTC time until which Duffel quotes the rate. A field Duffel did not return is absent.
 
 - `suppliers` lists every rental company among the rates that match the other filters, cheapest first, as `{name, rates, cheapest_total, currency}`. It ignores `--supplier`, so a company missing from it has no rate from this source for the search.
 
@@ -30,7 +30,7 @@
 
 - A 429 rate-limit response ends Duffel calls for the current task. Report the limit and keep the query, radius and filters as they were.
 
-- Quote the row the user picks by its `rate_id`. When the search output is no longer in view, search again with the same inputs.
+- Quote the row the user picks by its `rate_id`, before its `expires_at`: Duffel keeps rates only for a limited time after a search, and `car-quote` refuses an expired rate with `code: rate_expired` without asking Duffel. When that time has passed, or the search output is no longer in view, search again with the same inputs and let the user choose from the fresh results, since prices and availability may have changed.
 
 ## Show the rates as a list
 
