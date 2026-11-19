@@ -14,6 +14,10 @@
 
 - `pages monetization earnings` explains how the Page's earnings changed over a time range. Pass the user's question as `--question`, up to 300 characters, and the period they mean as `--time-range`. A `custom` range needs both `--start-date` and `--end-date`.
 
+<!-- facebook-pages-tranche2-monetization-only:start -->
+- Earnings are also Page insights metrics. Read the Page's `earnings` or a post's `earnings`, `earnings_by_program`, `stars_earnings` and `unified_program_earnings` with [Page insights](/opt/hatch/connectors/facebook_cli/references/pages-insights.md) when the user asks which posts earned the most or wants earnings next to views.
+<!-- facebook-pages-tranche2-monetization-only:end -->
+
 ## Monetization programs
 
 ```sh

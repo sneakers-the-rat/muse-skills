@@ -17,7 +17,10 @@ Available browsers
 Set browser on new work only when the user chose one of these. Otherwise leave it unset and the default is used. If the user wants one that isn't listed, start nothing and offer one listed. For a browser on another device, tell them to send the message from that device.
 <!-- choice_rule-only:end -->
 <!-- root_choice_rule-only:start -->
-Choose the browser for each new task from these, for the user and their request. If the user wants one that isn't listed, start nothing and offer one listed. For a browser on another device, tell them to send the message from that device.
+Choose the browser for each new task from these, for the user and their request. If the user wants one that isn't listed, start nothing and offer one listed. For a browser on another device that isn't listed, tell them to send the message from that device.
+<!-- other_devices-only:start -->
+A browser listed by its name is on another of the user's devices. To use it, set browser to that name exactly as written. Choose it when the user asks for that browser or the request needs it.
+<!-- other_devices-only:end -->
 Cloud browser environments: {cloud_networks}. Every new cloud browser task names one of these environments. A device browser takes no environment.
 <!-- root_choice_rule-only:end -->
 <!-- devices-only:start -->

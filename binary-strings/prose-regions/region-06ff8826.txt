@@ -1,0 +1,20 @@
+browser follow-up identity was reusedupdate runtime.browser_specialist_steers set delivered_at = now()
+                     where steer_id = $1 and delivered_at is null and undeliverable_at is nullupdate runtime.browser_seat_inputs set shown_at = now()
+                     where source_id = $1 and shown_at is null and revision is not null
+                       and invocation_id = (select invocation_id
+                         from runtime.browser_specialist_steers where steer_id = $1)update runtime.browser_specialist_steers set undeliverable_at = now()
+                     where steer_id = $1 and delivered_at is null and undeliverable_at is nullselect revision, state_json from runtime.browser_service_state where invocation_id = $1browser invocation cannot enter this waitupdate runtime.browser_invocations set wait_call_id = $2 where invocation_id = $1select revision, state_json from runtime.browser_task_service_state where task_id = $1select revision, state_json
+                from runtime.browser_service_state where invocation_id = $1 for updatebrowser service invocation changedselect revision, state_json
+                from runtime.browser_task_service_state where task_id = $1 for updateupdate runtime.browser_service_state set revision = $2,
+                        state_json = $3, updated_at = now() where invocation_id = $1browser service state changedinsert into runtime.browser_service_state (invocation_id, revision, state_json)
+                        values ($1, $2, $3)browser task service state is missinginsert into runtime.browser_task_service_state (task_id, revision, state_json)
+                values ($1,$2,$3) on conflict (task_id) do update set revision=excluded.revision,
+                state_json=excluded.state_json, updated_at=now()update runtime.browser_invocations set
+                state=case when state='waiting_user' then 'running' else state end,
+                suspended_state=case when state='waiting_control' and suspended_state='waiting_user'
+                    then 'running' else suspended_state end,
+                wait_call_id=null,updated_at=now()
+                where invocation_id=$1 and wait_call_id=$2 and result_json is nullselect * from runtime.stripe_link_spend_requests
+                where approval_id = $1 and owner_browser_task_id = $2 and wallet_provider = $3payment replacementupdate runtime.stripe_link_spend_requests
+                    set replacement_approval_id = $2, replacement_task_state_revision = $3
+                    where approval_id = $1 and owner_browser_task_id = $4payment replacement has an unresolved provider effectpayment replacement lineage changedpayment replacement lost its ownertab_id, alias, holder_invocation_id, actor_invocation_id, actor_agent_id, (select holder.kind from runtime.browser_invocations holder where holder.invocation_id = browser_task_tabs.holder_invocation_id) as holder_kind

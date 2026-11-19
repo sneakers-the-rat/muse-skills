@@ -27,12 +27,12 @@
 ```text
 /opt/hatch/bin/dropbox list-tools
 /opt/hatch/bin/dropbox call-tool --name <tool> --arguments-json '<json-object>'
-/opt/hatch/bin/dropbox call-tool --name download --arguments-json '<json-object>' --output <path>
+/opt/hatch/bin/dropbox call-tool --name download --arguments-json '{"path":"/Projects/report.pdf"}' --output <path>
 ```
 
 - The reviewed tools list, search, read and download files, read file and account metadata, inspect and create shared links and file requests, create folders, and copy, move and delete content. Use `check_job_status` when a result hands back a job to follow.
 
-- `download` needs `--output`, and `list-tools` marks it with `hatch_requires_output`. It saves the file and returns only the saved path and byte count.
+- `download` needs `--output`, and `list-tools` marks it with `hatch_requires_output`. Its `path` is the file's absolute Dropbox path or its `id:` file ID. It saves the file and returns only the saved path and byte count.
 
 ## Upload a local file
 

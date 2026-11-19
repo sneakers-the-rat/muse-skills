@@ -1,0 +1,103 @@
+unconfirmed_rule_idsChatDeliveryTargetchat_idSubagentCompletionIdentitypayload_sha256batch_agent_idsuser_messageidagent_messagetool_calllabelmetadata_jsontool_outputsuccessroot_user_message_idoutputinternally tagged enum ExecutionItemgoal_idTranscriptItemcontenttool_call_idargumentsresultEventKindHeartbeatCallEndedscannedexpiredpendingdeleted_entriesdeleted_dirspartialerrorsCurrentLocationReadstatusfailedexpired_remainingretained_bytesdirectoryfingerprintorphan_files_removeddeferred_source_checksleased_new_event_idscompletedlocale_supersededpreserved_existingitem_idsourcespreparationcontext_group_idscontext_event_idssource_checksconversation_derivedsuggestion_idsdeduplication_keysgenerationvariant index 0 <= i < 4phone.transcript.snapshotphone.transcript.updatedphone.stream.heartbeatphone.stream.closedphone.stream.problemavailableunavailabledeniedstaleambiguousincompleteinvalidlongitudeaccuracy_metersupload_timestamp_msreceived_at_unix_msadmitted_at_unix_msnode_idpairing_epochglobal_seqsync_idsample_indexvariant_hashowner_run_idpresentation_localeremainingstruct PeerRequesterHandoff with 4 elementsstruct TodoReminderProvenance with 2 elementsstruct ProactiveReplyReference with 1 elementstruct FollowUpHandoff with 24 elementsstruct Event with 3 elementsstruct Place with 9 elementsstruct PlaceEvidence with 3 elementsstruct Tour with 3 elementsstruct ProactiveFollowUpReference with 3 elementsFailedInvalidIncompleteAmbiguousStaleDeniedUnavailableCurrentLocationSnapshotstruct CurrentLocationContext with 1 elementstruct CurrentLocationSnapshot with 13 elementsstruct ResearchRecord with 9 elementsstruct VolatileContextPinBackfillKey with 2 elementsstruct InternalMessage with 8 elementsstruct InternalMessageChange with 3 elementsstruct OtaManifest with 2 elementsstruct ScanWindow with 2 elementsstruct FollowThroughRetry with 2 elementsstruct Cursor with 4 elementsstruct CatchUp with 2 elementsstruct Scan with 3 elementsstruct LinkedAccount with 4 elementsstruct Tracked with 4 elementsstruct ChatRow with 4 elementsstruct MessageRow with 7 elementsstruct InitialScan with 5 elementsstruct Cursor with 6 elementsstruct CliEnvelope with 2 elementsstruct SessionStatus with 2 elementsstruct CompanionAccount with 2 elementsstruct RetryWindow with 4 elementsstruct StatusData with 4 elementsstruct Cursor with 2 elementsstruct EngagementPage with 8 elementsstruct EngagementChange with 5 elementsstruct EngagementSubject with 7 elementsstruct Position with 2 elementsstruct Scan with 2 elementsstruct InternalSchedule with 5 elementsstruct PreparedItem with 11 elementsstruct SourceChecks with 6 elementsstruct KindCounts with 5 elementsstruct ConnectorReference with 4 elementsstruct PlannedSplit with 3 elementsstruct DeletionsData with 2 elementsstruct DeletionRecord with 5 elementsinline_bytes_seenmigrated_bytesoversizedskippedstruct BackfillCheckpoint with 3 elementsstruct MessageContent with 4 elementsstring or map}false{background task failed/v1/webhooks/controlwrite_admissionwritepostgres write completed slowlypostgres write failedpostgres write deferred; caller retains custodyretrying idempotent postgres writehatch:db:operationpass_budgetdatabase_errorrow_timeoutsweep_finishedone-shot postgres write invoked more than onceadmission_errorcapacity_errorpage_errorinvalid connection work chatinvalid tracking conversationconnection_idrequested_at_mscontent_localeinline_bytesselect b.*, a.connection_id as current_connection_id,
+                    a.revoked as account_revoked
+                from chat_private.binding_authorizations b
+                join chat_private.accounts a using(provider, account_id)
+                where b.provider = $1 and b.binding_id = $2account_revokedcurrent_connection_idSELECT EXISTS(SELECT 1 FROM runtime.maintenance_markers WHERE marker_key = 'event_hook_admissions_v1')SELECT EXISTS(SELECT 1 FROM agent.chat_worker_requests WHERE chat_id=$1 AND state IN ('pending','running','reported','completed'))SELECT count(*) FROM (SELECT 1 FROM agent.chat_worker_requests
+                 WHERE state IN ('pending','running') LIMIT $1) activeselect agent_id,generation,active from agent.chat_workers where group_id=$1 for updateactivechat worker owner changedSELECT EXISTS(SELECT 1 FROM agent.connections WHERE connection_id=$1 AND active)The work's connection is no longer activeINSERT INTO agent.connection_work (connection_id,work_id,coordinator,request_id)
+                     SELECT $1,work_id,$3,$4 FROM unnest($2::uuid[]) AS work_id
+                     ON CONFLICT (connection_id,work_id) DO NOTHINGSELECT count(*) FROM agent.connection_work WHERE connection_id=$1 AND work_id=ANY($2) AND request_id=$3This connection work has already been assignedselect exists(select 1 from chat_private.external_party_conversations where chat_id=$1)select work_id, deadline_at, metadata_json, updated_at
+                     from runtime.work_items
+                     where work_class = 'maintenance_job' and state = 'queued'
+                       and lease_owner is null and terminalized_at is null
+                       and deadline_at is not null
+                       and metadata_json::jsonb->>'maintenance_kind' = $1
+                       and ($2::text is null or work_id > $2)
+                     order by work_id limit 64update runtime.work_items
+                     set metadata_json = (metadata_json::jsonb ||
+                         jsonb_build_object('suspend_policy', $5::text))::text,
+                         updated_at = clock_timestamp()
+                     where work_id = $1 and work_class = 'maintenance_job'
+                       and state = 'queued' and lease_owner is null and terminalized_at is null
+                       and deadline_at = $2 and metadata_json = $3 and updated_at = $4
+                       and (metadata_json::jsonb->>'suspend_policy') is distinct from $5SELECT goal_id, connection_id, title, summary, description,
+                        connection_follow_up_at, connection_revision, connection_owner_initiated
+                 FROM goals.goals
+                 WHERE source='assistant_tracking' AND status='active'
+                   AND connection_id IS NOT NULL AND connection_follow_up_at <= now()
+                   AND ($2::timestamptz IS NULL OR (connection_follow_up_at, goal_id) > ($2, $3))
+                   AND EXISTS (SELECT 1 FROM agent.connections c WHERE c.connection_id=goals.goals.connection_id AND c.active)
+                 ORDER BY connection_follow_up_at, goal_id LIMIT $1
+SELECT e.event_seq,
+       NULLIF(BTRIM(COALESCE(
+         tz.text_value,
+         tz.scalar_value,
+         e.payload_json::jsonb #>> '{metadata,client_timezone}'
+       )), '') AS client_timezone
+FROM runtime.events AS e
+LEFT JOIN runtime.event_payload_fields AS tz ON tz.event_seq = e.event_seq
+  AND tz.field_path = '/metadata/client_timezone'
+WHERE e.event_name = 'message.user'
+  AND e.visibility = 'public'
+  AND e.source IN ('runtime', 'runtime.voice_audio')
+  AND e.event_seq >= (
+    SELECT min(seq)
+    FROM (
+      SELECT e2.event_seq AS seq
+      FROM runtime.events AS e2
+      WHERE e2.event_name = 'message.user'
+        AND e2.visibility = 'public'
+        AND e2.source IN ('runtime', 'runtime.voice_audio')
+      ORDER BY e2.event_seq DESC
+      LIMIT 100
+    ) recent
+  )
+  AND NULLIF(BTRIM(COALESCE(
+        tz.text_value,
+        tz.scalar_value,
+        e.payload_json::jsonb #>> '{metadata,client_timezone}'
+      )), '') IS NOT NULL
+ORDER BY e.event_seq DESC
+LIMIT 1
+BEGIN READ ONLY; SET LOCAL statement_timeout = '250ms'; SET LOCAL lock_timeout = '50ms'SELECT agent_id, variant_hash, CASE WHEN variant_hash <> 'handoff_policy' THEN octet_length(body)::bigint END AS inline_bytes FROM agent.volatile_context_pins WHERE (agent_id, variant_hash) > ($1, $2) ORDER BY agent_id, variant_hash LIMIT $3SELECT pg_total_relation_size('agent.volatile_context_pin_bodies')INSERT INTO runtime.maintenance_markers (marker_key, detail_json) VALUES ('event_hook_admissions_v1', '{}') ON CONFLICT (marker_key) DO NOTHINGINSERT INTO runtime.event_hook_admissions (hook_id, revision, definition_sha256, script_sha256, enabled)  ON CONFLICT (hook_id) DO NOTHINGavatar-state: authoritative DB row missingnode_card.notification_opt_inthe avatar state registry is unavailablesummaryEmojiTaglineCould not read hooksHook admission failed/evidence/discoveryfollow-up queue backlog read failed; keeping the backstopbuild_plan_markdownconnector:geofence.setgeofence.listfollow-up wake policy unavailablequeue_holdscursor_errorvolatile_context_pin_backfill_progress_v2load_chat_bindingruntimewebhook_custodywebhook_custody_lockwebhook_fetch_workwebhook_eventsacquired connection, but time to acquire exceeded slow thresholdacquired connectionevent_hook_admissions.bootstrap_completechat_worker.has_pending_requestinvalid initial worker request statechat_worker.requestexternal_party.retiredwork_items.queued_policy_snapshotswork_items.set_queued_suspend_policyUDS HTTP request path must start with '/'goals.connection_tracking_dueuncertain connection settingschat connection snapshotlatest_public_runtime_user_message_client_timezoneevent_seqclient_timezonelist_volatile_context_pin_backfill_pageexecute_resolve_runsevent_hook_space_ownerswork_itemsJoinHandle polled after completionregistry.list_pairedevent_hook_admissions.bootstrapMuse content card headline failed; publishing without oneMuse content card headline timed out; publishing without onex-hatch-gk-assignment-confirmedhttp://localhost/hatch/check_gatekeepersGatekeeper response omitted requested gate; using defaultGatekeeper response was invalid; using defaultGatekeeper check failed; using defaultfailed to refresh latest public runtime user timezone cachefailed to read home timezone for quota status renderingfailed to compute the avatar assets revision for identityfailed to list paired devices for the avatar manifestcaptured provider absentno_user_textclassifiedclassification_failedtimeoutuser_sentiment_observeduser_sentimenttaglinedescriptionemojifailed to build identity.updated payloadspace.share
+    select
+        node_id,
+        coalesce(display_name, node_id) as display_name,
+        platform,
+        enabled_permissions_json,
+        commands_json,
+        data_sources_json,
+        version,
+        device_family,
+        model_id,
+        metadata_json,
+        is_wakeup_supported,
+        delivery_app,
+        invoke_protocol,
+        -- Sentinel rejects a pairing identity with a space; created_at::text has one.
+        coalesce(
+            paired_at_text,
+            to_char(created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')
+        ) as paired_at,
+        coalesce(last_seen_at_text, last_seen_at::text, created_at::text) as last_seen_at,
+        status,
+        pairing_status
+    from device.nodes
+pairing_status <> 'revoked'insert into agent.chat_worker_requests (request_id,chat_id,generation,worker_agent_id,owner_chat_id,owner_agent_id,origin_json,instruction,created_at_ms,state,result_json,result_submission_id) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) on conflict(request_id) do nothingselect * from agent.chat_worker_requests where request_id=$1 for updatechat worker request identity collision/v1/pin-reminder/prepare-duepin-reminder.prepare-dueWITH requested AS (
+           SELECT * FROM unnest($1::text[], $2::bigint[]) AS r(goal_id, revision)
+         ), locked AS MATERIALIZED (
+           SELECT g.goal_id, g.connection_request_id, g.connection_revision,
+                  g.connection_follow_up_at, r.revision
+           FROM goals.goals g JOIN requested r USING (goal_id)
+           WHERE g.connection_id=$3 AND g.source='assistant_tracking'
+           ORDER BY g.goal_id FOR UPDATE OF g
+         ), claimed AS (
+           UPDATE goals.goals g
+           SET connection_follow_up_at=NULL, connection_request_id=$4,
+               connection_revision=g.connection_revision+1
+           FROM locked l WHERE g.goal_id=l.goal_id
+             AND g.status='active' AND l.connection_revision=l.revision
+             AND l.connection_follow_up_at <= now()
+             AND l.connection_request_id IS DISTINCT FROM $4
+           RETURNING g.goal_id
+         ) SELECT (SELECT count(*) FROM claimed) +
+                  (SELECT count(*) FROM locked WHERE connection_request_id=$4)A follow-up must name work from its conversationTracked work changed before the follow-up was queuedunreadable legacy hook was not admittedinvalid legacy hook path was not admittedinvalid legacy hook was not admittedtracking-follow-up-admissiontracking follow-up was not queued:conversation identity unavailable; leaving participants unresolvedconversation identity lookup timed out; leaving participants unresolvedgroup private binding is no longer currentgroup provider authority or rollout awaits availabilitygroup provider unavailablewhatsapp-owner-inbox-exploration-v1pin.remindercapableprepare due authd PIN reminderno_capable_targetsreminder_interval_daysdueenqueue_failedalready_in_flight_or_presentedpin reminder capability rejected server reminder parameterscapability_validation_failedsender_missingpin reminder acknowledgement task failedack_task_failedpresentation_acknowledgementspending_until_state_transition/hatch/webhooks/deliveries/acklease_expires_at_msdatabase write admission gate closedadmission_timeoutassert_table_existstable_presence.querystandaloneworker return route must be the current owner private chatconnectors.webhooks.updated

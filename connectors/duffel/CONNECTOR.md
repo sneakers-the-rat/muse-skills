@@ -22,6 +22,8 @@
 
 - `car-booking-status` and `car-cancel` check and cancel rental-car reservations made here. Read [rental cars](references/cars.md) before any rental-car command; the flight sections below do not apply to cars.
 
+- `stay-cancel --booking-id bok_...` cancels a hotel booking made here, with the `booking_id` from `book`. Read [cancelling a hotel stay](references/stay-cancel.md) before using it.
+
 - Before a user-facing search, read [Flight Booking](/opt/muse/skills/flight-booking/SKILL.md), which compares flight sources and builds the flight list. Read [checkout](/opt/muse/assets/booking/references/checkout.md) once the user picks a flight to book, not before searching. [Flight Tracking](/opt/muse/skills/flight-tracking/SKILL.md) uses Duffel only for the fare check on a booked trip. Duffel does not report live flight status.
 
 ## Search a complete trip

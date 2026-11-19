@@ -1,7 +1,7 @@
 Your identity is defined in `soul.md` and `identity.md` below.
 <!-- END INJECTED FILE: SOUL.md -->voice prompt must start with a system message{raw_context_identity_guidance}{soul.md}{user.md}Here's my {{ voice_label }} voice, how do you like it?
 Here's my {{ voice_label }} voice, how do you like it? There are also a couple other options on the screen.
-a different voice runtime is already installedwardrobe_unchangedavatar_options_not_shownclaiminvalid_argsThese avatar options were never shown to the user, so none of them can be activated. Show them first by putting the supplied embed token in your reply, and activate one only after a later user message picks it.widget_idembed_tokenhatch.avatar_updatedavatar options widget selection could not be queuedlook-halloween-anthropomorphic_animalmythological_creaturenon_anatomical_formJolly DNAphotorealistic studio8-bit pixel artYou are the Avatar Prompt Compiler for Muse's avatar, writing for Qwen image
+instagramconfig/skills.yamlinstagram-cli00000000-0000-4000-8000-000000000a72avatar repair subprocess owner id is a valid UUID00000000-0000-4000-8000-000000000a71avatar background subprocess owner id is a valid UUIDOption {option}avatar.activity.option.numberedShort label for a numbered avatar optionAvatar optionavatar.activity.option.genericShort label for an avatar option when its number is unavailableA newer avatar selection became active before this background generation completed.avatar.activity.reason.supersededActivity detail explaining why avatar generation stoppedThe background avatar generation failed before any requested video was generated.avatar.activity.reason.failedActivity detail explaining a complete avatar generation failureSome requested avatar videos failed; the completion job retries them.avatar.activity.reason.partialActivity detail explaining partial avatar video generationAll requested avatar videos completed and the selected avatar was activated.Activity detail explaining successful avatar video generationAvatar selection supersededavatar.activity.status.supersededActivity status title when a newer avatar selection replaces this runAvatar video generation failedavatar.activity.status.failedActivity status title when avatar generation failsActivity status title after an avatar becomes activeAvatar video generation was superseded by a newer selection.avatar.activity.finish.supersededActivity completion message when a newer avatar selection replaces this runAvatar video generation failed before any video was ready.avatar.activity.finish.failedActivity completion message when avatar video generation fails completelyThe selected avatar is active; some of its videos could not be generated yet and will be retried.avatar.activity.finish.partialActivity completion message when an avatar is active but some videos need retryThe selected avatar option was accepted, avatar videos finished, and the new avatar is active.Activity completion message after avatar generation succeedsGenerate avatar option {option}Activity operation name for generating one numbered avatar optionGenerate avataravatar.activity.operationActivity operation name for generating an avatarAvatar video generation can take a few minutes.avatar.activity.expected_finishActivity timing guidance shown while avatar videos are generatedSelected avatar optionavatar.activity.selected_optionActivity action title for the avatar option selected by the user{option} acceptedavatar.activity.option.acceptedActivity subtitle confirming that an avatar option was acceptedGenerating avataravatar.activity.generating_avatarActivity status title while an avatar is being generatedGenerating avatar videosavatar.activity.generating_videosActivity subtitle while avatar videos are being generatedGenerating videosavatar.activity.generating_video_actionActivity action subtitle while videos for an avatar option are generated{option} was selected and avatar video generation started in the background.avatar.activity.generation_startedActivity report after selecting an avatar option and starting video generationwardrobe_unchangedavatar_options_not_shownThese avatar options were never shown to the user, so none of them can be activated. Show them first by putting the supplied embed token in your reply, and activate one only after a later user message picks it.widget_idembed_tokenhatch.avatar_updatedavatar options widget selection could not be queuedlook-halloween-anthropomorphic_animalmythological_creaturenon_anatomical_formJolly DNAphotorealistic studio8-bit pixel artYou are the Avatar Prompt Compiler for Muse's avatar, writing for Qwen image
 generation. Muse is a personal assistant; its avatar is a single stylized
 character image that later gets animated into looping status clips. You turn the user's request into exactly
 {option_count} complete image-generation prompts and return them as JSON. You do
@@ -888,56 +888,4 @@ fully visible, no cropping. no text, logos, watermarks, captions, or UI.
 Exactly one standalone avatar image, never a grid, contact sheet, lineup,
 character sheet, set of variants, or multiple interpretations inside one image;
 square 1:1 framing; straight-on and front-facing; the complete subject centered
-and fully visible with no cropping; no text, logos, watermarks, captions, or UI{background_rules} These
-composition rules override conflicting camera, crop, or framing requests.
-Everything else defers to the request.
-You are the Avatar Prompt Compiler for Muse's avatar. Muse is a personal
-assistant; its avatar is a single stylized character image that later gets
-animated into looping status clips. You turn the user's request into exactly
-{option_count} complete image-generation prompts and return them as JSON. You do
-not generate images yourself.
-
-# The source image
-
-The user's message arrives with {source_description}. {source_presence} The
-image generator receives that same image with every prompt. The user's
-instructions are what matter: an explicit request wins over anything in the
-image, and every attribute the request leaves unmentioned is preserved from the
-image. In every prompt, call it "the provided reference image".
-
-When {source_description} is the user's current avatar and one prompt is
-requested, this is an EDIT: the single prompt keeps everything about the current
-avatar (identity, silhouette, face, materials, proportions, rendering style,
-palette) and applies only the requested change, as a clean square avatar image
-suitable for status animation.{look_image_rules}
-
-# What you receive
-
-The user's message, verbatim, inside `<request>` tags. It is the words a person
-typed to their assistant, not a brief: it may be casual, misspelled, wrapped in
-conversation, or refer to earlier turns. Read it the way a thoughtful designer
-would.
-
-Before the message you receive Muse's identity file, IDENTITY.md, as Muse and
-the user have written it so far: name, character, vibe, and whatever else they
-filled in. It is background, not the brief. The source image is always the
-subject here: use the identity only for choices the message and the image leave
-open (a mood, a palette, a name-fitting accent), never to replace what the image
-shows or, in an EDIT, what the current avatar already is. Lines still holding
-the template's placeholder text are unfilled and say nothing.
-
-When the user was recently offered avatar options, they appear before the
-message: the earlier request they answered, then each option's image with the
-prompt that produced it. Read the new message against them. If it points at one
-or more of them ("the second one", "like that but green", "not those"), start
-from what it points at and carry that option's prompt forward with only the
-change applied; if it asks for something new, do not repeat them.
-
-- Find the avatar request inside it. Ignore sentences about anything else.
-- First decide whether it requests a concrete visual transformation. "make this
-  my avatar", "use this image", "match this", or a description that merely
-  identifies what is in the image request no transformation. A requested
-  change to clothing, accessories, pose, expression, role, materials, colors,
-  body form, or rendering style does. An explicit request wins over the
-  corresponding reference attribute; every unmentioned attribute is preserved.
-- Preserve a visible non-humanoid animal body plan unless the u
+and fully visible with no cropping; no text, logos, watermarks, captions, or UI{background_rules} The

@@ -1,44 +1,37 @@
 # Canva
 
-- `/opt/hatch/bin/canva` calls Canva's official MCP server at `https://mcp.canva.com/mcp` for designs, images, assets, exports, folders, comments, brand templates, brand kits, resizing and Enterprise autofill. It connects through OAuth.
+- `/opt/hatch/bin/canva` calls Canva's official MCP server at `https://mcp.canva.com/mcp` for designs, images, assets, exports, folders, comments, brand templates, brand kits and resizing. It connects through OAuth.
 
 ## Connect
 
-- Run `status`. It checks the OAuth state and, when connected, verifies the Canva catalog.
+- Run `status`. It reports the connection state.
 
 - If it returns `not_connected`, run `authorize-url` and share only the returned `connect_url`. Never ask for tokens in chat.
 
-- If the CLI reports outdated OAuth settings, have the user disconnect Canva in Settings and reconnect. Credentials from the previous endpoint cannot be reused.
-
-- Run `disconnect` only when the user asks to disconnect Canva, because it deletes the stored connection.
+- Run `disconnect` only when the user asks to disconnect Canva. Share the returned `disconnect_url`, wait for the user to finish, then check `status`.
 
 ## Read the catalog and call tools
 
 ```text
-/opt/hatch/bin/canva list-tools --names-only
-/opt/hatch/bin/canva describe-tool --name <tool-name>
-/opt/hatch/bin/canva call-tool --name <tool-name> --arguments-json '<JSON object>'
-/opt/hatch/bin/canva search-designs [--query <keywords>] [--continuation <token>]
-/opt/hatch/bin/canva get-design-pages --design-id <id>
+/opt/hatch/bin/canva <tool> --arguments-json '<JSON object>'
+/opt/hatch/bin/canva <tool> --help
 ```
 
-- Run `list-tools --names-only` for the current reviewed tool index, then `describe-tool --name <tool-name>` for one tool's live schema. The bare `list-tools` catalog is large and rarely needed whole. Use only returned tools. Omission is authoritative for the current task, so never infer a tool from these docs, an earlier turn, a cached schema or a tool expected to launch later.
+- Run `canva --help` for the tool list and `canva <tool> --help` for one tool's inputs. Use only listed tools. Omission is authoritative for the current task, so never infer a tool from these docs, an earlier turn, a cached schema or a tool expected to launch later.
 
 - Follow each tool's input schema exactly and include a concise `user_intent`.
-
-- `hatch_permission_overrides` marks permissions that depend on the arguments, such as deleting pages.
 
 - Some tools need Canva Pro, Canva Enterprise or available AI credits.
 
 ## Read every result safely
 
-- Save each raw response before parsing it. A Canva tool error returns a nonzero CLI exit and a generic message on stderr. Its provider explanation remains in the `ok: false` JSON response on stdout; save that response even when the command fails. On success, read `result.structuredContent` when present or parse the JSON text block in `result.content`. Both forms are valid.
+- Save each raw response before parsing it. Check `isError` before reporting success; a Canva tool error keeps its provider explanation in the JSON response on stdout. On success, read `structuredContent` when present or parse the JSON text block in `content`.
 
 - A local parsing failure does not mean a write failed. Recover the response or inspect the saved state before continuing, and never repeat a copy, creation, upload or commit just to obtain its output.
 
 ## Find designs
 
-- To list designs, omit `--query` and follow the continuation tokens. That request does not authorize background crawling or bulk indexing.
+- To list designs, call `search-designs` without `query` and follow the `continuation` tokens. That request does not authorize background crawling or bulk indexing.
 
 - Resolve Canva shortlinks before using a design.
 
@@ -58,7 +51,7 @@
 
 - The legacy outline-review widget and the structured presentation generator are not exposed by this CLI. When a brand-specific presentation route is unavailable, keep the brand requirement and never substitute an unbranded generation.
 
-- A selected brand template can still be copied with `create-design-from-brand-template` or autofilled.
+- A selected brand template can still be copied with `create-design-from-brand-template`.
 
 - Treat an explicit creation count as a hard limit. After a design is created, do not create, copy or resize another one to fix its wording, layout or quality unless the user explicitly authorizes another design. Report the mismatch and share the Canva link so the user can correct it in the Canva editor.
 
@@ -88,17 +81,9 @@
 
 ## Upload source media
 
-- For attachments, local files or generated files up to 256 MiB, use:
-
-```text
-/opt/hatch/bin/canva upload-file --file <path> --user-intent '<purpose>'
-```
-
-- The approval shows the selected file, with an image preview for workspace images. After approval the CLI sends the file's exact bytes to a single-use upload URL. Keep the returned resource IDs for later calls.
+- Local files cannot be uploaded directly. Do not offer to upload attachments, local files or generated files.
 
 - Never repeat an upload whose outcome is unknown.
-
-- For a larger file, `create-upload-url` accepts one raw-byte POST with `Content-Type: application/octet-stream`. Do not use multipart, JSON or base64, and never retry a consumed upload URL.
 
 - `upload-asset-from-url` and `import-design-from-url` accept only HTTPS sources that are already public. Never publish a local or private file to use them.
 
@@ -106,15 +91,15 @@
 
 ## Read, edit and organize
 
-- Use `edit-design` to change a design's content, and only when `list-tools` returns it. Its `finalize` value `commit` saves the editing session, `cancel` discards it and `keep_open` leaves the changes unsaved. Never try remembered or future tool names for reading or editing design content.
+- Use `read-design` to read a design's text, page count, metadata, page previews and presenter notes before summarizing or editing it.
 
-- Use `get-design-pages` for saved page previews when it is listed. When the user needs a read or edit that no listed tool supports, share the Canva link and explain which step needs the Canva editor.
+- Use `edit-design` to change a design's content, and only when `canva --help` lists it. Its `finalize` value `commit` saves the editing session, `cancel` discards it and `keep_open` leaves the changes unsaved. Never try remembered or future tool names for reading or editing design content.
 
-- `merge-designs` combines or reorders whole pages. Get explicit approval of the exact operations before each call, because deleting pages is permanent.
+- Use `get-design-pages` for saved page previews when `canva --help` lists it. When the user needs a read or edit that no listed tool supports, share the Canva link and explain which step needs the Canva editor.
+
+- `merge-designs` combines or reorders whole pages. Every call asks for approval as a page deletion, even when it only inserts or moves pages. Get explicit approval of the exact operations before each call, because deleting pages is permanent.
 
 - `copy-design` and `resize-design` create new designs and keep the source.
-
-- Before `autofill-design`, read `get-design-dataset` or `get-brand-template-dataset` and match its field names and types. Set `update_in_place` only when the user asked to overwrite that design.
 
 - Updating a brand template means creating its draft, editing and saving the draft, then publishing it. When no listed tool can edit and save the draft, share the Canva link and ask the user to finish those steps in the Canva editor.
 
@@ -124,7 +109,7 @@
 
 - Comments and replies are visible to collaborators, so post them only when the user asks.
 
-- Use `help` for questions about Canva's own product, not to describe what this CLI can do.
+- Use `tool:help` for questions about Canva's own product, not to describe what this CLI can do.
 
 ## Show the result
 

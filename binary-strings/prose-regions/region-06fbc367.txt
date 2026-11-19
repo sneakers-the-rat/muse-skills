@@ -1,0 +1,181 @@
+scheduler.croninvalid evaluation responsebrowser invocation is missingbrowser parent is missingselect pg_current_wal_lsn()INSERT INTO runtime.wallet_offers (connector_id, claimed_purchase_keys)
+                 VALUES ($1, ARRAY[$2]::text[])
+                 ON CONFLICT (connector_id) DO UPDATE SET
+                   claimed_purchase_keys = array_append(runtime.wallet_offers.claimed_purchase_keys, $2)
+                 WHERE cardinality(runtime.wallet_offers.claimed_purchase_keys) < 3
+                   AND NOT ($2 = ANY(runtime.wallet_offers.claimed_purchase_keys))CHECKPOINTselect exists (select 1 from agent.root_turn_queue where submission_id = $1)BEGIN READ ONLY; SET LOCAL statement_timeout = '500ms'; SET LOCAL lock_timeout = '50ms'
+WITH blockers AS (
+  SELECT child_agent_id, bool_or(nonterminal) AS nonterminal,
+         bool_or(completed_unseen) AS completed_unseen
+  FROM (
+    SELECT id AS child_agent_id, true AS nonterminal, false AS completed_unseen
+    FROM agents
+    WHERE kind = 'subagent'
+      AND (status IS NULL OR status NOT IN ('completed', 'errored', 'shutdown', 'interrupted', 'not_found'))
+      AND ($1::text IS NULL OR id > $1 OR id IS NULL)
+    UNION ALL
+    SELECT child_agent_id, false, true
+    FROM subagent_spawns
+    WHERE completed_at IS NOT NULL AND seen_at IS NULL
+      AND (handoff_state_json -> 'undeliverable_result' ->> 'completed_at') IS DISTINCT FROM completed_at::text
+      AND ($1::text IS NULL OR child_agent_id > $1)
+  ) candidates
+  GROUP BY child_agent_id
+  ORDER BY child_agent_id NULLS LAST
+  LIMIT $2
+)
+SELECT b.child_agent_id, b.nonterminal, b.completed_unseen,
+       COALESCE(sp.parent_agent_id, a.parent_id) AS parent_agent_id,
+       ancestry.root_agent_id,
+       coordinator.coordinator_agent_id,
+       a.status AS agent_status, sp.status AS spawn_status, p.status AS parent_status,
+       a.depth AS agent_depth, sp.child_agent_id IS NOT NULL AS spawn_exists,
+       p.id IS NOT NULL AS parent_exists, sp.completed_at, sp.seen_at,
+       cp.mode AS checkpoint_mode, pcp.mode AS parent_checkpoint_mode,
+       COALESCE(handoffs.rows, '[]'::jsonb) AS handoffs
+FROM blockers b
+LEFT JOIN agents a ON a.id = b.child_agent_id
+LEFT JOIN subagent_spawns sp ON sp.child_agent_id = b.child_agent_id
+LEFT JOIN agents p ON p.id = COALESCE(sp.parent_agent_id, a.parent_id)
+LEFT JOIN runtime_restart_checkpoints cp ON cp.agent_id = b.child_agent_id
+LEFT JOIN runtime_restart_checkpoints pcp ON pcp.agent_id = p.id
+LEFT JOIN LATERAL (
+  SELECT CASE WHEN count(*) = 1 THEN min(ancestor.id) END AS root_agent_id
+  FROM agent_ancestors aa JOIN agents ancestor ON ancestor.id = aa.ancestor_id
+  WHERE aa.descendant_id = b.child_agent_id AND ancestor.kind = 'root'
+) ancestry ON true
+LEFT JOIN LATERAL (
+  -- Delegation depth is not structural depth: browser specialists inherit
+  -- their planner's depth. Match the relay's spawn-parent edge to the root.
+  SELECT CASE WHEN count(*) = 1 THEN min(ancestor.id) END AS coordinator_agent_id
+  FROM agent_ancestors aa
+  JOIN agents ancestor ON ancestor.id = aa.ancestor_id AND ancestor.kind = 'subagent'
+  JOIN subagent_spawns ancestor_spawn ON ancestor_spawn.child_agent_id = ancestor.id
+  WHERE aa.descendant_id = b.child_agent_id
+    AND ancestor_spawn.parent_agent_id = ancestry.root_agent_id
+    AND EXISTS (
+      SELECT 1 FROM agent_ancestors root_path
+      WHERE root_path.descendant_id = b.child_agent_id
+        AND root_path.ancestor_id = ancestry.root_agent_id
+        AND root_path.distance = aa.distance + 1
+    )
+) coordinator ON true
+LEFT JOIN LATERAL (
+  SELECT jsonb_agg(jsonb_build_object(
+    'handoff_id', h.value ->> 'handoff_id',
+    'recipient_agent_id', h.value ->> 'agent_id',
+    'root_message_execution_id', h.value -> 'receipt' ->> 'root_message_execution_id',
+    'receipt_exists', h.value -> 'receipt' IS NOT NULL AND h.value -> 'receipt' <> 'null'::jsonb,
+    'authorities', COALESCE((
+      SELECT jsonb_agg(jsonb_build_object(
+        'authority_id', authority.key,
+        'attempt_count', authority.value -> 'attempt_count',
+        'next_attempt_at_ms', authority.value -> 'next_attempt_at_ms',
+        'claim_until_ms', authority.value -> 'claim_until_ms',
+        'blocked_reason', CASE
+          WHEN authority.value ->> 'blocked_reason' IN
+            ('target_retired', 'binding_retired', 'handoff_parent_scope_conflict', 'attempt_budget_exhausted', 'missing_recovery_descriptor')
+          THEN authority.value ->> 'blocked_reason'
+          WHEN authority.value ->> 'blocked_reason' IS NOT NULL THEN 'other'
+          ELSE NULL END
+      ) ORDER BY authority.rotation_order) FROM (
+        SELECT key, value, mod(ordinal - 1 + total - mod($4::bigint / h.total, total), total) AS rotation_order FROM (
+          SELECT key, value, row_number() OVER (ORDER BY key) AS ordinal, count(*) OVER () AS total
+          FROM jsonb_each(CASE WHEN jsonb_typeof(h.value -> 'authorities') = 'object' THEN h.value -> 'authorities' ELSE '{}'::jsonb END)
+        ) candidates
+        ORDER BY mod(ordinal - 1 + total - mod($4::bigint / h.total, total), total)
+        LIMIT $3
+      ) authority
+    ), '[]'::jsonb)
+  ) ORDER BY h.rotation_order) AS rows
+  FROM (
+    SELECT key, value, total, mod(ordinal - 1 + total - mod($4::bigint, total), total) AS rotation_order FROM (
+      SELECT key, value, row_number() OVER (ORDER BY key) AS ordinal, count(*) OVER () AS total
+      FROM jsonb_each(CASE WHEN jsonb_typeof(sp.handoff_state_json) = 'object' THEN sp.handoff_state_json ELSE '{}'::jsonb END)
+      WHERE value ->> 'handoff_id' IS NOT NULL AND value ->> 'agent_id' IS NOT NULL
+    ) candidates
+    ORDER BY mod(ordinal - 1 + total - mod($4::bigint, total), total)
+    LIMIT $3
+  ) h
+) handoffs ON true
+ORDER BY b.child_agent_id NULLS LAST
+invocation_id, task_id, planner_agent_id, parent_invocation_id, caller_agent_id, caller_submission_id, call_id, agent_id, submission_id, runtime_work_id, input_digest, kind, state, input_json, context_json, result_json, wait_call_id, ordinal, tab_id, (extract(epoch from created_at) * 1000)::bigint as created_at_ms, (extract(epoch from stop_requested_at) * 1000)::bigint as stop_requested_at_ms, terminal_reason, handoff_state, (extract(epoch from finished_at) * 1000)::bigint as finished_at_msselect revision, state_json from runtime.browser_task_service_state where task_id = $1
+        with activity as (
+            select state, wait_event_type, query_start
+            from pg_stat_activity
+            where datname = current_database()
+              and pid <> pg_backend_pid()
+        ),
+        client_io as (
+            select
+                coalesce(sum(reads), 0)::bigint as reads,
+                coalesce(sum(read_time), 0)::double precision as read_time_ms,
+                coalesce(sum(writes), 0)::bigint as writes,
+                coalesce(sum(write_time), 0)::double precision as write_time_ms,
+                coalesce(sum(evictions), 0)::bigint as evictions
+            from pg_stat_io
+            where backend_type = 'client backend'
+              and object = 'relation'
+              and context = 'normal'
+        ),
+        checkpointer_io as (
+            select
+                coalesce(sum(writes), 0)::bigint as writes,
+                coalesce(sum(write_time), 0)::double precision as write_time_ms,
+                coalesce(sum(fsyncs), 0)::bigint as fsyncs,
+                coalesce(sum(fsync_time), 0)::double precision as fsync_time_ms
+            from pg_stat_io
+            where backend_type = 'checkpointer'
+              and object = 'relation'
+              and context = 'normal'
+        )
+        select
+            current_setting('max_connections')::bigint as max_connections,
+            current_setting('superuser_reserved_connections')::bigint
+                as superuser_reserved_connections,
+            count(*)::bigint as connections_total,
+            count(*) filter (where state = 'active')::bigint as active,
+            count(*) filter (where state = 'idle')::bigint as idle,
+            count(*) filter (where state = 'idle in transaction')::bigint
+                as idle_in_transaction,
+            count(*) filter (where wait_event_type is not null)::bigint as waiting,
+            count(*) filter (where wait_event_type = 'IO')::bigint as io_waiting,
+            count(*) filter (where wait_event_type = 'Lock')::bigint as lock_waiting,
+            count(*) filter (where wait_event_type = 'LWLock')::bigint as lwlock_waiting,
+            coalesce(max((extract(epoch from clock_timestamp() - query_start) * 1000)::bigint)
+                filter (where state = 'active' and query_start is not null), 0)::bigint
+                as longest_active_ms,
+            (select reads from client_io) as client_reads,
+            (select read_time_ms from client_io) as client_read_time_ms,
+            (select writes from client_io) as client_writes,
+            (select write_time_ms from client_io) as client_write_time_ms,
+            (select evictions from client_io) as client_evictions,
+            (select writes from checkpointer_io) as checkpointer_writes,
+            (select write_time_ms from checkpointer_io) as checkpointer_write_time_ms,
+            (select fsyncs from checkpointer_io) as checkpointer_fsyncs,
+            (select fsync_time_ms from checkpointer_io) as checkpointer_fsync_time_ms,
+            (select wal_records from pg_stat_wal)::bigint as wal_records,
+            (select wal_fpi from pg_stat_wal)::bigint as wal_fpi,
+            (select wal_bytes::bigint from pg_stat_wal) as wal_bytes,
+            (select wal_buffers_full from pg_stat_wal)::bigint as wal_buffers_full,
+            (select buffers_alloc from pg_stat_bgwriter)::bigint as buffers_alloc,
+            (select buffers_clean from pg_stat_bgwriter)::bigint as buffers_clean,
+            (select maxwritten_clean from pg_stat_bgwriter)::bigint as maxwritten_clean,
+            (select blks_hit from pg_stat_database where datname = current_database())::bigint
+                as db_blks_hit,
+            (select blks_read from pg_stat_database where datname = current_database())::bigint
+                as db_blks_read,
+            (select blk_read_time from pg_stat_database
+                where datname = current_database())::double precision as db_blk_read_time_ms
+        from activity
+        successmax_connectionssuperuser_reservedsuperuser_reserved_connectionsconnections_totalactiveidle_in_transactionwaitingio_waitinglock_waitinglwlock_waitinglongest_active_msioclient_backendrelation_normalreadsclient_readsread_time_msclient_read_time_mswritesclient_writeswrite_time_msclient_write_time_msevictionscheckpointercheckpointer_writescheckpointer_write_time_msfsyncscheckpointer_fsyncsfsync_time_mscheckpointer_fsync_time_mswalrecordswal_recordswal_fpiwal_bytesbuffers_fullbuffers_allocbuffers_cleandb_blks_hitblks_readdb_blks_readdb_blk_read_time_msselect approval_id, user_control_revision, operation_id, receipt_digest, receipt_text, purchase_json, completed_at
+                from runtime.browser_purchase_receipts where task_id = $1 and checkout_id = $2t.task_id, t.root_session_id, t.owner_agent_id as planner_agent_idselect 1 from runtime.browser_tasks where task_id = $1 for updatewith recursive branch as (
+                    select invocation_id from runtime.browser_invocations where invocation_id = $1
+                    union all select child.invocation_id from runtime.browser_invocations child
+                    join branch parent on child.parent_invocation_id = parent.invocation_id)
+                    update runtime.browser_invocations set state = $3, suspended_state = null, result_json = $2,
+                    terminal_reason = $4, finished_at = now(), updated_at = now(),
+                    handoff_state = case when parent_invocation_id is null then $5::text end,
+                    handoff_submission_id = case when parent_invocation_id is null then $6::text end
+                    where invocation_id in (select invocation_id from branch)
+                    and result_json is null returning invocation_idcreate empty blob workspacespace_build_completedstartup media safety dispatch unavailable
