@@ -9,6 +9,9 @@ footnotes. Line counts are trailing metadata only. Maintained by the
 nightly check-in; entries through 2026-10-15 backfilled 2026-10-15.
 Times are America/Los_Angeles.
 
+## 2026-11-21
+- No commits were made today — the hourly snapshots did not run, so no skill files were archived. The newest commit remains the 2026-11-20 changelog commit at 23:44, and verification failed: **muse_mail** in the archive still says a send or reply accepts at most 50 recipients across To, CC and BCC, while the live connector now says at most 10.
+
 ## 2026-11-20
 - [`bc33aa5ad`](https://github.com/sneakers-the-rat/muse-skills/commit/bc33aa5adef840f47a6425ec8da093a1ca59f42d) 21:57
   - **code — scripts/extract_android_strings.py**: a new hook entry point that dumps every banked Muse Android APK from the signer-gated archive into `android-strings/<version>/` — all dex strings sorted and unique, the instruction-bearing prompt subset (strings of at least 240 chars matching instruction wording), the NodeCommandSpec description openers, every `resources.arsc` string, a decoded manifest summary (package, permissions, components), and per-library native `.so` strings via the android-inspect toolkit; it is idempotent per APK sha256 (a version already matching `android-map.json` is skipped) and exits 0 with a note when no APK is banked, so it never fails a snapshot on its own.
