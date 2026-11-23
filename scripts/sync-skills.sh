@@ -50,6 +50,34 @@
 #                       android-strings/reuters-claims/<version>/,
 #                       which build_topics.py then gathers into
 #                       topics/reuters_claims/.
+#                       extract_mac_strings.py dumps the important
+#                       strings of the banked Muse macOS app (Endo,
+#                       ~/workspace/your_files/mac-app-archive) into
+#                       mac-app/ (flat tree, no version directory —
+#                       mac-app-map.json, its provenance manifest,
+#                       records which app version the tree
+#                       corresponds to): per-binary unique
+#                       strings, prompt-like strings, the shipped
+#                       node-command spec fragments under
+#                       tool-prompts/ (per-command files plus a
+#                       tools-manifest with described/fragmentary/
+#                       name_only status), command catalog, URLs,
+#                       entitlements, plist summary, and the ObjC/
+#                       Swift census. It is hash-gated on the DMG
+#                       sha256 plus the mac-inspect analysis inputs,
+#                       so it writes only when a new version is
+#                       banked or the analysis changes.
+#                       extract_tool_prompts.py writes one clean
+#                       JSON per tool the hatch binary defines
+#                       (name, description, parameter schema where
+#                       the binary stores one) into
+#                       binary-strings/tools/, with the provenance
+#                       manifest binary-strings/tools-manifest.json;
+#                       it owns the top-level *.json of that
+#                       directory and is hash-gated on the binary,
+#                       so it runs before the binary file/strings
+#                       steps below and lands independently of
+#                       them.
 #                       New files landing in binary-etc/ are UNSORTED:
 #                       they are held out of the commit (updates to
 #                       already-versioned binary-etc files still commit)
@@ -236,7 +264,10 @@ mirror "$HOME/docs" "$REPO/docs"
 # extraction, so its output lands in the tree even while a hatch-side
 # extractor is broken (it commits on the next successful run).
 python3 "$REPO/scripts/extract_android_strings.py"
+python3 "$REPO/scripts/extract_vm_reuters_claims.py"
 python3 "$REPO/scripts/extract_android_reuters_claims.py"
+python3 "$REPO/scripts/extract_mac_strings.py"
+python3 "$REPO/scripts/extract_tool_prompts.py"
 python3 "$REPO/scripts/extract_binary_files.py"
 python3 "$REPO/scripts/extract_binary_strings.py"
 python3 "$REPO/scripts/extract_binary_persona.py"
@@ -275,7 +306,7 @@ read -r CONN_ADDED CONN_REMOVED <<< "$(git -C "$REPO" diff --cached --numstat --
   | awk '{ if ($1 ~ /^[0-9]+$/) a += $1; if ($2 ~ /^[0-9]+$/) r += $2 } END { print a + 0, r + 0 }')"
 read -r DOCS_ADDED DOCS_REMOVED <<< "$(git -C "$REPO" diff --cached --numstat -- docs \
   | awk '{ if ($1 ~ /^[0-9]+$/) a += $1; if ($2 ~ /^[0-9]+$/) r += $2 } END { print a + 0, r + 0 }')"
-read -r BIN_ADDED BIN_REMOVED <<< "$(git -C "$REPO" diff --cached --numstat -- system_prompts binary-skills binary-etc binary-strings topics binary-map.json android-strings android-map.json \
+read -r BIN_ADDED BIN_REMOVED <<< "$(git -C "$REPO" diff --cached --numstat -- system_prompts binary-skills binary-etc binary-strings topics binary-map.json android-strings android-map.json mac-app mac-app-map.json \
   | awk '{ if ($1 ~ /^[0-9]+$/) a += $1; if ($2 ~ /^[0-9]+$/) r += $2 } END { print a + 0, r + 0 }')"
 
 # Regenerate the plot with this run's point appended, then stage it too.
